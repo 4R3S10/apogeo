@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Ágape: el corazón al revés sobre un disco berenjena -->
+  <circle cx="50" cy="50" r="48" fill="#1e1621"/>
+  <path d="M50 23C38 36 25 52 27 63C28.5 71.5 41 76 50 66C59 76 71.5 71.5 73 63C75 52 62 36 50 23Z" fill="none" stroke="#e0a9b4" stroke-width="6" stroke-linejoin="round"/>
+</svg>

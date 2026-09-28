@@ -29,6 +29,7 @@ modules:
       - estetica.sh
       - sesion.sh
       - juegos.sh
+      - agape.sh
 
   # Pisos (Jugar, Navegar, Estudiar) y la salud del PC
   - type: systemd

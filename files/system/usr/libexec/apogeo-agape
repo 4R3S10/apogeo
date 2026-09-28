@@ -1,0 +1,150 @@
+#!/usr/bin/python3
+"""
+Ágape en Apogeo. Ágape está en un repositorio privado, así que no viene dentro de la imagen (que es pública): la
+primera vez que se abre, esto lo descarga de tus versiones de GitHub con tu token de solo lectura y lo deja en
+~/Applications/ARES.AppImage, donde se actualiza solo (con el mismo token, en ~/.config/ARES/update-token). Después lo
+pone como navegador del sistema.
+
+El token lo escribes tú en la ventanita; se guarda solo en tu equipo (permisos 600) y nunca se muestra.
+
+  apogeo-agape          instala Ágape si falta y lo abre (con las direcciones que se le pasen)
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+
+HOME = os.path.expanduser('~')
+REPO = os.environ.get('APOGEO_AGAPE_REPO', '4R3S10/ares-browser')
+APP = os.environ.get('APOGEO_AGAPE_APP', os.path.join(HOME, 'Applications/ARES.AppImage'))
+TOKEN = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'ARES', 'update-token')
+TITLE = 'Ágape'
+
+
+def say(msg, error=False):
+    subprocess.run(['kdialog', '--title', TITLE, '--sorry' if error else '--msgbox', msg])
+
+
+def notify(msg):
+    subprocess.run(['notify-send', '-a', TITLE, '-i', 'apogeo', TITLE, msg])
+
+
+def read_token():
+    try:
+        with open(TOKEN) as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+
+def ask_token():
+    r = subprocess.run(['kdialog', '--title', TITLE, '--password',
+                        'Ágape es privado. Pega tu token de GitHub de solo lectura para descargarlo.\n'
+                        'Se guarda solo en este equipo y sirve también para que Ágape se actualice.'],
+                       capture_output=True, text=True)
+    token = r.stdout.strip()
+    if r.returncode != 0 or not token:
+        return ''
+    os.makedirs(os.path.dirname(TOKEN), exist_ok=True)
+    fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as f:
+        f.write(token)
+    return token
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """GitHub redirige las descargas a su almacén: allí no se debe mandar el token (y lo rechazaría)."""
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def request(url, token, accept='application/vnd.github+json'):
+    headers = {'Accept': accept, 'User-Agent': 'Apogeo'}
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    opener = urllib.request.build_opener(NoRedirect)
+    try:
+        return opener.open(urllib.request.Request(url, headers=headers), timeout=60)
+    except urllib.error.HTTPError as e:
+        if e.code in (301, 302, 303, 307, 308) and e.headers.get('Location'):
+            return urllib.request.urlopen(urllib.request.Request(e.headers['Location'], headers={'User-Agent': 'Apogeo'}),
+                                          timeout=60)
+        raise
+
+
+def latest(token):
+    with request(f'https://api.github.com/repos/{REPO}/releases/latest', token) as r:
+        return json.load(r)
+
+
+def install():
+    token = read_token()
+    try:
+        rel = latest(token)
+    except urllib.error.HTTPError as e:
+        if e.code not in (401, 403, 404):
+            raise
+        # Sin token (o con uno que ya no vale) un repositorio privado «no existe»: se pide
+        token = ask_token()
+        if not token:
+            return False
+        try:
+            rel = latest(token)
+        except urllib.error.HTTPError:
+            os.remove(TOKEN)
+            say('Ese token no deja ver las versiones de Ágape. Revisa que tenga permiso de lectura sobre el '
+                'repositorio y vuelve a abrir Ágape.', error=True)
+            return False
+    images = [a for a in rel.get('assets', []) if a['name'].endswith('.AppImage')]
+    asset = next((a for a in images if 'x86_64' in a['name']), images[0] if images else None)
+    if not asset:
+        say('La última versión de Ágape no tiene el archivo para Linux (AppImage).', error=True)
+        return False
+    notify(f"Descargando Ágape {rel.get('tag_name', '')}…")
+    os.makedirs(os.path.dirname(APP), exist_ok=True)
+    part = APP + '.part'
+    with request(asset['url'], token, 'application/octet-stream') as r, open(part, 'wb') as f:
+        while chunk := r.read(1 << 20):
+            f.write(chunk)
+    if os.path.getsize(part) != asset.get('size', os.path.getsize(part)):
+        os.remove(part)
+        say('La descarga de Ágape ha llegado incompleta. Vuelve a intentarlo.', error=True)
+        return False
+    os.chmod(part, 0o755)
+    os.replace(part, APP)
+    notify('Ágape instalado. Se actualizará solo.')
+    return True
+
+
+def make_default():
+    """Ágape crea su acceso (ares.desktop) al abrirse; en cuanto está, se pone como navegador del sistema."""
+    desktop = os.path.join(HOME, '.local/share/applications/ares.desktop')
+    for _ in range(60):
+        if os.path.exists(desktop):
+            break
+        time.sleep(0.5)
+    subprocess.run(['xdg-settings', 'set', 'default-web-browser', 'ares.desktop'],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def main():
+    fresh = False
+    if not os.access(APP, os.X_OK):
+        try:
+            if not install():
+                return 1
+        except (urllib.error.URLError, OSError) as e:
+            say(f'No se ha podido descargar Ágape ({getattr(e, "reason", e)}). ¿Hay conexión a internet?', error=True)
+            return 1
+        fresh = True
+    subprocess.Popen([APP, *sys.argv[1:]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    if fresh and 'APOGEO_AGAPE_APP' not in os.environ:  # (en las pruebas no se toca el navegador del sistema)
+        make_default()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

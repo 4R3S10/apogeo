@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ágape
+GenericName=Navegador web
+Comment=Tu navegador (la primera vez se descarga de tu GitHub)
+Exec=agape %U
+Icon=agape
+Terminal=false
+StartupWMClass=ARES
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+Categories=Network;WebBrowser;

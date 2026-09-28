@@ -39,6 +39,12 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 - **Juegos de Windows** (Valorant, EA FC…): se abrirán en el Windows escondido; la lista está en
   `~/.config/apogeo/juegos-windows.json`.
 
+## Ágape
+
+Ágape es privado, así que no va dentro de la imagen (que es pública). La primera vez que se abre (o al pulsar un
+enlace), Apogeo pide tu token de GitHub de solo lectura, descarga la última versión de tus releases a
+`~/Applications/ARES.AppImage` (donde se actualiza sola) y la deja como navegador del sistema.
+
 ## Salud del PC
 
 - A partir de 80 °C (procesador o gráfica) Apogeo baja poco a poco la velocidad máxima; por debajo de 72 °C la devuelve.
