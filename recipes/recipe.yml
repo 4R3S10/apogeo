@@ -12,18 +12,22 @@ modules:
       - source: system
         destination: /
 
-  # Letra Nunito e iconos Papirus
+  # Letra Nunito, iconos Papirus, inicio de sesión (SDDM) y el tipo de tema del arranque
   - type: dnf
     install:
       packages:
         - papirus-icon-theme
         - vernnobile-nunito-fonts
+        - sddm
+        - sddm-wayland-plasma
+        - plymouth-plugin-script
 
   # Nombre y logo del sistema; estética (carpetas rosa, cursor berenjena, letra, iconos, colores, sonidos y teclado)
   - type: script
     scripts:
       - branding.sh
       - estetica.sh
+      - sesion.sh
 
   # Pisos (Jugar, Navegar, Estudiar) y la salud del PC
   - type: systemd

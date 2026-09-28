@@ -1,0 +1,10 @@
+[SddmGreeterTheme]
+Name=Apogeo
+Description=Tarjeta con tu nombre, el piso en el que empiezas y la contraseña
+Author=Ares
+Type=sddm-theme
+Version=0.1
+Website=https://github.com/4R3S10/apogeo
+MainScript=Main.qml
+ConfigFile=theme.conf
+QtVersion=6

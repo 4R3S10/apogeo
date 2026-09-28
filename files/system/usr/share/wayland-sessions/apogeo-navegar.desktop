@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Apogeo · Navegar
+Comment=Apogeo empezando en el piso Navegar
+Exec=/usr/libexec/apogeo-sesion navegar
+TryExec=/usr/bin/startplasma-wayland
+DesktopNames=KDE
+X-KDE-PluginInfo-Version=6

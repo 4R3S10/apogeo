@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Apogeo · Jugar
+Comment=Apogeo empezando en el piso Jugar
+Exec=/usr/libexec/apogeo-sesion jugar
+TryExec=/usr/bin/startplasma-wayland
+DesktopNames=KDE
+X-KDE-PluginInfo-Version=6

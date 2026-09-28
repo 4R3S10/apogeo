@@ -1,0 +1,5 @@
+#!/bin/sh
+# Sesión de Apogeo: apunta en qué piso empezar (lo lee apogeo-pisos) y arranca Plasma como la sesión normal
+mkdir -p "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+printf '%s\n' "${1:-navegar}" > "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/apogeo-piso"
+exec /usr/libexec/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland
