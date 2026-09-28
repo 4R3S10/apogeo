@@ -1,0 +1,7 @@
+[Sound Theme]
+Name=Apogeo
+Comment=Pocos sonidos y suaves: avisos, errores, USB y volumen
+Directories=stereo
+
+[stereo]
+OutputProfile=stereo

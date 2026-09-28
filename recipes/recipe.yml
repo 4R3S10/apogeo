@@ -12,10 +12,18 @@ modules:
       - source: system
         destination: /
 
-  # Nombre del sistema (lo que sale en «Acerca de», el arranque, etc.)
+  # Letra Nunito e iconos Papirus
+  - type: dnf
+    install:
+      packages:
+        - papirus-icon-theme
+        - vernnobile-nunito-fonts
+
+  # Nombre y logo del sistema; estética (carpetas rosa, cursor berenjena, letra, iconos, colores, sonidos y teclado)
   - type: script
     scripts:
       - branding.sh
+      - estetica.sh
 
   # Pisos (Jugar, Navegar, Estudiar) y la salud del PC
   - type: systemd

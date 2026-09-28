@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Logo de Apogeo: un diamante facetado con la cara de arriba en rosa, sobre un disco berenjena -->
+  <circle cx="50" cy="50" r="48" fill="#1e1621"/>
+  <path d="M50 20 L76 46 L50 80 L24 46 Z" fill="#e0a9b4" opacity=".35"/>
+  <path d="M50 20 L76 46 H24 Z" fill="#ff8fc6"/>
+  <path d="M24 46 L50 80 L50 46 Z" fill="#e0a9b4" opacity=".6"/>
+</svg>

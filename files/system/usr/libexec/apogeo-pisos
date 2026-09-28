@@ -107,10 +107,34 @@ def setup(bus):
             p.addWidget('org.apogeo.pisos');
         """)
         st['panel'] = True
-    if not st.get('scheme'):
-        subprocess.Popen(['plasma-apply-colorscheme', 'Apogeo'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        st['scheme'] = True
+    if st.get('estetica', 0) < AESTHETICS:
+        aesthetics()
+        st['estetica'] = AESTHETICS
     save_state(st)
+
+
+AESTHETICS = 1  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+NUNITO = 'Nunito,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
+
+
+def aesthetics():
+    """La estética de Apogeo para un usuario que ya existía (a los nuevos les llega por /etc/xdg)."""
+    run = lambda *c: subprocess.run(list(c), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    kw = lambda f, g, k, v: run('kwriteconfig6', '--file', f, '--group', g, '--key', k, v)
+    run('plasma-apply-colorscheme', 'Apogeo')
+    run('plasma-apply-cursortheme', 'Apogeo-cursor')
+    run('/usr/libexec/plasma-changeicons', 'Papirus-Dark')
+    for key in ('font', 'menuFont', 'toolBarFont'):
+        kw('kdeglobals', 'General', key, NUNITO)
+    kw('kdeglobals', 'General', 'smallestReadableFont', NUNITO.replace(',10,', ',8,', 1))
+    kw('kdeglobals', 'WM', 'activeFont', NUNITO.replace(',400,', ',700,', 1))
+    kw('kdeglobals', 'Sounds', 'Theme', 'apogeo')
+    # Teclado ANSI: EE. UU. internacional
+    kw('kxkbrc', 'Layout', 'LayoutList', 'us')
+    kw('kxkbrc', 'Layout', 'VariantList', 'intl')
+    kw('kxkbrc', 'Layout', 'Use', 'true')
+    run('dbus-send', '--session', '--type=signal', '/Layouts', 'org.kde.keyboard.reloadConfig')
+    log('estética aplicada')
 
 
 class Floors:
