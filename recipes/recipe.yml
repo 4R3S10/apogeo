@@ -44,3 +44,6 @@ modules:
 
   # Firma de las imágenes (clave pública: cosign.pub; la privada es el secreto SIGNING_SECRET)
   - type: signing
+
+  # Rehace el arranque (initramfs) para que lleve el tema de Apogeo; tiene que ir al final
+  - type: initramfs

@@ -1,0 +1,75 @@
+# Arranque de Apogeo: el diamante sobre un brillo berenjena y, debajo, una barra finita de progreso.
+# Si el disco está cifrado, la contraseña se pide debajo del logo (con puntos).
+
+Window.SetBackgroundTopColor(0.07, 0.05, 0.08);
+Window.SetBackgroundBottomColor(0.07, 0.05, 0.08);
+
+W = Window.GetWidth();
+H = Window.GetHeight();
+X = Window.GetX();
+Y = Window.GetY();
+
+fondo = Sprite(Image("fondo.png").Scale(W, H));
+fondo.SetPosition(X, Y, -10);
+
+logo_img = Image("logo.png");
+logo = Sprite(logo_img);
+logo.SetPosition(X + W / 2 - logo_img.GetWidth() / 2, Y + H / 2 - logo_img.GetHeight() / 2 - 20, 1);
+
+barra_fondo_img = Image("barra-fondo.png");
+barra_img = Image("barra.png");
+barra_x = X + W / 2 - barra_fondo_img.GetWidth() / 2;
+barra_y = Y + H / 2 + logo_img.GetHeight() / 2 + 30;
+barra_fondo = Sprite(barra_fondo_img);
+barra_fondo.SetPosition(barra_x, barra_y, 1);
+barra = Sprite();
+barra.SetPosition(barra_x, barra_y, 2);
+
+fun progreso(duracion, avance) {
+  ancho = Math.Int(barra_fondo_img.GetWidth() * avance);
+  if (ancho < 2) ancho = 2;
+  barra.SetImage(barra_img.Scale(ancho, barra_img.GetHeight()));
+}
+Plymouth.SetBootProgressFunction(progreso);
+
+# ---------- Contraseña del disco (si está cifrado) ----------
+punto_img = Image("punto.png");
+puntos = [];
+texto = Sprite();
+
+fun pedir_contrasena(pregunta, cuantos) {
+  barra.SetOpacity(0);
+  barra_fondo.SetOpacity(0);
+  texto_img = Image.Text(pregunta, 0.88, 0.8, 0.83);
+  texto.SetImage(texto_img);
+  texto.SetOpacity(1);
+  texto.SetPosition(X + W / 2 - texto_img.GetWidth() / 2, barra_y - 6, 3);
+  for (i = 0; puntos[i] || i < cuantos; i++) {
+    if (!puntos[i]) puntos[i] = Sprite(punto_img);
+    puntos[i].SetPosition(X + W / 2 - cuantos * 9 + i * 18, barra_y + 28, 3);
+    puntos[i].SetOpacity(i < cuantos);
+  }
+}
+Plymouth.SetDisplayPasswordFunction(pedir_contrasena);
+
+fun normal() {
+  texto.SetOpacity(0);
+  for (i = 0; puntos[i]; i++) puntos[i].SetOpacity(0);
+  barra.SetOpacity(1);
+  barra_fondo.SetOpacity(1);
+}
+Plymouth.SetDisplayNormalFunction(normal);
+
+# Mensajes del sistema (p. ej. «Comprobando el disco…»), pequeños y abajo
+mensaje = Sprite();
+fun mostrar_mensaje(t) {
+  mensaje_img = Image.Text(t, 0.66, 0.58, 0.62);
+  mensaje.SetImage(mensaje_img);
+  mensaje.SetPosition(X + W / 2 - mensaje_img.GetWidth() / 2, Y + H - 60, 3);
+}
+Plymouth.SetMessageFunction(mostrar_mensaje);
+
+fun al_salir() {
+  barra.SetImage(barra_img);
+}
+Plymouth.SetQuitFunction(al_salir);

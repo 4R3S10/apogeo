@@ -58,4 +58,6 @@ cat > /usr/share/icons/default/index.theme <<'EOF'
 [Icon Theme]
 Inherits=Apogeo-cursor
 EOF
+# Arranque: el diamante sobre el brillo berenjena (el initramfs se rehace al final de la receta)
+plymouth-set-default-theme apogeo
 echo "Estética aplicada"

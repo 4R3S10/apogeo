@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Apogeo
+Description=Arranque de Apogeo: el diamante sobre un brillo berenjena y una barra finita de progreso
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/apogeo
+ScriptFile=/usr/share/plymouth/themes/apogeo/apogeo.script
