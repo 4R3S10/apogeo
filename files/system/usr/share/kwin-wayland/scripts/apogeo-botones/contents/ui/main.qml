@@ -3,8 +3,10 @@ import QtQuick.Layouts
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kwin
 
-// Ventanas sin barra de título (V2): a todas las ventanas normales se les quita el borde. Al acercar el ratón a la
-// esquina de arriba a la derecha de la ventana activa aparece una pastilla con mover, minimizar, maximizar y cerrar.
+// Ventanas sin barra de título (V2): a todas las ventanas normales se les quita el borde. Al tocar con el ratón el borde
+// de arriba de la ventana activa (en su lado derecho) aparece, por fuera y encima de ella, una pastilla con mover,
+// minimizar, maximizar y cerrar: así no tapa los botones de la app. Si la ventana llega arriba del todo (maximizada),
+// sale dentro solo mientras el ratón está en el borde o encima de la pastilla.
 Item {
     id: root
     property var target: null
@@ -30,11 +32,16 @@ Item {
             if (onPill) return;
             if (!w || !w.normalWindow || w.fullScreen || w.minimized) { pill.visible = false; return; }
             const g = w.frameGeometry;
-            const hot = p.x >= g.x + g.width - 190 && p.x < g.x + g.width && p.y >= g.y && p.y < g.y + 56;
+            const screen = Workspace.clientArea(KWin.FullScreenArea, w);
+            const above = g.y - pill.height - 6;
+            const outside = above >= screen.y;
+            // Franja caliente: el borde de arriba (unos píxeles) y, si cabe fuera, el hueco donde sale la pastilla
+            const top = outside ? above : g.y;
+            const hot = p.x >= g.x + g.width - 230 && p.x < g.x + g.width && p.y >= top && p.y < g.y + 6;
             if (hot) {
                 root.target = w;
                 pill.x = g.x + g.width - pill.width - 10;
-                pill.y = g.y + 8;
+                pill.y = outside ? above : g.y + 4;
                 pill.visible = true;
             } else {
                 pill.visible = false;
