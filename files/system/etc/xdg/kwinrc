@@ -1,3 +1,7 @@
 # Apogeo: si una ventana de otro piso se pone delante sola, se viene al piso donde estás (nunca cambias de piso sin querer)
 [Windows]
 ActivationDesktopPolicy=BringToCurrentDesktop
+
+# Ventanas sin barra de título, con los botones flotando al acercar el ratón a su esquina
+[Plugins]
+apogeo-botonesEnabled=true

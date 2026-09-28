@@ -44,6 +44,13 @@ cat >> /etc/xdg/kcminputrc <<'EOF'
 [Mouse]
 cursorTheme=Apogeo-cursor
 EOF
+# Pantalla de bloqueo con el fondo de Navegar
+cat >> /etc/xdg/kscreenlockerrc <<'EOF'
+
+[Greeter][Wallpaper][org.kde.image][General]
+Image=file:///usr/share/apogeo/fondos/navegar.jpg
+PreviewImage=file:///usr/share/apogeo/fondos/navegar.jpg
+EOF
 # Teclado ANSI: EE. UU. internacional (ñ con AltGr+n, tildes con ´ + vocal)
 cat >> /etc/xdg/kxkbrc <<'EOF'
 

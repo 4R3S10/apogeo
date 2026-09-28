@@ -107,13 +107,37 @@ def setup(bus):
             p.addWidget('org.apogeo.pisos');
         """)
         st['panel'] = True
+    if st.get('isla', 0) < ISLAND:
+        # La isla: fuera la barra de abajo de Bazzite; una isla centrada, flotante, que se esconde sola
+        plasma_script(bus, """
+            panels().forEach(function (p) { if (p.location == 'bottom') p.remove(); });
+            var p = new Panel;
+            p.location = 'bottom';
+            p.floating = true;
+            p.height = 52;
+            p.lengthMode = 'fit';
+            p.alignment = 'center';
+            p.hiding = 'autohide';
+            p.addWidget('org.apogeo.isla');
+            p.addWidget('org.kde.plasma.systemtray');
+            var clock = p.addWidget('org.kde.plasma.digitalclock');
+            clock.currentConfigGroup = ['Appearance'];
+            clock.writeConfig('showDate', false);
+            clock.writeConfig('dateDisplayFormat', 'DisableDate');
+            clock.writeConfig('autoFontAndSize', false);
+            clock.writeConfig('fontFamily', 'Nunito');
+            clock.writeConfig('boldText', true);
+            clock.writeConfig('fontSize', 12);
+        """)
+        st['isla'] = ISLAND
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
     save_state(st)
 
 
-AESTHETICS = 1  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+ISLAND = 1  # igual que AESTHETICS, para la isla de abajo
+AESTHETICS = 2  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 NUNITO = 'Nunito,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
 
 
@@ -129,6 +153,11 @@ def aesthetics():
     kw('kdeglobals', 'General', 'smallestReadableFont', NUNITO.replace(',10,', ',8,', 1))
     kw('kdeglobals', 'WM', 'activeFont', NUNITO.replace(',400,', ',700,', 1))
     kw('kdeglobals', 'Sounds', 'Theme', 'apogeo')
+    for key in ('Image', 'PreviewImage'):  # pantalla de bloqueo con el fondo de Navegar
+        run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
+            'org.kde.image', '--group', 'General', '--key', key, 'file:///usr/share/apogeo/fondos/navegar.jpg')
+    kw('kwinrc', 'Plugins', 'apogeo-botonesEnabled', 'true')
+    run('qdbus', 'org.kde.KWin', '/KWin', 'reconfigure')
     # Teclado ANSI: EE. UU. internacional
     kw('kxkbrc', 'Layout', 'LayoutList', 'us')
     kw('kxkbrc', 'Layout', 'VariantList', 'intl')

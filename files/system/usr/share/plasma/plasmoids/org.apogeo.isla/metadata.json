@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "Windows and Tasks",
+        "Description": "La isla de Apogeo: cambia en cada piso (Jugar, Navegar, Estudiar)",
+        "Icon": "apogeo",
+        "Id": "org.apogeo.isla",
+        "License": "MIT",
+        "Name": "Isla",
+        "Version": "0.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
