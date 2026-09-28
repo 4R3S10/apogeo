@@ -10,9 +10,19 @@ import org.kde.kwin
 Item {
     id: root
     property var target: null
+    property var pending: [] // ventanas de la consola a las que aún no se ha podido poner a pantalla completa
 
     function bare(w) {
-        if (w && w.normalWindow && !w.noBorder) w.noBorder = true;
+        if (!w || !w.normalWindow) return;
+        if (!w.noBorder) w.noBorder = true;
+        // La consola del piso Jugar, a pantalla completa (cuando ya tenga su título y se vea: antes KWin no lo aplica)
+        const cls = (w.resourceClass || "") + " " + (w.desktopFileName || "");
+        if (cls.indexOf("plasmawindowed") >= 0) pending.push(w);
+    }
+    function console_(w) {
+        if (w.caption !== "Jugar") return false;
+        w.fullScreen = true;
+        return w.fullScreen;
     }
     Component.onCompleted: Workspace.windows.forEach(bare)
     Connections {
@@ -26,6 +36,7 @@ Item {
         repeat: true
         running: true
         onTriggered: {
+            if (root.pending.length) root.pending = root.pending.filter(x => x && !root.console_(x));
             const w = Workspace.activeWindow;
             const p = Workspace.cursorPos;
             const onPill = pill.visible && p.x >= pill.x && p.x < pill.x + pill.width && p.y >= pill.y && p.y < pill.y + pill.height;

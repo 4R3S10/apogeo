@@ -28,6 +28,7 @@ modules:
       - branding.sh
       - estetica.sh
       - sesion.sh
+      - juegos.sh
 
   # Pisos (Jugar, Navegar, Estudiar) y la salud del PC
   - type: systemd

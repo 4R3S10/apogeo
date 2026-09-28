@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Jugar
+Comment=Todos tus juegos juntos: Steam, Epic, GOG, Hydra y los de Windows
+Exec=apogeo-consola
+Icon=input-gaming
+Categories=Game;

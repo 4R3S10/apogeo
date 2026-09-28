@@ -19,6 +19,26 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 - **Energía:** nunca «rendimiento». Jugar y Navegar en equilibrado, Estudiar en ahorro.
 - **La primera vez** que entras en un piso se abren sus apps (Jugar: Steam; Navegar: Ágape o Firefox).
 
+## Aspecto
+
+- **Arranque:** el diamante de Apogeo sobre un brillo berenjena y una barra finita de progreso.
+- **Inicio de sesión:** una tarjeta con tu nombre, el piso en el que empiezas y la contraseña (SDDM, tema propio).
+- **Isla:** abajo, centrada, se esconde sola y cambia en cada piso (Jugar: temperatura, FPS y escritorio; Navegar:
+  ventanas y música; Estudiar: temporizador 25/5 y lo estudiado hoy). El corazón abre el buscador.
+- **Ventanas sin barra de título:** al tocar el borde de arriba de una ventana salen, encima de ella, sus botones.
+- Letra Nunito, iconos Papirus con carpetas rosa, cursor berenjena, sonidos pocos y suaves y teclado EE. UU.
+  internacional (ñ con AltGr+n).
+
+## Jugar
+
+- **Consola:** al entrar en el piso Jugar se abre a pantalla completa con todos tus juegos juntos (Steam, Epic y GOG con
+  Heroic, Hydra y los de Windows): el último en grande y el resto en fila. Teclado o mando: ← → elegir, Intro jugar,
+  Q/E cambiar de tienda, Esc salir.
+- **Tiendas:** Steam, Heroic (Epic y GOG), el lanzador oficial de Epic con Proton («Epic Games (oficial)», se instala la
+  primera vez) e Hydra (de su GitHub oficial, sin fuentes de descarga añadidas).
+- **Juegos de Windows** (Valorant, EA FC…): se abrirán en el Windows escondido; la lista está en
+  `~/.config/apogeo/juegos-windows.json`.
+
 ## Salud del PC
 
 - A partir de 80 °C (procesador o gráfica) Apogeo baja poco a poco la velocidad máxima; por debajo de 72 °C la devuelve.

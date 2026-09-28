@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "Miscellaneous",
+        "Description": "La consola del piso Jugar: todos tus juegos juntos (Steam, Epic, GOG, Hydra y Windows)",
+        "Icon": "input-gaming",
+        "Id": "org.apogeo.consola",
+        "License": "MIT",
+        "Name": "Jugar",
+        "Version": "0.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

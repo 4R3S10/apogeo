@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Epic Games (oficial)
+Comment=El lanzador oficial de Epic Games funcionando con Proton
+Exec=apogeo-epic
+Icon=input-gaming
+Categories=Game;

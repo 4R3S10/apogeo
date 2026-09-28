@@ -1,0 +1,11 @@
+#!/bin/sh
+# Juegos que solo van en Windows (anticheat del núcleo): reinicia en el Windows escondido con el juego y, al cerrarlo,
+# vuelve a Apogeo. Mientras no haya Windows instalado, lo explica.
+if ! efibootmgr 2>/dev/null | grep -qi "Windows Boot Manager"; then
+  kdialog --title "Jugar en Windows" --sorry "Este juego solo funciona en Windows (su anticheat no deja jugar en Linux).
+
+Todavía no hay un Windows instalado en este PC. Cuando lo instalemos, al pulsar Jugar el PC se reiniciará en Windows con el juego y volverá solo a Apogeo al cerrarlo."
+  exit 0
+fi
+# TODO: viaje a Windows (tarjeta con cuenta atrás de 10 s, arranque único con efibootmgr --bootnext y vuelta a Apogeo)
+kdialog --title "Jugar en Windows" --sorry "El viaje a Windows aún se está preparando."

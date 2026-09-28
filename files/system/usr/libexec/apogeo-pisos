@@ -3,7 +3,7 @@
 Pisos de Apogeo: Jugar, Navegar y Estudiar son tres escritorios virtuales, uno encima de otro. Al cambiar de piso las
 ventanas se deslizan (efecto Deslizar de KWin) y este programa cambia lo demás: el fondo, el color de acento, los avisos
 (en Jugar y Estudiar no sale ninguno; se quedan en el historial) y la energía (nunca «rendimiento»: primero la salud del
-PC). La primera vez que se entra en un piso en la sesión se abren sus apps; después, cada piso guarda sus ventanas.
+PC). La primera vez que se entra en un piso en la sesión se abren sus apps (Jugar: la consola); después, cada piso guarda sus ventanas.
 
   apogeo-pisos             se queda vigilando (lo arranca systemd al entrar en la sesión)
   apogeo-pisos ir N        va al piso N (0 = Jugar, 1 = Navegar, 2 = Estudiar)
@@ -20,7 +20,7 @@ import dbus.mainloop.glib
 from gi.repository import GLib
 
 FLOORS = [
-    {'name': 'Jugar', 'key': 'jugar', 'accent': '#ff8fc6', 'power': 'balanced', 'quiet': True, 'apps': [['steam']]},
+    {'name': 'Jugar', 'key': 'jugar', 'accent': '#ff8fc6', 'power': 'balanced', 'quiet': True, 'apps': [['apogeo-consola']]},
     {'name': 'Navegar', 'key': 'navegar', 'accent': '#e0a9b4', 'power': 'balanced', 'quiet': False,
      'apps': [['agape', 'firefox']]},  # Ágape si está; si no, Firefox
     {'name': 'Estudiar', 'key': 'estudiar', 'accent': '#c9b8c9', 'power': 'power-saver', 'quiet': True, 'apps': []},

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Lanzador oficial de Epic Games con Proton (umu-run). La primera vez lo descarga de la web de Epic y lo instala en su
+# propia carpeta; después, lo abre directamente.
+set -eu
+PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}/apogeo/epic"
+EXE="$PREFIX/drive_c/Program Files (x86)/Epic Games/Launcher/Portal/Binaries/Win64/EpicGamesLauncher.exe"
+export WINEPREFIX="$PREFIX" GAMEID=umu-0 PROTONPATH=GE-Proton
+if [ ! -f "$EXE" ]; then
+  mkdir -p "$PREFIX"
+  MSI="${XDG_CACHE_HOME:-$HOME/.cache}/apogeo/EpicInstaller.msi"
+  mkdir -p "$(dirname "$MSI")"
+  notify-send -a "Epic Games" -i input-gaming "Instalando Epic Games" "La primera vez tarda unos minutos (se descarga de la web de Epic)."
+  curl -fL --retry 3 -o "$MSI" "https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncherInstaller.msi"
+  umu-run msiexec /i "$MSI" /qn
+fi
+exec umu-run "$EXE" -opengl -SkipBuildPatchPrereq
