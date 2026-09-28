@@ -1,0 +1,3 @@
+# Apogeo: si una ventana de otro piso se pone delante sola, se viene al piso donde estás (nunca cambias de piso sin querer)
+[Windows]
+ActivationDesktopPolicy=BringToCurrentDesktop
