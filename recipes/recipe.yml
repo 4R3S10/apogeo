@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
+# Se publica en ghcr.io/4r3s10/apogeo
+name: apogeo
+description: Apogeo, el sistema de Ares (basado en Bazzite)
+
+base-image: ghcr.io/ublue-os/bazzite
+image-version: stable
+
+modules:
+  - type: files
+    files:
+      - source: system
+        destination: /
+
+  # Nombre del sistema (lo que sale en «Acerca de», el arranque, etc.)
+  - type: script
+    scripts:
+      - branding.sh
+
+  # Epic Games: Heroic (con tu cuenta de Epic); el lanzador oficial se añadirá con Proton
+  - type: default-flatpaks
+    configurations:
+      - notify: true
+        scope: system
+        install:
+          - com.heroicgameslauncher.hgl
+
+  # Firma de las imágenes: se activará con la clave de cosign (SIGNING_SECRET)
+  # - type: signing
