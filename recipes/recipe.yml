@@ -17,6 +17,15 @@ modules:
     scripts:
       - branding.sh
 
+  # Pisos (Jugar, Navegar, Estudiar) y la salud del PC
+  - type: systemd
+    system:
+      enabled:
+        - apogeo-termico.service
+    user:
+      enabled:
+        - apogeo-pisos.service
+
   # Epic Games: Heroic (con tu cuenta de Epic); el lanzador oficial se añadirá con Proton
   - type: default-flatpaks
     configurations:

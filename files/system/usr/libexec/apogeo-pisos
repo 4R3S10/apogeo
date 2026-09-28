@@ -1,0 +1,210 @@
+#!/usr/bin/python3
+"""
+Pisos de Apogeo: Jugar, Navegar y Estudiar son tres escritorios virtuales, uno encima de otro. Al cambiar de piso las
+ventanas se deslizan (efecto Deslizar de KWin) y este programa cambia lo demás: el fondo, el color de acento, los avisos
+(en Jugar y Estudiar no sale ninguno; se quedan en el historial) y la energía (nunca «rendimiento»: primero la salud del
+PC). La primera vez que se entra en un piso en la sesión se abren sus apps; después, cada piso guarda sus ventanas.
+
+  apogeo-pisos             se queda vigilando (lo arranca systemd al entrar en la sesión)
+  apogeo-pisos ir N        va al piso N (0 = Jugar, 1 = Navegar, 2 = Estudiar)
+  apogeo-pisos subir|bajar va al piso de arriba o de abajo (la rueda del ratón en la columna de pisos)
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+import dbus
+import dbus.mainloop.glib
+from gi.repository import GLib
+
+FLOORS = [
+    {'name': 'Jugar', 'key': 'jugar', 'accent': '#ff8fc6', 'power': 'balanced', 'quiet': True, 'apps': [['steam']]},
+    {'name': 'Navegar', 'key': 'navegar', 'accent': '#e0a9b4', 'power': 'balanced', 'quiet': False,
+     'apps': [['agape', 'firefox']]},  # Ágape si está; si no, Firefox
+    {'name': 'Estudiar', 'key': 'estudiar', 'accent': '#c9b8c9', 'power': 'power-saver', 'quiet': True, 'apps': []},
+]
+HOME = os.path.expanduser('~')
+STATE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'pisos.json')
+SHARE = next((d for d in ['/usr/share/apogeo', os.path.join(HOME, '.local/share/apogeo')]
+              if os.path.isdir(os.path.join(d, 'fondos'))), '/usr/share/apogeo')
+
+
+def log(*a):
+    print('[pisos]', *a, flush=True)
+
+
+def vdm(bus):
+    return bus.get_object('org.kde.KWin', '/VirtualDesktopManager')
+
+
+def prop(obj, name):
+    return obj.Get('org.kde.KWin.VirtualDesktopManager', name, dbus_interface='org.freedesktop.DBus.Properties')
+
+
+def desktops(bus):
+    """[(posición, id, nombre)] en orden."""
+    return sorted((int(p), str(i), str(n)) for p, i, n in prop(vdm(bus), 'desktops'))
+
+
+def go(bus, index):
+    ds = desktops(bus)
+    index = max(0, min(index, len(ds) - 1))
+    vdm(bus).Set('org.kde.KWin.VirtualDesktopManager', 'current', ds[index][1],
+                 dbus_interface='org.freedesktop.DBus.Properties')
+
+
+def current_index(bus):
+    cur = str(prop(vdm(bus), 'current'))
+    return next((k for k, (_, i, _n) in enumerate(desktops(bus)) if i == cur), 0)
+
+
+def load_state():
+    try:
+        with open(STATE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(st):
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE, 'w') as f:
+        json.dump(st, f)
+
+
+def plasma_script(bus, js):
+    try:
+        bus.get_object('org.kde.plasmashell', '/PlasmaShell').evaluateScript(js, dbus_interface='org.kde.PlasmaShell')
+    except dbus.DBusException as e:
+        log('plasmashell:', e.get_dbus_message())
+
+
+def setup(bus):
+    """La primera vez: tres escritorios en columna con los nombres de los pisos y la columna de pisos a la derecha."""
+    st = load_state()
+    ds = desktops(bus)
+    m = vdm(bus)
+    for k, f in enumerate(FLOORS):
+        if k < len(ds):
+            if ds[k][2] != f['name']:
+                m.setDesktopName(ds[k][1], f['name'], dbus_interface='org.kde.KWin.VirtualDesktopManager')
+        else:
+            m.createDesktop(dbus.UInt32(k), f['name'], dbus_interface='org.kde.KWin.VirtualDesktopManager')
+    props = 'org.freedesktop.DBus.Properties'
+    m.Set('org.kde.KWin.VirtualDesktopManager', 'rows', dbus.UInt32(len(FLOORS)), dbus_interface=props)
+    m.Set('org.kde.KWin.VirtualDesktopManager', 'navigationWrappingAround', False, dbus_interface=props)
+    if not st.get('panel'):
+        # Columna de pisos: panel flotante en el borde derecho, solo con el widget de pisos
+        plasma_script(bus, """
+            var p = new Panel;
+            p.location = 'right';
+            p.floating = true;
+            p.height = 52;
+            p.lengthMode = 'fit';
+            p.alignment = 'center';
+            p.addWidget('org.apogeo.pisos');
+        """)
+        st['panel'] = True
+    if not st.get('scheme'):
+        subprocess.Popen(['plasma-apply-colorscheme', 'Apogeo'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        st['scheme'] = True
+    save_state(st)
+
+
+class Floors:
+    def __init__(self, bus, system):
+        self.bus = bus
+        self.system = system
+        self.cookie = None
+        self.visited = set()
+        self.last = None
+
+    def apply(self, index):
+        if index == self.last:
+            return
+        self.last = index
+        f = FLOORS[min(index, len(FLOORS) - 1)]
+        log('piso', f['name'])
+        self.wallpaper(f)
+        subprocess.Popen(['plasma-apply-colorscheme', '--accent-color', f['accent']],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.quiet(f['quiet'])
+        self.power(f['power'])
+        if index not in self.visited:
+            # Solo si se queda en el piso: pasar de largo con la rueda no abre nada (y la ventana, al aparecer tarde,
+            # le devolvería a este piso)
+            GLib.timeout_add(1500, self.first_visit, index)
+
+    def first_visit(self, index):
+        if self.last == index and index not in self.visited:
+            self.visited.add(index)
+            self.open_apps(FLOORS[index])
+        return False
+
+    def wallpaper(self, f):
+        img = os.path.join(SHARE, 'fondos', f"{f['key']}.jpg")
+        plasma_script(self.bus, """
+            desktops().forEach(function (d) {
+                d.wallpaperPlugin = 'org.kde.image';
+                d.currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General'];
+                d.writeConfig('Image', 'file://%s');
+            });
+        """ % img)
+
+    def quiet(self, on):
+        """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos."""
+        try:
+            n = dbus.Interface(self.bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications'),
+                               'org.freedesktop.Notifications')
+            if on and self.cookie is None:
+                self.cookie = n.Inhibit('apogeo-pisos', 'Piso sin avisos', dbus.Dictionary({}, signature='sv'))
+            elif not on and self.cookie is not None:
+                n.UnInhibit(self.cookie)
+                self.cookie = None
+        except dbus.DBusException as e:
+            log('avisos:', e.get_dbus_message())
+
+    def power(self, profile):
+        try:
+            pp = self.system.get_object('org.freedesktop.UPower.PowerProfiles', '/org/freedesktop/UPower/PowerProfiles')
+            pp.Set('org.freedesktop.UPower.PowerProfiles', 'ActiveProfile', profile,
+                   dbus_interface='org.freedesktop.DBus.Properties')
+        except dbus.DBusException as e:
+            log('energía:', e.get_dbus_message())
+
+    def open_apps(self, f):
+        for choices in f['apps']:
+            exe = next((c for c in choices if shutil.which(c)), None)
+            if not exe or subprocess.run(['pgrep', '-x', exe], stdout=subprocess.DEVNULL).returncode == 0:
+                continue  # no está instalada o ya está abierta (en este u otro piso)
+            log('abriendo', exe)
+            # En su propio grupo de systemd (como si la abrieras tú): si este programa se reinicia, la app sigue abierta
+            subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
+                              f'--unit=app-apogeo-{exe}-{os.getpid()}-{len(self.visited)}', exe],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def main():
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    bus = dbus.SessionBus()
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        if cmd == 'ir' and len(sys.argv) > 2:
+            go(bus, int(sys.argv[2]))
+        elif cmd in ('subir', 'bajar'):
+            go(bus, current_index(bus) + (-1 if cmd == 'subir' else 1))
+        return
+    setup(bus)
+    floors = Floors(bus, dbus.SystemBus())
+    bus.add_signal_receiver(lambda _id: floors.apply(current_index(bus)), signal_name='currentChanged',
+                            dbus_interface='org.kde.KWin.VirtualDesktopManager', path='/VirtualDesktopManager')
+    # Al entrar en la sesión se empieza en Navegar
+    go(bus, 1)
+    floors.apply(current_index(bus))
+    GLib.MainLoop().run()
+
+
+if __name__ == '__main__':
+    main()

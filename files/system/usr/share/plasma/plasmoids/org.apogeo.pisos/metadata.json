@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "Windows and Tasks",
+        "Description": "Los pisos de Apogeo: Jugar, Navegar y Estudiar. Rueda del ratón para subir o bajar",
+        "Icon": "view-list-details",
+        "Id": "org.apogeo.pisos",
+        "License": "MIT",
+        "Name": "Pisos",
+        "Version": "0.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

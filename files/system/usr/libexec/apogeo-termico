@@ -1,0 +1,119 @@
+#!/usr/bin/python3
+"""
+Salud del PC antes que rendimiento: si el procesador o la gráfica llegan a 80 °C, Apogeo baja poco a poco su velocidad
+máxima (y la potencia de la gráfica AMD, si la deja cambiar) hasta que se enfrían. Por debajo de 72 °C la va devolviendo.
+Nunca pasa de lo que el sistema permite ni baja de la mitad. Al pararse, lo deja todo como estaba.
+"""
+import glob
+import os
+import signal
+import sys
+import time
+
+LIMIT = 80.0  # °C a partir de los que se baja
+RESUME = 72.0  # °C por debajo de los que se devuelve
+STEP = 0.1  # cuánto se baja o se sube cada vez (10 % del máximo)
+MIN_FACTOR = 0.5
+COOL_READS = 3  # lecturas frescas seguidas antes de subir (que no vaya a tirones)
+INTERVAL = float(os.environ.get('APOGEO_TERMICO_INTERVAL', '2'))
+SYS = os.environ.get('APOGEO_SYSFS', '/sys')  # para probarlo con un /sys de mentira
+CPU_SENSORS = ('k10temp', 'zenpower', 'coretemp', 'cpu_thermal')
+
+
+def log(*a):
+    print('[termico]', *a, flush=True)
+
+
+def read(path, default=None):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return default
+
+
+def write(path, value):
+    try:
+        with open(path, 'w') as f:
+            f.write(str(value))
+        return True
+    except OSError as e:
+        log('no se puede escribir', path, e.strerror)
+        return False
+
+
+def hwmons(names):
+    return [d for d in glob.glob(f'{SYS}/class/hwmon/hwmon*') if read(f'{d}/name') in names]
+
+
+def temp_of(d):
+    temps = [int(v) / 1000 for v in (read(p) for p in glob.glob(f'{d}/temp*_input')) if v and v.lstrip('-').isdigit()]
+    return max(temps) if temps else None
+
+
+class Guard:
+    def __init__(self):
+        self.factor = 1.0
+        self.cool = 0
+        self.cpus = sorted(glob.glob(f'{SYS}/devices/system/cpu/cpu[0-9]*/cpufreq'))
+        self.cpu_max = {c: int(read(f'{c}/cpuinfo_max_freq', '0')) for c in self.cpus}
+        self.gpus = [d for d in hwmons(('amdgpu',)) if read(f'{d}/power1_cap_default')]
+        self.gpu_cap = {d: int(read(f'{d}/power1_cap_default')) for d in self.gpus}
+        log(f'{len(self.cpus)} núcleos, {len(self.gpus)} gráficas con límite de potencia')
+
+    def temperature(self):
+        temps = [t for t in (temp_of(d) for d in hwmons(CPU_SENSORS + ('amdgpu',))) if t is not None]
+        return max(temps) if temps else None
+
+    def apply(self):
+        for c in self.cpus:
+            if self.cpu_max[c]:
+                want = int(self.cpu_max[c] * self.factor)
+                if read(f'{c}/scaling_max_freq') != str(want):
+                    write(f'{c}/scaling_max_freq', want)
+        for d in self.gpus:
+            low = int(read(f'{d}/power1_cap_min', '0'))
+            want = max(low, int(self.gpu_cap[d] * self.factor))
+            if read(f'{d}/power1_cap') != str(want):
+                write(f'{d}/power1_cap', want)
+
+    def step(self):
+        t = self.temperature()
+        if t is None:
+            return
+        before = self.factor
+        if t >= LIMIT and self.factor > MIN_FACTOR:
+            self.factor = round(max(MIN_FACTOR, self.factor - STEP), 2)
+            self.cool = 0
+        elif t <= RESUME and self.factor < 1:
+            self.cool += 1
+            if self.cool >= COOL_READS:
+                self.factor = round(min(1.0, self.factor + STEP), 2)
+                self.cool = 0
+        else:
+            self.cool = 0
+        if self.factor != before:
+            log(f'{t:.0f} °C → {"bajo" if self.factor < before else "subo"} al {self.factor:.0%}')
+        if self.factor < 1 or before < 1:
+            self.apply()  # también si otro programa lo ha cambiado mientras tanto
+
+    def restore(self, *_):
+        self.factor = 1.0
+        self.apply()
+        log('todo como estaba')
+        sys.exit(0)
+
+
+def main():
+    g = Guard()
+    signal.signal(signal.SIGTERM, g.restore)
+    signal.signal(signal.SIGINT, g.restore)
+    if not g.cpus and not g.gpus:
+        log('no hay nada que vigilar (¿máquina virtual?)')
+    while True:
+        g.step()
+        time.sleep(INTERVAL)
+
+
+if __name__ == '__main__':
+    main()
