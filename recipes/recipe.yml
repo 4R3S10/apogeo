@@ -25,5 +25,5 @@ modules:
         install:
           - com.heroicgameslauncher.hgl
 
-  # Firma de las imágenes: se activará con la clave de cosign (SIGNING_SECRET)
-  # - type: signing
+  # Firma de las imágenes (clave pública: cosign.pub; la privada es el secreto SIGNING_SECRET)
+  - type: signing

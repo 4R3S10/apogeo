@@ -32,5 +32,3 @@ jobs:
           registry_token: ${{ github.token }}
           pr_event_number: ${{ github.event.number }}
           maximize_build_space: true
-          # Sin firma hasta tener la clave de cosign (SIGNING_SECRET y cosign.pub); entonces se quita esta línea
-          build_opts: --no-sign
