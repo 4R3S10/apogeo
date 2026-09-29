@@ -15,9 +15,8 @@ for f in /usr/lib/os-release /etc/os-release; do
   set_key "$f" LOGO 'apogeo'
 done
 
-# Limine (el arranque de CachyOS) busca su entrada por el NAME de os-release; como ahora es «Apogeo», se le dice el
-# nombre con el que se creó la entrada (sin tocar el menú de arranque, que va firmado).
-if [ -f /etc/default/limine ] && ! grep -q '^TARGET_OS_NAME=' /etc/default/limine && [ -r /boot/limine.conf ]; then
-  name=$(sed -n 's|^/+\{0,1\}\([^/].*\)$|\1|p' /boot/limine.conf | head -n 1)
-  [ -n "$name" ] && printf '\n# Apogeo: nombre de la entrada de arranque (os-release dice «Apogeo»)\nTARGET_OS_NAME="%s"\n' "$name" >> /etc/default/limine
+# Limine (el arranque de CachyOS) nombra su entrada con el NAME de os-release: tras el cambio, la entrada nueva se llama
+# «Apogeo» (instalar.sh quita la vieja de CachyOS). Una versión anterior le fijaba TARGET_OS_NAME a la vieja; se quita.
+if [ -f /etc/default/limine ]; then
+  sed -i '/^# Apogeo: nombre de la entrada de arranque/d; /^TARGET_OS_NAME="\(CachyOS\|Arch Linux\)"$/d' /etc/default/limine
 fi

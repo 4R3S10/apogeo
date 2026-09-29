@@ -22,3 +22,16 @@ fi
 
 echo ">>> Instalando Apogeo"
 pacman -Syu --needed apogeo </dev/tty
+
+# El arranque (Limine) pasa a llamarse «Apogeo»: se crea su entrada y se quita la vieja de CachyOS, que comparte los
+# archivos de arranque y se quedaría con la comprobación desfasada (y no arrancaría)
+if command -v limine-mkinitcpio >/dev/null && [ -r /boot/limine.conf ]; then
+  echo ">>> Arranque"
+  grep -Eq '^/\+?Apogeo$' /boot/limine.conf || limine-mkinitcpio
+  if grep -Eq '^/\+?Apogeo$' /boot/limine.conf; then
+    for old in CachyOS "Arch Linux"; do
+      grep -Eq "^/\+?$old\$" /boot/limine.conf && limine-entry-tool --remove-os "$old" </dev/tty
+    done
+  fi
+fi
+echo ">>> Listo. Reinicia para entrar en Apogeo."
