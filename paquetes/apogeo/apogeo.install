@@ -2,7 +2,8 @@ post_install() {
   # Salud del PC (temperatura) y los pisos en cada sesión de Plasma
   systemctl enable apogeo-termico.service
   systemctl --global enable apogeo-pisos.service
-  # Inicio de sesión con la tarjeta de Apogeo
+  # Inicio de sesión con la tarjeta de Apogeo (SDDM en lugar del de Plasma, que no deja cambiar su diseño)
+  systemctl disable plasmalogin.service 2>/dev/null || true
   systemctl enable -f sddm.service
   # Teclado ANSI: EE. UU. internacional (también en la pantalla de inicio de sesión)
   localectl set-x11-keymap us pc105 intl 2>/dev/null || true

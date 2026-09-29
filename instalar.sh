@@ -5,8 +5,8 @@ set -euo pipefail
 REPO=https://github.com/4R3S10/apogeo
 CLAVE=DF948BE0F005C7C6101BF9607CF246C5627C09B2
 [ "$(id -u)" -eq 0 ] || { echo "Hay que ejecutarlo con sudo"; exit 1; }
-grep -q '^ID=cachyos' /usr/lib/os-release 2>/dev/null || grep -q '^ID_LIKE=.*arch' /usr/lib/os-release \
-  || { echo "Apogeo se instala sobre CachyOS"; exit 1; }
+# CachyOS se presenta como Arch en os-release; lo que lo distingue son sus repositorios
+grep -q '^\[cachyos' /etc/pacman.conf || { echo "Apogeo se instala sobre CachyOS"; exit 1; }
 
 echo ">>> Clave de firma de Apogeo"
 tmp=$(mktemp)
