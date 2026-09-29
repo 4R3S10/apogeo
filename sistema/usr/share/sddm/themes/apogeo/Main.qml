@@ -31,7 +31,8 @@ Rectangle {
             required property int index
             required property string file
             Component.onCompleted: {
-                const m = /apogeo-(\w+)\.desktop$/.exec(file || "");
+                // apogeo-1-navegar.desktop… (el número las ordena: sin sesión anterior, SDDM marca la primera, Navegar)
+                const m = /apogeo-(?:\d-)?([a-z]+)\.desktop$/.exec(file || "");
                 if (!m) return;
                 const s = root.sessionIndex; s[m[1]] = index; root.sessionIndex = s;
                 if (index === sessionModel.lastIndex) root.floor = Math.max(0, root.floors.findIndex(f => f.key === m[1]));
