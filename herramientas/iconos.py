@@ -23,9 +23,14 @@ def main():
         for dirpath, _dirs, files in os.walk(root, followlinks=True):
             for name in files:
                 path = os.path.join(dirpath, name)
-                if not os.path.islink(path) or '-blue' not in os.readlink(path):
+                if not os.path.islink(path):
                     continue
-                pink = os.path.join(os.path.dirname(path), os.readlink(path).replace('-blue', '-pink'))
+                # Se sigue la cadena de enlaces entera (inode-directory → folder → folder-blue)
+                real = os.path.realpath(path)
+                base = os.path.basename(real)
+                if '-blue' not in base:
+                    continue
+                pink = os.path.join(os.path.dirname(real), base.replace('-blue', '-pink'))
                 if os.path.exists(pink):
                     links[os.path.relpath(path, root)] = os.path.realpath(pink)
     # Apps cuyo icono en Papirus es una carpeta azul: la carpeta rosa (Dolphin, el explorador de archivos)

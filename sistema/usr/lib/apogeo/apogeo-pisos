@@ -304,7 +304,8 @@ class Floors:
             # En su propio grupo de systemd (como si la abrieras tú): si este programa se reinicia, la app sigue abierta
             subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
                               f'--unit=app-apogeo-{exe}-{os.getpid()}-{len(self.visited)}', exe],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+                             env=dict(os.environ, APOGEO_AUTO='1'))  # (la abre el piso, no tú)
 
 
 def start_floor():

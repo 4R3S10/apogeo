@@ -22,6 +22,7 @@ REPO = os.environ.get('APOGEO_AGAPE_REPO', '4R3S10/ares-browser')
 APP = os.environ.get('APOGEO_AGAPE_APP', os.path.join(HOME, 'Applications/ARES.AppImage'))
 TOKEN = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'ARES', 'update-token')
 TITLE = 'Ágape'
+LATER = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'agape-ahora-no')
 
 
 def say(msg, error=False):
@@ -41,14 +42,16 @@ def read_token():
 
 
 def ask_token():
-    # zenity (y no kdialog, que llama «Contraseña» al campo): texto y botones propios; lo escrito no se ve
-    r = subprocess.run(['zenity', '--entry', '--hide-text', '--title', TITLE, '--window-icon', 'agape',
-                        '--ok-label', 'Descargar Ágape', '--cancel-label', 'Ahora no',
-                        '--text', 'Ágape es privado. Pega tu token de GitHub de solo lectura para descargarlo.\n'
-                                  'Se guarda solo en este equipo y sirve también para que Ágape se actualice.'],
+    r = subprocess.run(['kdialog', '--title', TITLE, '--password',
+                        'Ágape es privado. Pega tu token de GitHub de solo lectura para descargarlo.\n'
+                        'Se guarda solo en este equipo y sirve también para que Ágape se actualice.\n\n'
+                        '(Si cancelas, no volverá a salir solo: abre «Ágape» cuando quieras.)'],
                        capture_output=True, text=True)
     token = r.stdout.strip()
     if r.returncode != 0 or not token:
+        # «Ahora no»: el piso Navegar ya no lo abre solo en cada inicio
+        os.makedirs(os.path.dirname(LATER), exist_ok=True)
+        open(LATER, 'w').close()
         return ''
     os.makedirs(os.path.dirname(TOKEN), exist_ok=True)
     fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -134,6 +137,9 @@ def make_default():
 
 def main():
     fresh = False
+    # Abierto solo por el piso Navegar (no por ti) y ya dijiste «ahora no»: no se insiste
+    if not os.access(APP, os.X_OK) and os.environ.get('APOGEO_AUTO') and os.path.exists(LATER):
+        return 0
     if not os.access(APP, os.X_OK):
         try:
             if not install():

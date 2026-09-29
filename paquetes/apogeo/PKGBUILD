@@ -11,7 +11,7 @@ depends=(
   plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
   papirus-icon-theme ttf-nunito                             # iconos y letra
   python python-dbus python-gobject                         # los pisos
-  kdialog zenity libnotify libpulse xdg-utils curl          # avisos, sonidos, Ágape
+  kdialog libnotify libpulse xdg-utils curl                 # avisos, sonidos, Ágape
   power-profiles-daemon                                     # energía de cada piso
   steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
 )
