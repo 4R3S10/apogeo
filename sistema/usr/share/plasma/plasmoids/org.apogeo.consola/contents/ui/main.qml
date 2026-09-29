@@ -3,10 +3,12 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
+import org.kde.kirigami as Kirigami
 
 // Consola del piso Jugar («Destacado»): el juego elegido en grande con su imagen de fondo y el botón de jugar; debajo,
 // todos los demás en una fila (Steam, Epic/GOG con Heroic, Hydra y los que se abren en el Windows escondido).
-// Teclado o mando (Steam lo convierte en teclado): ← → elegir · Intro jugar · Q / E cambiar de tienda · Esc salir.
+// Teclado o mando (Steam lo convierte en teclado): ← → elegir · Intro jugar · Q / E cambiar de tienda · ↓ bajar al piso
+// Navegar · Esc salir. La rueda del ratón en el borde derecho también cambia de piso (como la columna de pisos).
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
@@ -50,6 +52,7 @@ PlasmoidItem {
         statusTimer.restart();
     }
     Timer { id: statusTimer; interval: 6000; onTriggered: root.status = "" }
+    function floor(dir) { runner.connectSource("/usr/lib/apogeo/apogeo-pisos " + dir) }
 
     function when(ts) {
         if (!ts) return "";
@@ -67,6 +70,7 @@ PlasmoidItem {
         Keys.onRightPressed: root.current = Math.min(root.shown.length - 1, root.current + 1)
         Keys.onReturnPressed: root.play(root.game)
         Keys.onEnterPressed: root.play(root.game)
+        Keys.onDownPressed: root.floor("bajar")
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Q || event.key === Qt.Key_PageUp) { root.filter = (root.filter + root.filters.length - 1) % root.filters.length; root.current = 0; }
             else if (event.key === Qt.Key_E || event.key === Qt.Key_PageDown) { root.filter = (root.filter + 1) % root.filters.length; root.current = 0; }
@@ -138,6 +142,18 @@ PlasmoidItem {
             }
         }
 
+        Kirigami.Icon {
+            visible: !!root.game && !!root.game.icon
+            anchors.right: parent.right
+            anchors.rightMargin: parent.width * 0.12
+            y: parent.height * 0.14
+            width: Math.min(parent.width * 0.26, 300)
+            height: width
+            source: root.game && root.game.icon ? root.game.icon : ""
+            fallback: "input-gaming"
+            opacity: 0.9
+        }
+
         // El juego elegido
         ColumnLayout {
             x: 48
@@ -170,7 +186,7 @@ PlasmoidItem {
                     QQC2.Label {
                         id: playText
                         anchors.centerIn: parent
-                        text: !root.game ? "" : root.game.app ? "▶  Abrir" : root.game.store === "windows" ? "▶  Jugar (en Windows)" : root.game.installed ? "▶  Jugar" : "⤓  Instalar"
+                        text: !root.game ? "" : root.game.app ? "▶  Abrir " + root.game.name : root.game.store === "windows" ? "▶  Jugar (en Windows)" : root.game.installed ? "▶  Jugar" : "⤓  Instalar"
                         color: "#2e0f24"
                         font.pixelSize: 18
                         font.weight: Font.ExtraBold
@@ -178,6 +194,15 @@ PlasmoidItem {
                     MouseArea { id: playArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.play(root.game) }
                 }
                 QQC2.Label { text: root.status; color: root.text; font.pixelSize: 16; Layout.leftMargin: 8 }
+            }
+            QQC2.Label {
+                visible: !root.games.some(g => g.store !== "windows" && !g.app)
+                text: "Entra en Steam o en Heroic con tu cuenta y tus juegos aparecerán aquí solos."
+                color: root.muted
+                font.pixelSize: 16
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                Layout.topMargin: 18
             }
         }
 
@@ -245,6 +270,15 @@ PlasmoidItem {
                             GradientStop { position: 0; color: tile.modelData.store === "windows" ? "#8a1c3a" : "#5a3160" }
                             GradientStop { position: 1; color: "#241a28" }
                         }
+                        Kirigami.Icon {
+                            visible: !!tile.modelData.icon
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: parent.height * 0.22
+                            width: parent.width * 0.5
+                            height: width
+                            source: tile.modelData.icon || ""
+                            fallback: "input-gaming"
+                        }
                         QQC2.Label {
                             anchors.fill: parent
                             anchors.margins: 12
@@ -275,6 +309,23 @@ PlasmoidItem {
             }
         }
 
+        // Rueda del ratón en el borde derecho: cambia de piso, como la columna de pisos (que la consola tapa)
+        MouseArea {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 24
+            acceptedButtons: Qt.NoButton
+            property real acc: 0
+            onWheel: wheel => {
+                acc += wheel.angleDelta.y;
+                if (Math.abs(acc) >= 120) {
+                    root.floor(acc < 0 ? "bajar" : "subir");
+                    acc = 0;
+                }
+            }
+        }
+
         RowLayout {
             id: hints
             anchors.left: parent.left
@@ -283,7 +334,7 @@ PlasmoidItem {
             anchors.bottomMargin: 26
             spacing: 24
             Repeater {
-                model: [["←  →", "Elegir"], ["Intro · A", "Jugar"], ["Q  E", "Tienda"], ["Esc", "Salir"]]
+                model: [["←  →", "Elegir"], ["Intro · A", "Jugar"], ["Q  E", "Tienda"], ["↓", "Bajar a Navegar"], ["Esc", "Salir"]]
                 delegate: QQC2.Label {
                     required property var modelData
                     text: "<b>" + modelData[0] + "</b>  " + modelData[1]

@@ -104,17 +104,27 @@ def windows_games():
             for g in items if isinstance(g, dict) and g.get('id')]
 
 
-def hydra():
-    exe = shutil.which('hydralauncher')
-    return [{'store': 'hydra', 'id': 'hydra', 'name': 'Hydra', 'cover': '', 'hero': '', 'last': 0,
-             'installed': True, 'app': True}] if exe else []
+# Las tiendas, para abrirlas desde la consola: (id, nombre, tienda, programa, icono)
+APPS = [
+    ('steam', 'Steam', 'steam', 'steam', 'steam'),
+    ('heroic', 'Heroic', 'epic', 'heroic', 'heroic'),
+    ('epic-oficial', 'Epic Games', 'epic', 'apogeo-epic', 'input-gaming'),
+    ('hydra', 'Hydra', 'hydra', 'hydralauncher', 'hydralauncher'),
+]
+
+
+def apps():
+    return [{'store': store, 'id': gid, 'name': name, 'cover': '', 'hero': '', 'last': 0, 'installed': True,
+             'app': True, 'icon': icon} for gid, name, store, exe, icon in APPS if shutil.which(exe)]
 
 
 def listing():
-    games = steam_games() + heroic_games() + windows_games() + hydra()
-    # Primero los últimos jugados; después, por nombre
+    # Primero tus juegos (los últimos jugados delante), después las tiendas y al final los que van en Windows
+    games = steam_games() + heroic_games()
     games.sort(key=lambda g: (-g.get('last', 0), g['name'].lower()))
-    return games
+    windows = windows_games()
+    windows.sort(key=lambda g: (-g.get('last', 0), g['name'].lower()))
+    return games + apps() + windows
 
 
 def detach(cmd):
@@ -122,13 +132,15 @@ def detach(cmd):
 
 
 def play(store, gid):
+    app = next((a for a in APPS if a[0] == gid and a[2] == store), None)
+    if app:
+        detach([app[3]])
+        return 0
     if store == 'steam':
         detach(['steam', '-silent', f'steam://rungameid/{gid}'])
     elif store in ('epic', 'gog'):
         runner = 'legendary' if store == 'epic' else 'gog'
         detach(['xdg-open', f'heroic://launch?appName={gid}&runner={runner}'])
-    elif store == 'hydra':
-        detach(['hydralauncher'])
     elif store == 'windows':
         detach(['/usr/lib/apogeo/apogeo-windows', gid])
     else:

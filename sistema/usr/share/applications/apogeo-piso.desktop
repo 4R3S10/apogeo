@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Apogeo · cambiar de piso
+Comment=Lo usa la pantalla de bloqueo para volver al piso elegido
+Exec=/usr/lib/apogeo/apogeo-pisos url %u
+MimeType=x-scheme-handler/apogeo-piso;
+NoDisplay=true
+Icon=apogeo

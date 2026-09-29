@@ -13,6 +13,7 @@ import sys
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/icons/Apogeo'
 ICONS = '/usr/share/icons'
 THEMES = ['Papirus', 'Papirus-Dark']  # el oscuro manda cuando tiene el suyo
+BLUE_APPS = ['system-file-manager', 'org.kde.dolphin', 'dolphin', 'file-manager', 'org.gnome.Nautilus']
 
 
 def main():
@@ -27,6 +28,14 @@ def main():
                 pink = os.path.join(os.path.dirname(path), os.readlink(path).replace('-blue', '-pink'))
                 if os.path.exists(pink):
                     links[os.path.relpath(path, root)] = os.path.realpath(pink)
+    # Apps cuyo icono en Papirus es una carpeta azul: la carpeta rosa (Dolphin, el explorador de archivos)
+    for size in os.listdir(os.path.join(ICONS, 'Papirus')):
+        pink = os.path.join(ICONS, 'Papirus', size, 'places', 'folder-pink.svg')
+        if not os.path.exists(pink):
+            continue
+        for name in BLUE_APPS:
+            if os.path.exists(os.path.join(ICONS, 'Papirus', size, 'apps', name + '.svg')):
+                links[os.path.join(size, 'apps', name + '.svg')] = os.path.realpath(pink)
     for rel, target in links.items():
         link = os.path.join(DST, rel)
         os.makedirs(os.path.dirname(link), exist_ok=True)

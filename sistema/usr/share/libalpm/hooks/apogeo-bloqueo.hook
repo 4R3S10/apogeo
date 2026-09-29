@@ -1,0 +1,12 @@
+# Vuelve a poner la pantalla de bloqueo de Apogeo si una actualización de Plasma la reescribe
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen/LockScreen.qml
+Target = usr/share/apogeo/bloqueo/LockScreen.qml
+
+[Action]
+Description = Apogeo: pantalla de bloqueo
+When = PostTransaction
+Exec = /usr/lib/apogeo/apogeo-bloqueo

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pantalla de bloqueo de Apogeo: pone la tarjeta (/usr/share/apogeo/bloqueo/LockScreen.qml) en lugar de la de Plasma.
+# La original se guarda al lado (LockScreen.qml.kde) y vuelve con «apogeo-bloqueo quitar» (al desinstalar Apogeo).
+# Lo llama un gancho de pacman cada vez que una actualización de Plasma reescribe el archivo.
+set -eu
+d=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen
+[ -d "$d" ] || exit 0
+if [ "${1:-}" = quitar ]; then
+  [ -f "$d/LockScreen.qml.kde" ] && mv -f "$d/LockScreen.qml.kde" "$d/LockScreen.qml"
+  exit 0
+fi
+# Si el archivo es de Plasma (no el nuestro), se guarda antes de cambiarlo
+if ! cmp -s /usr/share/apogeo/bloqueo/LockScreen.qml "$d/LockScreen.qml"; then
+  cp -f "$d/LockScreen.qml" "$d/LockScreen.qml.kde"
+fi
+install -m644 /usr/share/apogeo/bloqueo/LockScreen.qml "$d/LockScreen.qml"

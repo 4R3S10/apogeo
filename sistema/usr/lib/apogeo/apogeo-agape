@@ -41,9 +41,11 @@ def read_token():
 
 
 def ask_token():
-    r = subprocess.run(['kdialog', '--title', TITLE, '--password',
-                        'Ágape es privado. Pega tu token de GitHub de solo lectura para descargarlo.\n'
-                        'Se guarda solo en este equipo y sirve también para que Ágape se actualice.'],
+    # zenity (y no kdialog, que llama «Contraseña» al campo): texto y botones propios; lo escrito no se ve
+    r = subprocess.run(['zenity', '--entry', '--hide-text', '--title', TITLE, '--window-icon', 'agape',
+                        '--ok-label', 'Descargar Ágape', '--cancel-label', 'Ahora no',
+                        '--text', 'Ágape es privado. Pega tu token de GitHub de solo lectura para descargarlo.\n'
+                                  'Se guarda solo en este equipo y sirve también para que Ágape se actualice.'],
                        capture_output=True, text=True)
     token = r.stdout.strip()
     if r.returncode != 0 or not token:

@@ -8,6 +8,7 @@ PC). La primera vez que se entra en un piso en la sesión se abren sus apps (Jug
   apogeo-pisos             se queda vigilando (lo arranca systemd al entrar en la sesión)
   apogeo-pisos ir N        va al piso N (0 = Jugar, 1 = Navegar, 2 = Estudiar)
   apogeo-pisos subir|bajar va al piso de arriba o de abajo (la rueda del ratón en la columna de pisos)
+  apogeo-pisos url apogeo-piso:N   lo mismo que «ir N» (lo usa la pantalla de bloqueo)
 """
 import json
 import os
@@ -130,6 +131,26 @@ def setup(bus):
             clock.writeConfig('fontSize', 12);
         """)
         st['isla'] = ISLAND
+    if st.get('bandeja', 0) < TRAY:
+        # La bandeja de la isla, limpia: a la vista solo red, sonido, batería, brillo y avisos; lo demás, en la flecha
+        plasma_script(bus, """
+            panels().forEach(function (p) {
+                if (p.location != 'bottom') return;
+                p.widgets().forEach(function (w) {
+                    if (w.type == 'org.kde.plasma.systemtray') {
+                        w.currentConfigGroup = ['General'];
+                        w.writeConfig('hiddenItems', %s);
+                        w.reloadConfig();
+                    }
+                    if (w.type == 'org.kde.plasma.digitalclock') {
+                        w.currentConfigGroup = ['Appearance'];
+                        w.writeConfig('use24hFormat', 2);
+                        w.reloadConfig();
+                    }
+                });
+            });
+        """ % json.dumps(TRAY_HIDDEN))
+        st['bandeja'] = TRAY
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
@@ -137,7 +158,11 @@ def setup(bus):
 
 
 ISLAND = 1  # igual que AESTHETICS, para la isla de abajo
-AESTHETICS = 3  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+TRAY = 1  # igual, para la bandeja de la isla
+TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma.manage-inputmethod',
+               'org.kde.plasma.keyboardlayout', 'org.kde.plasma.keyboardindicator', 'org.kde.kscreen',
+               'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
+AESTHETICS = 4  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 NUNITO = 'Nunito,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
 DECORATION = '__aurorae__svg__apogeo-'  # un tema de ventanas por piso (herramientas/ventanas.py)
 
@@ -185,6 +210,13 @@ def aesthetics():
     run('dbus-send', '--session', '--type=signal', '/Layouts', 'org.kde.keyboard.reloadConfig')
     # Ágape como navegador (la primera vez que se abre, se instala)
     run('xdg-settings', 'set', 'default-web-browser', 'ares.desktop')
+    # La terminal con los colores de Apogeo
+    kw('konsolerc', 'Desktop Entry', 'DefaultProfile', 'Apogeo.profile')
+    # La bienvenida de CachyOS ya no se abre sola al entrar (sigue en el menú)
+    try:
+        os.remove(os.path.join(HOME, '.config/autostart/cachyos-hello.desktop'))
+    except OSError:
+        pass
     log('estética aplicada')
 
 
@@ -221,6 +253,10 @@ class Floors:
 
     def wallpaper(self, f):
         img = os.path.join(SHARE, 'fondos', f"{f['key']}.jpg")
+        # También en la pantalla de bloqueo (así sabe en qué piso estabas)
+        for key in ('Image', 'PreviewImage'):
+            run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
+                'org.kde.image', '--group', 'General', '--key', key, 'file://' + img)
         plasma_script(self.bus, """
             desktops().forEach(function (d) {
                 d.wallpaperPlugin = 'org.kde.image';
@@ -293,6 +329,8 @@ def main():
             go(bus, int(sys.argv[2]))
         elif cmd in ('subir', 'bajar'):
             go(bus, current_index(bus) + (-1 if cmd == 'subir' else 1))
+        elif cmd == 'url' and len(sys.argv) > 2 and sys.argv[2].partition(':')[2].strip('/').isdigit():
+            go(bus, int(sys.argv[2].partition(':')[2].strip('/')))
         return
     setup(bus)
     floors = Floors(bus, dbus.SystemBus())
