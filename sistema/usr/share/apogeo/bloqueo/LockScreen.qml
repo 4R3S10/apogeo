@@ -37,16 +37,22 @@ Item {
     }
     property string error: ""
     property bool busy: false
+    property string pending: ""   // contraseña escrita antes de que KDE la pida
 
-    onClearPassword: password.text = ""
+    onClearPassword: { password.text = ""; pending = ""; }
 
-    Component.onCompleted: authenticator.startAuthenticating()
+    // KDE ignora «empezar» durante los primeros segundos del bloqueo (el margen para volver sin contraseña), así que se
+    // pide cada vez que tocas el ratón o el teclado y justo antes de comprobar la contraseña, como hace el suyo
+    function start() { authenticator.startAuthenticating() }
+    Component.onCompleted: start()
 
     Connections {
         target: authenticator
         function onFailed(kind) {
             if (kind != 0) return; // huella u otros métodos sin contraseña: no se enseña
             root.busy = false;
+            root.pending = "";
+            watchdog.stop();
             root.error = "Contraseña incorrecta";
             password.text = "";
             shake.start();
@@ -56,6 +62,12 @@ Item {
             Qt.quit();
         }
         function onPromptForSecretChanged() {
+            // KDE ya pide la contraseña: si la habías escrito, se le da
+            if (authenticator.promptForSecret && root.pending !== "") {
+                const p = root.pending;
+                root.pending = "";
+                authenticator.respond(p);
+            }
             password.forceActiveFocus();
         }
         function onErrorMessageChanged() {
@@ -66,14 +78,35 @@ Item {
     Timer {
         id: retry
         interval: 3000
-        onTriggered: authenticator.startAuthenticating()
+        onTriggered: {
+            root.start();
+            password.forceActiveFocus();
+        }
+    }
+    // Si KDE no contesta, la casilla no se queda bloqueada
+    Timer {
+        id: watchdog
+        interval: 6000
+        onTriggered: {
+            root.busy = false;
+            root.pending = "";
+            root.error = "No ha respondido. Vuelve a intentarlo.";
+            root.start();
+            password.forceActiveFocus();
+        }
     }
 
     function unlock() {
         if (busy || password.text === "") return;
         error = "";
         busy = true;
-        authenticator.respond(password.text);
+        watchdog.restart();
+        if (authenticator.promptForSecret) {
+            authenticator.respond(password.text);
+        } else {
+            pending = password.text;
+            start();
+        }
     }
 
     // Oscurece un poco el fondo para que la tarjeta resalte
@@ -87,7 +120,8 @@ Item {
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
-        onPressed: password.forceActiveFocus()
+        onPressed: { root.start(); password.forceActiveFocus(); }
+        onPositionChanged: root.start()
     }
 
     Rectangle {
@@ -186,6 +220,7 @@ Item {
                     border.width: 2
                 }
                 onAccepted: root.unlock()
+                onTextEdited: root.start()
                 Keys.onUpPressed: root.pick(Math.max(0, root.floor - 1))
                 Keys.onDownPressed: root.pick(Math.min(root.floors.length - 1, root.floor + 1))
                 Keys.onEscapePressed: text = ""
