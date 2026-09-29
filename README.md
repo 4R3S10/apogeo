@@ -1,13 +1,13 @@
 # Apogeo
 
-Sistema operativo personal basado en Linux ([Bazzite](https://bazzite.gg), Fedora Atomic), con Ágape como navegador y un
-escritorio propio organizado por **Modos** (Jugar, Navegar, Estudiar, Relax).
+Sistema operativo personal basado en Linux ([CachyOS](https://cachyos.org), Arch, con KDE Plasma), con Ágape como
+navegador y un escritorio propio organizado por **pisos** (Jugar, Navegar, Estudiar).
 
 - **Juegos:** Steam oficial con Proton, Epic (lanzador oficial con Proton y Heroic) y los juegos con anticheat de Windows
   (Valorant, EA FC…) mediante un Windows escondido: se pulsa Jugar en Apogeo, el equipo se reinicia en Windows con el
   juego y al cerrarlo vuelve a Apogeo.
-- **Actualizaciones:** GitHub construye la imagen cada día (`ghcr.io/4r3s10/apogeo`); el equipo se actualiza solo y, si
-  algo falla, se arranca la versión anterior.
+- **Actualizaciones:** Apogeo es un paquete (`apogeo`) en su propio repositorio firmado; GitHub lo construye en cada
+  cambio y cada día. Se actualiza con el resto del sistema (`sudo pacman -Syu` o el actualizador de CachyOS).
 
 ## Pisos
 
@@ -17,7 +17,7 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 
 - **Avisos:** solo en Navegar; en Jugar y Estudiar no sale ninguno (se quedan en el historial).
 - **Energía:** nunca «rendimiento». Jugar y Navegar en equilibrado, Estudiar en ahorro.
-- **La primera vez** que entras en un piso se abren sus apps (Jugar: Steam; Navegar: Ágape o Firefox).
+- **La primera vez** que entras en un piso se abren sus apps (Jugar: la consola; Navegar: Ágape).
 
 ## Aspecto
 
@@ -25,7 +25,8 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 - **Inicio de sesión:** una tarjeta con tu nombre, el piso en el que empiezas y la contraseña (SDDM, tema propio).
 - **Isla:** abajo, centrada, se esconde sola y cambia en cada piso (Jugar: temperatura, FPS y escritorio; Navegar:
   ventanas y música; Estudiar: temporizador 25/5 y lo estudiado hoy). El corazón abre el buscador.
-- **Ventanas sin barra de título:** al tocar el borde de arriba de una ventana salen, encima de ella, sus botones.
+- **Ventanas «Fina con pastilla»:** barra ciruela de 24 px con el título en el centro y los tres botones juntos en una
+  pastilla a la derecha, del color del piso (apagada en las ventanas de detrás).
 - Letra Nunito, iconos Papirus con carpetas rosa, cursor berenjena, sonidos pocos y suaves y teclado EE. UU.
   internacional (ñ con AltGr+n).
 
@@ -41,7 +42,7 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 
 ## Ágape
 
-Ágape es privado, así que no va dentro de la imagen (que es pública). La primera vez que se abre (o al pulsar un
+Ágape es privado, así que no va dentro del paquete (que es público). La primera vez que se abre (o al pulsar un
 enlace), Apogeo pide tu token de GitHub de solo lectura, descarga la última versión de tus releases a
 `~/Applications/ARES.AppImage` (donde se actualiza sola) y la deja como navegador del sistema.
 
@@ -50,20 +51,24 @@ enlace), Apogeo pide tu token de GitHub de solo lectura, descarga la última ver
 - A partir de 80 °C (procesador o gráfica) Apogeo baja poco a poco la velocidad máxima; por debajo de 72 °C la devuelve.
 - Los juegos de Windows (Proton) van a 60 FPS como mucho.
 
-## Pasar un equipo con Bazzite a Apogeo
+## Pasar un CachyOS a Apogeo
+
+Sobre un CachyOS recién instalado con KDE Plasma:
 
 ```bash
-rpm-ostree rebase ostree-unverified-registry:ghcr.io/4r3s10/apogeo:latest
-systemctl reboot
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/4r3s10/apogeo:latest
-systemctl reboot
+curl -fsSL https://raw.githubusercontent.com/4R3S10/apogeo/main/instalar.sh | sudo bash
 ```
+
+Añade la clave y el repositorio de Apogeo (`[apogeo]` en `/etc/pacman.conf`), instala el paquete y, al reiniciar, ya
+entras en Apogeo.
 
 ## Estructura
 
-- `recipes/recipe.yml`: la receta (qué se añade sobre Bazzite)
-- `files/system/`: archivos que se copian al sistema
-- `files/scripts/`: pasos que se ejecutan al construir
-- `files/system/usr/libexec/apogeo-pisos`: los pisos (fondo, color, avisos, energía y apps de cada uno)
-- `files/system/usr/share/plasma/plasmoids/org.apogeo.pisos`: la columna de pisos
-- `files/system/usr/libexec/apogeo-termico`: la protección de temperatura
+- `sistema/`: los archivos que instala el paquete, tal cual van en el sistema
+- `herramientas/`: lo que se genera al construir (cursor, ventanas de cada piso y carpetas rosa)
+- `paquetes/apogeo/PKGBUILD`: el paquete de Apogeo (dependencias, servicios y ganchos)
+- `paquetes/apogeo-hydra/PKGBUILD`: Hydra Launcher desde su GitHub oficial
+- `.github/workflows/paquetes.yml`: construye, firma y publica el repositorio
+- `sistema/usr/lib/apogeo/apogeo-pisos`: los pisos (fondo, color, avisos, energía, ventanas y apps de cada uno)
+- `sistema/usr/lib/apogeo/apogeo-termico`: la protección de temperatura
+- `apogeo.asc`: la clave pública con la que se firman los paquetes

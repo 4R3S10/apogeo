@@ -1,0 +1,3 @@
+#!/bin/sh
+# Ágape: lo instala la primera vez (desde tu GitHub privado) y lo abre
+exec /usr/lib/apogeo/apogeo-agape "$@"

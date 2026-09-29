@@ -1,0 +1,16 @@
+# Apogeo: valores por defecto (cada usuario puede cambiarlos en los ajustes)
+[General]
+ColorScheme=Apogeo
+font=Nunito,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+menuFont=Nunito,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+smallestReadableFont=Nunito,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+toolBarFont=Nunito,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+
+[Icons]
+Theme=Apogeo
+
+[WM]
+activeFont=Nunito,10,-1,5,700,0,0,0,0,0,0,0,0,0,0,1
+
+[Sounds]
+Theme=apogeo

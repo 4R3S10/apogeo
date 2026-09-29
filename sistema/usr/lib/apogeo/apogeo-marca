@@ -1,0 +1,14 @@
+#!/bin/sh
+# Nombre y logo de Apogeo en os-release, sin tocar el ID (CachyOS y Arch lo usan para sus actualizaciones). Lo vuelve a
+# poner un gancho de pacman cada vez que una actualización de CachyOS reescribe el archivo.
+set -eu
+f=/usr/lib/os-release
+[ -f "$f" ] || exit 0
+set_key() {
+  if grep -q "^$1=" "$f"; then sed -i "s|^$1=.*|$1=$2|" "$f"; else echo "$1=$2" >> "$f"; fi
+}
+set_key PRETTY_NAME '"Apogeo"'
+set_key NAME '"Apogeo"'
+set_key VARIANT '"Apogeo"'
+set_key DEFAULT_HOSTNAME '"apogeo"'
+set_key LOGO 'apogeo'

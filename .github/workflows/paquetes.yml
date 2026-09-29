@@ -1,0 +1,75 @@
+name: paquetes
+# Construye los paquetes de Apogeo (apogeo y apogeo-hydra), los firma y los publica como repositorio de pacman en la
+# versión «repo» de GitHub: https://github.com/4R3S10/apogeo/releases/download/repo
+on:
+  schedule:
+    - cron: "00 06 * * *" # cada día, para tener la última versión de Hydra
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+concurrency:
+  group: paquetes
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  construir:
+    name: Construir y publicar
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Herramientas
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git github-cli pacman-contrib jq \
+            python python-gobject python-cairo librsvg breeze papirus-icon-theme
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Usuario para makepkg y clave de firma
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          useradd -m constructor
+          chown -R constructor "$GITHUB_WORKSPACE"
+          printf '%s\n' "$GPG_PRIVATE_KEY" | runuser -u constructor -- gpg --batch --import
+      - name: Última versión de Hydra
+        run: |
+          v=$(curl -fsSL https://api.github.com/repos/hydralauncher/hydra/releases/latest | jq -r .tag_name)
+          v=${v#v}
+          echo "Hydra $v"
+          sed -i "s/^pkgver=.*/pkgver=$v/" paquetes/apogeo-hydra/PKGBUILD
+          cd paquetes/apogeo-hydra && runuser -u constructor -- updpkgsums
+      - name: Construir
+        run: |
+          for p in apogeo-hydra apogeo; do
+            (cd "paquetes/$p" && runuser -u constructor -- makepkg --nodeps --sign --noconfirm --cleanbuild)
+          done
+      - name: Repositorio
+        run: |
+          mkdir repo
+          mv paquetes/*/*.pkg.tar.zst paquetes/*/*.pkg.tar.zst.sig repo/
+          chown -R constructor repo
+          cd repo
+          runuser -u constructor -- repo-add --sign apogeo.db.tar.gz ./*.pkg.tar.zst
+          # GitHub no guarda enlaces: se suben copias con el nombre que pide pacman
+          for f in db files; do
+            cp --remove-destination "apogeo.$f.tar.gz" "apogeo.$f"
+            cp --remove-destination "apogeo.$f.tar.gz.sig" "apogeo.$f.sig"
+          done
+          ls -la
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          R="$GITHUB_REPOSITORY"
+          gh release view repo -R "$R" >/dev/null 2>&1 || gh release create repo -R "$R" --title "Repositorio de paquetes" \
+            --notes "Repositorio de pacman de Apogeo. Se usa con instalar.sh; no hace falta descargar nada de aquí a mano."
+          # Primero se suben los nuevos y después se quitan los paquetes viejos
+          gh release upload repo -R "$R" --clobber repo/*.pkg.tar.zst repo/*.pkg.tar.zst.sig repo/apogeo.db repo/apogeo.db.sig repo/apogeo.files repo/apogeo.files.sig
+          keep=$(cd repo && ls *.pkg.tar.zst *.pkg.tar.zst.sig apogeo.db apogeo.db.sig apogeo.files apogeo.files.sig)
+          gh release view repo -R "$R" --json assets -q '.assets[].name' | while read -r a; do
+            echo "$keep" | grep -qxF "$a" || gh release delete-asset repo "$a" -R "$R" -y
+          done

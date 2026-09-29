@@ -1,0 +1,10 @@
+[Unit]
+Description=Salud del PC de Apogeo (baja la velocidad a partir de 80 °C)
+
+[Service]
+ExecStart=/usr/lib/apogeo/apogeo-termico
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

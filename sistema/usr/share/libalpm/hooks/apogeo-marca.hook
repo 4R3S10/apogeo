@@ -1,0 +1,12 @@
+# Vuelve a poner el nombre de Apogeo si una actualización reescribe os-release
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/lib/os-release
+Target = usr/lib/apogeo/apogeo-marca
+
+[Action]
+Description = Apogeo: nombre del sistema
+When = PostTransaction
+Exec = /usr/lib/apogeo/apogeo-marca

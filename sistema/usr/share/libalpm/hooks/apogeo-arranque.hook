@@ -1,0 +1,12 @@
+# Rehace el arranque cuando cambia el tema de Apogeo (el diamante sobre el brillo berenjena)
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/share/plymouth/themes/apogeo/*
+Target = usr/lib/apogeo/apogeo-arranque
+
+[Action]
+Description = Apogeo: tema del arranque
+When = PostTransaction
+Exec = /usr/lib/apogeo/apogeo-arranque

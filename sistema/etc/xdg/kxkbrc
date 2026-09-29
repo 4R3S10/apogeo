@@ -1,0 +1,5 @@
+# Teclado ANSI: EE. UU. internacional (ñ con AltGr+n, tildes con ´ + vocal)
+[Layout]
+LayoutList=us
+VariantList=intl
+Use=true

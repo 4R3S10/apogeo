@@ -1,0 +1,14 @@
+# Apogeo: si una ventana de otro piso se pone delante sola, se viene al piso donde estás (nunca cambias de piso sin querer)
+[Windows]
+ActivationDesktopPolicy=BringToCurrentDesktop
+
+# La consola del piso Jugar, a pantalla completa
+[Plugins]
+apogeo-ventanasEnabled=true
+
+# Ventanas «Fina con pastilla»: barra de 24 px con el título en el centro y los botones juntos a la derecha
+[org.kde.kdecoration2]
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__apogeo-navegar
+ButtonsOnLeft=
+ButtonsOnRight=IAX

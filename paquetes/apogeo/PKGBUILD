@@ -1,0 +1,32 @@
+# Apogeo encima de CachyOS (KDE): pisos, isla, consola de juegos, Ágape, ventanas, arranque, inicio de sesión y estética.
+# Se construye en GitHub Actions (.github/workflows/paquetes.yml) a partir de las carpetas sistema/ y herramientas/.
+pkgname=apogeo
+pkgver=1.r0
+pkgrel=1
+pkgdesc='Apogeo: el sistema de Ares sobre CachyOS'
+arch=('any')
+url='https://github.com/4R3S10/apogeo'
+license=('MIT')
+depends=(
+  plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
+  papirus-icon-theme ttf-nunito                             # iconos y letra
+  python python-dbus python-gobject                         # los pisos
+  kdialog libnotify libpulse xdg-utils curl                 # avisos, sonidos, Ágape
+  power-profiles-daemon                                     # energía de cada piso
+  steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
+)
+makedepends=(git python-gobject python-cairo librsvg breeze papirus-icon-theme)
+install=apogeo.install
+_raiz="$startdir/../.."
+
+pkgver() {
+  printf '1.r%s' "$(git -C "$_raiz" rev-list --count HEAD)"
+}
+
+package() {
+  cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"
+  # Lo que se genera: cursor berenjena (desde el de Breeze), ventanas de cada piso y Papirus con carpetas rosa
+  python "$_raiz/herramientas/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
+  python "$_raiz/herramientas/ventanas.py" "$pkgdir/usr/share/aurorae/themes"
+  python "$_raiz/herramientas/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
+}

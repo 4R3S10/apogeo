@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Description": "La consola del piso Jugar se abre a pantalla completa",
+        "EnabledByDefault": true,
+        "Icon": "window",
+        "Id": "apogeo-ventanas",
+        "License": "MIT",
+        "Name": "Apogeo: ventanas"
+    },
+    "X-Plasma-API": "declarativescript"
+}

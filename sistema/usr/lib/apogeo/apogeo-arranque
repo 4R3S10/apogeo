@@ -1,0 +1,22 @@
+#!/bin/sh
+# Arranque de Apogeo (A2 · Brillo y barra): el tema de Plymouth, el gancho de Plymouth en el arranque y «splash» en la
+# línea del núcleo. Lo llama un gancho de pacman cuando cambia el tema.
+set -eu
+plymouth-set-default-theme apogeo
+
+# El gancho de Plymouth en mkinitcpio (CachyOS suele traerlo ya)
+if ! grep -Eqs '^HOOKS=.*\bplymouth\b' /etc/mkinitcpio.conf /etc/mkinitcpio.conf.d/*.conf; then
+  sed -i -E '/^HOOKS=/ s/\b(systemd|udev)\b/& plymouth/' /etc/mkinitcpio.conf
+fi
+
+# «quiet splash» para que se vea el tema en vez del texto del arranque (Limine, el cargador de CachyOS)
+if [ -f /etc/default/limine ] && ! grep -Eq 'KERNEL_CMDLINE.*\bsplash\b' /etc/default/limine; then
+  sed -i -E '/^KERNEL_CMDLINE\[default\]\+?=/ s/"$/ quiet splash"/' /etc/default/limine
+fi
+
+# Rehace el arranque (con Limine, su herramienta también actualiza las entradas)
+if command -v limine-mkinitcpio >/dev/null; then
+  limine-mkinitcpio
+else
+  mkinitcpio -P
+fi

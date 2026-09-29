@@ -1,0 +1,12 @@
+[Unit]
+Description=Pisos de Apogeo (Jugar, Navegar, Estudiar)
+PartOf=graphical-session.target
+After=plasma-workspace.target
+
+[Service]
+ExecStart=/usr/lib/apogeo/apogeo-pisos
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=plasma-workspace.target

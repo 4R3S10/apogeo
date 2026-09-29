@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Apogeo · Estudiar
+Comment=Apogeo empezando en el piso Estudiar
+Exec=/usr/lib/apogeo/apogeo-sesion estudiar
+TryExec=/usr/bin/startplasma-wayland
+DesktopNames=KDE
+X-KDE-PluginInfo-Version=6

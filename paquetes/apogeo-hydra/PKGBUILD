@@ -1,0 +1,21 @@
+# Hydra Launcher, tal cual lo publica su GitHub oficial (hydralauncher/hydra). Apogeo no añade ninguna fuente de
+# descargas. La versión la pone al día el flujo de GitHub Actions cada día.
+pkgname=apogeo-hydra
+pkgver=4.1.5
+pkgrel=1
+pkgdesc='Hydra Launcher (versión oficial)'
+arch=('x86_64')
+url='https://github.com/hydralauncher/hydra'
+license=('MIT')
+provides=('hydralauncher')
+conflicts=('hydra-launcher-bin' 'hydra-launcher-git')
+depends=(gtk3 nss alsa-lib libxss libxtst libnotify libsecret xdg-utils at-spi2-core util-linux-libs)
+options=('!strip' '!debug')
+source=("https://github.com/hydralauncher/hydra/releases/download/v${pkgver}/hydralauncher_${pkgver}_amd64.deb")
+sha256sums=('SKIP')
+
+package() {
+  bsdtar -xf data.tar.* -C "$pkgdir"
+  chmod -R u+rwX,go+rX,go-w "$pkgdir"
+  [ -e "$pkgdir/usr/bin/hydralauncher" ] || { mkdir -p "$pkgdir/usr/bin"; ln -s "$(cd "$pkgdir" && find opt -maxdepth 2 -name hydralauncher -type f | head -1 | sed 's#^#/#')" "$pkgdir/usr/bin/hydralauncher"; }
+}
