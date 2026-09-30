@@ -24,9 +24,10 @@ fi
 # y no elige uno que no toca (por defecto propondría mesa-git)
 vulkan=()
 gpus=$(lspci -nn 2>/dev/null | grep -Ei 'vga|3d|display' || true)
-grep -qi 'amd\|ati' <<<"$gpus" && vulkan+=(vulkan-radeon lib32-vulkan-radeon)
-grep -qi 'intel' <<<"$gpus" && vulkan+=(vulkan-intel lib32-vulkan-intel)
-grep -qi 'nvidia' <<<"$gpus" && ! pacman -Q nvidia-utils >/dev/null 2>&1 && vulkan+=(vulkan-nouveau lib32-vulkan-nouveau)
+# (por el número del fabricante: 1002 AMD, 8086 Intel, 10de NVIDIA)
+grep -qi '\[1002:' <<<"$gpus" && vulkan+=(vulkan-radeon lib32-vulkan-radeon)
+grep -qi '\[8086:' <<<"$gpus" && vulkan+=(vulkan-intel lib32-vulkan-intel)
+grep -qi '\[10de:' <<<"$gpus" && ! pacman -Q nvidia-utils >/dev/null 2>&1 && vulkan+=(vulkan-nouveau lib32-vulkan-nouveau)
 [ ${#vulkan[@]} -eq 0 ] && vulkan+=(vulkan-swrast lib32-vulkan-swrast)   # máquina virtual o sin gráfica
 echo ">>> Vulkan: ${vulkan[*]}"
 pacman -S --needed --noconfirm "${vulkan[@]}"
