@@ -180,7 +180,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.keyboardlayout', 'org.kde.plasma.keyboardindicator', 'org.kde.kscreen',
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
-AESTHETICS = 5  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+AESTHETICS = 6  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -211,6 +211,9 @@ def aesthetics():
     kw('kdeglobals', 'General', 'smallestReadableFont', FONT.replace(',10,', ',8,', 1))
     kw('kdeglobals', 'WM', 'activeFont', FONT.replace(',400,', ',600,', 1))
     kw('kdeglobals', 'Sounds', 'Theme', 'apogeo')
+    # Las apps con las formas de Ágape (tema de Kvantum «Apogeo»)
+    kw('Kvantum/kvantum.kvconfig', 'General', 'theme', 'Apogeo')
+    kw('kdeglobals', 'KDE', 'widgetStyle', 'kvantum')
     # Ventanas con la barra de Ágape
     kw('kwinrc', 'org.kde.kdecoration2', 'library', 'org.kde.kwin.aurorae')
     kw('kwinrc', 'org.kde.kdecoration2', 'theme', DECORATION)

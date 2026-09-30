@@ -9,7 +9,7 @@ url='https://github.com/4R3S10/apogeo'
 license=('MIT')
 depends=(
   plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
-  papirus-icon-theme ttf-nunito                             # iconos y letra
+  papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
   python python-dbus python-gobject                         # los pisos
   kdialog libnotify libpulse xdg-utils curl                 # avisos, sonidos, Ágape
   power-profiles-daemon                                     # energía de cada piso
@@ -33,6 +33,7 @@ package() {
   install -Dm644 "$h/fuentes/Bricolage-OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/Bricolage-OFL.txt"
   python "$h/ventanas.py" "$pkgdir/usr/share/aurorae/themes"
   python "$h/plasma.py" "$pkgdir/usr/share/plasma/desktoptheme"
+  python "$h/kvantum.py" "$pkgdir/usr/share/Kvantum"
   python "$h/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
   python "$h/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
   local shaders="$pkgdir/usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders"

@@ -14,3 +14,6 @@ activeFont=Bricolage Grotesque,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1
 
 [Sounds]
 Theme=apogeo
+
+[KDE]
+widgetStyle=kvantum
