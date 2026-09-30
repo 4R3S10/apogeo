@@ -230,6 +230,12 @@ PlasmoidItem {
         }
         AgapeButton {
             visible: root.floor === "Jugar"
+            iconName: "consola"
+            tip: "Consola de juegos"
+            onClicked: root.run("/usr/lib/apogeo/apogeo-juegos consola")
+        }
+        AgapeButton {
+            visible: root.floor === "Jugar"
             iconName: "escritorio"
             tip: "Ver el escritorio"
             onClicked: root.run("dbus-send --session --type=method_call --dest=org.kde.kglobalaccel /component/kwin org.kde.kglobalaccel.Component.invokeShortcut 'string:Show Desktop'")

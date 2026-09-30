@@ -3,7 +3,8 @@
 Los juegos de Apogeo, todos juntos, para la consola del piso Jugar:
 
   apogeo-juegos lista                 JSON con los juegos de Steam, Epic/GOG (Heroic), Hydra y los de Windows
-  apogeo-juegos jugar TIENDA ID       abre el juego (Steam, Heroic, Hydra o el Windows escondido)
+  apogeo-juegos jugar TIENDA ID       abre el juego (Steam, Heroic, Hydra o el Windows escondido) y aparta la consola
+  apogeo-juegos consola               trae la consola delante (o la abre si no está)
 
 Solo lee las listas que cada tienda guarda en tu carpeta; no entra en tus cuentas.
 """
@@ -127,6 +128,42 @@ def listing():
     return games + apps() + windows
 
 
+def kwin(js):
+    """Ejecuta un momento un script de KWin (para mover la ventana de la consola)."""
+    import tempfile
+    import dbus
+    with tempfile.NamedTemporaryFile('w', suffix='.js', dir=os.environ.get('XDG_RUNTIME_DIR'), delete=False) as f:
+        f.write(js)
+    try:
+        scripting = dbus.Interface(dbus.SessionBus().get_object('org.kde.KWin', '/Scripting'), 'org.kde.kwin.Scripting')
+        name = 'apogeo-consola-' + str(os.getpid())
+        sid = scripting.loadScript(f.name, name, signature='ss')
+        dbus.SessionBus().get_object('org.kde.KWin', f'/Scripting/Script{sid}').run(dbus_interface='org.kde.kwin.Script')
+        time.sleep(0.3)
+        scripting.unloadScript(name)
+    except Exception:  # sin KWin (pruebas): no pasa nada
+        pass
+    finally:
+        os.remove(f.name)
+
+
+CONSOLE = 'w.caption === "Jugar" && (w.resourceClass || "").indexOf("plasmawindowed") >= 0'
+
+
+def hide_console():
+    """Al abrir algo, la consola (a pantalla completa) se aparta para que se vea."""
+    kwin('for (const w of workspace.windowList()) { if (%s) w.minimized = true; }' % CONSOLE)
+
+
+def show_console():
+    """La consola delante; si no está abierta, se abre."""
+    if subprocess.run(['pgrep', '-f', 'plasmawindowed org.apogeo.consola'], stdout=subprocess.DEVNULL).returncode:
+        detach(['apogeo-consola'])
+        return
+    kwin('for (const w of workspace.windowList()) { if (%s) { w.minimized = false; workspace.activeWindow = w; } }'
+         % CONSOLE)
+
+
 def detach(cmd):
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
@@ -135,6 +172,7 @@ def play(store, gid):
     app = next((a for a in APPS if a[0] == gid and a[2] == store), None)
     if app:
         detach([app[3]])
+        hide_console()
         return 0
     if store == 'steam':
         detach(['steam', '-silent', f'steam://rungameid/{gid}'])
@@ -145,6 +183,7 @@ def play(store, gid):
         detach(['/usr/lib/apogeo/apogeo-windows', gid])
     else:
         return 1
+    hide_console()
     # Se apunta cuándo se jugó a los de Windows (Steam lo apunta solo)
     if store == 'windows':
         try:
@@ -163,6 +202,9 @@ def play(store, gid):
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == 'lista':
         json.dump(listing(), sys.stdout, ensure_ascii=False)
+        return 0
+    if len(sys.argv) >= 2 and sys.argv[1] == 'consola':
+        show_console()
         return 0
     if len(sys.argv) >= 4 and sys.argv[1] == 'jugar':
         return play(sys.argv[2], sys.argv[3])
