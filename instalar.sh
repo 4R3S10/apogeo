@@ -20,6 +20,17 @@ if ! grep -q '^\[apogeo\]' /etc/pacman.conf; then
   printf '\n# Apogeo (%s)\n[apogeo]\nServer = %s/releases/download/repo\n' "$REPO" "$REPO" >> /etc/pacman.conf
 fi
 
+# El controlador de Vulkan de tu gráfica (y el de 32 bits, para Steam y Proton) antes que nada: así pacman no pregunta
+# y no elige uno que no toca (por defecto propondría mesa-git)
+vulkan=()
+gpus=$(lspci -nn 2>/dev/null | grep -Ei 'vga|3d|display' || true)
+grep -qi 'amd\|ati' <<<"$gpus" && vulkan+=(vulkan-radeon lib32-vulkan-radeon)
+grep -qi 'intel' <<<"$gpus" && vulkan+=(vulkan-intel lib32-vulkan-intel)
+grep -qi 'nvidia' <<<"$gpus" && ! pacman -Q nvidia-utils >/dev/null 2>&1 && vulkan+=(vulkan-nouveau lib32-vulkan-nouveau)
+[ ${#vulkan[@]} -eq 0 ] && vulkan+=(vulkan-swrast lib32-vulkan-swrast)   # máquina virtual o sin gráfica
+echo ">>> Vulkan: ${vulkan[*]}"
+pacman -S --needed --noconfirm "${vulkan[@]}"
+
 echo ">>> Instalando Apogeo"
 pacman -Syu --needed apogeo </dev/tty
 
