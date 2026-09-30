@@ -122,7 +122,7 @@ def build_svg():
     for state, fill in (('normal', HOVER), ('focused', HOVER2), ('pressed', PRESS), ('toggled', ACCENT),
                         ('disabled', DISABLED)):
         c.frame(f'button-{state}', F, fill)
-    c.frame('button-toggled-inactive', F, mix(ACCENT, SURFACE, 0.35))
+    c.frame('button-toggled-inactive', F, mix(ACCENT, SURFACE, 0.6))
     c.raw('button-default-indicator', 4, 4, '')
     # Botones de herramientas (barras): sin fondo, como los .icon-btn de Ágape
     for state, fill in (('normal', NONE), ('focused', HOVER), ('pressed', PRESS), ('toggled', PRESS),
@@ -130,17 +130,19 @@ def build_svg():
         c.frame(f'tbutton-{state}', F, fill)
     # Campos de texto: como la barra de direcciones de Ágape (fondo suave; al escribir, el borde rosa)
     c.frame('lineedit-normal', F, HOVER)
-    c.frame('lineedit-focused', F, HOVER, border=ACCENT)
+    c.frame('lineedit-focused', F, HOVER, border=ACCENT, border_w=F / 14)  # se agranda ×3,5 (frame.expansion 28)
     c.frame('lineedit-disabled', F, DISABLED)
     # Listas: al pasar el ratón, el fondo suave; lo elegido, la pastilla rosa
     c.frame('itemview-normal', F, NONE)
     c.frame('itemview-focused', F, HOVER)
-    c.frame('itemview-pressed', F, ACCENT)
-    c.frame('itemview-toggled', F, ACCENT)
-    c.frame('itemview-pressed-inactive', F, mix(ACCENT, SURFACE, 0.35))
-    c.frame('itemview-toggled-inactive', F, mix(ACCENT, SURFACE, 0.35))
+    # Elegido con el foco: rosa oscuro con el borde rosa (las carpetas también son rosas y no se pierden)
+    c.frame('itemview-pressed', F, mix(ACCENT, SURFACE, 0.62), border=ACCENT, border_w=F / 10)  # ×2,5
+    # Elegido pero sin el foco (p. ej. el panel de Lugares): rosa atenuado con el texto claro
+    c.frame('itemview-toggled', F, mix(ACCENT, SURFACE, 0.55))
+    c.frame('itemview-pressed-inactive', F, mix(ACCENT, SURFACE, 0.6))
+    c.frame('itemview-toggled-inactive', F, mix(ACCENT, SURFACE, 0.6))
     # Menús: la tarjeta de Ágape; el elemento bajo el ratón, el fondo suave
-    c.frame('menu-normal', 10, CHROME, border=BORDER)
+    c.frame('menu-normal', 6, CHROME, border=BORDER)
     for state in ('normal',):
         c.frame(f'menuitem-{state}', F, NONE)
     for state in ('focused', 'pressed', 'toggled'):
@@ -155,18 +157,18 @@ def build_svg():
     c.frame('tab-normal', F, NONE)
     c.frame('tab-focused', F, HOVER)
     c.frame('tab-toggled', F, ACCENT)
-    c.frame('tab-toggled-inactive', F, mix(ACCENT, SURFACE, 0.35))
+    c.frame('tab-toggled-inactive', F, mix(ACCENT, SURFACE, 0.6))
     c.frame('tabframe-normal', 8, SURFACE, border=BORDER)
     c.frame('tframe-normal', 8, SURFACE, border=BORDER)
     # Marcos (vistas, grupos)
     c.frame('common-normal', F, NONE, border=BORDER)
     c.frame('group-normal', 8, NONE, border=BORDER)
     c.frame('dock-normal', F, SURFACE)
-    c.frame('focus', F, NONE, border=mix(ACCENT, SURFACE, 0.3))
+    c.frame('focus', F, NONE, border=mix(ACCENT, SURFACE, 0.3), border_w=F / 12)  # ×12 (frame 1, expansión 24)
     # Barras de progreso y deslizadores: pastillas; lo lleno, rosa
     c.frame('progress-normal', 3, HOVER2)
     c.frame('progress-pattern-normal', 3, ACCENT)
-    c.frame('progress-pattern-normal-inactive', 3, mix(ACCENT, SURFACE, 0.35))
+    c.frame('progress-pattern-normal-inactive', 3, mix(ACCENT, SURFACE, 0.6))
     c.frame('progress-pattern-disabled', 3, FAINT)
     c.frame('slider-normal', 2, HOVER2)
     c.frame('slider-toggled', 2, ACCENT)
@@ -209,7 +211,7 @@ def build_svg():
         c.icon(f'tab-close-{state}', 16, '<path d="M17 7L7 17M7 7l10 10"/>', color, stroke=2)
     # Divisores y asas: casi invisibles
     for state in ('normal', 'focused', 'pressed'):
-        c.raw(f'splitter-grip-{state}', 4, 24, '')
+        c.raw(f'splitter-grip-{state}', 2, 24, '')
     c.raw('toolbar-handle', 4, 16, '')
     c.frame('toolbar-normal', F, NONE)
     c.frame('header-normal', F, NONE)
@@ -236,6 +238,7 @@ menu_shadow_depth=0
 tooltip_shadow_depth=0
 spread_menuitems=true
 scroll_width=8
+splitter_width=1
 scroll_arrows=false
 scroll_min_extent=48
 transient_scrollbar=true
@@ -266,8 +269,8 @@ groupbox_top_label=true
 inline_spin_indicators=true
 remove_extra_frames=true
 joined_inactive_tabs=false
-layout_spacing=6
-layout_margin=9
+layout_spacing=4
+layout_margin=6
 submenu_overlap=0
 tooltip_delay=-1
 animate_states=true
@@ -275,7 +278,7 @@ no_inactiveness=false
 no_window_pattern=true
 respect_DE=true
 scrollable_menu=true
-menu_separator_height=9
+menu_separator_height=7
 spin_button_width=24
 tree_branch_line=false
 dark_titlebar=true
@@ -291,7 +294,7 @@ mid.light.color={HOVER2}
 dark.color={BG}
 mid.color={BORDER}
 highlight.color={ACCENT}
-inactive.highlight.color={mix(ACCENT, SURFACE, 0.35)}
+inactive.highlight.color={mix(ACCENT, SURFACE, 0.6)}
 text.color={TEXT}
 window.text.color={TEXT}
 button.text.color={TEXT}
@@ -299,6 +302,7 @@ disabled.text.color={FAINT}
 tooltip.base.color={CHROME}
 tooltip.text.color={TEXT}
 highlight.text.color={ACCENT_TEXT}
+inactive.highlight.text.color={ACCENT_TEXT}
 link.color={ACCENT}
 link.visited.color={mix(ACCENT, '#9b59b6', 0.5)}
 progress.indicator.text.color={ACCENT_TEXT}
@@ -343,11 +347,10 @@ text.toggle.color={ACCENT_TEXT}
 text.shadow=0
 text.margin=1
 text.iconspacing=6
-text.margin.top=4
-text.margin.bottom=4
-text.margin.left=10
-text.margin.right=10
-min_height=+0.4font
+text.margin.top=3
+text.margin.bottom=3
+text.margin.left=8
+text.margin.right=8
 
 [PanelButtonTool]
 inherits=PanelButtonCommand
@@ -537,18 +540,20 @@ inherits=PanelButtonCommand
 frame.element=itemview
 interior.element=itemview
 frame.expansion=20
-text.margin.top=2
-text.margin.bottom=2
-text.margin.left=6
-text.margin.right=6
+text.margin.top=1
+text.margin.bottom=1
+text.margin.left=2
+text.margin.right=2
 text.normal.color={TEXT}
 text.focus.color={TEXT}
-text.press.color={ACCENT_TEXT}
-text.toggle.color={ACCENT_TEXT}
-min_height=+0.6font
+text.press.color={TEXT}
+text.toggle.color={TEXT}
+text.normal.inactive.color={TEXT}
+text.toggle.inactive.color={TEXT}
+text.press.inactive.color={TEXT}
 
 [Splitter]
-indicator.size=24
+indicator.size=2
 
 [Scrollbar]
 inherits=PanelButtonCommand
@@ -580,11 +585,11 @@ text.normal.color={TEXT}
 text.focus.color={TEXT}
 text.press.color={TEXT}
 text.toggle.color={TEXT}
-text.margin.top=4
-text.margin.bottom=4
-text.margin.left=8
-text.margin.right=8
-min_height=+0.8font
+text.margin.top=2
+text.margin.bottom=2
+text.margin.left=4
+text.margin.right=4
+text.iconspacing=8
 
 [MenuBar]
 inherits=PanelButtonCommand
@@ -616,10 +621,10 @@ indicator.element=arrow-down
 inherits=PanelButtonCommand
 frame.element=menu
 interior.element=menu
-frame.top=10
-frame.bottom=10
-frame.left=10
-frame.right=10
+frame.top=6
+frame.bottom=6
+frame.left=6
+frame.right=6
 frame.expansion=0
 text.normal.color={TEXT}
 
