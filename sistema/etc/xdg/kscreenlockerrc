@@ -1,4 +1,6 @@
-# Pantalla de bloqueo con el fondo de Navegar
-[Greeter][Wallpaper][org.kde.image][General]
-Image=file:///usr/share/apogeo/fondos/navegar.jpg
-PreviewImage=file:///usr/share/apogeo/fondos/navegar.jpg
+# Pantalla de bloqueo con el fondo animado de Ágape (cada piso pone el suyo)
+[Greeter]
+WallpaperPlugin=org.apogeo.fondo
+
+[Greeter][Wallpaper][org.apogeo.fondo][General]
+Estilo=tinta

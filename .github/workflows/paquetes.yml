@@ -23,7 +23,7 @@ jobs:
       - name: Herramientas
         run: |
           pacman -Syu --noconfirm --needed base-devel git github-cli pacman-contrib jq \
-            python python-gobject python-cairo librsvg breeze papirus-icon-theme
+            python python-gobject python-cairo librsvg breeze papirus-icon-theme python-fonttools qt6-shadertools
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0

@@ -10,6 +10,7 @@ PC). La primera vez que se entra en un piso en la sesión se abren sus apps (Jug
   apogeo-pisos subir|bajar va al piso de arriba o de abajo (la rueda del ratón en la columna de pisos)
   apogeo-pisos url apogeo-piso:N   lo mismo que «ir N» (lo usa la pantalla de bloqueo)
 """
+import glob
 import json
 import os
 import shutil
@@ -21,15 +22,14 @@ import dbus.mainloop.glib
 from gi.repository import GLib
 
 FLOORS = [
-    {'name': 'Jugar', 'key': 'jugar', 'accent': '#ff8fc6', 'power': 'balanced', 'quiet': True, 'apps': [['apogeo-consola']]},
-    {'name': 'Navegar', 'key': 'navegar', 'accent': '#e0a9b4', 'power': 'balanced', 'quiet': False,
+    # Un solo rosa (el de Ágape) en todo; cada piso tiene su fondo animado de Ágape
+    {'name': 'Jugar', 'key': 'jugar', 'fondo': 'remolino', 'power': 'balanced', 'quiet': True, 'apps': [['apogeo-consola']]},
+    {'name': 'Navegar', 'key': 'navegar', 'fondo': 'tinta', 'power': 'balanced', 'quiet': False,
      'apps': [['agape', 'firefox']]},  # Ágape si está; si no, Firefox
-    {'name': 'Estudiar', 'key': 'estudiar', 'accent': '#c9b8c9', 'power': 'power-saver', 'quiet': True, 'apps': []},
+    {'name': 'Estudiar', 'key': 'estudiar', 'fondo': 'seda', 'power': 'power-saver', 'quiet': True, 'apps': []},
 ]
 HOME = os.path.expanduser('~')
 STATE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'pisos.json')
-SHARE = next((d for d in ['/usr/share/apogeo', os.path.join(HOME, '.local/share/apogeo')]
-              if os.path.isdir(os.path.join(d, 'fondos'))), '/usr/share/apogeo')
 
 
 def log(*a):
@@ -126,7 +126,7 @@ def setup(bus):
             clock.writeConfig('showDate', false);
             clock.writeConfig('dateDisplayFormat', 'DisableDate');
             clock.writeConfig('autoFontAndSize', false);
-            clock.writeConfig('fontFamily', 'Nunito');
+            clock.writeConfig('fontFamily', 'Bricolage Grotesque');
             clock.writeConfig('boldText', true);
             clock.writeConfig('fontSize', 12);
         """)
@@ -151,6 +151,23 @@ def setup(bus):
             });
         """ % json.dumps(TRAY_HIDDEN))
         st['bandeja'] = TRAY
+    if st.get('reloj', 0) < CLOCK:
+        # La hora de la isla con la letra de Ágape (en negrita, como el reloj de su nueva pestaña)
+        plasma_script(bus, """
+            panels().forEach(function (p) {
+                p.widgets().forEach(function (w) {
+                    if (w.type != 'org.kde.plasma.digitalclock') return;
+                    w.currentConfigGroup = ['Appearance'];
+                    w.writeConfig('autoFontAndSize', false);
+                    w.writeConfig('fontFamily', 'Bricolage Grotesque');
+                    w.writeConfig('boldText', true);
+                    w.writeConfig('fontSize', 11);
+                    w.writeConfig('use24hFormat', 2);
+                    w.reloadConfig();
+                });
+            });
+        """)
+        st['reloj'] = CLOCK
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
@@ -162,9 +179,10 @@ TRAY = 1  # igual, para la bandeja de la isla
 TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma.manage-inputmethod',
                'org.kde.plasma.keyboardlayout', 'org.kde.plasma.keyboardindicator', 'org.kde.kscreen',
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
-AESTHETICS = 4  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
-NUNITO = 'Nunito,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
-DECORATION = '__aurorae__svg__apogeo-'  # un tema de ventanas por piso (herramientas/ventanas.py)
+CLOCK = 1  # igual, para la hora de la isla
+AESTHETICS = 5  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
+DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
 
 def run(*c):
@@ -186,18 +204,16 @@ def aesthetics():
     """La estética de Apogeo para cada usuario (CachyOS copia su propia configuración a las cuentas nuevas)."""
     run('plasma-apply-colorscheme', 'Apogeo')
     run('plasma-apply-cursortheme', 'Apogeo-cursor')
-    run('/usr/lib/plasma-changeicons', 'Apogeo')  # Papirus con las carpetas rosa
+    run('/usr/lib/plasma-changeicons', 'Apogeo')  # Papirus con las carpetas en el rosa de Ágape
+    run('plasma-apply-desktoptheme', 'apogeo')    # la isla, los menús y los avisos con el cristal de Ágape
     for key in ('font', 'menuFont', 'toolBarFont'):
-        kw('kdeglobals', 'General', key, NUNITO)
-    kw('kdeglobals', 'General', 'smallestReadableFont', NUNITO.replace(',10,', ',8,', 1))
-    kw('kdeglobals', 'WM', 'activeFont', NUNITO.replace(',400,', ',700,', 1))
+        kw('kdeglobals', 'General', key, FONT)
+    kw('kdeglobals', 'General', 'smallestReadableFont', FONT.replace(',10,', ',8,', 1))
+    kw('kdeglobals', 'WM', 'activeFont', FONT.replace(',400,', ',600,', 1))
     kw('kdeglobals', 'Sounds', 'Theme', 'apogeo')
-    for key in ('Image', 'PreviewImage'):  # pantalla de bloqueo con el fondo de Navegar
-        run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
-            'org.kde.image', '--group', 'General', '--key', key, 'file:///usr/share/apogeo/fondos/navegar.jpg')
-    # Ventanas «Fina con pastilla» (el color de la pastilla lo pone cada piso)
+    # Ventanas con la barra de Ágape
     kw('kwinrc', 'org.kde.kdecoration2', 'library', 'org.kde.kwin.aurorae')
-    kw('kwinrc', 'org.kde.kdecoration2', 'theme', DECORATION + 'navegar')
+    kw('kwinrc', 'org.kde.kdecoration2', 'theme', DECORATION)
     kw('kwinrc', 'org.kde.kdecoration2', 'ButtonsOnLeft', '')
     kw('kwinrc', 'org.kde.kdecoration2', 'ButtonsOnRight', 'IAX')
     kw('kwinrc', 'Plugins', 'apogeo-ventanasEnabled', 'true')
@@ -235,11 +251,8 @@ class Floors:
         f = FLOORS[min(index, len(FLOORS) - 1)]
         log('piso', f['name'])
         self.wallpaper(f)
-        subprocess.Popen(['plasma-apply-colorscheme', '--accent-color', f['accent']],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.quiet(f['quiet'])
         self.power(f['power'])
-        self.decoration(f)
         if index not in self.visited:
             # Solo si se queda en el piso: pasar de largo con la rueda no abre nada (y la ventana, al aparecer tarde,
             # le devolvería a este piso)
@@ -252,27 +265,22 @@ class Floors:
         return False
 
     def wallpaper(self, f):
-        img = os.path.join(SHARE, 'fondos', f"{f['key']}.jpg")
-        # También en la pantalla de bloqueo (así sabe en qué piso estabas)
-        for key in ('Image', 'PreviewImage'):
+        """El fondo animado de Ágape del piso (org.apogeo.fondo). Sin gráfica de verdad, quieto (lo dibujaría el
+        procesador). También en la pantalla de bloqueo, que así sabe en qué piso estabas."""
+        animate = 'true' if real_gpu() else 'false'
+        run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--key', 'WallpaperPlugin',
+            'org.apogeo.fondo')
+        for key, value in (('Estilo', f['fondo']), ('Animar', animate)):
             run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
-                'org.kde.image', '--group', 'General', '--key', key, 'file://' + img)
+                'org.apogeo.fondo', '--group', 'General', '--key', key, value)
         plasma_script(self.bus, """
             desktops().forEach(function (d) {
-                d.wallpaperPlugin = 'org.kde.image';
-                d.currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General'];
-                d.writeConfig('Image', 'file://%s');
+                d.wallpaperPlugin = 'org.apogeo.fondo';
+                d.currentConfigGroup = ['Wallpaper', 'org.apogeo.fondo', 'General'];
+                d.writeConfig('Estilo', '%s');
+                d.writeConfig('Animar', %s);
             });
-        """ % img)
-
-    def decoration(self, f):
-        """La pastilla de los botones de las ventanas, del color del piso (si no se ha elegido otra decoración)."""
-        r = subprocess.run(['kreadconfig6', '--file', 'kwinrc', '--group', 'org.kde.kdecoration2', '--key', 'theme'],
-                           capture_output=True, text=True)
-        theme = DECORATION + f['key']
-        if r.stdout.strip().startswith(DECORATION) and r.stdout.strip() != theme:
-            kw('kwinrc', 'org.kde.kdecoration2', 'theme', theme)
-            kwin_reconfigure()
+        """ % (f['fondo'], animate))
 
     def quiet(self, on):
         """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos."""
@@ -306,6 +314,14 @@ class Floors:
                               f'--unit=app-apogeo-{exe}-{os.getpid()}-{len(self.visited)}', exe],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
                              env=dict(os.environ, APOGEO_AUTO='1'))  # (la abre el piso, no tú)
+
+
+def real_gpu():
+    """¿Hay una gráfica que dibuje el fondo animado? En una máquina virtual sin 3D lo dibujaría el procesador."""
+    for card in glob.glob('/sys/class/drm/card[0-9]/device/driver'):
+        if os.path.basename(os.path.realpath(card)) in ('amdgpu', 'radeon', 'i915', 'xe', 'nouveau', 'nvidia'):
+            return True
+    return False
 
 
 def start_floor():

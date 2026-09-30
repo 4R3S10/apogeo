@@ -21,13 +21,19 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 
 ## Aspecto
 
-- **Arranque:** el diamante de Apogeo sobre un brillo berenjena y una barra finita de progreso.
-- **Inicio de sesión:** una tarjeta con tu nombre, el piso en el que empiezas y la contraseña (SDDM, tema propio).
-- **Isla:** abajo, centrada, se esconde sola y cambia en cada piso (Jugar: temperatura, FPS y escritorio; Navegar:
-  ventanas y música; Estudiar: temporizador 25/5 y lo estudiado hoy). El corazón abre el buscador.
-- **Ventanas «Fina con pastilla»:** barra ciruela de 24 px con el título en el centro y los tres botones juntos en una
-  pastilla a la derecha, del color del piso (apagada en las ventanas de detrás).
-- Letra Nunito, iconos Papirus con carpetas rosa, cursor berenjena, sonidos pocos y suaves y teclado EE. UU.
+Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
+
+- **Letra:** Bricolage Grotesque en todo el sistema.
+- **Colores:** fondo #120d14, superficie #1e1621, texto #f1e6ea y un solo rosa, #e0a9b4, en todos los pisos.
+- **Fondos:** los fondos animados de Ágape, uno por piso (Jugar «Remolino», Navegar «Tinta», Estudiar «Seda»). Se
+  dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica (máquina virtual) se quedan
+  quietos.
+- **Isla y pisos:** el cristal translúcido de Ágape, con la pastilla rosa con brillo para lo activo y sus iconos de línea.
+- **Ventanas:** la barra de Ágape (título en el centro y sus botones planos; la ✕ se pone roja).
+- **Menús y avisos:** las tarjetas de Ágape.
+- **Inicio de sesión y bloqueo:** una tarjeta con la hora grande, tu nombre, el piso (el control segmentado de Ágape) y
+  la contraseña, sobre el fondo del piso.
+- **Carpetas:** Papirus con el rosa empolvado de Ágape. Cursor berenjena, sonidos pocos y suaves y teclado EE. UU.
   internacional (ñ con AltGr+n).
 
 ## Jugar
@@ -65,7 +71,8 @@ entras en Apogeo.
 ## Estructura
 
 - `sistema/`: los archivos que instala el paquete, tal cual van en el sistema
-- `herramientas/`: lo que se genera al construir (cursor, ventanas de cada piso y carpetas rosa)
+- `herramientas/`: lo que se genera al construir (colores, letra, ventanas, estilo de Plasma, carpetas, cursor y el
+  sombreador de los fondos de Ágape)
 - `paquetes/apogeo/PKGBUILD`: el paquete de Apogeo (dependencias, servicios y ganchos)
 - `paquetes/apogeo-hydra/PKGBUILD`: Hydra Launcher desde su GitHub oficial
 - `.github/workflows/paquetes.yml`: construye, firma y publica el repositorio

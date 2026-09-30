@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
+import QtQuick.Effects
 import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
@@ -13,9 +14,14 @@ PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
 
-    readonly property color pink: "#ff8fc6"
+    // Colores de Ágape (tema Berenjena oscuro)
+    readonly property color pink: "#e0a9b4"
+    readonly property color accentText: "#2a1c26"
+    readonly property color bg: "#120d14"
     readonly property color text: "#f1e6ea"
-    readonly property color muted: "#a9949f"
+    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
+    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
+    readonly property color border: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
     readonly property var filters: [
         { key: "", label: "Todo" }, { key: "steam", label: "Steam" }, { key: "epic", label: "Epic" },
         { key: "gog", label: "GOG" }, { key: "hydra", label: "Hydra" }, { key: "windows", label: "Windows" }
@@ -77,7 +83,29 @@ PlasmoidItem {
             else if (event.key === Qt.Key_Escape) Qt.quit();
         }
 
-        Rectangle { anchors.fill: parent; color: "#2e0f24" }
+        // Detrás, el fondo «Remolino» de Ágape (el del piso Jugar), quieto: la gráfica, para los juegos
+        Rectangle { anchors.fill: parent; color: root.bg }
+        ShaderEffect {
+            id: fx
+            width: Math.round(screen.width / 3)
+            height: Math.round(screen.height / 3)
+            property real t: 40
+            property real kind: 5
+            property real light: 0
+            property size res: Qt.size(screen.width, screen.height)
+            property color base: "#120d14"
+            property color c1: "#4a2c4f"
+            property color c2: "#7a4458"
+            property color c3: "#e0a9b4"
+            fragmentShader: "file:///usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders/fondo.frag.qsb"
+        }
+        ShaderEffectSource {
+            anchors.fill: parent
+            sourceItem: fx
+            textureSize: Qt.size(fx.width, fx.height)
+            smooth: true
+            hideSource: true
+        }
 
         // Imagen de fondo del juego elegido y un degradado para que se lea el texto
         Image {
@@ -93,16 +121,16 @@ PlasmoidItem {
             anchors.fill: parent
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: "#f22e0f24" }
-                GradientStop { position: 0.45; color: "#a02e0f24" }
-                GradientStop { position: 1.0; color: "#202e0f24" }
+                GradientStop { position: 0.0; color: "#f2120d14" }
+                GradientStop { position: 0.45; color: "#a0120d14" }
+                GradientStop { position: 1.0; color: "#20120d14" }
             }
         }
         Rectangle {
             anchors.fill: parent
             gradient: Gradient {
-                GradientStop { position: 0.55; color: "#002e0f24" }
-                GradientStop { position: 1.0; color: "#f02e0f24" }
+                GradientStop { position: 0.55; color: "#00120d14" }
+                GradientStop { position: 1.0; color: "#f0120d14" }
             }
         }
 
@@ -111,25 +139,58 @@ PlasmoidItem {
             x: 48; y: 32
             width: parent.width - 96
             spacing: 8
-            QQC2.Label { text: "🎮  Jugar"; color: root.text; font.pixelSize: 24; font.weight: Font.ExtraBold; Layout.rightMargin: 18 }
-            Repeater {
-                model: root.filters
-                delegate: Rectangle {
-                    required property var modelData
-                    required property int index
-                    readonly property bool on: index === root.filter
-                    Layout.preferredHeight: 36
-                    Layout.preferredWidth: pillText.implicitWidth + 30
-                    radius: 18
-                    color: on ? root.pink : (pillArea.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.06))
-                    QQC2.Label {
-                        id: pillText
-                        anchors.centerIn: parent
-                        text: parent.modelData.label
-                        color: parent.on ? "#2e0f24" : root.text
-                        font.weight: Font.Bold
+            Kirigami.Icon {
+                Layout.preferredWidth: 24; Layout.preferredHeight: 24
+                source: "file:///usr/share/plasma/plasmoids/org.apogeo.pisos/contents/icons/jugar.svg"
+                isMask: true
+                color: root.pink
+            }
+            QQC2.Label { text: "Jugar"; color: root.text; font.pixelSize: 24; font.weight: Font.ExtraBold; Layout.rightMargin: 18 }
+            // Tiendas: el control segmentado de Ágape
+            Rectangle {
+                Layout.preferredHeight: 40
+                Layout.preferredWidth: seg.implicitWidth + 6
+                radius: 14
+                color: root.hover
+                Row {
+                    id: seg
+                    anchors.centerIn: parent
+                    spacing: 3
+                    Repeater {
+                        model: root.filters
+                        delegate: Item {
+                            id: opt
+                            required property var modelData
+                            required property int index
+                            readonly property bool on: index === root.filter
+                            width: pillText.implicitWidth + 26
+                            height: 34
+                            RectangularShadow {
+                                anchors.fill: optBg
+                                visible: opt.on
+                                offset.y: 4; blur: 18; spread: -4
+                                radius: optBg.radius
+                                color: root.pink
+                                opacity: 0.85
+                            }
+                            Rectangle {
+                                id: optBg
+                                anchors.fill: parent
+                                radius: 11
+                                color: opt.on ? root.pink : (pillArea.containsMouse ? root.hover : "transparent")
+                                Behavior on color { ColorAnimation { duration: 180 } }
+                            }
+                            QQC2.Label {
+                                id: pillText
+                                anchors.centerIn: parent
+                                text: opt.modelData.label
+                                color: opt.on ? root.accentText : root.muted
+                                font.weight: opt.on ? Font.Bold : Font.DemiBold
+                                font.pixelSize: 14
+                            }
+                            MouseArea { id: pillArea; anchors.fill: parent; hoverEnabled: true; onClicked: { root.filter = opt.index; root.current = 0; } }
+                        }
                     }
-                    MouseArea { id: pillArea; anchors.fill: parent; hoverEnabled: true; onClicked: { root.filter = parent.index; root.current = 0; } }
                 }
             }
             Item { Layout.fillWidth: true }
@@ -181,13 +242,15 @@ PlasmoidItem {
                 Rectangle {
                     Layout.preferredHeight: 50
                     Layout.preferredWidth: playText.implicitWidth + 48
-                    radius: 15
-                    color: playArea.containsMouse ? "#ffa6d3" : root.pink
+                    radius: 12
+                    color: playArea.containsMouse ? "#e9c2ca" : root.pink
+                    layer.enabled: true
+                    layer.effect: MultiEffect { shadowEnabled: true; shadowColor: root.pink; shadowBlur: 0.8; shadowVerticalOffset: 4; shadowOpacity: 0.7 }
                     QQC2.Label {
                         id: playText
                         anchors.centerIn: parent
                         text: !root.game ? "" : root.game.app ? "▶  Abrir " + root.game.name : root.game.store === "windows" ? "▶  Jugar (en Windows)" : root.game.installed ? "▶  Jugar" : "⤓  Instalar"
-                        color: "#2e0f24"
+                        color: root.accentText
                         font.pixelSize: 18
                         font.weight: Font.ExtraBold
                     }
@@ -247,9 +310,9 @@ PlasmoidItem {
                     height: tile.sel ? 222 : 196
                     radius: 14
                     clip: true
-                    color: "#3a1a30"
-                    border.color: tile.sel ? root.pink : "transparent"
-                    border.width: 3
+                    color: "#1e1621"
+                    border.color: tile.sel ? root.pink : root.border
+                    border.width: tile.sel ? 2 : 1
                     Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                     Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                     Image {
@@ -267,8 +330,8 @@ PlasmoidItem {
                         radius: 11
                         visible: cover.status !== Image.Ready
                         gradient: Gradient {
-                            GradientStop { position: 0; color: tile.modelData.store === "windows" ? "#8a1c3a" : "#5a3160" }
-                            GradientStop { position: 1; color: "#241a28" }
+                            GradientStop { position: 0; color: tile.modelData.store === "windows" ? "#4a2c4f" : "#7a4458" }
+                            GradientStop { position: 1; color: "#1e1621" }
                         }
                         Kirigami.Icon {
                             visible: !!tile.modelData.icon
@@ -295,7 +358,7 @@ PlasmoidItem {
                         anchors.top: parent.top
                         anchors.margins: 8
                         radius: 7
-                        color: "#b0000000"
+                        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.9)
                         width: storeLabel.implicitWidth + 12
                         height: 20
                         QQC2.Label { id: storeLabel; anchors.centerIn: parent; text: root.storeName[tile.modelData.store] || ""; color: "white"; font.pixelSize: 11; font.weight: Font.Bold }

@@ -6,9 +6,9 @@ ActivationDesktopPolicy=BringToCurrentDesktop
 [Plugins]
 apogeo-ventanasEnabled=true
 
-# Ventanas «Fina con pastilla»: barra de 24 px con el título en el centro y los botones juntos a la derecha
+# Ventanas con la barra de Ágape: título en el centro y sus botones planos a la derecha
 [org.kde.kdecoration2]
 library=org.kde.kwin.aurorae
-theme=__aurorae__svg__apogeo-navegar
+theme=__aurorae__svg__apogeo
 ButtonsOnLeft=
 ButtonsOnRight=IAX

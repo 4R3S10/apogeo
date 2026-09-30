@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """
-Iconos de Apogeo: Papirus (oscuro) con las carpetas rosa. En vez de cambiar los archivos de Papirus (se perderían en
-cada actualización), es un tema aparte, «Apogeo», que solo tiene las carpetas (enlaces a las rosa de Papirus) y hereda
-todo lo demás de Papirus-Dark.
+Iconos de Apogeo: Papirus (oscuro) con las carpetas en el rosa de Ágape. En vez de cambiar los archivos de Papirus (se
+perderían en cada actualización), es un tema aparte, «Apogeo», que solo tiene las carpetas (las rosa de Papirus con los
+colores de Ágape) y hereda todo lo demás de Papirus-Dark.
 
   iconos.py [destino]    por defecto /usr/share/icons/Apogeo
 """
@@ -14,6 +14,22 @@ DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/icons/Apogeo'
 ICONS = '/usr/share/icons'
 THEMES = ['Papirus', 'Papirus-Dark']  # el oscuro manda cuando tiene el suyo
 BLUE_APPS = ['system-file-manager', 'org.kde.dolphin', 'dolphin', 'file-manager', 'org.gnome.Nautilus']
+
+
+# Colores de las carpetas rosa de Papirus → los de Ágape (Berenjena: rosa #e0a9b4, texto #f1e6ea)
+COLORS = {
+    '#f06292': '#e0a9b4',  # la carpeta
+    '#ec407a': '#b97a8c',  # la solapa de detrás
+    '#542233': '#5b3445',  # el dibujo de encima
+    '#e4e4e4': '#f1e6ea',  # el papel
+    '#ffffff': '#faf4f6',
+}
+
+
+def recolor(svg):
+    for a, b in COLORS.items():
+        svg = svg.replace(a, b).replace(a.upper(), b)
+    return svg
 
 
 def main():
@@ -28,7 +44,8 @@ def main():
                 # Se sigue la cadena de enlaces entera (inode-directory → folder → folder-blue)
                 real = os.path.realpath(path)
                 base = os.path.basename(real)
-                if '-blue' not in base:
+                # Solo carpetas (hay aparatos «-blue» que no lo son) y no «network», que la bandeja usa para la red
+                if not base.startswith(('folder-blue', 'user-blue')) or name == 'network.svg':
                     continue
                 pink = os.path.join(os.path.dirname(real), base.replace('-blue', '-pink'))
                 if os.path.exists(pink):
@@ -41,14 +58,18 @@ def main():
         for name in BLUE_APPS:
             if os.path.exists(os.path.join(ICONS, 'Papirus', size, 'apps', name + '.svg')):
                 links[os.path.join(size, 'apps', name + '.svg')] = os.path.realpath(pink)
+    # Cada carpeta rosa de Papirus, copiada con los colores de Ágape (el fucsia pasa al rosa empolvado)
+    cache = {}
     for rel, target in links.items():
-        link = os.path.join(DST, rel)
-        os.makedirs(os.path.dirname(link), exist_ok=True)
-        # Enlace relativo a /usr/share/icons (sirve igual dentro del paquete que instalado)
-        target_rel = os.path.relpath(target, os.path.dirname(os.path.join(ICONS, 'Apogeo', rel)))
-        if os.path.lexists(link):
-            os.remove(link)
-        os.symlink(target_rel, link)
+        out = os.path.join(DST, rel)
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        if target not in cache:
+            with open(target) as f:
+                cache[target] = recolor(f.read())
+        if os.path.lexists(out):
+            os.remove(out)
+        with open(out, 'w') as f:
+            f.write(cache[target])
 
     # index.theme: el de Papirus-Dark con otro nombre y heredando de él
     idx = configparser.ConfigParser(interpolation=None, strict=False)

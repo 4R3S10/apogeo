@@ -15,7 +15,7 @@ depends=(
   power-profiles-daemon                                     # energía de cada piso
   steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
 )
-makedepends=(git python-gobject python-cairo librsvg breeze papirus-icon-theme)
+makedepends=(git python-gobject python-cairo librsvg breeze papirus-icon-theme python-fonttools qt6-shadertools)
 install=apogeo.install
 _raiz="$startdir/../.."
 
@@ -25,8 +25,17 @@ pkgver() {
 
 package() {
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"
-  # Lo que se genera: cursor berenjena (desde el de Breeze), ventanas de cada piso y Papirus con carpetas rosa
-  python "$_raiz/herramientas/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
-  python "$_raiz/herramientas/ventanas.py" "$pkgdir/usr/share/aurorae/themes"
-  python "$_raiz/herramientas/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
+  local h="$_raiz/herramientas"
+  # Lo que se genera con la estética de Ágape: colores, letra (Bricolage Grotesque), ventanas, estilo de Plasma
+  # (cristal y tarjetas), carpetas en su rosa, el cursor berenjena y el sombreador de sus fondos animados
+  python "$h/colores.py" "$pkgdir/usr/share/color-schemes/Apogeo.colors"
+  python "$h/letra.py" "$h/fuentes/BricolageGrotesque[opsz,wdth,wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
+  install -Dm644 "$h/fuentes/Bricolage-OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/Bricolage-OFL.txt"
+  python "$h/ventanas.py" "$pkgdir/usr/share/aurorae/themes"
+  python "$h/plasma.py" "$pkgdir/usr/share/plasma/desktoptheme"
+  python "$h/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
+  python "$h/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
+  local shaders="$pkgdir/usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders"
+  install -d "$shaders"
+  /usr/lib/qt6/bin/qsb --glsl '100es,120,150' -o "$shaders/fondo.frag.qsb" "$h/fondo/fondo.frag"
 }

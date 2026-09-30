@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 
 // Pantalla de bloqueo de Apogeo («Tarjeta con piso», como la de inicio de sesión): tu nombre, el piso al que vuelves y
 // la contraseña. Sustituye a la de Plasma (la copia apogeo-bloqueo). Si algún día no carga, el bloqueo de KDE pone su
@@ -18,18 +19,23 @@ Item {
     implicitWidth: 800
     implicitHeight: 600
 
+    // Colores y letra de Ágape (tema Berenjena oscuro)
     readonly property color text: "#f1e6ea"
-    readonly property color muted: "#a9949f"
+    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
+    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
+    readonly property color border: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
+    readonly property color accent: "#e0a9b4"
+    readonly property color accentText: "#2a1c26"
+    readonly property string font: "Bricolage Grotesque"
     readonly property var floors: [
-        { key: "jugar", name: "Jugar", icon: "🎮", accent: "#ff8fc6" },
-        { key: "navegar", name: "Navegar", icon: "♥", accent: "#e0a9b4" },
-        { key: "estudiar", name: "Estudiar", icon: "✎", accent: "#c9b8c9" }
+        { key: "jugar", name: "Jugar", fondo: "remolino" },
+        { key: "navegar", name: "Navegar", fondo: "tinta" },
+        { key: "estudiar", name: "Estudiar", fondo: "seda" }
     ]
     // El piso en el que estabas: el fondo del bloqueo es el suyo (lo pone apogeo-pisos)
     property int floor: {
         try {
-            const img = String(wallpaperIntegration.configuration.Image || "");
-            const k = floors.findIndex(f => img.indexOf("/" + f.key + ".") >= 0);
+            const k = floors.findIndex(f => f.fondo === String(wallpaperIntegration.configuration.Estilo || ""));
             return k >= 0 ? k : 1;
         } catch (e) {
             return 1;
@@ -124,14 +130,27 @@ Item {
         onPositionChanged: root.start()
     }
 
+    // La tarjeta de Ágape: el cromo casi opaco, borde del 10 %, brillo arriba y radio 20
+    RectangularShadow {
+        anchors.fill: card
+        offset.y: 16
+        blur: 44
+        radius: card.radius
+        color: Qt.rgba(0, 0, 0, 0.45)
+    }
     Rectangle {
         id: card
         x: 40; y: 40
         width: Math.min(440, parent.width - 80)
         height: parent.height - 80
-        radius: 28
-        color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.95)
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        radius: 20
+        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.92)
+        border.color: root.border
+        Rectangle { // el brillo de 1 px de arriba
+            x: parent.radius; y: 1
+            width: parent.width - 2 * parent.radius; height: 1
+            color: Qt.rgba(1, 1, 1, 0.06)
+        }
 
         SequentialAnimation {
             id: shake
@@ -142,82 +161,135 @@ Item {
         }
 
         Image {
-            x: 44; y: 44
-            width: 64; height: 64
+            x: 40; y: 40
+            width: 44; height: 44
             source: "file:///usr/share/apogeo/logo.svg"
-            sourceSize: Qt.size(128, 128)
+            sourceSize: Qt.size(88, 88)
         }
 
         Column {
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: 44
+            anchors.margins: 40
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 14
+            spacing: 12
 
+            // La hora grande, como en la nueva pestaña de Ágape
+            Text {
+                id: bigClock
+                color: root.text
+                font { family: root.font; pixelSize: 72; weight: Font.ExtraBold; letterSpacing: -1 }
+                function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
+                Component.onCompleted: update()
+                Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
+            }
             Text {
                 text: "Hola de nuevo, " + (kscreenlocker_userName || "")
                 color: root.text
                 width: parent.width
                 wrapMode: Text.Wrap
-                font { family: "Nunito"; pixelSize: 36; weight: Font.ExtraBold }
+                font { family: root.font; pixelSize: 24; weight: Font.Bold }
             }
             Text {
                 text: "¿A qué piso vuelves?"
                 color: root.muted
-                font { family: "Nunito"; pixelSize: 17 }
+                font { family: root.font; pixelSize: 15 }
             }
 
-            Row {
-                spacing: 8
-                Repeater {
-                    model: root.floors
-                    delegate: Rectangle {
-                        required property var modelData
-                        required property int index
-                        readonly property bool on: index === root.floor
-                        width: label.implicitWidth + 30
-                        height: 40
-                        radius: 20
-                        color: on ? modelData.accent : Qt.rgba(1, 1, 1, pill.containsMouse ? 0.12 : 0.06)
-                        Behavior on color { ColorAnimation { duration: 160 } }
-                        Text {
-                            id: label
-                            anchors.centerIn: parent
-                            text: modelData.icon + "  " + modelData.name
-                            color: parent.on ? "#2a1a22" : root.text
-                            font { family: "Nunito"; pixelSize: 16; weight: Font.Bold }
-                        }
-                        MouseArea {
-                            id: pill
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.pick(index)
+            // Pisos: el control segmentado de Ágape (la pastilla rosa con brillo es el elegido)
+            Rectangle {
+                width: seg.implicitWidth + 6
+                height: 40
+                radius: 14
+                color: root.hover
+                Row {
+                    id: seg
+                    anchors.centerIn: parent
+                    spacing: 3
+                    Repeater {
+                        model: root.floors
+                        delegate: Item {
+                            id: opt
+                            required property var modelData
+                            required property int index
+                            readonly property bool on: index === root.floor
+                            width: optRow.implicitWidth + 26
+                            height: 34
+                            RectangularShadow {
+                                anchors.fill: optBg
+                                visible: opt.on
+                                offset.y: 4; blur: 18; spread: -4
+                                radius: optBg.radius
+                                color: root.accent
+                                opacity: 0.85
+                            }
+                            Rectangle {
+                                id: optBg
+                                anchors.fill: parent
+                                radius: 11
+                                color: opt.on ? root.accent : (optArea.containsMouse ? root.hover : "transparent")
+                                Behavior on color { ColorAnimation { duration: 180 } }
+                            }
+                            Row {
+                                id: optRow
+                                anchors.centerIn: parent
+                                spacing: 7
+                                Item {
+                                    width: 16; height: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Image {
+                                        id: optIcon
+                                        anchors.fill: parent
+                                        source: "file:///usr/share/plasma/plasmoids/org.apogeo.pisos/contents/icons/" + opt.modelData.key + ".svg"
+                                        sourceSize: Qt.size(32, 32)
+                                        visible: false
+                                    }
+                                    MultiEffect {
+                                        anchors.fill: parent
+                                        source: optIcon
+                                        colorization: 1
+                                        colorizationColor: opt.on ? root.accentText : root.muted
+                                    }
+                                }
+                                Text {
+                                    text: opt.modelData.name
+                                    color: opt.on ? root.accentText : root.muted
+                                    font { family: root.font; pixelSize: 14; weight: opt.on ? Font.Bold : Font.DemiBold }
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                            MouseArea {
+                                id: optArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.pick(opt.index)
+                            }
                         }
                     }
                 }
             }
 
-            Item { width: 1; height: 8 }
+            Item { width: 1; height: 6 }
 
+            // La contraseña, como la barra de direcciones de Ágape
             TextField {
                 id: password
                 width: parent.width
-                height: 52
+                height: 44
                 echoMode: TextInput.Password
                 placeholderText: "Contraseña"
                 placeholderTextColor: root.muted
                 color: root.text
-                font { family: "Nunito"; pixelSize: 17 }
-                leftPadding: 18
+                font { family: root.font; pixelSize: 15 }
+                leftPadding: 14
                 focus: true
                 enabled: !root.busy && !retry.running
                 background: Rectangle {
-                    radius: 16
-                    color: Qt.rgba(1, 1, 1, 0.07)
-                    border.color: password.activeFocus ? root.floors[root.floor].accent : "transparent"
-                    border.width: 2
+                    radius: 14
+                    color: root.hover
+                    border.color: password.activeFocus ? root.accent : "transparent"
+                    border.width: 1
                 }
                 onAccepted: root.unlock()
                 onTextEdited: root.start()
@@ -232,22 +304,23 @@ Item {
                 color: "#ff8f9a"
                 width: parent.width
                 wrapMode: Text.Wrap
-                font { family: "Nunito"; pixelSize: 15 }
+                font { family: root.font; pixelSize: 14 }
             }
         }
 
         Text {
             id: clock
-            x: 44
+            x: 40
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
+            anchors.bottomMargin: 36
             color: root.muted
-            font { family: "Nunito"; pixelSize: 17 }
+            font { family: root.font; pixelSize: 14 }
             function update() {
-                text = Qt.formatDateTime(new Date(), "HH:mm") + " · " + Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
+                const d = Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
+                text = d.charAt(0).toUpperCase() + d.slice(1);
             }
             Component.onCompleted: update()
-            Timer { interval: 5000; running: true; repeat: true; onTriggered: clock.update() }
+            Timer { interval: 60000; running: true; repeat: true; onTriggered: clock.update() }
         }
     }
 

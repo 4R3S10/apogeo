@@ -1,21 +1,28 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 
-// Inicio de sesión de Apogeo: una tarjeta a la izquierda con tu nombre, en qué piso empiezas y la contraseña. El fondo
-// de la derecha es el del piso elegido. Cada piso es una sesión («Apogeo · Jugar», etc.): así la elección llega a la
-// sesión sin que esta pantalla toque tus archivos.
+// Inicio de sesión de Apogeo, con la estética de Ágape: a la izquierda la tarjeta (la hora grande, tu nombre, en qué piso
+// empiezas y la contraseña) y detrás el fondo de Ágape del piso elegido. Cada piso es una sesión («Apogeo · Jugar»,
+// etc.): así la elección llega a la sesión sin que esta pantalla toque tus archivos.
 Rectangle {
     id: root
     width: 1920
     height: 1080
     color: "#120d14"
 
+    // Colores y letra de Ágape (tema Berenjena oscuro)
     readonly property color text: "#f1e6ea"
-    readonly property color muted: "#a9949f"
+    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
+    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
+    readonly property color border: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
+    readonly property color accent: "#e0a9b4"
+    readonly property color accentText: "#2a1c26"
+    readonly property string font: "Bricolage Grotesque"
     readonly property var floors: [
-        { key: "jugar", name: "Jugar", icon: "🎮", accent: "#ff8fc6" },
-        { key: "navegar", name: "Navegar", icon: "♥", accent: "#e0a9b4" },
-        { key: "estudiar", name: "Estudiar", icon: "✎", accent: "#c9b8c9" }
+        { key: "jugar", name: "Jugar", kind: 5 },      // Remolino
+        { key: "navegar", name: "Navegar", kind: 0 },  // Tinta
+        { key: "estudiar", name: "Estudiar", kind: 2 } // Seda
     ]
     property int floor: 1
     property int user: Math.max(0, userModel.lastIndex)
@@ -52,47 +59,79 @@ Rectangle {
         }
     }
 
-    // Fondo del piso elegido (cambia con un fundido)
-    Repeater {
-        model: root.floors
-        delegate: Image {
-            required property var modelData
-            required property int index
-            anchors.fill: parent
-            source: "file:///usr/share/apogeo/fondos/" + modelData.key + ".jpg"
-            fillMode: Image.PreserveAspectCrop
-            opacity: index === root.floor ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-        }
+    // Fondo de Ágape del piso elegido (el mismo sombreador que el escritorio, quieto)
+    ShaderEffect {
+        id: fx
+        width: Math.round(root.width / 3)
+        height: Math.round(root.height / 3)
+        property real t: 40
+        property real kind: root.floors[root.floor].kind
+        property real light: 0
+        property size res: Qt.size(root.width, root.height)
+        property color base: "#120d14"
+        property color c1: "#4a2c4f"
+        property color c2: "#7a4458"
+        property color c3: "#e0a9b4"
+        fragmentShader: "file:///usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders/fondo.frag.qsb"
     }
+    ShaderEffectSource {
+        anchors.fill: parent
+        sourceItem: fx
+        textureSize: Qt.size(fx.width, fx.height)
+        smooth: true
+        hideSource: true
+    }
+    Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.2 }
 
+    RectangularShadow {
+        anchors.fill: card
+        offset.y: 16
+        blur: 44
+        radius: card.radius
+        color: Qt.rgba(0, 0, 0, 0.45)
+    }
     Rectangle {
         id: card
         x: 40; y: 40
         width: 440
         height: parent.height - 80
-        radius: 28
-        color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.95)
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        radius: 20
+        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.92)
+        border.color: root.border
+        Rectangle { // el brillo de 1 px de arriba
+            x: parent.radius; y: 1
+            width: parent.width - 2 * parent.radius; height: 1
+            color: Qt.rgba(1, 1, 1, 0.06)
+        }
 
         Image {
-            x: 44; y: 44
-            width: 64; height: 64
+            x: 40; y: 40
+            width: 44; height: 44
             source: "logo.svg"
-            sourceSize: Qt.size(128, 128)
+            sourceSize: Qt.size(88, 88)
         }
 
         Column {
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: 44
+            anchors.margins: 40
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 14
+            spacing: 12
 
+            Text {
+                id: bigClock
+                color: root.text
+                font { family: root.font; pixelSize: 72; weight: Font.ExtraBold; letterSpacing: -1 }
+                function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
+                Component.onCompleted: update()
+                Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
+            }
             Text {
                 text: "Hola, " + (root.userReal[root.user] || "")
                 color: root.text
-                font { family: "Nunito"; pixelSize: 40; weight: Font.ExtraBold }
+                width: parent.width
+                wrapMode: Text.Wrap
+                font { family: root.font; pixelSize: 24; weight: Font.Bold }
                 MouseArea {
                     anchors.fill: parent
                     enabled: userModel.count > 1
@@ -103,60 +142,103 @@ Rectangle {
             Text {
                 text: userModel.count > 1 ? "¿En qué piso empiezas? (pulsa tu nombre para cambiar de usuario)" : "¿En qué piso empiezas?"
                 color: root.muted
-                font { family: "Nunito"; pixelSize: 17 }
                 width: parent.width
                 wrapMode: Text.Wrap
+                font { family: root.font; pixelSize: 15 }
             }
 
-            Row {
-                spacing: 8
-                Repeater {
-                    model: root.floors
-                    delegate: Rectangle {
-                        required property var modelData
-                        required property int index
-                        readonly property bool on: index === root.floor
-                        width: label.implicitWidth + 30
-                        height: 40
-                        radius: 20
-                        color: on ? modelData.accent : Qt.rgba(1, 1, 1, pill.containsMouse ? 0.12 : 0.06)
-                        Behavior on color { ColorAnimation { duration: 160 } }
-                        Text {
-                            id: label
-                            anchors.centerIn: parent
-                            text: modelData.icon + "  " + modelData.name
-                            color: parent.on ? "#2a1a22" : root.text
-                            font { family: "Nunito"; pixelSize: 16; weight: Font.Bold }
-                        }
-                        MouseArea {
-                            id: pill
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: { root.floor = index; password.forceActiveFocus(); }
+            // Pisos: el control segmentado de Ágape
+            Rectangle {
+                width: seg.implicitWidth + 6
+                height: 40
+                radius: 14
+                color: root.hover
+                Row {
+                    id: seg
+                    anchors.centerIn: parent
+                    spacing: 3
+                    Repeater {
+                        model: root.floors
+                        delegate: Item {
+                            id: opt
+                            required property var modelData
+                            required property int index
+                            readonly property bool on: index === root.floor
+                            width: optRow.implicitWidth + 26
+                            height: 34
+                            RectangularShadow {
+                                anchors.fill: optBg
+                                visible: opt.on
+                                offset.y: 4; blur: 18; spread: -4
+                                radius: optBg.radius
+                                color: root.accent
+                                opacity: 0.85
+                            }
+                            Rectangle {
+                                id: optBg
+                                anchors.fill: parent
+                                radius: 11
+                                color: opt.on ? root.accent : (optArea.containsMouse ? root.hover : "transparent")
+                                Behavior on color { ColorAnimation { duration: 180 } }
+                            }
+                            Row {
+                                id: optRow
+                                anchors.centerIn: parent
+                                spacing: 7
+                                Item {
+                                    width: 16; height: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Image {
+                                        id: optIcon
+                                        anchors.fill: parent
+                                        source: "file:///usr/share/plasma/plasmoids/org.apogeo.pisos/contents/icons/" + opt.modelData.key + ".svg"
+                                        sourceSize: Qt.size(32, 32)
+                                        visible: false
+                                    }
+                                    MultiEffect {
+                                        anchors.fill: parent
+                                        source: optIcon
+                                        colorization: 1
+                                        colorizationColor: opt.on ? root.accentText : root.muted
+                                    }
+                                }
+                                Text {
+                                    text: opt.modelData.name
+                                    color: opt.on ? root.accentText : root.muted
+                                    font { family: root.font; pixelSize: 14; weight: opt.on ? Font.Bold : Font.DemiBold }
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                            MouseArea {
+                                id: optArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: { root.floor = opt.index; password.forceActiveFocus(); }
+                            }
                         }
                     }
                 }
             }
 
-            Item { width: 1; height: 8 }
+            Item { width: 1; height: 6 }
 
             TextField {
                 id: password
                 width: parent.width
-                height: 52
+                height: 44
                 echoMode: TextInput.Password
                 placeholderText: "Contraseña"
                 placeholderTextColor: root.muted
                 color: root.text
-                font { family: "Nunito"; pixelSize: 17 }
-                leftPadding: 18
+                font { family: root.font; pixelSize: 15 }
+                leftPadding: 14
                 focus: true
                 background: Rectangle {
-                    radius: 16
-                    color: Qt.rgba(1, 1, 1, 0.07)
-                    border.color: password.activeFocus ? root.floors[root.floor].accent : "transparent"
-                    border.width: 2
+                    radius: 14
+                    color: root.hover
+                    border.color: password.activeFocus ? root.accent : "transparent"
+                    border.width: 1
                 }
                 onAccepted: root.login()
                 Keys.onUpPressed: root.floor = Math.max(0, root.floor - 1)
@@ -167,40 +249,54 @@ Rectangle {
                 text: root.error
                 visible: root.error !== ""
                 color: "#ff8f9a"
-                font { family: "Nunito"; pixelSize: 15 }
+                font { family: root.font; pixelSize: 14 }
             }
         }
 
-        // Hora y botones de apagar / reiniciar
+        // Fecha y botones de reiniciar / apagar (los botones de Ágape)
         Text {
-            id: clock
-            x: 44
+            id: date
+            x: 40
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
+            anchors.bottomMargin: 36
             color: root.muted
-            font { family: "Nunito"; pixelSize: 17 }
+            font { family: root.font; pixelSize: 14 }
             function update() {
-                text = Qt.formatDateTime(new Date(), "HH:mm") + " · " + Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
+                const d = Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
+                text = d.charAt(0).toUpperCase() + d.slice(1);
             }
             Component.onCompleted: update()
-            Timer { interval: 5000; running: true; repeat: true; onTriggered: clock.update() }
+            Timer { interval: 60000; running: true; repeat: true; onTriggered: date.update() }
         }
         Row {
             anchors.right: parent.right
-            anchors.rightMargin: 36
-            anchors.verticalCenter: clock.verticalCenter
-            spacing: 8
+            anchors.rightMargin: 32
+            anchors.verticalCenter: date.verticalCenter
+            spacing: 2
             Repeater {
                 model: [
-                    { label: "⟳", tip: "Reiniciar", run: () => sddm.reboot(), can: sddm.canReboot },
-                    { label: "⏻", tip: "Apagar", run: () => sddm.powerOff(), can: sddm.canPowerOff }
+                    { icon: "reiniciar", tip: "Reiniciar", run: () => sddm.reboot(), can: sddm.canReboot },
+                    { icon: "apagar", tip: "Apagar", run: () => sddm.powerOff(), can: sddm.canPowerOff }
                 ]
-                delegate: Rectangle {
+                delegate: Item {
                     required property var modelData
                     visible: modelData.can
-                    width: 40; height: 40; radius: 12
-                    color: Qt.rgba(1, 1, 1, btn.containsMouse ? 0.12 : 0.05)
-                    Text { anchors.centerIn: parent; text: modelData.label; color: root.text; font.pixelSize: 18 }
+                    width: 34; height: 34
+                    Rectangle { anchors.fill: parent; radius: 12; color: btn.containsMouse ? root.hover : "transparent" }
+                    Image {
+                        id: btnIcon
+                        anchors.centerIn: parent
+                        width: 17; height: 17
+                        source: modelData.icon + ".svg"
+                        sourceSize: Qt.size(34, 34)
+                        visible: false
+                    }
+                    MultiEffect {
+                        anchors.fill: btnIcon
+                        source: btnIcon
+                        colorization: 1
+                        colorizationColor: btn.containsMouse ? root.text : root.muted
+                    }
                     MouseArea { id: btn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: modelData.run() }
                     ToolTip.visible: btn.containsMouse
                     ToolTip.text: modelData.tip

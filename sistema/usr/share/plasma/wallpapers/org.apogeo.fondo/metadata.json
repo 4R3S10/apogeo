@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Description": "Los fondos animados de Ágape: tinta, humo, seda, mármol, relieve, remolino y dunas",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "org.apogeo.fondo",
+        "License": "MIT",
+        "Name": "Apogeo · Fondo de Ágape"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

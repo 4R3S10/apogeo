@@ -1,22 +1,27 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
+import QtQuick.Effects
 import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.taskmanager as TaskManager
 import org.kde.kirigami as Kirigami
 
-// Columna de pisos: un círculo por piso (el actual, grande y con su color). La rueda del ratón sube o baja de piso
-// y un clic va directo. El cambio lo hace apogeo-pisos, que también pone el fondo, los avisos y la energía de cada piso.
+// Columna de pisos, como la pastilla de pestañas de Ágape: un botón por piso con su icono de línea; el piso en el que
+// estás es la pastilla rosa con su brillo. La rueda del ratón sube o baja de piso y un clic va directo. El cambio lo
+// hace apogeo-pisos (que también pone el fondo, los avisos y la energía de cada piso).
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
 
-    readonly property var floors: ({
-        "Jugar": { accent: "#ff8fc6", icon: "jugar" },
-        "Navegar": { accent: "#e0a9b4", icon: "navegar" },
-        "Estudiar": { accent: "#c9b8c9", icon: "estudiar" }
-    })
+    // Colores de Ágape (tema Berenjena oscuro)
+    readonly property color accent: "#e0a9b4"
+    readonly property color accentText: "#2a1c26"
+    readonly property color text: "#f1e6ea"
+    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
+    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
+
+    readonly property var icons: ({ "Jugar": "jugar", "Navegar": "navegar", "Estudiar": "estudiar" })
     property double lastWheel: 0
 
     TaskManager.VirtualDesktopInfo { id: desktops }
@@ -33,8 +38,8 @@ PlasmoidItem {
     }
 
     fullRepresentation: Item {
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 2.2
-        Layout.preferredHeight: column.implicitHeight + Kirigami.Units.largeSpacing * 2
+        Layout.preferredWidth: 46
+        Layout.preferredHeight: column.implicitHeight + 8
         Layout.minimumHeight: Layout.preferredHeight
 
         MouseArea {
@@ -51,7 +56,7 @@ PlasmoidItem {
         ColumnLayout {
             id: column
             anchors.centerIn: parent
-            spacing: Kirigami.Units.largeSpacing
+            spacing: 3
 
             Repeater {
                 model: desktops.desktopIds
@@ -61,28 +66,36 @@ PlasmoidItem {
                     required property int index
                     readonly property bool current: modelData === desktops.currentDesktop
                     readonly property string name: desktops.desktopNames[index] || ""
-                    readonly property var info: root.floors[name] || { accent: "#e0a9b4", icon: "navegar" }
                     Layout.alignment: Qt.AlignHCenter
                     implicitWidth: 38
                     implicitHeight: 38
 
+                    // El brillo de la pastilla activa (0 4px 18px -4px el rosa)
+                    RectangularShadow {
+                        anchors.fill: pill
+                        visible: floor.current
+                        offset.y: 4
+                        blur: 18
+                        spread: -4
+                        radius: pill.radius
+                        color: root.accent
+                        opacity: 0.85
+                    }
                     Rectangle {
+                        id: pill
+                        anchors.fill: parent
+                        radius: 12
+                        color: floor.current ? root.accent : (hover.containsMouse ? root.hover : "transparent")
+                        Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                    }
+                    Kirigami.Icon {
                         anchors.centerIn: parent
-                        width: floor.current ? 38 : (hover.containsMouse ? 30 : 26)
-                        height: width
-                        radius: width / 2
-                        color: floor.current ? floor.info.accent : Qt.rgba(1, 1, 1, hover.containsMouse ? 0.2 : 0.1)
-                        Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        width: 18
+                        height: 18
+                        source: Qt.resolvedUrl("../icons/" + (root.icons[floor.name] || "navegar") + ".svg")
+                        isMask: true
+                        color: floor.current ? root.accentText : (hover.containsMouse ? root.text : root.muted)
                         Behavior on color { ColorAnimation { duration: 180 } }
-
-                        Kirigami.Icon {
-                            anchors.centerIn: parent
-                            width: Math.round(parent.width * 0.62)
-                            height: width
-                            source: Qt.resolvedUrl("../icons/" + floor.info.icon + ".svg")
-                            isMask: true
-                            color: floor.current ? "#2a1a22" : "#f1e6ea"
-                        }
                     }
 
                     MouseArea {
