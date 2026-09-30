@@ -23,6 +23,7 @@ APP = os.environ.get('APOGEO_AGAPE_APP', os.path.join(HOME, 'Applications/ARES.A
 TOKEN = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'ARES', 'update-token')
 TITLE = 'Ágape'
 LATER = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'agape-ahora-no')
+WELCOME = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'bienvenida-hecha')
 
 
 def say(msg, error=False):
@@ -53,10 +54,7 @@ def ask_token():
         os.makedirs(os.path.dirname(LATER), exist_ok=True)
         open(LATER, 'w').close()
         return ''
-    os.makedirs(os.path.dirname(TOKEN), exist_ok=True)
-    fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, 'w') as f:
-        f.write(token)
+    save_token(token)
     return token
 
 
@@ -85,6 +83,50 @@ def latest(token):
         return json.load(r)
 
 
+class Fallo(Exception):
+    """Un problema que se le puede explicar a la persona tal cual."""
+
+
+def save_token(token):
+    os.makedirs(os.path.dirname(TOKEN), exist_ok=True)
+    fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as f:
+        f.write(token)
+
+
+def check_token(token):
+    """La última versión si el token deja verla; si no, Fallo."""
+    try:
+        return latest(token)
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403, 404):
+            raise Fallo('Esa llave no deja ver las versiones de Ágape. Revisa que tenga permiso de lectura sobre el '
+                        'repositorio.') from e
+        raise
+
+
+def download(rel, token, progress=None):
+    """Descarga el AppImage de la versión «rel» a APP. progress(hecho, total) mientras baja."""
+    images = [a for a in rel.get('assets', []) if a['name'].endswith('.AppImage')]
+    asset = next((a for a in images if 'x86_64' in a['name']), images[0] if images else None)
+    if not asset:
+        raise Fallo('La última versión de Ágape no tiene el archivo para Linux (AppImage).')
+    os.makedirs(os.path.dirname(APP), exist_ok=True)
+    part = APP + '.part'
+    total, done = asset.get('size', 0), 0
+    with request(asset['url'], token, 'application/octet-stream') as r, open(part, 'wb') as f:
+        while chunk := r.read(1 << 20):
+            f.write(chunk)
+            done += len(chunk)
+            if progress:
+                progress(done, total)
+    if total and os.path.getsize(part) != total:
+        os.remove(part)
+        raise Fallo('La descarga de Ágape ha llegado incompleta. Vuelve a intentarlo.')
+    os.chmod(part, 0o755)
+    os.replace(part, APP)
+
+
 def install():
     token = read_token()
     try:
@@ -97,29 +139,17 @@ def install():
         if not token:
             return False
         try:
-            rel = latest(token)
-        except urllib.error.HTTPError:
+            rel = check_token(token)
+        except Fallo as f:
             os.remove(TOKEN)
-            say('Ese token no deja ver las versiones de Ágape. Revisa que tenga permiso de lectura sobre el '
-                'repositorio y vuelve a abrir Ágape.', error=True)
+            say(f'{f} Luego vuelve a abrir Ágape.', error=True)
             return False
-    images = [a for a in rel.get('assets', []) if a['name'].endswith('.AppImage')]
-    asset = next((a for a in images if 'x86_64' in a['name']), images[0] if images else None)
-    if not asset:
-        say('La última versión de Ágape no tiene el archivo para Linux (AppImage).', error=True)
-        return False
     notify(f"Descargando Ágape {rel.get('tag_name', '')}…")
-    os.makedirs(os.path.dirname(APP), exist_ok=True)
-    part = APP + '.part'
-    with request(asset['url'], token, 'application/octet-stream') as r, open(part, 'wb') as f:
-        while chunk := r.read(1 << 20):
-            f.write(chunk)
-    if os.path.getsize(part) != asset.get('size', os.path.getsize(part)):
-        os.remove(part)
-        say('La descarga de Ágape ha llegado incompleta. Vuelve a intentarlo.', error=True)
+    try:
+        download(rel, token)
+    except Fallo as f:
+        say(str(f), error=True)
         return False
-    os.chmod(part, 0o755)
-    os.replace(part, APP)
     notify('Ágape instalado. Se actualizará solo.')
     return True
 
@@ -137,8 +167,10 @@ def make_default():
 
 def main():
     fresh = False
-    # Abierto solo por el piso Navegar (no por ti) y ya dijiste «ahora no»: no se insiste
-    if not os.access(APP, os.X_OK) and os.environ.get('APOGEO_AUTO') and os.path.exists(LATER):
+    # Abierto solo por el piso Navegar (no por ti) y ya dijiste «ahora no», o la bienvenida (que lo instala) aún no
+    # está hecha: no se insiste
+    if not os.access(APP, os.X_OK) and os.environ.get('APOGEO_AUTO') and (
+            os.path.exists(LATER) or not os.path.exists(WELCOME)):
         return 0
     if not os.access(APP, os.X_OK):
         try:

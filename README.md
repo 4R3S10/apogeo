@@ -31,8 +31,8 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 - **Isla y pisos:** el cristal translúcido de Ágape, con la pastilla rosa con brillo para lo activo y sus iconos de línea.
 - **Ventanas:** la barra de Ágape (título en el centro y sus botones planos; la ✕ se pone roja).
 - **Menús y avisos:** las tarjetas de Ágape.
-- **Inicio de sesión y bloqueo:** una tarjeta con la hora grande, tu nombre, el piso (el control segmentado de Ágape) y
-  la contraseña, sobre el fondo del piso.
+- **Inicio de sesión y bloqueo:** una tarjeta con la hora grande, tu foto y tu nombre, el piso (el control segmentado de
+  Ágape) y la contraseña, sobre el fondo del piso.
 - **Carpetas:** Papirus con el rosa empolvado de Ágape. Cursor berenjena, sonidos pocos y suaves y teclado EE. UU.
   internacional (ñ con AltGr+n).
 
@@ -45,6 +45,13 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
   primera vez) e Hydra (de su GitHub oficial, sin fuentes de descarga añadidas).
 - **Juegos de Windows** (Valorant, EA FC…): se abrirán en el Windows escondido; la lista está en
   `~/.config/apogeo/juegos-windows.json`.
+
+## Bienvenida
+
+Al entrar por primera vez sale una tarjeta en el centro, como la bienvenida de Ágape, con los pasos: tu nombre y tu foto
+(para el inicio de sesión y el bloqueo), instalar Ágape con tu llave, traer tu copia de Ágape (`.agape`, la contraseña
+la pide Ágape), los pisos y la isla. Todo se puede saltar; si se cierra sin terminar vuelve en el siguiente inicio,
+hasta acabarla o pulsar «No volver a mostrar». Se abre de nuevo desde el buscador («Bienvenida de Apogeo»).
 
 ## Ágape
 
@@ -78,4 +85,5 @@ entras en Apogeo.
 - `.github/workflows/paquetes.yml`: construye, firma y publica el repositorio
 - `sistema/usr/lib/apogeo/apogeo-pisos`: los pisos (fondo, color, avisos, energía, ventanas y apps de cada uno)
 - `sistema/usr/lib/apogeo/apogeo-termico`: la protección de temperatura
+- `sistema/usr/lib/apogeo/apogeo-bienvenida` y `sistema/usr/share/apogeo/bienvenida/`: la bienvenida
 - `apogeo.asc`: la clave pública con la que se firman los paquetes

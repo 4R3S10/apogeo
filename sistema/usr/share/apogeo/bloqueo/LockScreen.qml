@@ -183,12 +183,37 @@ Item {
                 Component.onCompleted: update()
                 Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
             }
-            Text {
-                text: "Hola de nuevo, " + (kscreenlocker_userName || "")
-                color: root.text
+            Row {
                 width: parent.width
-                wrapMode: Text.Wrap
-                font { family: root.font; pixelSize: 24; weight: Font.Bold }
+                spacing: 14
+                Item { // tu foto (la de la bienvenida o Ajustes), en círculo con el borde rosa
+                    id: face
+                    width: 48; height: 48
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: faceImg.status === Image.Ready
+                    Image {
+                        id: faceImg
+                        anchors.fill: parent
+                        source: {
+                            const f = typeof kscreenlocker_userImage !== "undefined" ? String(kscreenlocker_userImage || "") : "";
+                            return f === "" ? "" : f.startsWith("/") ? "file://" + f : f;
+                        }
+                        sourceSize: Qt.size(96, 96)
+                        fillMode: Image.PreserveAspectCrop
+                        visible: false
+                    }
+                    Rectangle { id: faceMask; anchors.fill: parent; radius: width / 2; visible: false; layer.enabled: true }
+                    MultiEffect { anchors.fill: parent; source: faceImg; maskEnabled: true; maskSource: faceMask }
+                    Rectangle { anchors.fill: parent; anchors.margins: -3; radius: width / 2; color: "transparent"; border.width: 2; border.color: root.accent }
+                }
+                Text {
+                    text: "Hola de nuevo, " + (kscreenlocker_userName || "")
+                    color: root.text
+                    width: parent.width - (face.visible ? face.width + parent.spacing : 0)
+                    anchors.verticalCenter: parent.verticalCenter
+                    wrapMode: Text.Wrap
+                    font { family: root.font; pixelSize: 24; weight: Font.Bold }
+                }
             }
             Text {
                 text: "¿A qué piso vuelves?"

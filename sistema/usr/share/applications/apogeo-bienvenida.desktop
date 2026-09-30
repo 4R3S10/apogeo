@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bienvenida de Apogeo
+Comment=Tu nombre y tu foto, instalar Ágape y traer tu copia, y cómo moverte por los pisos
+Keywords=bienvenida;empezar;perfil;foto;copia;ágape;agape;
+Exec=/usr/lib/apogeo/apogeo-bienvenida
+Icon=apogeo
+Categories=System;

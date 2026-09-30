@@ -30,6 +30,8 @@ FLOORS = [
 ]
 HOME = os.path.expanduser('~')
 STATE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'pisos.json')
+WELCOME_DONE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'bienvenida-hecha')
+WELCOME = '/usr/lib/apogeo/apogeo-bienvenida'
 
 
 def log(*a):
@@ -262,6 +264,8 @@ class Floors:
             GLib.timeout_add(1500, self.first_visit, index)
 
     def first_visit(self, index):
+        if self.last == index and welcome_open():
+            return True  # con la bienvenida delante no se abre nada (Ágape, por ejemplo, lo instala ella): luego
         if self.last == index and index not in self.visited:
             self.visited.add(index)
             self.open_apps(FLOORS[index])
@@ -319,6 +323,20 @@ class Floors:
                              env=dict(os.environ, APOGEO_AUTO='1'))  # (la abre el piso, no tú)
 
 
+def welcome_open():
+    return subprocess.run(['pgrep', '-f', WELCOME], stdout=subprocess.DEVNULL).returncode == 0
+
+
+def welcome():
+    """La bienvenida, hasta que se termine (o se pulse «No volver a mostrar»)."""
+    if os.path.exists(WELCOME_DONE) or welcome_open() or not os.access(WELCOME, os.X_OK):
+        return
+    log('bienvenida')
+    subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
+                      f'--unit=app-apogeo-bienvenida-{os.getpid()}', WELCOME, '--auto'],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
 def real_gpu():
     """¿Hay una gráfica que dibuje el fondo animado? En una máquina virtual sin 3D lo dibujaría el procesador."""
     for card in glob.glob('/sys/class/drm/card[0-9]/device/driver'):
@@ -357,6 +375,7 @@ def main():
     bus.add_signal_receiver(lambda _id: floors.apply(current_index(bus)), signal_name='currentChanged',
                             dbus_interface='org.kde.KWin.VirtualDesktopManager', path='/VirtualDesktopManager')
     go(bus, start_floor())
+    welcome()
     floors.apply(current_index(bus))
     GLib.MainLoop().run()
 

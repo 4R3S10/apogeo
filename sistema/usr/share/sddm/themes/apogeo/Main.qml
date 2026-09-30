@@ -29,6 +29,7 @@ Rectangle {
     property var sessionIndex: ({})   // piso → índice de su sesión
     property var userNames: []
     property var userReal: []
+    property var userIcons: []
     property string error: ""
 
     // Las sesiones y los usuarios solo se pueden leer como modelos: se copian a listas
@@ -52,7 +53,9 @@ Rectangle {
             required property int index
             required property string name
             required property string realName
+            required property string icon
             Component.onCompleted: {
+                const ic = root.userIcons.slice(); ic[index] = icon || ""; root.userIcons = ic;
                 const n = root.userNames.slice(); n[index] = name; root.userNames = n;
                 const r = root.userReal.slice(); r[index] = realName || name; root.userReal = r;
             }
@@ -126,17 +129,43 @@ Rectangle {
                 Component.onCompleted: update()
                 Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
             }
-            Text {
-                text: "Hola, " + (root.userReal[root.user] || "")
-                color: root.text
+            Row {
                 width: parent.width
-                wrapMode: Text.Wrap
-                font { family: root.font; pixelSize: 24; weight: Font.Bold }
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: userModel.count > 1
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: root.user = (root.user + 1) % userModel.count // otro usuario
+                spacing: 14
+                Item { // tu foto (la de la bienvenida o Ajustes), en círculo con el borde rosa
+                    id: face
+                    width: 48; height: 48
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: faceImg.status === Image.Ready
+                    Image {
+                        id: faceImg
+                        anchors.fill: parent
+                        source: {
+                            // (sin foto propia, SDDM da su cara gris de siempre: esa no se pone)
+                            const f = root.userIcons[root.user] || "";
+                            return f === "" || f.indexOf("/sddm/faces/") >= 0 ? "" : f.startsWith("/") ? "file://" + f : f;
+                        }
+                        sourceSize: Qt.size(96, 96)
+                        fillMode: Image.PreserveAspectCrop
+                        visible: false
+                    }
+                    Rectangle { id: faceMask; anchors.fill: parent; radius: width / 2; visible: false; layer.enabled: true }
+                    MultiEffect { anchors.fill: parent; source: faceImg; maskEnabled: true; maskSource: faceMask }
+                    Rectangle { anchors.fill: parent; anchors.margins: -3; radius: width / 2; color: "transparent"; border.width: 2; border.color: root.accent }
+                }
+                Text {
+                    text: "Hola, " + (root.userReal[root.user] || "")
+                    color: root.text
+                    width: parent.width - (face.visible ? face.width + parent.spacing : 0)
+                    anchors.verticalCenter: parent.verticalCenter
+                    wrapMode: Text.Wrap
+                    font { family: root.font; pixelSize: 24; weight: Font.Bold }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: userModel.count > 1
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: root.user = (root.user + 1) % userModel.count // otro usuario
+                    }
                 }
             }
             Text {

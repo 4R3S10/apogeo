@@ -1,0 +1,296 @@
+#!/usr/bin/python3
+"""
+Bienvenida de Apogeo: lo primero que se ve al entrar por primera vez. Una tarjeta en el centro, como la bienvenida de
+Ágape (Bienvenida.qml), con los pasos: hola (y la red, si no hay), tu nombre y tu foto, instalar Ágape con tu llave,
+traer tu copia de Ágape (.agape), los pisos, la isla y listo. Si se cierra sin terminar, vuelve a salir en el siguiente
+inicio, hasta que se acabe o se pulse «No volver a mostrar».
+
+La llave de Ágape y las contraseñas nunca salen de este proceso: la llave se guarda con permisos 600 (como en
+apogeo-agape) y la contraseña de la copia la pide el propio Ágape.
+
+  apogeo-bienvenida          la abre (desde el menú: «Bienvenida de Apogeo»)
+  apogeo-bienvenida --auto   la abre solo si aún no está hecha (lo usa apogeo-pisos al empezar la sesión)
+"""
+import glob
+import importlib.machinery
+import importlib.util
+import os
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import urllib.error
+
+import dbus
+from PyQt6.QtCore import QObject, QUrl, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt6.QtGui import QGuiApplication, QIcon
+from PyQt6.QtQml import QQmlApplicationEngine
+
+HOME = os.path.expanduser('~')
+CONFIG = os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
+DONE = os.path.join(CONFIG, 'apogeo', 'bienvenida-hecha')
+QML = os.environ.get('APOGEO_BIENVENIDA_QML', '/usr/share/apogeo/bienvenida/Bienvenida.qml')
+AVATAR = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(HOME, '.cache')), 'apogeo', 'foto.png')
+
+
+def agape_module():
+    """apogeo-agape (sin .py) como módulo: la misma descarga y el mismo sitio para la llave."""
+    path = os.environ.get('APOGEO_AGAPE', '/usr/lib/apogeo/apogeo-agape')
+    loader = importlib.machinery.SourceFileLoader('apogeo_agape', path)
+    spec = importlib.util.spec_from_loader('apogeo_agape', loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+agape = agape_module()
+
+
+def real_gpu():
+    """Igual que apogeo-pisos: sin gráfica de verdad el fondo se queda quieto (lo dibujaría el procesador)."""
+    for card in glob.glob('/sys/class/drm/card[0-9]/device/driver'):
+        if os.path.basename(os.path.realpath(card)) in ('amdgpu', 'radeon', 'i915', 'xe', 'nouveau', 'nvidia'):
+            return True
+    return False
+
+
+def human(n):
+    for unit in ('B', 'KB', 'MB', 'GB'):
+        if n < 1024 or unit == 'GB':
+            return f'{n:.0f} {unit}' if unit in ('B', 'KB') else f'{n:.1f} {unit}'.replace('.', ',')
+        n /= 1024
+
+
+def spawn(*cmd):
+    """Como si lo abrieras tú: en su propio grupo de systemd, así sigue abierto al cerrar la bienvenida."""
+    subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice', *cmd],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def kwin(js):
+    """Ejecuta un momento un script de KWin (como apogeo-juegos): para poner delante una ventana aunque KWin no quiera
+    quitarle el sitio a otra (la bienvenida ocupa toda la pantalla)."""
+    with tempfile.NamedTemporaryFile('w', suffix='.js', dir=os.environ.get('XDG_RUNTIME_DIR'), delete=False) as f:
+        f.write(js)
+    try:
+        scripting = dbus.Interface(dbus.SessionBus().get_object('org.kde.KWin', '/Scripting'), 'org.kde.kwin.Scripting')
+        name = f'apogeo-bienvenida-{os.getpid()}-{threading.get_ident()}'
+        sid = scripting.loadScript(f.name, name, signature='ss')
+        dbus.SessionBus().get_object('org.kde.KWin', f'/Scripting/Script{sid}').run(dbus_interface='org.kde.kwin.Script')
+        time.sleep(0.3)
+        scripting.unloadScript(name)
+    except Exception:  # sin KWin (pruebas): no pasa nada
+        pass
+    finally:
+        os.remove(f.name)
+
+
+def front(app_id, delays=(0,)):
+    """La ventana de esa app, delante (se reintenta: una app recién abierta tarda en tener ventana)."""
+    def work():
+        for d in delays:
+            time.sleep(d)
+            kwin('for (const w of workspace.windowList()) { if (w.normalWindow && w.desktopFileName === "%s") '
+                 '{ w.minimized = false; workspace.activeWindow = w; } }' % app_id)
+    threading.Thread(target=work, daemon=True).start()
+
+
+class Accounts:
+    """Tu nombre y tu foto (AccountsService: los usan el inicio de sesión, el bloqueo y Plasma)."""
+
+    def __init__(self):
+        bus = dbus.SystemBus()
+        path = bus.get_object('org.freedesktop.Accounts', '/org/freedesktop/Accounts').FindUserById(
+            dbus.Int64(os.getuid()), dbus_interface='org.freedesktop.Accounts')
+        self.user = bus.get_object('org.freedesktop.Accounts', path)
+
+    def get(self, name):
+        return str(self.user.Get('org.freedesktop.Accounts.User', name, dbus_interface='org.freedesktop.DBus.Properties'))
+
+    def set_name(self, name):
+        self.user.SetRealName(name, dbus_interface='org.freedesktop.Accounts.User')
+
+    def set_icon(self, path):
+        self.user.SetIconFile(path, dbus_interface='org.freedesktop.Accounts.User')
+
+
+class Backend(QObject):
+    changed = pyqtSignal()
+    progress = pyqtSignal(float, arguments=['value'])  # descarga de Ágape, 0…1 (-1 si no se sabe el total)
+    installed = pyqtSignal(bool, str, arguments=['ok', 'message'])  # (bien, mensaje si no)
+    restored = pyqtSignal()               # Ágape ha traído la copia
+
+    def __init__(self):
+        super().__init__()
+        self._online = False
+        self._restoring = False
+        try:
+            self.accounts = Accounts()
+        except dbus.DBusException:
+            self.accounts = None
+        self.check_online()
+
+    # ---------- Estado ----------
+
+    @pyqtProperty(bool, notify=changed)
+    def online(self):
+        return self._online
+
+    @pyqtProperty(str, constant=True)
+    def realName(self):
+        name = self.accounts.get('RealName') if self.accounts else ''
+        return name or os.environ.get('USER', '').capitalize()
+
+    @pyqtProperty(str, constant=True)
+    def avatarPath(self):
+        return AVATAR
+
+    @pyqtProperty(bool, constant=True)
+    def animate(self):
+        return real_gpu()
+
+    @pyqtProperty(bool, notify=changed)
+    def agapeInstalled(self):
+        return os.access(agape.APP, os.X_OK)
+
+    @pyqtProperty(str, constant=True)
+    def mediaFolder(self):
+        """Donde están los USB y los discos (para abrir ahí el selector de la copia)."""
+        media = f"/run/media/{os.environ.get('USER', '')}"
+        return QUrl.fromLocalFile(media if os.path.isdir(media) else HOME).toString()
+
+    @pyqtSlot()
+    def check_online(self):
+        try:
+            nm = dbus.SystemBus().get_object('org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager')
+            # 4 = conectado a internet del todo (NM_CONNECTIVITY_FULL); si NM no comprueba, basta con estar conectado
+            conn = int(nm.Get('org.freedesktop.NetworkManager', 'Connectivity',
+                              dbus_interface='org.freedesktop.DBus.Properties'))
+            state = int(nm.Get('org.freedesktop.NetworkManager', 'State',
+                               dbus_interface='org.freedesktop.DBus.Properties'))
+            online = conn == 4 or (conn == 0 and state >= 70)
+        except dbus.DBusException:
+            online = True  # sin NetworkManager no se sabe: que lo intente
+        if online != self._online:
+            self._online = online
+            self.changed.emit()
+
+    @pyqtSlot()
+    def openNetwork(self):
+        spawn('kcmshell6', 'kcm_networkmanagement')
+
+    # ---------- Tu nombre y tu foto ----------
+
+    @pyqtSlot(str, result=str)
+    def saveProfile(self, name):
+        """El nombre y la foto (la dibuja la tarjeta en AVATAR). Devuelve el problema, o «» si todo bien."""
+        if not self.accounts:
+            return 'No se ha podido guardar (el servicio de cuentas no responde).'
+        try:
+            if name.strip() and name.strip() != self.accounts.get('RealName'):
+                self.accounts.set_name(name.strip())
+            if os.path.exists(AVATAR):
+                self.accounts.set_icon(AVATAR)
+        except dbus.DBusException as e:
+            return f'No se ha podido guardar ({e.get_dbus_message()}).'
+        return ''
+
+    # ---------- Ágape ----------
+
+    @pyqtSlot(str)
+    def installAgape(self, token):
+        token = token.strip()
+
+        def work():
+            try:
+                rel = agape.check_token(token)
+                agape.save_token(token)
+                agape.download(rel, token, lambda done, total: self.progress.emit(done / total if total else -1))
+            except agape.Fallo as f:
+                self.installed.emit(False, str(f))
+                return
+            except (urllib.error.URLError, OSError) as e:
+                self.installed.emit(False, f'No se ha podido descargar Ágape ({getattr(e, "reason", e)}). '
+                                           '¿Hay conexión a internet?')
+                return
+            self.changed.emit()
+            self.installed.emit(True, '')
+            # Se abre una vez (crea su acceso) y queda como navegador del sistema
+            spawn(agape.APP)
+            agape.make_default()
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @pyqtSlot(str, result='QVariantMap')
+    def copyInfo(self, url):
+        path = QUrl(url).toLocalFile()
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            return {}
+        media = f"/run/media/{os.environ.get('USER', '')}/"
+        if path.startswith(media):
+            where = f"En «{path[len(media):].split('/')[0]}»"
+        else:
+            where = 'En ' + os.path.dirname(path).replace(HOME, 'tu carpeta', 1)
+        return {'path': path, 'name': os.path.basename(path), 'where': f'{where} · {human(size)}'}
+
+    @pyqtSlot(str)
+    def restoreCopy(self, path):
+        """Ágape abre la copia y pide su contraseña (con Ágape ya abierto, se la pasa a esa ventana)."""
+        if not os.access(agape.APP, os.X_OK) or not os.path.isfile(path):
+            return
+        spawn(agape.APP, f'--importar={path}')
+        front('ares', (1, 1, 2, 3))  # Ágape pide la contraseña en su ventana: delante de la bienvenida
+        if not self._restoring:
+            self._restoring = True
+            threading.Thread(target=self._wait_restore, daemon=True).start()
+
+    def _wait_restore(self):
+        """Ágape deja lo traído en «copia-pendiente» hasta reiniciarse: en cuanto aparece, la copia está bien."""
+        pending = os.path.join(CONFIG, 'ARES', 'copia-pendiente')
+        for _ in range(3600):
+            if os.path.isdir(pending):
+                self.restored.emit()
+                front('apogeo-bienvenida', (1.5,))  # y la bienvenida vuelve delante
+                break
+            threading.Event().wait(1)
+        self._restoring = False
+
+    # ---------- Salir ----------
+
+    @pyqtSlot(bool)
+    def finish(self, done):
+        """done: terminada (o «No volver a mostrar»): ya no sale sola. Si no, vuelve en el siguiente inicio."""
+        if done:
+            os.makedirs(os.path.dirname(DONE), exist_ok=True)
+            open(DONE, 'w').close()
+        QGuiApplication.quit()
+
+
+def main():
+    if '--auto' in sys.argv and os.path.exists(DONE):
+        return 0
+    os.makedirs(os.path.dirname(AVATAR), exist_ok=True)
+    os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'  # los controles los dibuja Bienvenida.qml, con las formas de Ágape
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Bienvenida de Apogeo')
+    app.setDesktopFileName('apogeo-bienvenida')
+    app.setWindowIcon(QIcon.fromTheme('apogeo'))
+    backend = Backend()
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty('apogeo', backend)
+    engine.rootContext().setContextProperty('firstStep', int(os.environ.get('APOGEO_PASO', '0')))  # (para probarla)
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    # En todos los pisos: si cambias de piso a medias, la bienvenida va contigo
+    threading.Thread(target=lambda: (time.sleep(1), kwin(
+        'for (const w of workspace.windowList()) { if (w.desktopFileName === "apogeo-bienvenida") w.onAllDesktops = true; }'
+    )), daemon=True).start()
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())
