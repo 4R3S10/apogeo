@@ -5,6 +5,7 @@ fondo #120d14, superficie #1e1621, texto #f1e6ea y un solo acento, el rosa #e0a9
 
   colores.py [archivo]    por defecto /usr/share/color-schemes/Apogeo.colors
 """
+import os
 import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/color-schemes/Apogeo.colors'
@@ -100,6 +101,7 @@ inactiveBlend={c(MUTED)}
 inactiveForeground={c(MUTED)}
 """,
     ]
+    os.makedirs(os.path.dirname(DST), exist_ok=True)
     with open(DST, 'w') as f:
         f.write('\n'.join(parts))
     print('Colores: esquema Apogeo')
