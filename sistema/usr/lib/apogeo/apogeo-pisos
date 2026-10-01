@@ -193,7 +193,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
-AESTHETICS = 9  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+AESTHETICS = 10  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -248,15 +248,9 @@ def aesthetics():
     kw('kdeglobals', 'KDE', 'LookAndFeelPackage', 'org.apogeo.desktop')
     kw('ksplashrc', 'KSplash', 'Engine', 'KSplashQML')
     kw('ksplashrc', 'KSplash', 'Theme', 'org.apogeo.desktop')
-    # El buscador de Apogeo: la tecla Meta sola y Alt+Espacio (son atajos globales: el lanzador de Plasma se queda en
-    # Alt+F1 y KRunner en Alt+F2). Vale al volver a entrar.
-    run('kwriteconfig6', '--file', 'kwinrc', '--group', 'ModifierOnlyShortcuts', '--key', 'Meta', '--delete')
-    run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'plasmashell', '--key',
-        'activate application launcher', 'Alt+F1,Meta\tAlt+F1,Activar el lanzador de aplicaciones')
-    run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'services', '--group', 'org.kde.krunner.desktop',
-        '--key', '_launch', 'Alt+F2')
-    run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'services', '--group', 'apogeo-buscador.desktop',
-        '--key', '_launch', 'Meta\tAlt+Space\tSearch')
+    # El buscador de Apogeo: la tecla Meta sola, Alt+Espacio y la tecla de buscar; el lanzador de Plasma se queda en
+    # Alt+F1 y KRunner en Alt+F2
+    search_shortcuts()
     # Ni la bienvenida ni el actualizador de CachyOS se abren solos (Apogeo tiene los suyos)
     try:
         os.remove(os.path.join(HOME, '.config/autostart/cachyos-hello.desktop'))
@@ -268,6 +262,23 @@ def aesthetics():
     run('systemctl', '--user', 'disable', '--now', 'arch-update.timer')
     run('pkill', '-f', 'arch-update --tray')
     log('estética aplicada')
+
+
+def search_shortcuts():
+    """Los atajos del buscador, al momento (por D-Bus a kglobalaccel, que los guarda él; escribir su archivo no vale:
+    solo lo lee al empezar la sesión)."""
+    def keys(*codes):
+        return dbus.Array([dbus.Struct([dbus.Array([dbus.Int32(c), 0, 0, 0], signature='i')]) for c in codes],
+                          signature='(ai)')
+    meta, alt_f1, alt_f2, alt_space, search = 0x01000022, 0x09000030, 0x09000031, 0x08000020, 0x01000092
+    try:
+        g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
+        g.setForeignShortcutKeys(['plasmashell', 'activate application launcher', '', ''], keys(alt_f1))
+        g.setForeignShortcutKeys(['org.kde.krunner.desktop', '_launch', '', ''], keys(alt_f2))
+        g.doRegister(['apogeo-buscador.desktop', '_launch', 'Buscador de Apogeo', 'Buscador de Apogeo'])
+        g.setForeignShortcutKeys(['apogeo-buscador.desktop', '_launch', '', ''], keys(meta, alt_space, search))
+    except dbus.DBusException as e:
+        log('atajos:', e.get_dbus_message())
 
 
 class Floors:
