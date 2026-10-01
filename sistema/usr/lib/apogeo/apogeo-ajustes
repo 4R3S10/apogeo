@@ -1,0 +1,388 @@
+#!/usr/bin/python3
+"""
+Ajustes de Apogeo, como «Personalizar» de Ágape (Ajustes.qml): pisos (fondo, avisos, energía y apps de cada uno), isla,
+salud del PC, Ágape, tu perfil y actualizaciones. Lo del resto del sistema (red, sonido, pantalla…) abre los Ajustes de
+KDE, que ya llevan el tema de Apogeo. Lo que se cambia se guarda en ~/.config/apogeo/ajustes.json y apogeo-pisos lo
+aplica en el momento.
+
+  apogeo-ajustes                 abre la ventana
+  apogeo-ajustes SECCION         la abre en esa sección (pisos, isla, salud, agape, perfil, actualizaciones)
+  apogeo-ajustes poner CLAVE V   cambia un ajuste («animar false», «pisos.jugar.energia power-saver»)
+  apogeo-ajustes rapido          el estado del panel rápido de la isla (JSON)
+  apogeo-ajustes rapido ACCION   lo que se toca en el panel rápido (red, bluetooth, volumen N, brillo N, luz, animar,
+                                 silencio, energia PISO, apagar)
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+import apogeo_comun as comun  # noqa: E402
+
+QML = os.environ.get('APOGEO_AJUSTES_QML', '/usr/share/apogeo/ajustes/Ajustes.qml')
+SECTIONS = ('pisos', 'isla', 'salud', 'agape', 'perfil', 'actualizaciones')
+
+
+def run(*cmd, timeout=5):
+    try:
+        return subprocess.run(list(cmd), capture_output=True, text=True, timeout=timeout).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ''
+
+
+def parse(value):
+    try:
+        return json.loads(value)
+    except ValueError:
+        return value
+
+
+# ---------- Panel rápido (lo lee y lo toca el plasmoide org.apogeo.rapido) ----------
+
+def network():
+    for line in run('nmcli', '-t', '-f', 'TYPE,STATE,CONNECTION', 'device').splitlines():
+        kind, state, name = (line.split(':', 2) + ['', ''])[:3]
+        if state == 'connected' and kind == 'ethernet':
+            return {'on': True, 'texto': 'Cable conectado'}
+        if state == 'connected' and kind == 'wifi':
+            return {'on': True, 'texto': name}
+    return {'on': False, 'texto': 'Sin conexión'}
+
+
+def bluez():
+    """El primer adaptador de bluetooth (o None). Por D-Bus: bluetoothctl se queda esperando si no hay ninguno."""
+    import dbus
+    try:
+        bus = dbus.SystemBus()
+        objs = bus.get_object('org.bluez', '/').GetManagedObjects(dbus_interface='org.freedesktop.DBus.ObjectManager',
+                                                                   timeout=2)
+    except dbus.DBusException:
+        return None
+    for path, ifaces in objs.items():
+        if 'org.bluez.Adapter1' in ifaces:
+            return bus.get_object('org.bluez', path), bool(ifaces['org.bluez.Adapter1'].get('Powered'))
+    return None
+
+
+def volume():
+    m = re.search(r'(\d+)%', run('pactl', 'get-sink-volume', '@DEFAULT_SINK@'))
+    muted = 'yes' in run('pactl', 'get-sink-mute', '@DEFAULT_SINK@')
+    return (int(m.group(1)) if m else 0), muted
+
+
+def screen():
+    """La pantalla cuyo brillo se puede cambiar (la del portátil o un monitor que lo deje), o None."""
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        root = bus.get_object('org.kde.ScreenBrightness', '/org/kde/ScreenBrightness')
+        names = root.Get('org.kde.ScreenBrightness', 'DisplaysDBusNames', dbus_interface='org.freedesktop.DBus.Properties')
+        if not names:
+            return None
+        return bus.get_object('org.kde.ScreenBrightness', f'/org/kde/ScreenBrightness/{names[0]}')
+    except dbus.DBusException:
+        return None
+
+
+def brightness():
+    d = screen()
+    if not d:
+        return -1
+    props = d.GetAll('org.kde.ScreenBrightness.Display', dbus_interface='org.freedesktop.DBus.Properties')
+    top = int(props.get('MaxBrightness', 0))
+    return round(int(props.get('Brightness', 0)) * 100 / top) if top else -1
+
+
+def night_light():
+    return run('kreadconfig6', '--file', 'kwinrc', '--group', 'NightColor', '--key', 'Active').strip() == 'true'
+
+
+def quick_state():
+    st = comun.load()
+    vol, muted = volume()
+    bt = bluez()
+    name, photo = os.environ.get('USER', '').capitalize(), ''
+    try:
+        acc = comun.Accounts()
+        name = acc.get('RealName') or name
+        photo = acc.get('IconFile')
+        photo = photo if os.path.isfile(photo) else ''
+    except Exception:
+        pass
+    return {
+        'red': network(),
+        'bt': {'hay': bt is not None, 'on': bool(bt and bt[1])},
+        'volumen': vol, 'mudo': muted,
+        'brillo': brightness(),
+        'luz': night_light(),
+        'animar': st['animar'], 'grafica': comun.real_gpu(), 'silencio': st['silencio'],
+        'energia': {k: st['pisos'][k]['energia'] for k in comun.FLOOR_KEYS},
+        'nombre': name, 'foto': photo,
+    }
+
+
+def quick(action, arg=None):
+    import dbus
+    if action == 'red':
+        comun.spawn('kcmshell6', 'kcm_networkmanagement')
+    elif action == 'bluetooth':
+        bt = bluez()
+        if bt:
+            bt[0].Set('org.bluez.Adapter1', 'Powered', dbus.Boolean(not bt[1]),
+                      dbus_interface='org.freedesktop.DBus.Properties')
+    elif action == 'volumen' and arg is not None:
+        run('pactl', 'set-sink-mute', '@DEFAULT_SINK@', '0')
+        run('pactl', 'set-sink-volume', '@DEFAULT_SINK@', f'{max(0, min(100, int(arg)))}%')
+    elif action == 'brillo' and arg is not None:
+        d = screen()
+        if d:
+            props = d.GetAll('org.kde.ScreenBrightness.Display', dbus_interface='org.freedesktop.DBus.Properties')
+            top = int(props.get('MaxBrightness', 0))
+            d.SetBrightness(dbus.Int32(round(top * max(5, min(100, int(arg))) / 100)), dbus.UInt32(0),
+                            dbus_interface='org.kde.ScreenBrightness.Display')
+    elif action == 'luz':
+        run('kwriteconfig6', '--file', 'kwinrc', '--group', 'NightColor', '--key', 'Active',
+            'false' if night_light() else 'true')
+        dbus.SessionBus().get_object('org.kde.KWin', '/KWin').reconfigure(dbus_interface='org.kde.KWin')
+    elif action in ('animar', 'silencio'):
+        st = comun.load()
+        st[action] = not st[action]
+        comun.save(st)
+    elif action == 'energia' and arg in comun.FLOOR_KEYS:
+        st = comun.load()
+        f = st['pisos'][arg]
+        f['energia'] = 'balanced' if f['energia'] == 'power-saver' else 'power-saver'
+        comun.save(st)
+    elif action == 'apagar':
+        dbus.SessionBus().get_object('org.kde.LogoutPrompt', '/LogoutPrompt').promptAll(
+            dbus_interface='org.kde.LogoutPrompt')
+    else:
+        return 1
+    return 0
+
+
+# ---------- La ventana ----------
+
+def window(section):
+    from PyQt6.QtCore import QSize, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtGui import QIcon
+    from PyQt6.QtQuick import QQuickImageProvider
+    import apogeo_qt
+
+    class Icons(QQuickImageProvider):
+        """image://icono/NOMBRE: los iconos del tema (Papirus con las carpetas rosas), para las apps de cada piso."""
+        def __init__(self):
+            super().__init__(QQuickImageProvider.ImageType.Pixmap)
+
+        def requestPixmap(self, name, requested):
+            side = max(requested.width(), requested.height(), 32)
+            icon = QIcon(name) if name.startswith('/') else QIcon.fromTheme(name, QIcon.fromTheme('application-x-executable'))
+            return icon.pixmap(QSize(side, side)), QSize(side, side)
+
+    class Backend(apogeo_qt.Base):
+        APP_ID = 'apogeo-ajustes'
+        settingsChanged = pyqtSignal()
+        tempsChanged = pyqtSignal()
+        healthChanged = pyqtSignal()
+        tokenSaved = pyqtSignal(bool, str, arguments=['ok', 'message'])
+        updatesChanged = pyqtSignal()
+        stateChanged = pyqtSignal()  # (= changed de Base: PyQt no deja avisar con una señal de la clase madre)
+
+        def __init__(self):
+            super().__init__()
+            self.changed.connect(self.stateChanged)
+            self._st = comun.load()
+            self._temps = {}
+            self._limit = comun.health()['limite']
+            self._health_msg = ''
+            self._apps = None
+            self._updates = {'estado': 'nada', 'lista': [], 'cuantas': 0}
+            self._timer = QTimer(self)
+            self._timer.timeout.connect(self._read_temps)
+            self._timer.start(3000)
+            self._read_temps()
+
+        # Ajustes
+        @pyqtProperty('QVariantMap', notify=settingsChanged)
+        def settings(self):
+            return self._st
+
+        @pyqtSlot(str, 'QVariant')
+        def set(self, path, value):
+            st = comun.load()
+            comun.set_path(st, path, value.toVariant() if hasattr(value, 'toVariant') else value)
+            self._st = comun.save(st)
+            self.settingsChanged.emit()
+
+        @pyqtProperty(str, constant=True)
+        def section(self):
+            return section
+
+        # Apps de cada piso
+        @pyqtSlot(str, result='QVariantList')
+        def floorApps(self, floor):
+            out = []
+            for app_id in self._st['pisos'][floor]['apps']:
+                info = comun.app_info(app_id)
+                if info:
+                    out.append({'id': app_id, 'name': info[0], 'icon': info[1]})
+            return out
+
+        @pyqtSlot(result='QVariantList')
+        def allApps(self):
+            if self._apps is None:
+                self._apps = comun.apps()
+            return self._apps
+
+        @pyqtSlot(str, str)
+        def addApp(self, floor, app_id):
+            apps = list(self._st['pisos'][floor]['apps'])
+            if app_id not in apps:
+                self.set(f'pisos.{floor}.apps', apps + [app_id])
+
+        @pyqtSlot(str, str)
+        def removeApp(self, floor, app_id):
+            self.set(f'pisos.{floor}.apps', [a for a in self._st['pisos'][floor]['apps'] if a != app_id])
+
+        # Salud del PC
+        def _read_temps(self):
+            self._temps = {k: round(v) for k, v in comun.temperatures().items()}
+            self.tempsChanged.emit()
+
+        @pyqtProperty('QVariantMap', notify=tempsChanged)
+        def temps(self):
+            return self._temps
+
+        @pyqtProperty(int, notify=healthChanged)
+        def limit(self):
+            return self._limit
+
+        @pyqtProperty(str, notify=healthChanged)
+        def healthMessage(self):
+            return self._health_msg
+
+        @pyqtSlot(int)
+        def setLimit(self, value):
+            """Lo guarda apogeo-salud como administrador (polkit lo deja sin contraseña a quien está delante)."""
+            def work():
+                r = subprocess.run(['pkexec', os.path.join(comun.LIB, 'apogeo-salud'), str(value)],
+                                   capture_output=True, text=True)
+                self._health_msg = '' if r.returncode == 0 else 'No se ha podido guardar.'
+                self._limit = comun.health()['limite']
+                comun.save(comun.load())  # (para que apogeo-pisos lo vea y la isla avise a la temperatura nueva)
+                self.healthChanged.emit()
+            threading.Thread(target=work, daemon=True).start()
+
+        # Ágape
+        @pyqtProperty(bool, notify=stateChanged)
+        def hasToken(self):
+            return os.path.exists(apogeo_qt.agape.TOKEN)
+
+        @pyqtSlot(str)
+        def saveToken(self, token):
+            token = token.strip()
+
+            def work():
+                try:
+                    apogeo_qt.agape.check_token(token)
+                except apogeo_qt.agape.Fallo as f:
+                    self.tokenSaved.emit(False, str(f))
+                    return
+                except OSError as e:
+                    self.tokenSaved.emit(False, f'No se ha podido comprobar ({getattr(e, "reason", e)}). '
+                                                '¿Hay conexión a internet?')
+                    return
+                apogeo_qt.agape.save_token(token)
+                self.changed.emit()
+                self.tokenSaved.emit(True, '')
+            threading.Thread(target=work, daemon=True).start()
+
+        @pyqtSlot(str)
+        def open(self, what):
+            cmd = {'agape': ['agape'], 'bienvenida': [os.path.join(comun.LIB, 'apogeo-bienvenida')],
+                   'sistema': ['systemsettings'], 'usuarios': ['kcmshell6', 'kcm_users']}.get(what)
+            if cmd:
+                comun.spawn(*cmd)
+
+        # Tu perfil
+        @pyqtProperty(str, notify=stateChanged)
+        def iconFile(self):
+            try:
+                f = self.accounts.get('IconFile') if self.accounts else ''
+            except Exception:
+                f = ''
+            return f if f and os.path.isfile(f) else ''
+
+        def _save_profile(self, name, photo):
+            err = super()._save_profile(name, photo)
+            self.changed.emit()  # la foto nueva, a la vista
+            return err
+
+        @pyqtProperty(str, notify=stateChanged)
+        def currentName(self):
+            try:
+                return (self.accounts.get('RealName') if self.accounts else '') or os.environ.get('USER', '').capitalize()
+            except Exception:
+                return os.environ.get('USER', '').capitalize()
+
+        # Actualizaciones
+        @pyqtProperty(str, constant=True)
+        def version(self):
+            v = run('pacman', '-Q', 'apogeo').split()
+            return v[1].rsplit('-', 1)[0].replace('1.r', 'versión ', 1) if len(v) > 1 else ''
+
+        @pyqtProperty('QVariantMap', notify=updatesChanged)
+        def updates(self):
+            return self._updates
+
+        @pyqtSlot()
+        def checkUpdates(self):
+            self._updates = {'estado': 'buscando', 'lista': [], 'cuantas': 0}
+            self.updatesChanged.emit()
+
+            def work():
+                # checkupdates mira en una copia de la base de datos: no toca el sistema ni pide contraseña
+                r = subprocess.run(['checkupdates'], capture_output=True, text=True, timeout=180)
+                names = [ln.split()[0] for ln in r.stdout.splitlines() if ln.strip()]
+                estado = 'error' if r.returncode not in (0, 2) else 'hay' if names else 'al-dia'
+                # Primero lo de Apogeo, luego lo demás
+                names.sort(key=lambda n: (not n.startswith('apogeo'), n))
+                self._updates = {'estado': estado, 'lista': names[:8], 'cuantas': len(names)}
+                self.updatesChanged.emit()
+            threading.Thread(target=work, daemon=True).start()
+
+        @pyqtSlot()
+        def runUpdate(self):
+            """En una terminal, a la vista: pide tu contraseña y enseña lo que hace."""
+            comun.spawn('konsole', '--hide-menubar', '-p', 'tabtitle=Actualizar Apogeo', '-e', 'bash', '-c',
+                        'echo "Actualizando Apogeo y el sistema…"; echo; sudo pacman -Syu; echo; '
+                        'read -rp "Listo. Pulsa Intro para cerrar."')
+
+    return apogeo_qt.run('Ajustes de Apogeo', 'apogeo-ajustes', QML, Backend, images={'icono': Icons})
+
+
+def main():
+    args = sys.argv[1:]
+    if args[:1] == ['poner'] and len(args) == 3:
+        st = comun.load()
+        try:
+            comun.set_path(st, args[1], parse(args[2]))
+        except KeyError:
+            print('No existe el ajuste', args[1], file=sys.stderr)
+            return 1
+        comun.save(st)
+        return 0
+    if args[:1] == ['rapido']:
+        if len(args) == 1:
+            print(json.dumps(quick_state(), ensure_ascii=False))
+            return 0
+        return quick(args[1], args[2] if len(args) > 2 else None)
+    section = args[0] if args and args[0] in SECTIONS else 'pisos'
+    return window(section)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

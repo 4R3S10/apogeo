@@ -7,5 +7,11 @@
     <!-- Tiempo de estudio de hoy (piso Estudiar) -->
     <entry name="studyDate" type="String"><default></default></entry>
     <entry name="studySeconds" type="Int"><default>0</default></entry>
+    <!-- Ajustes de Apogeo → Isla y Salud del PC (los escribe apogeo-pisos) -->
+    <entry name="extraJugar" type="Bool"><default>true</default></entry>
+    <entry name="extraNavegar" type="Bool"><default>true</default></entry>
+    <entry name="extraEstudiar" type="Bool"><default>true</default></entry>
+    <entry name="fps" type="Int"><default>60</default></entry>
+    <entry name="limite" type="Int"><default>80</default></entry>
   </group>
 </kcfg>

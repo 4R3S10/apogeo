@@ -1,0 +1,31 @@
+#!/usr/bin/python3
+"""
+Guarda la temperatura a partir de la que Apogeo baja la velocidad (/etc/apogeo/salud.json, la lee apogeo-termico).
+La abre Ajustes → Salud del PC con pkexec: polkit (org.apogeo.salud) deja a quien está delante del equipo sin pedir
+contraseña, porque solo acepta valores prudentes (de 70 a 85 °C).
+
+  apogeo-salud GRADOS
+"""
+import json
+import os
+import sys
+
+PATH = '/etc/apogeo/salud.json'
+LOW, HIGH = 70, 85
+
+
+def main():
+    if len(sys.argv) != 2 or not sys.argv[1].isdigit() or not LOW <= int(sys.argv[1]) <= HIGH:
+        print(f'Uso: apogeo-salud GRADOS (de {LOW} a {HIGH})', file=sys.stderr)
+        return 2
+    os.makedirs(os.path.dirname(PATH), exist_ok=True)
+    tmp = PATH + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump({'limite': int(sys.argv[1])}, f)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, PATH)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

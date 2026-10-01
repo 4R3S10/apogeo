@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "System Information",
+        "Description": "Panel rápido de Apogeo: red, bluetooth, volumen, energía, no molestar y todos los ajustes",
+        "Icon": "apogeo",
+        "Id": "org.apogeo.rapido",
+        "License": "MIT",
+        "Name": "Panel rápido",
+        "Version": "0.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

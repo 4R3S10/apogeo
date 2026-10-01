@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 """
 Pisos de Apogeo: Jugar, Navegar y Estudiar son tres escritorios virtuales, uno encima de otro. Al cambiar de piso las
-ventanas se deslizan (efecto Deslizar de KWin) y este programa cambia lo demás: el fondo, el color de acento, los avisos
-(en Jugar y Estudiar no sale ninguno; se quedan en el historial) y la energía (nunca «rendimiento»: primero la salud del
-PC). La primera vez que se entra en un piso en la sesión se abren sus apps (Jugar: la consola); después, cada piso guarda sus ventanas.
+ventanas se deslizan (efecto Deslizar de KWin) y este programa cambia lo demás: el fondo, los avisos (por defecto solo en
+Navegar; los demás se quedan en el historial) y la energía (nunca «rendimiento»: primero la salud del PC). La primera vez
+que se entra en un piso en la sesión se abren sus apps (Jugar: la consola); después, cada piso guarda sus ventanas.
+Todo eso sale de tus ajustes (Ajustes de Apogeo, ~/.config/apogeo/ajustes.json): se vigilan y se aplican al momento.
 
   apogeo-pisos             se queda vigilando (lo arranca systemd al entrar en la sesión)
   apogeo-pisos ir N        va al piso N (0 = Jugar, 1 = Navegar, 2 = Estudiar)
@@ -19,15 +20,12 @@ import sys
 
 import dbus
 import dbus.mainloop.glib
-from gi.repository import GLib
+from gi.repository import Gio, GLib
 
-FLOORS = [
-    # Un solo rosa (el de Ágape) en todo; cada piso tiene su fondo animado de Ágape
-    {'name': 'Jugar', 'key': 'jugar', 'fondo': 'remolino', 'power': 'balanced', 'quiet': True, 'apps': [['apogeo-consola']]},
-    {'name': 'Navegar', 'key': 'navegar', 'fondo': 'tinta', 'power': 'balanced', 'quiet': False,
-     'apps': [['agape', 'firefox']]},  # Ágape si está; si no, Firefox
-    {'name': 'Estudiar', 'key': 'estudiar', 'fondo': 'seda', 'power': 'power-saver', 'quiet': True, 'apps': []},
-]
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+import apogeo_comun as ajustes  # noqa: E402
+
+FLOORS = [{'name': 'Jugar', 'key': 'jugar'}, {'name': 'Navegar', 'key': 'navegar'}, {'name': 'Estudiar', 'key': 'estudiar'}]
 HOME = os.path.expanduser('~')
 STATE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'pisos.json')
 WELCOME_DONE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'bienvenida-hecha')
@@ -124,6 +122,7 @@ def setup(bus):
             p.addWidget('org.apogeo.isla');
             p.addWidget('org.kde.plasma.systemtray');
             var clock = p.addWidget('org.kde.plasma.digitalclock');
+            p.addWidget('org.apogeo.rapido');
             clock.currentConfigGroup = ['Appearance'];
             clock.writeConfig('showDate', false);
             clock.writeConfig('dateDisplayFormat', 'DisableDate');
@@ -170,10 +169,21 @@ def setup(bus):
             });
         """)
         st['reloj'] = CLOCK
+    if st.get('rapido', 0) < QUICK:
+        # El panel rápido (red, bluetooth, volumen, energía, no molestar…) al final de la isla, después de la hora
+        plasma_script(bus, """
+            panels().forEach(function (p) {
+                if (p.location != 'bottom') return;
+                var has = p.widgets().some(function (w) { return w.type == 'org.apogeo.rapido'; });
+                if (!has && p.widgets().some(function (w) { return w.type == 'org.apogeo.isla'; })) p.addWidget('org.apogeo.rapido');
+            });
+        """)
+        st['rapido'] = QUICK
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
     save_state(st)
+    island(bus, ajustes.load())
 
 
 ISLAND = 1  # igual que AESTHETICS, para la isla de abajo
@@ -182,6 +192,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.keyboardlayout', 'org.kde.plasma.keyboardindicator', 'org.kde.kscreen',
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
+QUICK = 1  # igual, para el panel rápido de la isla
 AESTHETICS = 6  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
@@ -249,15 +260,19 @@ class Floors:
         self.visited = set()
         self.last = None
 
-    def apply(self, index):
-        if index == self.last:
+    def apply(self, index, force=False):
+        if index == self.last and not force:
             return
         self.last = index
         f = FLOORS[min(index, len(FLOORS) - 1)]
+        st = ajustes.load()
+        mine = st['pisos'][f['key']]
         log('piso', f['name'])
-        self.wallpaper(f)
-        self.quiet(f['quiet'])
-        self.power(f['power'])
+        self.wallpaper(mine['fondo'], st['animar'])
+        self.quiet(st['silencio'] or not mine['avisos'])
+        self.power(mine['energia'])
+        if force:
+            return
         if index not in self.visited:
             # Solo si se queda en el piso: pasar de largo con la rueda no abre nada (y la ventana, al aparecer tarde,
             # le devolvería a este piso)
@@ -268,16 +283,22 @@ class Floors:
             return True  # con la bienvenida delante no se abre nada (Ágape, por ejemplo, lo instala ella): luego
         if self.last == index and index not in self.visited:
             self.visited.add(index)
-            self.open_apps(FLOORS[index])
+            self.open_apps(ajustes.load()['pisos'][FLOORS[index]['key']]['apps'])
         return False
 
-    def wallpaper(self, f):
+    def settings_changed(self):
+        """Has cambiado algo en los ajustes: el piso en el que estás y la isla, ya."""
+        self.apply(self.last if self.last is not None else current_index(self.bus), force=True)
+        island(self.bus, ajustes.load())
+
+    def wallpaper(self, style, animate):
         """El fondo animado de Ágape del piso (org.apogeo.fondo). Sin gráfica de verdad, quieto (lo dibujaría el
-        procesador). También en la pantalla de bloqueo, que así sabe en qué piso estabas."""
-        animate = 'true' if real_gpu() else 'false'
+        procesador), y también si lo apagas en los ajustes. También en la pantalla de bloqueo, que así sabe en qué piso
+        estabas."""
+        animate = 'true' if animate and real_gpu() else 'false'
         run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--key', 'WallpaperPlugin',
             'org.apogeo.fondo')
-        for key, value in (('Estilo', f['fondo']), ('Animar', animate)):
+        for key, value in (('Estilo', style), ('Animar', animate)):
             run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
                 'org.apogeo.fondo', '--group', 'General', '--key', key, value)
         plasma_script(self.bus, """
@@ -287,7 +308,7 @@ class Floors:
                 d.writeConfig('Estilo', '%s');
                 d.writeConfig('Animar', %s);
             });
-        """ % (f['fondo'], animate))
+        """ % (style, animate))
 
     def quiet(self, on):
         """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos."""
@@ -310,17 +331,44 @@ class Floors:
         except dbus.DBusException as e:
             log('energía:', e.get_dbus_message())
 
-    def open_apps(self, f):
-        for choices in f['apps']:
-            exe = next((c for c in choices if shutil.which(c)), None)
-            if not exe or subprocess.run(['pgrep', '-x', exe], stdout=subprocess.DEVNULL).returncode == 0:
-                continue  # no está instalada o ya está abierta (en este u otro piso)
-            log('abriendo', exe)
+    def open_apps(self, app_ids):
+        for app_id in app_ids:
+            info = ajustes.app_info(app_id)
+            if not info:
+                continue  # ya no está instalada
+            exe = os.path.basename(info[2])
+            if exe and subprocess.run(['pgrep', '-x', exe], stdout=subprocess.DEVNULL).returncode == 0:
+                continue  # ya está abierta (en este u otro piso)
+            log('abriendo', app_id)
+            path = Gio.DesktopAppInfo.new(app_id).get_filename()
             # En su propio grupo de systemd (como si la abrieras tú): si este programa se reinicia, la app sigue abierta
             subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
-                              f'--unit=app-apogeo-{exe}-{os.getpid()}-{len(self.visited)}', exe],
+                              f'--unit=app-apogeo-{exe or "app"}-{os.getpid()}-{len(self.visited)}', 'gio', 'launch', path],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
                              env=dict(os.environ, APOGEO_AUTO='1'))  # (la abre el piso, no tú)
+
+
+def island(bus, st):
+    """La isla como en los ajustes: si se esconde sola, lo de cada piso (temperatura y FPS, música, temporizador) y los
+    números de la salud del PC que enseña en Jugar."""
+    cfg = st['isla']
+    plasma_script(bus, """
+        panels().forEach(function (p) {
+            if (p.location != 'bottom') return;
+            p.hiding = %s;
+            p.widgets().forEach(function (w) {
+                if (w.type != 'org.apogeo.isla') return;
+                w.currentConfigGroup = ['General'];
+                w.writeConfig('extraJugar', %s);
+                w.writeConfig('extraNavegar', %s);
+                w.writeConfig('extraEstudiar', %s);
+                w.writeConfig('fps', %d);
+                w.writeConfig('limite', %d);
+                w.reloadConfig();
+            });
+        });
+    """ % (json.dumps('autohide' if cfg['esconder'] else 'none'), json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
+           json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 
 
 def welcome_open():
@@ -377,6 +425,20 @@ def main():
     go(bus, start_floor())
     welcome()
     floors.apply(current_index(bus))
+    # Los ajustes: al guardarlos (de golpe, con un archivo nuevo) se aplican
+    monitor = Gio.File.new_for_path(os.path.dirname(ajustes.SETTINGS)).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES,
+                                                                                          None)
+    pending = {'id': None}
+
+    def changed(_m, f, other, _event):
+        names = {x.get_basename() for x in (f, other) if x}
+        if os.path.basename(ajustes.SETTINGS) not in names:
+            return
+        if pending['id']:
+            GLib.source_remove(pending['id'])
+        pending['id'] = GLib.timeout_add(250, lambda: (pending.update(id=None), floors.settings_changed(), False)[-1])
+    os.makedirs(os.path.dirname(ajustes.SETTINGS), exist_ok=True)
+    monitor.connect('changed', changed)
     GLib.MainLoop().run()
 
 

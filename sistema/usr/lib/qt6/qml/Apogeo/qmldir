@@ -1,0 +1,16 @@
+module Apogeo
+singleton Tema 1.0 Tema.qml
+Texto 1.0 Texto.qml
+Icono 1.0 Icono.qml
+Boton 1.0 Boton.qml
+Campo 1.0 Campo.qml
+Interruptor 1.0 Interruptor.qml
+Segmentos 1.0 Segmentos.qml
+Deslizador 1.0 Deslizador.qml
+Aviso 1.0 Aviso.qml
+Girando 1.0 Girando.qml
+Cara 1.0 Cara.qml
+Foto 1.0 Foto.qml
+Fondo 1.0 Fondo.qml
+Seccion 1.0 Seccion.qml
+Fila 1.0 Fila.qml

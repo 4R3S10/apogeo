@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 """
-Salud del PC antes que rendimiento: si el procesador o la gráfica llegan a 80 °C, Apogeo baja poco a poco su velocidad
-máxima (y la potencia de la gráfica AMD, si la deja cambiar) hasta que se enfrían. Por debajo de 72 °C la va devolviendo.
+Salud del PC antes que rendimiento: si el procesador o la gráfica llegan a 80 °C (o lo que se ponga en Ajustes → Salud
+del PC, de 70 a 85: /etc/apogeo/salud.json), Apogeo baja poco a poco su velocidad máxima (y la potencia de la gráfica AMD,
+si la deja cambiar) hasta que se enfrían. Por debajo de 8 °C menos la va devolviendo.
 Nunca pasa de lo que el sistema permite ni baja de la mitad. Al pararse, lo deja todo como estaba.
 """
 import glob
+import json
 import os
 import signal
 import sys
 import time
 
-LIMIT = 80.0  # °C a partir de los que se baja
-RESUME = 72.0  # °C por debajo de los que se devuelve
+LIMIT = 80.0  # °C a partir de los que se baja (por defecto; ver limits())
+MARGIN = 8.0  # se devuelve por debajo de LIMIT - MARGIN
+SETTINGS = os.environ.get('APOGEO_SALUD', '/etc/apogeo/salud.json')
 STEP = 0.1  # cuánto se baja o se sube cada vez (10 % del máximo)
 MIN_FACTOR = 0.5
 COOL_READS = 3  # lecturas frescas seguidas antes de subir (que no vaya a tirones)
@@ -40,6 +43,27 @@ def write(path, value):
     except OSError as e:
         log('no se puede escribir', path, e.strerror)
         return False
+
+
+_limits = {'mtime': None, 'limit': LIMIT}
+
+
+def limits():
+    """(bajar a partir de, devolver por debajo de), de /etc/apogeo/salud.json si cambia (solo de 70 a 85 °C)."""
+    try:
+        mtime = os.stat(SETTINGS).st_mtime
+    except OSError:
+        mtime = None
+    if mtime != _limits['mtime']:
+        _limits['mtime'] = mtime
+        try:
+            with open(SETTINGS) as f:
+                value = float(json.load(f).get('limite', LIMIT))
+            _limits['limit'] = value if 70 <= value <= 85 else LIMIT
+        except (OSError, ValueError, AttributeError):
+            _limits['limit'] = LIMIT
+        log(f'límite {_limits["limit"]:.0f} °C')
+    return _limits['limit'], _limits['limit'] - MARGIN
 
 
 def hwmons(names):
@@ -82,10 +106,11 @@ class Guard:
         if t is None:
             return
         before = self.factor
-        if t >= LIMIT and self.factor > MIN_FACTOR:
+        limit, resume = limits()
+        if t >= limit and self.factor > MIN_FACTOR:
             self.factor = round(max(MIN_FACTOR, self.factor - STEP), 2)
             self.cool = 0
-        elif t <= RESUME and self.factor < 1:
+        elif t <= resume and self.factor < 1:
             self.cool += 1
             if self.cool >= COOL_READS:
                 self.factor = round(min(1.0, self.factor + STEP), 2)

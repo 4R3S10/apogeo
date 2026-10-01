@@ -13,6 +13,7 @@ import org.kde.kirigami as Kirigami
 //  - Jugar: temperatura, el límite de FPS y un botón para ver el escritorio.
 //  - Navegar: tus ventanas del piso y la música que suena.
 //  - Estudiar: temporizador de concentración (25 min estudio / 5 descanso), lo estudiado hoy y tus ventanas.
+// Lo de cada piso se puede quitar en Ajustes de Apogeo → Isla (apogeo-pisos lo escribe en la configuración de este widget).
 // La hora, el sonido, la red y los avisos son los widgets de Plasma que van a su lado en el mismo panel.
 PlasmoidItem {
     id: root
@@ -218,15 +219,15 @@ PlasmoidItem {
 
         // ----- Jugar -----
         Chip {
-            visible: root.floor === "Jugar" && root.temp > 0
+            visible: root.floor === "Jugar" && root.temp > 0 && Plasmoid.configuration.extraJugar
             iconName: "temperatura"
             text: Math.round(root.temp) + " °C"
-            fg: root.temp >= 80 ? root.warn : root.text
+            fg: root.temp >= Plasmoid.configuration.limite ? root.warn : root.text
         }
         Chip {
-            visible: root.floor === "Jugar"
+            visible: root.floor === "Jugar" && Plasmoid.configuration.extraJugar
             iconName: "fps"
-            text: "60 FPS"
+            text: Plasmoid.configuration.fps + " FPS"
         }
         AgapeButton {
             visible: root.floor === "Jugar"
@@ -243,7 +244,7 @@ PlasmoidItem {
 
         // ----- Estudiar -----
         Chip {
-            visible: root.floor === "Estudiar"
+            visible: root.floor === "Estudiar" && Plasmoid.configuration.extraEstudiar
             iconName: root.focusRunning ? "pausa" : "reloj"
             on: root.focusRunning
             text: root.mmss(root.focusLeft) + " · " + (root.focusBreak ? "descanso" : "estudio")
@@ -251,11 +252,11 @@ PlasmoidItem {
             onRightClicked: { root.focusRunning = false; root.focusBreak = false; root.focusLeft = 25 * 60; }
         }
         Chip {
-            visible: root.floor === "Estudiar"
+            visible: root.floor === "Estudiar" && Plasmoid.configuration.extraEstudiar
             iconName: "libro"
             text: "Hoy " + root.hm(root.studied())
         }
-        Separator { visible: root.floor === "Estudiar" && tasks.count > 0 }
+        Separator { visible: root.floor === "Estudiar" && tasks.count > 0 && Plasmoid.configuration.extraEstudiar }
 
         // ----- Ventanas del piso (Navegar y Estudiar) -----
         Repeater {
@@ -310,7 +311,7 @@ PlasmoidItem {
         Separator { visible: music.visible }
         Rectangle {
             id: music
-            visible: root.floor === "Navegar" && !!root.player && (root.player.track || "") !== ""
+            visible: root.floor === "Navegar" && Plasmoid.configuration.extraNavegar && !!root.player && (root.player.track || "") !== ""
             Layout.preferredHeight: 34
             Layout.preferredWidth: musicRow.implicitWidth + 12
             radius: 12

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Dialogs
+import Apogeo
 
 // Bienvenida de Apogeo («A · Tarjeta central»): como la bienvenida de Ágape, una tarjeta de cristal en el centro sobre el
 // fondo animado del piso Navegar, con puntos abajo que marcan por dónde vas. La parte de dentro (red, cuentas, descarga
@@ -71,145 +72,11 @@ ApplicationWindow {
 
     // ---------- Fondo: el animado de Ágape del piso Navegar («Tinta»), a un tercio de resolución y 30 imágenes/s ----------
 
-    property real time: 40
-    ShaderEffect {
-        id: fx
-        width: Math.max(2, Math.round(win.width / 3))
-        height: Math.max(2, Math.round(win.height / 3))
-        visible: false
-        property real t: win.time
-        property real kind: 0
-        property real light: 0
-        property size res: Qt.size(win.width, win.height)
-        property color base: "#120d14"
-        property color c1: "#4a2c4f"
-        property color c2: "#7a4458"
-        property color c3: "#e0a9b4"
-        fragmentShader: "file:///usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders/fondo.frag.qsb"
-    }
-    ShaderEffectSource {
-        anchors.fill: parent
-        sourceItem: fx
-        textureSize: Qt.size(fx.width, fx.height)
-        smooth: true
-    }
-    Timer {
-        interval: 33
-        repeat: true
-        // Sin gráfica de verdad se queda quieto: primero la salud del equipo
-        running: apogeo.animate && GraphicsInfo.api !== GraphicsInfo.Software && win.active
-        onTriggered: win.time += 0.033
-    }
+    Binding { target: Tema; property: "animar"; value: apogeo.animate && win.active }
+    Fondo { anchors.fill: parent; tipo: 0 }
     Rectangle { anchors.fill: parent; color: win.bg; opacity: 0.45 }
 
     // ---------- Piezas ----------
-
-    component Label_: Text {
-        color: win.text
-        font.family: win.fontName
-        font.pixelSize: 14
-        wrapMode: Text.Wrap
-    }
-
-    component Icon_: Item {
-        id: icon
-        property string name
-        property color color: win.text
-        width: 16; height: 16
-        Image {
-            id: iconImg
-            anchors.fill: parent
-            source: icon.name ? Qt.resolvedUrl("iconos/" + icon.name + ".svg") : ""
-            sourceSize: Qt.size(icon.width * 2, icon.height * 2)
-            visible: false
-        }
-        // (la transparencia del color no la aplica el coloreado: va aparte)
-        MultiEffect { anchors.fill: parent; source: iconImg; colorization: 1; colorizationColor: icon.color; opacity: icon.color.a }
-    }
-
-    component Button_: AbstractButton {
-        id: b
-        property string kind: "normal"      // primary · ghost · normal
-        property bool big: kind === "primary"
-        property string iconName: ""
-        readonly property color fg: kind === "primary" ? win.accentText : kind === "ghost" && !hovered ? win.muted : win.text
-        implicitHeight: big ? 42 : 34
-        implicitWidth: row.implicitWidth + (big ? 44 : 28)
-        opacity: enabled ? 1 : 0.45
-        hoverEnabled: true
-        font.family: win.fontName
-        background: Item {
-            RectangularShadow {
-                anchors.fill: parent
-                visible: b.kind === "primary" && b.enabled
-                offset.y: 4; blur: 18; spread: -4
-                radius: bgRect.radius
-                color: win.accent
-                opacity: 0.8
-            }
-            Rectangle {
-                id: bgRect
-                anchors.fill: parent
-                radius: b.big ? 13 : 10
-                color: b.kind === "primary" ? (b.hovered ? Qt.lighter(win.accent, 1.06) : win.accent)
-                     : b.kind === "ghost" ? (b.hovered ? win.hover : "transparent")
-                     : (b.hovered ? win.press : win.hover)
-                border.width: b.kind === "normal" ? 1 : 0
-                border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.14)
-                Behavior on color { ColorAnimation { duration: 150 } }
-            }
-        }
-        contentItem: Item {
-            Row {
-                id: row
-                anchors.centerIn: parent
-                spacing: 8
-                Label_ {
-                    text: b.text
-                    color: b.fg
-                    wrapMode: Text.NoWrap
-                    font.pixelSize: b.big ? 14 : 13
-                    font.weight: b.kind === "ghost" ? Font.DemiBold : Font.ExtraBold
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                Icon_ {
-                    visible: b.iconName !== ""
-                    name: b.iconName
-                    color: b.fg
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-        }
-    }
-
-    component Field_: TextField {
-        id: f
-        width: Math.min(360, parent ? parent.width : 360)
-        height: 44
-        anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
-        horizontalAlignment: TextInput.AlignHCenter
-        color: win.text
-        placeholderTextColor: win.faint
-        selectionColor: win.accent
-        selectedTextColor: win.accentText
-        font.family: win.fontName
-        font.pixelSize: 15
-        background: Rectangle {
-            radius: 12
-            color: win.hover
-            border.width: 1
-            border.color: f.activeFocus ? win.accent : Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.12)
-            Rectangle { // el anillo de foco de Ágape
-                anchors.fill: parent
-                anchors.margins: -3
-                radius: 15
-                color: "transparent"
-                border.width: 3
-                border.color: win.accentSoft
-                visible: f.activeFocus
-            }
-        }
-    }
 
     component Header_: Column {
         property alias title: t.text
@@ -223,7 +90,7 @@ ApplicationWindow {
             sourceSize: Qt.size(152, 152)
         }
         Item { width: 1; height: 2 }
-        Label_ {
+        Texto {
             id: t
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
@@ -231,7 +98,7 @@ ApplicationWindow {
             font.weight: Font.Black
             font.letterSpacing: -0.3
         }
-        Label_ {
+        Texto {
             id: l
             width: Math.min(470, parent.width)
             anchors.horizontalCenter: parent.horizontalCenter
@@ -255,19 +122,19 @@ ApplicationWindow {
         signal nextClicked()
         width: parent ? parent.width : 0
         height: 42 + 22
-        Button_ {
+        Boton {
             visible: acts.back !== ""
-            kind: "ghost"
+            tipo: "plano"
             text: acts.back
             enabled: acts.backEnabled
             anchors.left: parent.left
             anchors.bottom: parent.bottom
             onClicked: acts.backClicked()
         }
-        Button_ {
-            kind: "primary"
+        Boton {
+            tipo: "principal"
             text: acts.next
-            iconName: acts.arrow ? "flecha" : ""
+            icono: acts.arrow ? "flecha" : ""
             enabled: acts.nextEnabled
             anchors.bottom: parent.bottom
             anchors.right: acts.back !== "" ? parent.right : undefined
@@ -276,115 +143,23 @@ ApplicationWindow {
         }
     }
 
-    component Warn_: Rectangle {
-        property alias text: w.text
-        width: Math.min(470, parent ? parent.width : 470)
-        anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
-        height: w.implicitHeight + 20
-        radius: 12
-        color: Qt.rgba(245 / 255, 158 / 255, 11 / 255, 0.14)
-        visible: w.text !== ""
-        Label_ { id: w; anchors.fill: parent; anchors.margins: 10; anchors.leftMargin: 14; anchors.rightMargin: 14; horizontalAlignment: Text.AlignHCenter; font.pixelSize: 14 }
-    }
-
     component Check_: Row {
         property alias text: c.text
         property bool ok: true
         property color tone: win.text
         spacing: 10
-        Icon_ { name: parent.ok ? "hecho" : "aviso"; color: parent.ok ? win.accent : win.faint; anchors.verticalCenter: parent.verticalCenter }
-        Label_ { id: c; color: parent.tone; wrapMode: Text.NoWrap; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
-    }
-
-    component Spinner_: Item {
-        width: 22; height: 22
-        Rectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: "transparent"
-            border.width: 2.5
-            border.color: win.faint
-        }
-        Rectangle { // el trozo rosa que gira
-            width: 7; height: 7; radius: 3.5
-            color: win.accent
-            x: parent.width / 2 - 3.5 + 8 * Math.cos(angle)
-            y: parent.height / 2 - 3.5 + 8 * Math.sin(angle)
-            property real angle: 0
-            NumberAnimation on angle { from: 0; to: 2 * Math.PI; duration: 800; loops: Animation.Infinite }
-        }
-    }
-
-    // Una cara para la foto: tu inicial, un icono o tu foto, sobre un degradado del tema
-    component Face_: Rectangle {
-        id: fc
-        property int kind: 0
-        property url photo: ""
-        property string letter: ""
-        readonly property var tones: [["#e0a9b4", "#7a4458"], ["#8e2e66", "#4a2c4f"], ["#ff8fc6", "#7a4458"], ["#5b3445", "#2a1830"]]
-        gradient: Gradient {
-            GradientStop { position: 0; color: fc.tones[Math.min(fc.kind, 3)][0] }
-            GradientStop { position: 1; color: fc.tones[Math.min(fc.kind, 3)][1] }
-        }
-        Label_ {
-            anchors.centerIn: parent
-            visible: fc.kind === 0
-            text: fc.letter
-            color: "#ffffff"
-            font.pixelSize: fc.height * 0.42
-            font.weight: Font.Black
-        }
-        Icon_ {
-            anchors.centerIn: parent
-            visible: fc.kind >= 1 && fc.kind <= 3
-            width: fc.height * 0.46; height: width
-            name: ["", "navegar", "jugar", "musica"][Math.min(fc.kind, 3)]
-            color: "#ffffff"
-        }
-        Image {
-            anchors.fill: parent
-            visible: fc.kind === 4
-            source: fc.kind === 4 ? fc.photo : ""
-            fillMode: Image.PreserveAspectCrop
-            sourceSize: Qt.size(512, 512)
-            asynchronous: true
-        }
-    }
-
-    component Round_: Item {
-        id: rd
-        property int kind: 0
-        property bool selected: false
-        property bool ring: false
-        Face_ { id: rface; anchors.fill: parent; kind: rd.kind; photo: win.photo; letter: win.name.trim().charAt(0).toUpperCase(); visible: false }
-        Rectangle { id: rmask; anchors.fill: parent; radius: width / 2; visible: false; layer.enabled: true }
-        RectangularShadow {
-            anchors.fill: parent
-            visible: rd.ring
-            radius: width / 2
-            blur: 30; spread: -6; offset.y: 8
-            color: win.accent
-        }
-        MultiEffect { anchors.fill: parent; source: rface; maskEnabled: true; maskSource: rmask }
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: rd.ring ? -3 : rd.selected ? -4 : 0
-            radius: width / 2
-            color: "transparent"
-            border.width: rd.ring ? 3 : 2
-            border.color: win.accent
-            visible: rd.ring || rd.selected
-        }
+        Icono { nombre: parent.ok ? "hecho" : "aviso"; color: parent.ok ? win.accent : win.faint; anchors.verticalCenter: parent.verticalCenter }
+        Texto { id: c; color: parent.tone; wrapMode: Text.NoWrap; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
     }
 
     // La foto que se guarda (256 × 256, cuadrada: el inicio de sesión y el bloqueo la recortan en círculo)
-    Face_ {
+    Cara {
         id: faceOut
         x: -1000
         width: 256; height: 256
-        kind: win.face
-        photo: win.photo
-        letter: win.name.trim().charAt(0).toUpperCase()
+        tipo: win.face
+        foto: win.photo
+        letra: win.name.trim().charAt(0).toUpperCase()
     }
 
     FileDialog {
@@ -452,12 +227,12 @@ ApplicationWindow {
     }
 
     // Saltar: por ahora (vuelve en el próximo inicio) o para siempre
-    Button_ {
+    Boton {
         id: skip
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: 22
-        kind: "ghost"
+        tipo: "plano"
         text: "Saltar"
         visible: win.step < win.steps - 1
         onClicked: skipMenu.open()
@@ -487,8 +262,8 @@ ApplicationWindow {
                         leftPadding: 10
                         topPadding: 8
                         spacing: 1
-                        Label_ { text: opt.modelData.title; font.weight: Font.Bold }
-                        Label_ { text: opt.modelData.sub; color: win.muted; font.pixelSize: 12 }
+                        Texto { text: opt.modelData.title; font.weight: Font.Bold }
+                        Texto { text: opt.modelData.sub; color: win.muted; font.pixelSize: 12 }
                     }
                     onClicked: apogeo.finish(opt.modelData.done)
                 }
@@ -520,7 +295,7 @@ ApplicationWindow {
                     visible: !apogeo.online
                     spacing: 12
                     Check_ { ok: false; text: "Sin conexión a internet"; anchors.verticalCenter: parent.verticalCenter }
-                    Button_ { text: "Conectar a una red…"; iconName: "wifi"; onClicked: apogeo.openNetwork() }
+                    Boton { text: "Conectar a una red…"; icono: "wifi"; onClicked: apogeo.openNetwork() }
                 }
                 Timer { interval: 2000; repeat: true; running: true; onTriggered: apogeo.check_online() }
             }
@@ -545,11 +320,11 @@ ApplicationWindow {
                 title: "¿Cómo te llamas?"
                 lead: "Tu nombre y tu foto salen al iniciar sesión y en la pantalla de bloqueo."
             }
-            Round_ {
+            Foto { foto: win.photo; letra: win.name.trim().charAt(0).toUpperCase();
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 88; height: 88
-                kind: win.face
-                ring: true
+                tipo: win.face
+                anillo: true
             }
             Item { width: 1; height: 14 }
             Row {
@@ -557,17 +332,17 @@ ApplicationWindow {
                 spacing: 10
                 Repeater {
                     model: 4
-                    delegate: Round_ {
+                    delegate: Foto { foto: win.photo; letra: win.name.trim().charAt(0).toUpperCase();
                         required property int index
                         width: 40; height: 40
-                        kind: index
-                        selected: win.face === index
+                        tipo: index
+                        elegida: win.face === index
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.face = parent.index }
                     }
                 }
                 Item {
                     width: 40; height: 40
-                    Round_ { anchors.fill: parent; kind: 4; selected: win.face === 4; visible: win.photo.toString() !== "" }
+                    Foto { foto: win.photo; letra: win.name.trim().charAt(0).toUpperCase(); anchors.fill: parent; tipo: 4; elegida: win.face === 4; visible: win.photo.toString() !== "" }
                     Rectangle {
                         anchors.fill: parent
                         visible: win.photo.toString() === ""
@@ -575,7 +350,7 @@ ApplicationWindow {
                         color: pick.containsMouse ? win.press : win.hover
                         border.width: 1.5
                         border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.2)
-                        Icon_ { anchors.centerIn: parent; name: "foto"; color: win.muted }
+                        Icono { anchors.centerIn: parent; nombre: "foto"; color: win.muted }
                     }
                     MouseArea {
                         id: pick
@@ -589,7 +364,10 @@ ApplicationWindow {
                 }
             }
             Item { width: 1; height: 16 }
-            Field_ {
+            Campo {
+                width: Math.min(360, parent.width)
+                anchors.horizontalCenter: parent.horizontalCenter
+                horizontalAlignment: TextInput.AlignHCenter
                 id: nameField
                 text: win.name
                 placeholderText: "Tu nombre"
@@ -599,7 +377,7 @@ ApplicationWindow {
                 Component.onCompleted: forceActiveFocus()
             }
             Item { width: 1; height: win.profileError ? 12 : 0 }
-            Warn_ { text: win.profileError }
+            Aviso { width: Math.min(470, parent.width); anchors.horizontalCenter: parent.horizontalCenter; text: win.profileError }
             Actions_ {
                 back: "Atrás"; next: "Siguiente"
                 nextEnabled: win.name.trim() !== ""
@@ -633,15 +411,18 @@ ApplicationWindow {
                 width: parent.width
                 visible: !apogeo.agapeInstalled && !win.installing
                 spacing: 12
-                Field_ {
+                Campo {
+                width: Math.min(360, parent.width)
+                anchors.horizontalCenter: parent.horizontalCenter
+                horizontalAlignment: TextInput.AlignHCenter
                     id: token
                     echoMode: TextInput.Password
                     placeholderText: "Llave de Ágape"
                     onAccepted: ag.download()
                     Component.onCompleted: if (visible) forceActiveFocus()
                 }
-                Warn_ { text: win.agapeError || (apogeo.online ? "" : "Sin conexión a internet: conéctate para descargar Ágape.") }
-                Label_ {
+                Aviso { width: Math.min(470, parent.width); anchors.horizontalCenter: parent.horizontalCenter; text: win.agapeError || (apogeo.online ? "" : "Sin conexión a internet: conéctate para descargar Ágape.") }
+                Texto {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     text: "La llave se guarda solo en este equipo."
@@ -665,7 +446,7 @@ ApplicationWindow {
                         Behavior on width { NumberAnimation { duration: 200 } }
                     }
                 }
-                Label_ {
+                Texto {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     color: win.muted
@@ -714,17 +495,17 @@ ApplicationWindow {
                     x: 14; anchors.verticalCenter: parent.verticalCenter
                     width: 42; height: 42; radius: 12
                     color: win.accentSoft
-                    Icon_ { anchors.centerIn: parent; width: 20; height: 20; name: "copia"; color: win.accent }
+                    Icono { anchors.centerIn: parent; width: 20; height: 20; nombre: "copia"; color: win.accent }
                 }
                 Column {
                     x: 70; anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 70 - (change.visible ? change.width + 28 : 16)
                     spacing: 2
-                    Label_ { width: parent.width; elide: Text.ElideMiddle; wrapMode: Text.NoWrap; font.weight: Font.ExtraBold; text: win.copy.name || "Elegir la copia…" }
-                    Label_ { width: parent.width; elide: Text.ElideRight; wrapMode: Text.NoWrap; color: win.muted; font.pixelSize: 13; text: win.copy.where || "Un archivo .agape (en un USB, otro disco o la nube)" }
+                    Texto { width: parent.width; elide: Text.ElideMiddle; wrapMode: Text.NoWrap; font.weight: Font.ExtraBold; text: win.copy.name || "Elegir la copia…" }
+                    Texto { width: parent.width; elide: Text.ElideRight; wrapMode: Text.NoWrap; color: win.muted; font.pixelSize: 13; text: win.copy.where || "Un archivo .agape (en un USB, otro disco o la nube)" }
                 }
                 MouseArea { id: dropArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: copyDialog.open() }
-                Button_ {
+                Boton {
                     id: change
                     visible: !!win.copy.name
                     anchors.right: parent.right; anchors.rightMargin: 14
@@ -734,7 +515,7 @@ ApplicationWindow {
                     onClicked: copyDialog.open()
                 }
             }
-            Spinner_ { visible: win.restoring; anchors.horizontalCenter: parent.horizontalCenter }
+            Girando { visible: win.restoring; anchors.horizontalCenter: parent.horizontalCenter }
             Check_ { visible: win.restored; anchors.horizontalCenter: parent.horizontalCenter; text: "Copia restaurada" }
             Actions_ {
                 readonly property bool choosing: apogeo.agapeInstalled && !win.restored && !win.restoring
@@ -785,7 +566,7 @@ ApplicationWindow {
                         ShaderEffect {
                             id: mini
                             width: 178; height: 84
-                            property real t: win.time
+                            property real t: Tema.tiempo
                             property real kind: fl.modelData.kind
                             property real light: 0
                             property size res: Qt.size(356, 168)
@@ -813,14 +594,14 @@ ApplicationWindow {
                             x: 10; y: 42; width: 32; height: 32
                             radius: 11
                             color: win.accent
-                            Icon_ { anchors.centerIn: parent; name: fl.modelData.key; color: win.accentText }
+                            Icono { anchors.centerIn: parent; nombre: fl.modelData.key; color: win.accentText }
                         }
                         Column {
                             x: 12; y: 94
                             width: parent.width - 24
                             spacing: 3
-                            Label_ { text: fl.modelData.name; font.pixelSize: 15; font.weight: Font.ExtraBold }
-                            Label_ { width: parent.width; text: fl.modelData.text; color: win.muted; font.pixelSize: 13; lineHeight: 1.15 }
+                            Texto { text: fl.modelData.name; font.pixelSize: 15; font.weight: Font.ExtraBold }
+                            Texto { width: parent.width; text: fl.modelData.text; color: win.muted; font.pixelSize: 13; lineHeight: 1.15 }
                         }
                     }
                 }
@@ -852,16 +633,16 @@ ApplicationWindow {
                     Item {
                         width: 34; height: 34
                         RectangularShadow { anchors.fill: parent; radius: 12; blur: 18; spread: -4; offset.y: 4; color: win.accent }
-                        Rectangle { anchors.fill: parent; radius: 12; color: win.accent; Icon_ { anchors.centerIn: parent; name: "buscar"; color: win.accentText } }
+                        Rectangle { anchors.fill: parent; radius: 12; color: win.accent; Icono { anchors.centerIn: parent; nombre: "buscar"; color: win.accentText } }
                     }
                     Rectangle { width: 1; height: 22; color: win.border; anchors.verticalCenter: parent.verticalCenter }
                     Repeater {
                         model: ["carpeta", "web", "musica"]
-                        delegate: Item { required property string modelData; width: 34; height: 34; Icon_ { anchors.centerIn: parent; name: parent.modelData; color: win.muted } }
+                        delegate: Item { required property string modelData; width: 34; height: 34; Icono { anchors.centerIn: parent; nombre: parent.modelData; color: win.muted } }
                     }
                     Rectangle { width: 1; height: 22; color: win.border; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 34; height: 34; Icon_ { anchors.centerIn: parent; name: "volumen"; color: win.muted } }
-                    Label_ {
+                    Item { width: 34; height: 34; Icono { anchors.centerIn: parent; nombre: "volumen"; color: win.muted } }
+                    Texto {
                         id: islandClock
                         anchors.verticalCenter: parent.verticalCenter
                         rightPadding: 8
@@ -885,8 +666,8 @@ ApplicationWindow {
                     delegate: Row {
                         required property var modelData
                         spacing: 10
-                        Icon_ { name: parent.modelData.icon; color: win.accent; anchors.verticalCenter: parent.verticalCenter }
-                        Label_ { text: parent.modelData.text; wrapMode: Text.NoWrap; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
+                        Icono { nombre: parent.modelData.icon; color: win.accent; anchors.verticalCenter: parent.verticalCenter }
+                        Texto { text: parent.modelData.text; wrapMode: Text.NoWrap; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
                     }
                 }
             }

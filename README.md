@@ -53,6 +53,18 @@ Al entrar por primera vez sale una tarjeta en el centro, como la bienvenida de �
 la pide Ágape), los pisos y la isla. Todo se puede saltar; si se cierra sin terminar vuelve en el siguiente inicio,
 hasta acabarla o pulsar «No volver a mostrar». Se abre de nuevo desde el buscador («Bienvenida de Apogeo»).
 
+## Ajustes
+
+«Ajustes de Apogeo» es como «Personalizar» de Ágape: el buscador y las secciones a la izquierda y las tarjetas a la
+derecha. Pisos (el fondo, los avisos, la energía y las apps de cada uno; animar los fondos; no molestar), Isla (que se
+esconda sola y lo de cada piso), Salud del PC (temperatura máxima de 70 a 85 °C y FPS de los juegos: 30, 45 o 60),
+Ágape (la llave, llevar o traer la copia, la bienvenida), Tu perfil y Actualizaciones. La red, el sonido, la pantalla…
+abren los Ajustes de KDE. Lo que cambias se guarda en `~/.config/apogeo/ajustes.json` y `apogeo-pisos` lo aplica al
+momento.
+
+Al final de la isla está el **panel rápido**: red, bluetooth, fondo animado, no molestar, ahorro de energía del piso,
+luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
+
 ## Ágape
 
 Ágape es privado, así que no va dentro del paquete (que es público). La primera vez que se abre (o al pulsar un
@@ -86,4 +98,8 @@ entras en Apogeo.
 - `sistema/usr/lib/apogeo/apogeo-pisos`: los pisos (fondo, color, avisos, energía, ventanas y apps de cada uno)
 - `sistema/usr/lib/apogeo/apogeo-termico`: la protección de temperatura
 - `sistema/usr/lib/apogeo/apogeo-bienvenida` y `sistema/usr/share/apogeo/bienvenida/`: la bienvenida
+- `sistema/usr/lib/apogeo/apogeo-ajustes` y `sistema/usr/share/apogeo/ajustes/`: los ajustes (y el panel rápido,
+  `org.apogeo.rapido`)
+- `sistema/usr/lib/apogeo/apogeo_comun.py` y `apogeo_qt.py`: lo que comparten (tus ajustes, tu cuenta, Ágape)
+- `sistema/usr/lib/qt6/qml/Apogeo/`: las piezas de Ágape en QML (botones, campos, interruptores, fondos…)
 - `apogeo.asc`: la clave pública con la que se firman los paquetes

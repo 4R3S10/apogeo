@@ -1,5 +1,5 @@
 [Unit]
-Description=Salud del PC de Apogeo (baja la velocidad a partir de 80 °C)
+Description=Salud del PC de Apogeo (baja la velocidad si se calienta)
 
 [Service]
 ExecStart=/usr/lib/apogeo/apogeo-termico

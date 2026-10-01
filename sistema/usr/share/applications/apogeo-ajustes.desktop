@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ajustes de Apogeo
+Comment=Pisos, fondos, isla, salud del PC, Ágape, tu perfil y actualizaciones
+Keywords=ajustes;configuración;preferencias;pisos;fondo;isla;temperatura;fps;perfil;foto;actualizar;
+Exec=/usr/lib/apogeo/apogeo-ajustes
+Icon=apogeo
+Categories=Settings;
