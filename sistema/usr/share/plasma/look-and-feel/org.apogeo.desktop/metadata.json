@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "",
+        "Description": "Apogeo: la pantalla de carga y la de apagar con la estética de Ágape",
+        "Id": "org.apogeo.desktop",
+        "License": "MIT",
+        "Name": "Apogeo",
+        "Version": "1.0"
+    },
+    "X-Plasma-APIVersion": "2"
+}

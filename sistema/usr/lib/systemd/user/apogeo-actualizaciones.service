@@ -1,0 +1,9 @@
+[Unit]
+Description=Avisos de actualización de Apogeo
+After=network-online.target graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-actualizaciones avisar
+TimeoutStartSec=6h
+Nice=10

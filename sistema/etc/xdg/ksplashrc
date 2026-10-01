@@ -1,0 +1,4 @@
+# Apogeo: la pantalla de carga al entrar es la misma que al encender (look-and-feel org.apogeo.desktop)
+[KSplash]
+Engine=KSplashQML
+Theme=org.apogeo.desktop

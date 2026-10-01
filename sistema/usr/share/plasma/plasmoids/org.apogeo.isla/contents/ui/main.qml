@@ -212,7 +212,7 @@ PlasmoidItem {
             iconName: "buscar"
             on: true
             tip: "Buscar"
-            onClicked: root.run("dbus-send --session --type=method_call --dest=org.kde.krunner /App org.kde.krunner.App.toggleDisplay")
+            onClicked: root.run("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle")
         }
 
         Separator {}

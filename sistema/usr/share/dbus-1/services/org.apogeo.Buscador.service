@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.apogeo.Buscador
+Exec=/usr/lib/apogeo/apogeo-buscador --fondo

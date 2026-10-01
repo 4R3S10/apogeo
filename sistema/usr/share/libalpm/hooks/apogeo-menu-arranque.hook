@@ -1,0 +1,12 @@
+# El menú de arranque de Apogeo: sin menú (una tecla lo enseña) y con sus colores
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/lib/apogeo/apogeo-menu-arranque
+Target = usr/bin/limine
+
+[Action]
+Description = Apogeo: menú de arranque
+When = PostTransaction
+Exec = /usr/lib/apogeo/apogeo-menu-arranque

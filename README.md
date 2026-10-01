@@ -65,6 +65,16 @@ momento.
 Al final de la isla está el **panel rápido**: red, bluetooth, fondo animado, no molestar, ahorro de energía del piso,
 luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
 
+## Sin restos de CachyOS
+
+- **Buscador:** la lupa de la isla, la tecla Meta o Alt+Espacio abren una tarjeta en el centro, como el buscador de
+  Ágape, con lo que encuentran los buscadores de KDE (apps, archivos, ajustes…) y «Buscar en la web con Ágape».
+- **Pantalla de apagar:** una tarjeta con tu foto y Apagar, Reiniciar, Reposo y Cerrar sesión.
+- **Pantalla de carga** al entrar: la misma que al encender (el diamante, el brillo y la barra).
+- **Menú de arranque:** no sale; mantén pulsada una tecla al encender para verlo (con los colores de Apogeo).
+- **Apps de CachyOS** (bienvenida, tienda, núcleos, actualizador): escondidas, no quitadas. En su lugar, un aviso de
+  Apogeo cuando hay actualizaciones (uno al día como mucho; en Jugar y Estudiar se guarda para luego).
+
 ## Ágape
 
 Ágape es privado, así que no va dentro del paquete (que es público). La primera vez que se abre (o al pulsar un

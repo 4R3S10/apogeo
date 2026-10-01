@@ -1,0 +1,49 @@
+#!/usr/bin/python3
+"""
+Avisos de actualización de Apogeo (en lugar del actualizador de CachyOS): una vez al día mira si hay versiones nuevas
+(checkupdates usa una copia de la base de datos: no toca el sistema ni pide contraseña) y, si las hay, avisa. El aviso
+llega como cualquier otro: en Jugar y Estudiar se queda en el historial para cuando vuelvas a Navegar. Con «Ver» se
+abren Ajustes → Actualizaciones. No vuelve a avisar de lo mismo.
+
+  apogeo-actualizaciones avisar   lo lanza apogeo-actualizaciones.timer
+"""
+import hashlib
+import os
+import subprocess
+import sys
+
+STATE = os.path.join(os.environ.get('XDG_STATE_HOME', os.path.expanduser('~/.local/state')), 'apogeo',
+                     'actualizaciones-avisadas')
+
+
+def main():
+    if sys.argv[1:] != ['avisar']:
+        print(__doc__.strip())
+        return 2
+    r = subprocess.run(['checkupdates'], capture_output=True, text=True, timeout=300)
+    names = sorted(ln.split()[0] for ln in r.stdout.splitlines() if ln.strip())
+    if r.returncode not in (0, 2) or not names:
+        return 0  # sin internet o todo al día
+    stamp = hashlib.sha1(r.stdout.encode()).hexdigest()
+    try:
+        if open(STATE).read().strip() == stamp:
+            return 0  # ya avisado de estas mismas
+    except OSError:
+        pass
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE, 'w') as f:
+        f.write(stamp)
+    apogeo = any(n.startswith('apogeo') for n in names)
+    title = 'Hay una actualización' if len(names) == 1 else f'Hay {len(names)} actualizaciones'
+    body = ('Incluye Apogeo. ' if apogeo else '') + 'Instálalas cuando quieras desde Ajustes → Actualizaciones.'
+    # Espera a que se pulse (o se cierre) el aviso; el servicio tiene un límite de tiempo
+    a = subprocess.run(['notify-send', '-a', 'Apogeo', '-i', 'apogeo', '-A', 'ver=Ver', '--wait', title, body],
+                       capture_output=True, text=True)
+    if a.stdout.strip() == 'ver':
+        subprocess.Popen(['/usr/lib/apogeo/apogeo-ajustes', 'actualizaciones'], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

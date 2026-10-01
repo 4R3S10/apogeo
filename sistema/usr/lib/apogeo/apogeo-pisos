@@ -193,7 +193,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
-AESTHETICS = 6  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+AESTHETICS = 8  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -244,11 +244,26 @@ def aesthetics():
     run('xdg-settings', 'set', 'default-web-browser', 'ares.desktop')
     # La terminal con los colores de Apogeo
     kw('konsolerc', 'Desktop Entry', 'DefaultProfile', 'Apogeo.profile')
-    # La bienvenida de CachyOS ya no se abre sola al entrar (sigue en el menú)
+    # La pantalla de carga y la de apagar de Apogeo (look-and-feel org.apogeo.desktop)
+    kw('kdeglobals', 'KDE', 'LookAndFeelPackage', 'org.apogeo.desktop')
+    kw('ksplashrc', 'KSplash', 'Engine', 'KSplashQML')
+    kw('ksplashrc', 'KSplash', 'Theme', 'org.apogeo.desktop')
+    # El buscador de Apogeo: la tecla Meta sola y Alt+Espacio (KRunner se queda en Alt+F2). Vale al volver a entrar.
+    kw('kwinrc', 'ModifierOnlyShortcuts', 'Meta', 'org.apogeo.Buscador,/Buscador,org.apogeo.Buscador,Toggle')
+    run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'services', '--group', 'org.kde.krunner.desktop',
+        '--key', '_launch', 'Alt+F2')
+    run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'services', '--group', 'apogeo-buscador.desktop',
+        '--key', '_launch', 'Alt+Space\tSearch')
+    # Ni la bienvenida ni el actualizador de CachyOS se abren solos (Apogeo tiene los suyos)
     try:
         os.remove(os.path.join(HOME, '.config/autostart/cachyos-hello.desktop'))
     except OSError:
         pass
+    os.makedirs(os.path.join(HOME, '.config/autostart'), exist_ok=True)
+    with open(os.path.join(HOME, '.config/autostart/arch-update-tray.desktop'), 'w') as f:
+        f.write('[Desktop Entry]\nType=Application\nName=Arch-Update\nHidden=true\n')
+    run('systemctl', '--user', 'disable', '--now', 'arch-update.timer')
+    run('pkill', '-f', 'arch-update --tray')
     log('estética aplicada')
 
 
@@ -423,6 +438,10 @@ def main():
     bus.add_signal_receiver(lambda _id: floors.apply(current_index(bus)), signal_name='currentChanged',
                             dbus_interface='org.kde.KWin.VirtualDesktopManager', path='/VirtualDesktopManager')
     go(bus, start_floor())
+    # El buscador, preparado (para que la lupa de la isla y la tecla Meta lo saquen al momento)
+    subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
+                      f'--unit=app-apogeo-buscador-{os.getpid()}', '/usr/lib/apogeo/apogeo-buscador', '--fondo'],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     welcome()
     floors.apply(current_index(bus))
     # Los ajustes: al guardarlos (de golpe, con un archivo nuevo) se aplican

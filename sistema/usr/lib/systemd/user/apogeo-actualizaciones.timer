@@ -1,0 +1,10 @@
+[Unit]
+Description=Mirar una vez al día si hay actualizaciones de Apogeo
+
+[Timer]
+OnStartupSec=10min
+OnUnitActiveSec=1d
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target

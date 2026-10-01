@@ -1,0 +1,17 @@
+# Vuelve a esconder las apps de CachyOS (bienvenida, tienda, núcleos, actualizador) si una actualización las pone
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/share/applications/cachyos-hello.desktop
+Target = usr/share/applications/cachyos-pi.desktop
+Target = usr/share/applications/org.cachyos.KernelManager.desktop
+Target = usr/share/applications/org.cachyos.scx-manager.desktop
+Target = usr/share/applications/arch-update.desktop
+Target = usr/share/applications/arch-update-tray.desktop
+Target = usr/lib/apogeo/apogeo-esconder
+
+[Action]
+Description = Apogeo: apps de CachyOS fuera del menú
+When = PostTransaction
+Exec = /usr/lib/apogeo/apogeo-esconder

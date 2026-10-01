@@ -1,0 +1,94 @@
+#!/usr/bin/python3
+"""
+Menú de arranque de Apogeo («L1 · Sin menú»): al encender va directo al logo y la barra; si mantienes pulsada una
+tecla, sale el menú de Limine (para el núcleo de reserva o las copias del sistema), con «Apogeo» y sus colores.
+
+Solo toca las opciones generales de limine.conf (las de arriba, antes de las entradas, que las herramientas de CachyOS
+no reescriben). La primera vez guarda el original al lado (limine.conf.cachyos). Lo llama un gancho de pacman.
+"""
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+OPTIONS = {
+    'timeout': '1',          # un segundo para pulsar una tecla (sin pulsar, ni se ve)
+    'quiet': 'yes',          # sin menú ni texto; una tecla lo enseña
+    'interface_branding': 'Apogeo',
+    'interface_branding_colour': '5',  # el rosa de la paleta
+    'term_palette': '120d14;e5484d;a6e3a1;f9e2af;7a4458;e0a9b4;94e2d5;f1e6ea',
+    'term_palette_bright': '4a2c4f;ff8f9a;b8f0b3;fbe9b5;b97a8c;ff8fc6;b2ecdf;ffffff',
+    'term_background': '120d14',
+    'term_foreground': 'f1e6ea',
+    'term_background_bright': '4a2c4f',
+    'term_foreground_bright': 'ffffff',
+    'backdrop': '120d14',
+}
+DROP = ('wallpaper', 'wallpaper_style')  # el fondo de CachyOS (se queda comentado)
+
+
+def esp():
+    try:
+        m = re.search(r'^ESP_PATH="?([^"\n]+)"?', open('/etc/default/limine').read(), re.M)
+        if m:
+            return m.group(1)
+    except OSError:
+        pass
+    return '/boot'
+
+
+def find():
+    base = esp()
+    for p in ('limine.conf', 'limine/limine.conf', 'EFI/limine/limine.conf', 'boot/limine/limine.conf'):
+        if os.path.isfile(os.path.join(base, p)):
+            return os.path.join(base, p)
+    return None
+
+
+def main():
+    path = find()
+    if not path:
+        print('Apogeo: no hay limine.conf (¿otro cargador?); el menú se queda como está')
+        return 0
+    text = open(path).read()
+    lines = text.split('\n')
+    first = next((i for i, ln in enumerate(lines) if ln.lstrip().startswith('/')), len(lines))
+    head, rest = lines[:first], lines[first:]
+    done = set()
+    for i, ln in enumerate(head):
+        m = re.match(r'\s*([a-z_]+)\s*:', ln)
+        if not m:
+            continue
+        key = m.group(1)
+        if key in OPTIONS:
+            head[i] = f'{key}: {OPTIONS[key]}'
+            done.add(key)
+        elif key in DROP:
+            head[i] = '#apogeo# ' + ln
+    # Lo que falte, arriba del todo
+    missing = [f'{k}: {v}' for k, v in OPTIONS.items() if k not in done]
+    if missing:
+        head = ['# Apogeo (apogeo-menu-arranque): sin menú salvo si pulsas una tecla, y con sus colores', *missing, *head]
+    new = '\n'.join(head + rest)
+    if new == text:
+        return 0
+    if not os.path.exists(path + '.cachyos'):
+        shutil.copy2(path, path + '.cachyos')
+    tmp = path + '.nuevo'
+    with open(tmp, 'w') as f:
+        f.write(new)
+    os.replace(tmp, path)
+    # Si el arranque seguro obliga a firmar la configuración, se vuelve a firmar
+    try:
+        if re.search(r'^ENABLE_ENROLL_LIMINE_CONFIG="?yes', open('/etc/default/limine').read(), re.M) \
+                and shutil.which('limine-enroll-config'):
+            subprocess.run(['limine-enroll-config'], check=False)
+    except OSError:
+        pass
+    print('Apogeo: menú de arranque escondido (mantén pulsada una tecla al encender para verlo)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

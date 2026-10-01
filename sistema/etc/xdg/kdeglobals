@@ -17,3 +17,4 @@ Theme=apogeo
 
 [KDE]
 widgetStyle=kvantum
+LookAndFeelPackage=org.apogeo.desktop

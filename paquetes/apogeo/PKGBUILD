@@ -11,7 +11,7 @@ depends=(
   plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
   papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
   python python-dbus python-gobject                         # los pisos
-  python-pyqt6 qt6-declarative                              # la bienvenida y los ajustes
+  python-pyqt6 qt6-declarative milou kirigami               # la bienvenida, los ajustes y el buscador
   pacman-contrib konsole polkit                             # ajustes: buscar actualizaciones e instalarlas
   kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
   power-profiles-daemon                                     # energía de cada piso

@@ -1,0 +1,79 @@
+#!/usr/bin/python3
+"""
+Buscador de Apogeo («B2 · Paleta en el centro», como el buscador de Ágape): una tarjeta en el centro con lo que
+encuentran los buscadores de KDE (apps, archivos, ajustes, calculadora…) agrupado, y al final «Buscar en la web con
+Ágape». Todo con el teclado: ↑ ↓ elegir, Intro abrir, Esc cerrar. Se queda preparado en segundo plano (lo arranca
+apogeo-pisos al entrar, o D-Bus la primera vez) para salir al momento.
+
+  apogeo-buscador           lo enseña (o lo esconde, si ya se ve)
+  apogeo-buscador --fondo   lo deja preparado, sin enseñarlo
+D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (la lupa de la isla y la tecla Meta)
+"""
+import os
+import sys
+
+SERVICE, PATH, IFACE = 'org.apogeo.Buscador', '/Buscador', 'org.apogeo.Buscador'
+QML = os.environ.get('APOGEO_BUSCADOR_QML', '/usr/share/apogeo/buscador/Buscador.qml')
+
+
+def already_running():
+    """Si ya está en marcha, se le pide que se enseñe (sin cargar Qt: así es instantáneo)."""
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        if not bus.name_has_owner(SERVICE):
+            return False
+        if '--fondo' not in sys.argv:
+            bus.get_object(SERVICE, PATH).Toggle(dbus_interface=IFACE)
+        return True
+    except dbus.DBusException:
+        return False
+
+
+def main():
+    if already_running():
+        return 0
+    os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
+    from PyQt6.QtCore import QObject, QUrl, pyqtClassInfo, pyqtSignal, pyqtSlot
+    from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
+    from PyQt6.QtGui import QDesktopServices, QGuiApplication, QIcon
+    from PyQt6.QtQml import QQmlApplicationEngine
+
+    class Buscador(QObject):
+        toggled = pyqtSignal()
+
+        @pyqtSlot(str)
+        def web(self, text):
+            """Buscar en la web: lo abre el navegador del sistema (Ágape)."""
+            QDesktopServices.openUrl(QUrl('https://www.google.com/search?q=' + QUrl.toPercentEncoding(text).data().decode()))
+
+    @pyqtClassInfo('D-Bus Interface', IFACE)
+    class Adaptor(QDBusAbstractAdaptor):
+        @pyqtSlot()
+        def Toggle(self):
+            self.parent().toggled.emit()
+
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Buscador de Apogeo')
+    app.setDesktopFileName('apogeo-buscador')
+    app.setWindowIcon(QIcon.fromTheme('apogeo'))
+    app.setQuitOnLastWindowClosed(False)
+    bus = QDBusConnection.sessionBus()
+    if not bus.registerService(SERVICE):
+        return 0  # otro se ha adelantado
+    backend = Buscador()
+    Adaptor(backend)
+    bus.registerObject(PATH, backend)
+    engine = QQmlApplicationEngine()
+    if os.environ.get('APOGEO_QML_DIR'):
+        engine.addImportPath(os.environ['APOGEO_QML_DIR'])
+    engine.rootContext().setContextProperty('buscador', backend)
+    engine.rootContext().setContextProperty('showAtStart', '--fondo' not in sys.argv)
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

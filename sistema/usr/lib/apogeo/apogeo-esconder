@@ -1,0 +1,15 @@
+#!/bin/sh
+# Las apps de CachyOS que no pintan nada en Apogeo, fuera del menú y del buscador (siguen instaladas, por si hacen
+# falta: se abren con su nombre desde una terminal). Lo lanza un gancho de pacman: si una actualización las vuelve a
+# poner, se vuelven a esconder.
+set -e
+for f in cachyos-hello cachyos-pi org.cachyos.KernelManager org.cachyos.scx-manager arch-update arch-update-tray; do
+  p="/usr/share/applications/$f.desktop"
+  [ -f "$p" ] || continue
+  grep -q '^NoDisplay=true' "$p" && continue
+  if grep -q '^NoDisplay=' "$p"; then
+    sed -i 's/^NoDisplay=.*/NoDisplay=true/' "$p"
+  else
+    sed -i '0,/^\[Desktop Entry\]/s//[Desktop Entry]\nNoDisplay=true/' "$p"
+  fi
+done
