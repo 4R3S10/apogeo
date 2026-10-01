@@ -336,11 +336,11 @@ class Floors:
             info = ajustes.app_info(app_id)
             if not info:
                 continue  # ya no está instalada
-            exe = os.path.basename(info[2])
+            exe = os.path.basename(info[2].strip('"'))
             if exe and subprocess.run(['pgrep', '-x', exe], stdout=subprocess.DEVNULL).returncode == 0:
                 continue  # ya está abierta (en este u otro piso)
             log('abriendo', app_id)
-            path = Gio.DesktopAppInfo.new(app_id).get_filename()
+            path = ajustes.desktop_info(app_id).get_filename()
             # En su propio grupo de systemd (como si la abrieras tú): si este programa se reinicia, la app sigue abierta
             subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
                               f'--unit=app-apogeo-{exe or "app"}-{os.getpid()}-{len(self.visited)}', 'gio', 'launch', path],

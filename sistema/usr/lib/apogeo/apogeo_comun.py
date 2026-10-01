@@ -171,15 +171,24 @@ def agape():
 
 # ---------- Apps ----------
 
+def desktop_info(desktop_id):
+    """La app de ese .desktop (GioUnix en GLib nuevas; Gio en las de antes), o None."""
+    import gi
+    try:
+        gi.require_version('GioUnix', '2.0')
+        from gi.repository import GioUnix as G
+    except (ValueError, ImportError):
+        gi.require_version('Gio', '2.0')
+        from gi.repository import Gio as G
+    try:
+        return G.DesktopAppInfo.new(desktop_id)
+    except TypeError:
+        return None
+
+
 def app_info(desktop_id):
     """(nombre, icono, ejecutable) de una app por su .desktop, o None si no está."""
-    import gi
-    gi.require_version('Gio', '2.0')
-    from gi.repository import Gio
-    try:
-        info = Gio.DesktopAppInfo.new(desktop_id)
-    except TypeError:
-        info = None
+    info = desktop_info(desktop_id)
     if not info:
         return None
     icon = info.get_icon()

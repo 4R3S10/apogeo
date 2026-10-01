@@ -40,6 +40,7 @@ PlasmoidItem {
         after.restart();
     }
     Timer { id: after; interval: 450; onTriggered: root.refresh() }
+    Component.onCompleted: refresh() // (una vez al empezar: al abrirlo ya está todo)
     // Solo mientras se ve: cerrado no gasta nada
     Timer { interval: 2500; repeat: true; running: root.expanded; triggeredOnStart: true; onTriggered: root.refresh() }
 
@@ -129,10 +130,12 @@ PlasmoidItem {
     }
 
     fullRepresentation: Item {
-        Layout.preferredWidth: 404
-        Layout.preferredHeight: col.implicitHeight + 24
-        Layout.minimumWidth: 404
-        Layout.minimumHeight: col.implicitHeight + 24
+        implicitWidth: 404
+        implicitHeight: col.implicitHeight + 24
+        Layout.preferredWidth: implicitWidth
+        Layout.preferredHeight: implicitHeight
+        Layout.minimumWidth: implicitWidth
+        Layout.minimumHeight: implicitHeight
         Column {
             id: col
             x: 12; y: 12
@@ -190,8 +193,9 @@ PlasmoidItem {
                 value: root.st.volumen || 0
                 onElegido: v => root.act("volumen", v)
             }
-            Level {
-                visible: (root.st.brillo !== undefined ? root.st.brillo : -1) >= 0
+            Level { // (siempre está, aunque la pantalla no deje cambiar el brillo: así el panel no cambia de tamaño)
+                enabled: (root.st.brillo !== undefined ? root.st.brillo : -1) >= 0
+                opacity: enabled ? 1 : 0.45
                 icono: "sol"
                 value: Math.max(0, root.st.brillo || 0)
                 onElegido: v => root.act("brillo", v)
