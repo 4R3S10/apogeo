@@ -5,4 +5,4 @@ Comment=Busca apps, archivos, ajustes o en la web
 Exec=/usr/lib/apogeo/apogeo-buscador
 Icon=apogeo
 NoDisplay=true
-X-KDE-Shortcuts=Alt+Space,Search
+X-KDE-Shortcuts=Meta,Alt+Space,Search

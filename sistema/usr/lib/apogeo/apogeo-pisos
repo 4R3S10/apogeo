@@ -193,7 +193,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
-AESTHETICS = 8  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+AESTHETICS = 9  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -248,12 +248,15 @@ def aesthetics():
     kw('kdeglobals', 'KDE', 'LookAndFeelPackage', 'org.apogeo.desktop')
     kw('ksplashrc', 'KSplash', 'Engine', 'KSplashQML')
     kw('ksplashrc', 'KSplash', 'Theme', 'org.apogeo.desktop')
-    # El buscador de Apogeo: la tecla Meta sola y Alt+Espacio (KRunner se queda en Alt+F2). Vale al volver a entrar.
-    kw('kwinrc', 'ModifierOnlyShortcuts', 'Meta', 'org.apogeo.Buscador,/Buscador,org.apogeo.Buscador,Toggle')
+    # El buscador de Apogeo: la tecla Meta sola y Alt+Espacio (son atajos globales: el lanzador de Plasma se queda en
+    # Alt+F1 y KRunner en Alt+F2). Vale al volver a entrar.
+    run('kwriteconfig6', '--file', 'kwinrc', '--group', 'ModifierOnlyShortcuts', '--key', 'Meta', '--delete')
+    run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'plasmashell', '--key',
+        'activate application launcher', 'Alt+F1,Meta\tAlt+F1,Activar el lanzador de aplicaciones')
     run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'services', '--group', 'org.kde.krunner.desktop',
         '--key', '_launch', 'Alt+F2')
     run('kwriteconfig6', '--file', 'kglobalshortcutsrc', '--group', 'services', '--group', 'apogeo-buscador.desktop',
-        '--key', '_launch', 'Alt+Space\tSearch')
+        '--key', '_launch', 'Meta\tAlt+Space\tSearch')
     # Ni la bienvenida ni el actualizador de CachyOS se abren solos (Apogeo tiene los suyos)
     try:
         os.remove(os.path.join(HOME, '.config/autostart/cachyos-hello.desktop'))
