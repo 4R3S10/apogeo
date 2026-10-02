@@ -1,0 +1,210 @@
+#!/usr/bin/python3
+"""
+Música de Apogeo («M1 · Como en Ágape»): abajo a la izquierda, una portada por cada cosa que suena; al pasar el ratón,
+la tarjeta con lo principal en grande (progreso y anterior · pausa · siguiente) y el resto en filas. La rueda del ratón
+encima de una cambia su volumen. Lo que suena sale de:
+  - los reproductores del sistema (MPRIS: Spotify, otros navegadores, apps de música…);
+  - cada pestaña de Ágape, por su socket ($XDG_RUNTIME_DIR/agape-musica.sock). El reproductor MPRIS de Ágape
+    (Chromium) no se enseña: ya está cada pestaña por separado.
+No sale si no suena nada (ni con Spotify cerrado), con Ágape delante (Ágape enseña el suyo) ni con una ventana a
+pantalla completa: eso lo hace el script de KWin apogeo-ventanas, que también la coloca y la pone encima de todo.
+
+  apogeo-musica    la deja en marcha (la arranca apogeo-pisos al empezar la sesión)
+"""
+import json
+import os
+import sys
+
+os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
+from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtProperty, pyqtSignal, pyqtSlot  # noqa: E402
+from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusVariant  # noqa: E402
+from PyQt6.QtGui import QGuiApplication, QIcon, QRegion  # noqa: E402
+from PyQt6.QtNetwork import QLocalSocket  # noqa: E402
+from PyQt6.QtQml import QQmlApplicationEngine  # noqa: E402
+
+QML = os.environ.get('APOGEO_MUSICA_QML', '/usr/share/apogeo/musica/Musica.qml')
+SOCKET = os.path.join(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'), 'agape-musica.sock')
+MPRIS = 'org.mpris.MediaPlayer2.'
+PATH = '/org/mpris/MediaPlayer2'
+PLAYER = 'org.mpris.MediaPlayer2.Player'
+NAMES = {'spotify': 'Spotify', 'firefox': 'Firefox', 'vlc': 'VLC', 'elisa': 'Elisa'}
+
+
+def unwrap(v):
+    """QDBusVariant → valor de Python (y las listas y diccionarios de dentro)."""
+    if isinstance(v, QDBusVariant):
+        v = v.variant()
+    if isinstance(v, dict):
+        return {str(k): unwrap(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [unwrap(x) for x in v]
+    return v
+
+
+class Musica(QObject):
+    changed = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+        self.bus = QDBusConnection.sessionBus()
+        self._mpris = []        # lo de los reproductores del sistema
+        self._agape = []        # lo de las pestañas de Ágape
+        self.pending = []       # preguntas a Ágape esperando respuesta (en orden)
+        self.sock = QLocalSocket(self)
+        self.sock.readyRead.connect(self._read)
+        self.sock.errorOccurred.connect(lambda *_: self._drop())
+        self.buf = b''
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.poll)
+        self.timer.start(1000)
+        self.poll()
+
+    # ---------- Lo que suena ----------
+
+    @pyqtProperty('QVariantList', notify=changed)
+    def sources(self):
+        return self._agape + self._mpris
+
+    def poll(self):
+        self._poll_mpris()
+        self._poll_agape()
+
+    def _players(self):
+        reply = self.bus.interface().registeredServiceNames()
+        names = reply.value() if hasattr(reply, 'value') else reply
+        return [n for n in names if n.startswith(MPRIS)]
+
+    def _poll_mpris(self):
+        out = []
+        for name in self._players():
+            root = QDBusInterface(name, PATH, 'org.freedesktop.DBus.Properties', self.bus)
+            got = root.call('Get', 'org.mpris.MediaPlayer2', 'Identity').arguments()
+            ident = str(unwrap(got[0])) if got else ''
+            if 'chromium' in name or str(ident).lower() in ('ares', 'ágape', 'agape'):
+                continue  # Ágape: van sus pestañas, una a una
+            msg = root.call('GetAll', PLAYER)
+            if msg.type() == QDBusMessage.MessageType.ErrorMessage or not msg.arguments():
+                continue
+            p = unwrap(msg.arguments()[0])
+            meta = p.get('Metadata') or {}
+            title = str(meta.get('xesam:title') or '')
+            if not title:
+                continue
+            artist = meta.get('xesam:artist') or []
+            art = str(meta.get('mpris:artUrl') or '')
+            short = name[len(MPRIS):].split('.')[0]
+            out.append({
+                'key': name, 'kind': 'mpris', 'app': NAMES.get(short, str(ident) or short.capitalize()),
+                'title': title, 'artist': ', '.join(artist) if isinstance(artist, list) else str(artist),
+                'art': art if art.startswith(('https://', 'file://')) else '',
+                'paused': p.get('PlaybackStatus') != 'Playing',
+                'time': (p.get('Position') or 0) / 1e6, 'dur': (meta.get('mpris:length') or 0) / 1e6,
+                'vol': float(p.get('Volume', 1.0) or 0), 'prev': bool(p.get('CanGoPrevious')), 'next': bool(p.get('CanGoNext')),
+                'spotify': short == 'spotify',
+            })
+        if out != self._mpris:
+            self._mpris = out
+            self.changed.emit()
+
+    # ---------- Ágape (socket) ----------
+
+    def _drop(self):
+        self.pending.clear()
+        self.buf = b''
+        if self._agape:
+            self._agape = []
+            self.changed.emit()
+
+    def _send(self, msg, want=None):
+        if self.sock.state() != QLocalSocket.LocalSocketState.ConnectedState:
+            return
+        self.pending.append(want)
+        self.sock.write((json.dumps(msg) + '\n').encode())
+        self.sock.flush()
+
+    def _poll_agape(self):
+        st = self.sock.state()
+        if st == QLocalSocket.LocalSocketState.UnconnectedState:
+            if os.path.exists(SOCKET):
+                self.sock.connectToServer(SOCKET)
+            elif self._agape:
+                self._drop()
+            return
+        if st == QLocalSocket.LocalSocketState.ConnectedState and not self.pending:
+            self._send({'cmd': 'estado'}, 'estado')
+
+    def _read(self):
+        self.buf += bytes(self.sock.readAll())
+        while b'\n' in self.buf:
+            line, self.buf = self.buf.split(b'\n', 1)
+            want = self.pending.pop(0) if self.pending else None
+            if want != 'estado':
+                continue
+            try:
+                data = json.loads(line)
+            except ValueError:
+                continue
+            items = [{**d, 'kind': 'agape', 'app': 'Ágape'} for d in (data or []) if isinstance(d, dict)]
+            if items != self._agape:
+                self._agape = items
+                self.changed.emit()
+
+    # ---------- Botones ----------
+
+    @pyqtSlot(str, str)
+    def run(self, key, action):
+        """action: toggle · next · prev"""
+        if key.startswith('web:'):
+            self._send({'cmd': 'run', 'key': key, 'action': action})
+        else:
+            method = {'toggle': 'PlayPause', 'next': 'Next', 'prev': 'Previous'}.get(action)
+            if method:
+                QDBusInterface(key, PATH, PLAYER, self.bus).call(method)
+        QTimer.singleShot(300, self.poll)
+
+    @pyqtSlot(str, float)
+    def setVolume(self, key, value):
+        value = max(0.0, min(1.0, value))
+        if key.startswith('web:'):
+            self._send({'cmd': 'volume', 'key': key, 'value': value})
+        else:
+            QDBusInterface(key, PATH, 'org.freedesktop.DBus.Properties', self.bus).call(
+                'Set', PLAYER, 'Volume', QDBusVariant(value))
+
+    @pyqtSlot(str)
+    def open(self, key):
+        """Pulsar el título: la app que suena, delante (Spotify y demás; las pestañas de Ágape, con Ágape)."""
+        if not key.startswith('web:'):
+            QDBusInterface(key, PATH, 'org.mpris.MediaPlayer2', self.bus).call('Raise')
+
+    @pyqtSlot('QObject*', list)
+    def setInputRegion(self, window, rects):
+        """Solo lo que se ve recibe el ratón; el resto de la ventana (transparente) deja pasar los clics."""
+        region = QRegion()
+        for r in rects:
+            region = region.united(QRegion(int(r['x']), int(r['y']), int(r['width']), int(r['height'])))
+        window.setMask(region)
+
+
+def main():
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Música de Apogeo')
+    app.setDesktopFileName('apogeo-musica')
+    app.setWindowIcon(QIcon.fromTheme('apogeo'))
+    app.setQuitOnLastWindowClosed(False)
+    if not QDBusConnection.sessionBus().registerService('org.apogeo.Musica'):
+        return 0  # ya está en marcha
+    musica = Musica()
+    engine = QQmlApplicationEngine()
+    if os.environ.get('APOGEO_QML_DIR'):
+        engine.addImportPath(os.environ['APOGEO_QML_DIR'])
+    engine.rootContext().setContextProperty('musica', musica)
+    engine.rootContext().setContextProperty('openAtStart', os.environ.get('APOGEO_MUSICA_ABIERTA') == '1')  # (para probarla)
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -462,10 +462,12 @@ def main():
     bus.add_signal_receiver(lambda _id: floors.apply(current_index(bus)), signal_name='currentChanged',
                             dbus_interface='org.kde.KWin.VirtualDesktopManager', path='/VirtualDesktopManager')
     go(bus, start_floor())
-    # El buscador, preparado (para que la lupa de la isla y la tecla Meta lo saquen al momento)
-    subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
-                      f'--unit=app-apogeo-buscador-{os.getpid()}', '/usr/lib/apogeo/apogeo-buscador', '--fondo'],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    # El buscador, preparado (para que la lupa de la isla y la tecla Meta lo saquen al momento), y la música de abajo a
+    # la izquierda (sale sola cuando suena algo)
+    for name, args in (('buscador', ['--fondo']), ('musica', [])):
+        subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
+                          f'--unit=app-apogeo-{name}-{os.getpid()}', f'/usr/lib/apogeo/apogeo-{name}', *args],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     welcome()
     floors.apply(current_index(bus))
     # Los ajustes: al guardarlos (de golpe, con un archivo nuevo) se aplican

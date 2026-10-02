@@ -65,6 +65,13 @@ momento.
 Al final de la isla está el **panel rápido**: red, bluetooth, fondo animado, no molestar, ahorro de energía del piso,
 luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
 
+## Música
+
+Abajo a la izquierda, una portada por cada cosa que suena (Spotify y otras apps de música, y **cada pestaña de Ágape**
+por su canal privado); al pasar el ratón, la tarjeta con el progreso y los botones; la rueda del ratón encima cambia el
+volumen de cada una. No sale si no suena nada, con Ágape delante (que enseña la suya) ni con algo a pantalla completa.
+`sistema/usr/lib/apogeo/apogeo-musica` y `sistema/usr/share/apogeo/musica/`.
+
 ## Sin restos de CachyOS
 
 - **Buscador:** la lupa de la isla, la tecla Meta o Alt+Espacio abren una tarjeta en el centro, como el buscador de
