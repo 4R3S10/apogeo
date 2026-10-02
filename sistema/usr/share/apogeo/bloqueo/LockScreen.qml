@@ -28,14 +28,17 @@ Item {
     readonly property color accentText: "#2a1c26"
     readonly property string font: "Bricolage Grotesque"
     readonly property var floors: [
-        { key: "jugar", name: "Jugar", fondo: "remolino" },
+        { key: "jugar", name: "Jugar", fondo: "luces" },
         { key: "navegar", name: "Navegar", fondo: "tinta" },
         { key: "estudiar", name: "Estudiar", fondo: "seda" }
     ]
     // El piso en el que estabas: el fondo del bloqueo es el suyo (lo pone apogeo-pisos)
     property int floor: {
         try {
-            const k = floors.findIndex(f => f.fondo === String(wallpaperIntegration.configuration.Estilo || ""));
+            const cfg = wallpaperIntegration.configuration;
+            // El piso lo apunta apogeo-pisos; si no está (versiones de antes), se deduce del fondo
+            let k = floors.findIndex(f => f.key === String(cfg.Piso || ""));
+            if (k < 0) k = floors.findIndex(f => f.fondo === String(cfg.Estilo || ""));
             return k >= 0 ? k : 1;
         } catch (e) {
             return 1;

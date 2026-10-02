@@ -550,7 +550,7 @@ ApplicationWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 Repeater {
                     model: [
-                        { key: "jugar", name: "Jugar", kind: 5, text: "La consola con todos tus juegos. Sin avisos y a 60 FPS." },
+                        { key: "jugar", name: "Jugar", kind: 7, text: "La consola con todos tus juegos. Sin avisos y a 60 FPS." },
                         { key: "navegar", name: "Navegar", kind: 0, text: "Ágape, música y tus cosas. Aquí llegan los avisos." },
                         { key: "estudiar", name: "Estudiar", kind: 2, text: "Temporizador de estudio y nada que distraiga." }
                     ]

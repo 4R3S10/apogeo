@@ -23,19 +23,21 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
+VERSION = 2  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado)
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
-STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas')
+STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
 DEFAULTS = {
     'pisos': {
         # Un solo rosa (el de Ágape) en todo; cada piso con su fondo animado. Energía: nunca «rendimiento».
-        'jugar': {'fondo': 'remolino', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop']},
+        'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop']},
         'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': ['ares.desktop']},
         'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': []},
     },
     'animar': True,      # fondos animados (solo con gráfica de verdad)
     'silencio': False,   # «No molestar» en todos los pisos
-    'isla': {'esconder': True, 'jugar': True, 'navegar': True, 'estudiar': True},  # lo de cada piso: temperatura/FPS,
+    'isla': {'esconder': True, 'esconderPisos': True, 'jugar': True, 'navegar': True, 'estudiar': True},  # lo de cada piso: temperatura/FPS,
     'fps': 60,                                                                    # música, temporizador
+    'version': VERSION,
 }
 HEALTH_DEFAULT = {'limite': 80}
 FPS_CHOICES = (30, 45, 60)
@@ -56,9 +58,13 @@ def _merge(base, over):
 def load():
     try:
         with open(SETTINGS) as f:
-            return _merge(DEFAULTS, json.load(f))
+            raw = json.load(f)
     except (OSError, ValueError):
         return copy.deepcopy(DEFAULTS)
+    st = _merge(DEFAULTS, raw)
+    if raw.get('version', 1) < 2 and st['pisos']['jugar']['fondo'] == 'remolino':
+        st['pisos']['jugar']['fondo'] = 'luces'
+    return st
 
 
 def valid(st):
@@ -78,6 +84,7 @@ def valid(st):
 
 def save(st):
     st = valid(st)
+    st['version'] = VERSION
     os.makedirs(os.path.dirname(SETTINGS), exist_ok=True)
     tmp = SETTINGS + '.nuevo'
     with open(tmp, 'w') as f:

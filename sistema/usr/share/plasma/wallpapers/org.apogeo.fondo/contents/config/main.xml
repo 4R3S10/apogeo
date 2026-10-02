@@ -4,9 +4,11 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
-    <!-- tinta, humo, seda, marmol, relieve, remolino, dunas -->
+    <!-- tinta, humo, seda, marmol, relieve, remolino, dunas, luces -->
     <entry name="Estilo" type="String"><default>tinta</default></entry>
     <!-- Animado (como en Ágape); sin gráfica de verdad se queda quieto -->
     <entry name="Animar" type="Bool"><default>true</default></entry>
+    <!-- El piso (jugar, navegar, estudiar): lo pone apogeo-pisos; lo lee la pantalla de bloqueo -->
+    <entry name="Piso" type="String"><default>navegar</default></entry>
   </group>
 </kcfg>

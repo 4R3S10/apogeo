@@ -6,7 +6,7 @@ import org.kde.plasma.plasmoid
 WallpaperItem {
     id: root
 
-    readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas"]
+    readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces"]
     readonly property int kind: Math.max(0, styles.indexOf(root.configuration.Estilo))
     // Sin gráfica (el dibujo lo haría el procesador) se queda quieto: primero la salud del equipo
     readonly property bool animate: root.configuration.Animar && GraphicsInfo.api !== GraphicsInfo.Software

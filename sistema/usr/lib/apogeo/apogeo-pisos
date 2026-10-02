@@ -105,6 +105,7 @@ def setup(bus):
             p.height = 52;
             p.lengthMode = 'fit';
             p.alignment = 'center';
+            p.hiding = 'autohide';
             p.addWidget('org.apogeo.pisos');
         """)
         st['panel'] = True
@@ -193,7 +194,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
-AESTHETICS = 10  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+AESTHETICS = 11  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -233,6 +234,7 @@ def aesthetics():
     kw('kwinrc', 'org.kde.kdecoration2', 'ButtonsOnLeft', '')
     kw('kwinrc', 'org.kde.kdecoration2', 'ButtonsOnRight', 'IAX')
     kw('kwinrc', 'Plugins', 'apogeo-ventanasEnabled', 'true')
+    kw('kwinrc', 'Plugins', 'apogeo-bordesEnabled', 'true')  # la isla y los pisos salen con una franja ancha del borde
     run('kwriteconfig6', '--file', 'kwinrc', '--group', 'Plugins', '--key', 'apogeo-botonesEnabled', '--delete')
     kwin_reconfigure()
     # Teclado ANSI: EE. UU. internacional
@@ -297,7 +299,7 @@ class Floors:
         st = ajustes.load()
         mine = st['pisos'][f['key']]
         log('piso', f['name'])
-        self.wallpaper(mine['fondo'], st['animar'])
+        self.wallpaper(mine['fondo'], st['animar'], f['key'])
         self.quiet(st['silencio'] or not mine['avisos'])
         self.power(mine['energia'])
         if force:
@@ -320,14 +322,14 @@ class Floors:
         self.apply(self.last if self.last is not None else current_index(self.bus), force=True)
         island(self.bus, ajustes.load())
 
-    def wallpaper(self, style, animate):
+    def wallpaper(self, style, animate, floor):
         """El fondo animado de Ágape del piso (org.apogeo.fondo). Sin gráfica de verdad, quieto (lo dibujaría el
         procesador), y también si lo apagas en los ajustes. También en la pantalla de bloqueo, que así sabe en qué piso
         estabas."""
         animate = 'true' if animate and real_gpu() else 'false'
         run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--key', 'WallpaperPlugin',
             'org.apogeo.fondo')
-        for key, value in (('Estilo', style), ('Animar', animate)):
+        for key, value in (('Estilo', style), ('Animar', animate), ('Piso', floor)):
             run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
                 'org.apogeo.fondo', '--group', 'General', '--key', key, value)
         plasma_script(self.bus, """
@@ -336,8 +338,9 @@ class Floors:
                 d.currentConfigGroup = ['Wallpaper', 'org.apogeo.fondo', 'General'];
                 d.writeConfig('Estilo', '%s');
                 d.writeConfig('Animar', %s);
+                d.writeConfig('Piso', '%s');
             });
-        """ % (style, animate))
+        """ % (style, animate, floor))
 
     def quiet(self, on):
         """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos."""
@@ -381,8 +384,14 @@ def island(bus, st):
     """La isla como en los ajustes: si se esconde sola, lo de cada piso (temperatura y FPS, música, temporizador) y los
     números de la salud del PC que enseña en Jugar."""
     cfg = st['isla']
+    # Las dos se esconden del todo (o no, si lo quitas en los ajustes); el script de KWin «apogeo-bordes» las saca al
+    # acercar el ratón a una franja ancha del borde, y tiene que saber si lo hace
+    kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if cfg['esconder'] else 'false')
+    kw('kwinrc', 'Script-apogeo-bordes', 'pisos', 'true' if cfg['esconderPisos'] else 'false')
+    kwin_reconfigure()
     plasma_script(bus, """
         panels().forEach(function (p) {
+            if (p.location == 'right') p.hiding = %s;
             if (p.location != 'bottom') return;
             p.hiding = %s;
             p.widgets().forEach(function (w) {
@@ -396,7 +405,8 @@ def island(bus, st):
                 w.reloadConfig();
             });
         });
-    """ % (json.dumps('autohide' if cfg['esconder'] else 'none'), json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
+    """ % (json.dumps('autohide' if cfg['esconderPisos'] else 'none'), json.dumps('autohide' if cfg['esconder'] else 'none'),
+           json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 
 

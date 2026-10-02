@@ -20,7 +20,7 @@ Rectangle {
     readonly property color accentText: "#2a1c26"
     readonly property string font: "Bricolage Grotesque"
     readonly property var floors: [
-        { key: "jugar", name: "Jugar", kind: 5 },      // Remolino
+        { key: "jugar", name: "Jugar", kind: 7 },      // Luces
         { key: "navegar", name: "Navegar", kind: 0 },  // Tinta
         { key: "estudiar", name: "Estudiar", kind: 2 } // Seda
     ]

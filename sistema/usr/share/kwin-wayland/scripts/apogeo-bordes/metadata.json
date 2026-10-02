@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Description": "La isla y la barra de pisos salen al acercar el ratón al borde (una franja ancha, no solo el último píxel)",
+        "EnabledByDefault": true,
+        "Icon": "window",
+        "Id": "apogeo-bordes",
+        "License": "MIT",
+        "Name": "Apogeo: bordes"
+    },
+    "X-Plasma-API": "javascript"
+}

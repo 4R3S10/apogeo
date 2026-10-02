@@ -19,8 +19,8 @@ QtObject {
     readonly property color sobreRosa: "#2a1c26"
     readonly property color aviso: Qt.rgba(245 / 255, 158 / 255, 11 / 255, 0.14)
     readonly property string letra: "Bricolage Grotesque"
-    readonly property var fondos: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas"]
-    readonly property var nombresFondos: ["Tinta", "Humo", "Seda", "Mármol", "Relieve", "Remolino", "Dunas"]
+    readonly property var fondos: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces"]
+    readonly property var nombresFondos: ["Tinta", "Humo", "Seda", "Mármol", "Relieve", "Remolino", "Dunas", "Luces"]
 
     // El tiempo de los fondos animados (a 30 imágenes por segundo como mucho, como Ágape). Quien lo usa pone «animar».
     property bool animar: false

@@ -1,7 +1,7 @@
 #version 440
 // Los fondos animados de Ágape (ui/js/theme.js, WALLPAPER_FX), los mismos sombreadores pasados a Qt: ruido fractal que se
 // deforma despacio con los tonos del tema Berenjena. «kind»: 0 Tinta, 1 Humo, 2 Seda, 3 Mármol, 4 Relieve, 5 Remolino,
-// 6 Dunas. Se compila con qsb al construir el paquete (herramientas/fondo.sh).
+// 6 Dunas, 7 Luces (de Apogeo). Se compila con qsb al construir el paquete (herramientas/fondo.sh).
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {
@@ -111,6 +111,18 @@ void main() {
         col = mix(col, C2 * k2, lit * 0.55);
         col = mix(col, hi * 1.3, pow(lit, 8.0) * 0.4);
         f = 0.3 + 0.4 * lit + 0.3 * big;
+    } else if (k == 7) {     // Luces: círculos de luz desenfocados que flotan despacio (el de Jugar)
+        vec2 p = uv * asp; float s = t * 0.05;
+        col = mix(b, C1 * 0.9, smoothstep(0.0, 1.0, uv.y) * 0.6);
+        f = 0.5;
+        for (int i = 0; i < 14; i++) {
+            float fi = float(i);
+            vec2 c = vec2(fract(hash(vec2(fi, 1.0)) + s * (0.05 + 0.08 * hash(vec2(fi, 2.0)))) * asp.x,
+                          fract(hash(vec2(fi, 3.0)) + 0.05 * sin(s * 3.0 + fi)));
+            float r = 0.05 + 0.11 * hash(vec2(fi, 4.0));
+            float blob = smoothstep(r, r * 0.6, length(p - c)) * (0.25 + 0.35 * hash(vec2(fi, 5.0)));
+            col += (hash(vec2(fi, 6.0)) > 0.5 ? C2 * k2 : hi * 1.3) * blob;
+        }
     } else {                 // Tinta
         vec2 p = uv * asp * 2.5; float s = t * 0.06;
         vec2 q = vec2(fbm(p + s), fbm(p + vec2(5.2, 1.3) - s));

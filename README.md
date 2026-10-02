@@ -25,7 +25,7 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 
 - **Letra:** Bricolage Grotesque en todo el sistema.
 - **Colores:** fondo #120d14, superficie #1e1621, texto #f1e6ea y un solo rosa, #e0a9b4, en todos los pisos.
-- **Fondos:** los fondos animados de Ágape, uno por piso (Jugar «Remolino», Navegar «Tinta», Estudiar «Seda»). Se
+- **Fondos:** los fondos animados de Ágape, uno por piso (Jugar «Luces», Navegar «Tinta», Estudiar «Seda»). Se
   dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica (máquina virtual) se quedan
   quietos.
 - **Isla y pisos:** el cristal translúcido de Ágape, con la pastilla rosa con brillo para lo activo y sus iconos de línea.

@@ -9,7 +9,7 @@ import org.kde.kirigami as Kirigami
 // Consola del piso Jugar («Destacado»): el juego elegido en grande con su imagen de fondo y el botón de jugar; debajo,
 // todos los demás en una fila (Steam, Epic/GOG con Heroic, Hydra y los que se abren en el Windows escondido).
 // Teclado o mando (Steam lo convierte en teclado): ← → elegir · Intro jugar · Q / E cambiar de tienda · ↓ bajar al piso
-// Navegar · Esc salir. La rueda del ratón en el borde derecho también cambia de piso (como la columna de pisos).
+// Navegar · Esc salir. Arriba a la derecha, los pisos (Jugar · Navegar · Estudiar) para cambiar con el ratón. La rueda del ratón en el borde derecho también cambia de piso (como la columna de pisos).
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
@@ -59,6 +59,8 @@ PlasmoidItem {
     }
     Timer { id: statusTimer; interval: 6000; onTriggered: root.status = "" }
     function floor(dir) { runner.connectSource("/usr/lib/apogeo/apogeo-pisos " + dir) }
+    function goFloor(i) { runner.connectSource("/usr/lib/apogeo/apogeo-pisos ir " + i) }
+    readonly property var floorList: [{ key: "jugar", label: "Jugar" }, { key: "navegar", label: "Navegar" }, { key: "estudiar", label: "Estudiar" }]
 
     function when(ts) {
         if (!ts) return "";
@@ -83,14 +85,14 @@ PlasmoidItem {
             else if (event.key === Qt.Key_Escape) Qt.quit();
         }
 
-        // Detrás, el fondo «Remolino» de Ágape (el del piso Jugar), quieto: la gráfica, para los juegos
+        // Detrás, el fondo «Luces» (el del piso Jugar), quieto: la gráfica, para los juegos
         Rectangle { anchors.fill: parent; color: root.bg }
         ShaderEffect {
             id: fx
             width: Math.round(screen.width / 3)
             height: Math.round(screen.height / 3)
             property real t: 40
-            property real kind: 5
+            property real kind: 7
             property real light: 0
             property size res: Qt.size(screen.width, screen.height)
             property color base: "#120d14"
@@ -194,6 +196,71 @@ PlasmoidItem {
                 }
             }
             Item { Layout.fillWidth: true }
+            // Los pisos (J1): Jugar marcado; los otros te llevan a su piso
+            Rectangle {
+                Layout.preferredHeight: 40
+                Layout.preferredWidth: floorSeg.implicitWidth + 6
+                Layout.rightMargin: 14
+                radius: 14
+                color: root.hover
+                Row {
+                    id: floorSeg
+                    anchors.centerIn: parent
+                    spacing: 3
+                    Repeater {
+                        model: root.floorList
+                        delegate: Item {
+                            id: fopt
+                            required property var modelData
+                            required property int index
+                            readonly property bool on: index === 0
+                            width: frow.implicitWidth + 26
+                            height: 34
+                            RectangularShadow {
+                                anchors.fill: fbg
+                                visible: fopt.on
+                                offset.y: 4; blur: 18; spread: -4
+                                radius: fbg.radius
+                                color: root.pink
+                                opacity: 0.85
+                            }
+                            Rectangle {
+                                id: fbg
+                                anchors.fill: parent
+                                radius: 11
+                                color: fopt.on ? root.pink : (farea.containsMouse ? root.hover : "transparent")
+                                Behavior on color { ColorAnimation { duration: 180 } }
+                            }
+                            Row {
+                                id: frow
+                                anchors.centerIn: parent
+                                spacing: 7
+                                Kirigami.Icon {
+                                    width: 16; height: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    source: "file:///usr/share/plasma/plasmoids/org.apogeo.pisos/contents/icons/" + fopt.modelData.key + ".svg"
+                                    isMask: true
+                                    color: fopt.on ? root.accentText : farea.containsMouse ? root.text : root.muted
+                                }
+                                QQC2.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: fopt.modelData.label
+                                    color: fopt.on ? root.accentText : farea.containsMouse ? root.text : root.muted
+                                    font.weight: fopt.on ? Font.Bold : Font.DemiBold
+                                    font.pixelSize: 14
+                                }
+                            }
+                            MouseArea {
+                                id: farea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: if (!fopt.on) root.goFloor(fopt.index)
+                            }
+                        }
+                    }
+                }
+            }
             QQC2.Label {
                 id: clock
                 color: root.muted

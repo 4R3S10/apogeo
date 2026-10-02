@@ -173,7 +173,7 @@ ApplicationWindow {
                         id: walls
                         width: parent.width
                         spacing: 10
-                        readonly property real side: Math.floor((width - 6 * spacing - 8) / 7)
+                        readonly property real side: Math.floor((width - (Tema.fondos.length - 1) * spacing - 8) / Tema.fondos.length)
                         Repeater {
                             model: Tema.fondos.length
                             delegate: Column {
@@ -310,9 +310,14 @@ ApplicationWindow {
                 intro: "Tu barra de abajo. En cada piso enseña cosas distintas."
                 Fila {
                     linea: false
-                    titulo: "Esconderse sola"
-                    detalle: win.s.isla.esconder ? "Aparece al acercar el ratón abajo" : "Siempre a la vista"
+                    titulo: "Isla: esconderse sola"
+                    detalle: win.s.isla.esconder ? "Sale al acercar el ratón al borde de abajo" : "Siempre a la vista"
                     Interruptor { checked: win.s.isla.esconder; onToggled: apogeo.set("isla.esconder", checked) }
+                }
+                Fila {
+                    titulo: "Barra de pisos: esconderse sola"
+                    detalle: win.s.isla.esconderPisos ? "Sale al acercar el ratón al borde derecho" : "Siempre a la vista"
+                    Interruptor { checked: win.s.isla.esconderPisos; onToggled: apogeo.set("isla.esconderPisos", checked) }
                 }
                 Fila {
                     titulo: "En Jugar: temperatura y FPS"
