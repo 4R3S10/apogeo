@@ -6,13 +6,16 @@ encima de una cambia su volumen. Lo que suena sale de:
   - los reproductores del sistema (MPRIS: Spotify, otros navegadores, apps de música…);
   - cada pestaña de Ágape, por su socket ($XDG_RUNTIME_DIR/agape-musica.sock). El reproductor MPRIS de Ágape
     (Chromium) no se enseña: ya está cada pestaña por separado.
-No sale si no suena nada (ni con Spotify cerrado), con Ágape delante (Ágape enseña el suyo) ni con una ventana a
-pantalla completa: eso lo hace el script de KWin apogeo-ventanas, que también la coloca y la pone encima de todo.
+Siempre está («A · Siempre a la vista»): si no suena nada, enseña lo último que sonó con «Seguir» y «Abrir Spotify».
+No sale con Ágape delante (Ágape enseña el suyo) ni con una ventana a pantalla completa: eso lo hace el script de KWin
+apogeo-ventanas, que también la coloca y la pone encima de todo.
 
   apogeo-musica    la deja en marcha (la arranca apogeo-pisos al empezar la sesión)
 """
 import json
 import os
+import shutil
+import subprocess
 import sys
 
 os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
@@ -27,6 +30,7 @@ SOCKET = os.path.join(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()
 MPRIS = 'org.mpris.MediaPlayer2.'
 PATH = '/org/mpris/MediaPlayer2'
 PLAYER = 'org.mpris.MediaPlayer2.Player'
+LAST = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'apogeo', 'musica-ultima.json')
 NAMES = {'spotify': 'Spotify', 'firefox': 'Firefox', 'vlc': 'VLC', 'elisa': 'Elisa'}
 
 
@@ -54,6 +58,11 @@ class Musica(QObject):
         self.sock.readyRead.connect(self._read)
         self.sock.errorOccurred.connect(lambda *_: self._drop())
         self.buf = b''
+        try:
+            with open(LAST) as f:
+                self._last = json.load(f)
+        except (OSError, ValueError):
+            self._last = {}
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.timer.start(1000)
@@ -64,6 +73,30 @@ class Musica(QObject):
     @pyqtProperty('QVariantList', notify=changed)
     def sources(self):
         return self._agape + self._mpris
+
+    @pyqtProperty('QVariantMap', notify=changed)
+    def last(self):
+        """Lo último que sonó (para cuando no suena nada)."""
+        return self._last
+
+    @pyqtProperty(bool, constant=True)
+    def hasSpotify(self):
+        return bool(shutil.which('spotify')) or os.path.exists('/var/lib/flatpak/exports/bin/com.spotify.Client')
+
+    def _remember(self):
+        playing = [s for s in self._agape + self._mpris if not s['paused']]
+        if not playing:
+            return
+        p = playing[0]
+        last = {k: p.get(k) for k in ('key', 'kind', 'app', 'title', 'artist', 'art', 'url', 'spotify')}
+        if last != self._last:
+            self._last = last
+            try:
+                os.makedirs(os.path.dirname(LAST), exist_ok=True)
+                with open(LAST, 'w') as f:
+                    json.dump(last, f, ensure_ascii=False)
+            except OSError:
+                pass
 
     def poll(self):
         self._poll_mpris()
@@ -104,6 +137,7 @@ class Musica(QObject):
             })
         if out != self._mpris:
             self._mpris = out
+            self._remember()
             self.changed.emit()
 
     # ---------- Ágape (socket) ----------
@@ -147,6 +181,7 @@ class Musica(QObject):
             items = [{**d, 'kind': 'agape', 'app': 'Ágape'} for d in (data or []) if isinstance(d, dict)]
             if items != self._agape:
                 self._agape = items
+                self._remember()
                 self.changed.emit()
 
     # ---------- Botones ----------
@@ -161,6 +196,26 @@ class Musica(QObject):
             if method:
                 QDBusInterface(key, PATH, PLAYER, self.bus).call(method)
         QTimer.singleShot(300, self.poll)
+
+    def _launch(self, *cmd):
+        subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice', *cmd],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+    @pyqtSlot()
+    def openSpotify(self):
+        self._launch('gtk-launch', 'spotify' if shutil.which('spotify') else 'com.spotify.Client')
+
+    @pyqtSlot()
+    def resume(self):
+        """«Seguir» con lo último que sonó: Spotify se abre (y sigue sonando); una web, en Ágape."""
+        last = self._last
+        if last.get('spotify'):
+            self.openSpotify()
+            QTimer.singleShot(6000, lambda: QDBusInterface(MPRIS + 'spotify', PATH, PLAYER, self.bus).call('Play'))
+        elif last.get('kind') == 'agape' and str(last.get('url', '')).startswith('https://'):
+            self._launch('/usr/lib/apogeo/apogeo-agape', last['url'])
+        elif last.get('key'):
+            QDBusInterface(last['key'], PATH, PLAYER, self.bus).call('Play')
 
     @pyqtSlot(str, float)
     def setVolume(self, key, value):

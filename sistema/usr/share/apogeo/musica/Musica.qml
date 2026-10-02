@@ -3,7 +3,7 @@ import QtQuick.Effects
 import Apogeo
 
 // Música de Apogeo («M1 · Como en Ágape»): abajo a la izquierda una portada por cada cosa que suena (la que empezó la
-// última, delante); al pasar el ratón, la tarjeta. La ventana es transparente y de tamaño fijo (la coloca el script de
+// última, delante); al pasar el ratón, la tarjeta. Si no suena nada, lo último que sonó con «Seguir» y «Abrir Spotify». La ventana es transparente y de tamaño fijo (la coloca el script de
 // KWin apogeo-ventanas en la esquina); solo lo que se ve recibe el ratón. «musica» es apogeo-musica.
 Window {
     id: win
@@ -33,7 +33,9 @@ Window {
         return out;
     }
     readonly property var main: list.length ? list[0] : null
-    visible: list.length > 0
+    readonly property bool idle: list.length === 0
+    readonly property var last: musica.last
+    visible: true
 
     // Abrir al pasar el ratón; cerrar un poco después de salir (por si vuelve)
     Timer { id: closeTimer; interval: 350; onTriggered: win.open = false }
@@ -98,10 +100,17 @@ Window {
         id: bubbles
         x: 14
         y: win.height - height - 14
-        width: Math.min(win.list.length, 4) * 22 + 30
+        width: Math.max(1, Math.min(win.list.length, 4)) * 22 + 30
         height: 52
         opacity: win.open ? 0 : 1
         Behavior on opacity { NumberAnimation { duration: 150 } }
+        Item { // sin nada sonando: lo último que sonó (o la nota de música)
+            visible: win.idle
+            width: 52; height: 52
+            RectangularShadow { anchors.fill: parent; radius: 14; blur: 18; offset.y: 6; color: Qt.rgba(0, 0, 0, 0.5) }
+            Art { anchors.fill: parent; src: win.last && win.last.title ? win.last : null; opacity: 0.85 }
+            Rectangle { anchors.fill: parent; radius: 14; color: "transparent"; border.color: Qt.rgba(1, 1, 1, 0.12) }
+        }
         Repeater {
             model: win.list.slice(0, 4)
             delegate: Item {
@@ -133,20 +142,52 @@ Window {
         x: 14
         y: win.height - height - 14
         width: 340
-        height: col.implicitHeight + 28
+        height: (win.idle ? idleCol.implicitHeight : col.implicitHeight) + 28
         radius: 20
         color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.96)
         border.color: Tema.borde
         visible: opacity > 0
-        opacity: win.open && win.main ? 1 : 0
+        opacity: win.open ? 1 : 0
         scale: win.open ? 1 : 0.96
         transformOrigin: Item.BottomLeft
         Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         HoverHandler { onHoveredChanged: win.hover(hovered) }
 
+        // Sin nada sonando
+        Column {
+            id: idleCol
+            visible: win.idle
+            x: 14; y: 14
+            width: parent.width - 28
+            spacing: 12
+            Row {
+                spacing: 12
+                width: parent.width
+                Art { width: 64; height: 64; src: win.last && win.last.title ? win.last : null }
+                Column {
+                    width: parent.width - 76
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+                    Texto { width: parent.width; text: win.last && win.last.title ? win.last.title : "No suena nada"; font.pixelSize: 15; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                    Texto {
+                        width: parent.width
+                        text: win.last && win.last.title ? "Lo último que sonó · " + (win.last.kind === "agape" ? "Ágape" : win.last.app) : "Pon algo en Spotify o en Ágape"
+                        color: Tema.apagado; font.pixelSize: 12; elide: Text.ElideRight; wrapMode: Text.NoWrap
+                    }
+                }
+            }
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 8
+                Boton { visible: !!(win.last && win.last.title); tipo: "principal"; text: "Seguir"; icono: "reproducir"; onClicked: musica.resume() }
+                Boton { visible: musica.hasSpotify; text: "Abrir Spotify"; icono: "musica"; onClicked: musica.openSpotify() }
+            }
+        }
+
         Column {
             id: col
+            visible: !win.idle
             x: 14; y: 14
             width: parent.width - 28
             spacing: 6
