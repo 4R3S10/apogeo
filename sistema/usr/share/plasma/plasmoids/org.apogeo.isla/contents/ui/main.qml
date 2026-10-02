@@ -7,6 +7,7 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.plasma.private.mpris as Mpris
 import org.kde.taskmanager as TaskManager
 import org.kde.kirigami as Kirigami
+import Apogeo
 
 // La isla de Apogeo (abajo, se esconde sola), con los botones y chips de Ágape. Siempre: el buscador (la pastilla rosa).
 // Además, según el piso:
@@ -57,32 +58,17 @@ PlasmoidItem {
         onTriggered: root.run(root.tempCmd)
     }
 
-    // ---------- Temporizador de concentración (piso Estudiar) ----------
-    property bool focusRunning: false
-    property bool focusBreak: false
-    property int focusLeft: 25 * 60
-    function today() { return Qt.formatDate(new Date(), "yyyy-MM-dd") }
-    function studied() {
-        return Plasmoid.configuration.studyDate === today() ? Plasmoid.configuration.studySeconds : 0;
-    }
+    // ---------- Temporizador de concentración (piso Estudiar): el mismo que el del escritorio (apogeo-pisos) ----------
+    Datos { id: datos }
+    property var estudio: ({})
+    readonly property bool focusRunning: !!estudio.corriendo
+    readonly property bool focusBreak: !!estudio.fase && estudio.fase !== "estudio"
+    readonly property int focusLeft: estudio.quedan !== undefined ? estudio.quedan : 25 * 60
+    function studied() { return estudio.hoy || 0 }
     Timer {
-        interval: 1000; repeat: true
-        running: root.focusRunning
-        onTriggered: {
-            if (!root.focusBreak) {
-                if (Plasmoid.configuration.studyDate !== root.today()) {
-                    Plasmoid.configuration.studyDate = root.today();
-                    Plasmoid.configuration.studySeconds = 0;
-                }
-                Plasmoid.configuration.studySeconds += 1;
-            }
-            if (--root.focusLeft <= 0) {
-                // Fin de la fase: suena bajito (en Estudiar no hay avisos) y empieza la siguiente
-                root.focusBreak = !root.focusBreak;
-                root.focusLeft = (root.focusBreak ? 5 : 25) * 60;
-                root.run("paplay /usr/share/sounds/apogeo/stereo/message-new-instant.oga");
-            }
-        }
+        interval: 1000; repeat: true; triggeredOnStart: true
+        running: root.floor === "Estudiar" && Plasmoid.configuration.extraEstudiar
+        onTriggered: datos.pedir("Estudio", [], d => { if (d) root.estudio = d; })
     }
     function mmss(s) { return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") }
     function hm(s) { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? h + " h " + m + " min" : m + " min" }
@@ -248,8 +234,8 @@ PlasmoidItem {
             iconName: root.focusRunning ? "pausa" : "reloj"
             on: root.focusRunning
             text: root.mmss(root.focusLeft) + " · " + (root.focusBreak ? "descanso" : "estudio")
-            onClicked: root.focusRunning = !root.focusRunning
-            onRightClicked: { root.focusRunning = false; root.focusBreak = false; root.focusLeft = 25 * 60; }
+            onClicked: datos.hacer("EstudioAccion", ["alternar", ""])
+            onRightClicked: datos.hacer("EstudioAccion", ["reiniciar", ""])
         }
         Chip {
             visible: root.floor === "Estudiar" && Plasmoid.configuration.extraEstudiar

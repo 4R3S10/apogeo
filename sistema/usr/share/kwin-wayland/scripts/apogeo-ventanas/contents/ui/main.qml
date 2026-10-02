@@ -5,8 +5,9 @@ import org.kde.kwin
 //  - La consola del piso Jugar se abre a pantalla completa. KWin no lo aplica hasta que la ventana tiene su título y se
 //    ve, así que se reintenta un momento después de aparecer.
 //  - La música (apogeo-musica) va abajo a la izquierda, encima de todo, en todos los pisos y fuera de la barra de
-//    tareas y del cambiador de ventanas. Se esconde con Ágape delante (Ágape enseña la suya en el mismo sitio) y con
-//    una ventana a pantalla completa (un juego, la consola).
+//    tareas y del cambiador de ventanas. Se esconde con Ágape delante (Ágape enseña la suya en el mismo sitio), con
+//    una ventana a pantalla completa (un juego, la consola) y en Navegar con el escritorio a la vista (allí ya está el
+//    widget de música del escritorio).
 Item {
     id: root
     property var pending: []
@@ -44,7 +45,11 @@ Item {
         if (!music) return;
         const a = Workspace.activeWindow;
         const agape = a && ((a.resourceClass || "") + " " + (a.desktopFileName || "")).toLowerCase().indexOf("ares") >= 0;
-        const busy = a && a !== music && (a.fullScreen || agape);
+        const desk = Workspace.currentDesktop;
+        const covered = Workspace.windows.some(w => w.normalWindow && !w.minimized && w !== music && !w.skipTaskbar
+                                                    && (w.onAllDesktops || w.desktops.indexOf(desk) >= 0));
+        const desktopShown = desk && desk.name === "Navegar" && !covered;
+        const busy = (a && a !== music && (a.fullScreen || agape)) || desktopShown;
         if (music.minimized !== busy) music.minimized = busy;
     }
 
@@ -59,6 +64,7 @@ Item {
         function onWindowAdded(w) { root.added(w) }
         function onWindowRemoved(w) { root.removed(w) }
         function onWindowActivated(w) { root.hideMusic() }
+        function onCurrentDesktopChanged() { root.hideMusic() }
     }
     Timer {
         id: retry

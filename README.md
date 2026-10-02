@@ -65,6 +65,13 @@ momento.
 Al final de la isla está el **panel rápido**: red, bluetooth, fondo animado, no molestar, ahorro de energía del piso,
 luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
 
+## Escritorios
+
+Sin iconos de apps. En **Navegar**, la hora grande con la fecha y el tiempo, y abajo una fila de widgets: lo que suena,
+los avisos, lo próximo del calendario de Ágape y tu PC. En **Estudiar**, tu carpeta `~/Estudios` (cada asignatura con
+Temas, Trabajos y Ejercicios), el temporizador 25/5 (el mismo que el de la isla), los exámenes con lo que falta y las
+tareas de hoy. Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`); el widget es `org.apogeo.escritorio`.
+
 ## Música
 
 Abajo a la izquierda, una portada por cada cosa que suena (Spotify y otras apps de música, y **cada pestaña de Ágape**

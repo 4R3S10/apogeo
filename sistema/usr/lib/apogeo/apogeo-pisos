@@ -170,6 +170,27 @@ def setup(bus):
             });
         """)
         st['reloj'] = CLOCK
+    if st.get('escritorio', 0) < DESKTOP:
+        # El escritorio sin iconos de apps (enseña una carpeta vacía) y, encima, el widget de Apogeo a pantalla completa
+        # (en Navegar la hora y tus widgets; en Estudiar tu carpeta de estudio, el temporizador, exámenes y tareas)
+        plasma_script(bus, """
+            desktops().forEach(function (d) {
+                d.currentConfigGroup = ['General'];
+                d.writeConfig('url', 'file:///usr/share/apogeo/escritorio-vacio');
+                d.reloadConfig();
+                var g = screenGeometry(d.screen);
+                var w = d.widgets().filter(function (x) { return x.type == 'org.apogeo.escritorio'; })[0];
+                if (!w) w = d.addWidget('org.apogeo.escritorio', 0, 0, g.width, g.height);
+                // A pantalla completa: Plasma guarda el sitio de cada widget así y solo lo lee al arrancar
+                var v = 'Applet-' + w.id + ':0,0,' + g.width + ',' + g.height + ',0;';
+                d.currentConfigGroup = [];
+                d.writeConfig('ItemGeometries-' + g.width + 'x' + g.height, v);
+                d.writeConfig('ItemGeometriesHorizontal', v);
+            });
+        """)
+        st['escritorio'] = DESKTOP
+        save_state(st)
+        GLib.timeout_add_seconds(2, lambda: (run('systemctl', '--user', 'restart', 'plasma-plasmashell'), False)[-1])
     if st.get('rapido', 0) < QUICK:
         # El panel rápido (red, bluetooth, volumen, energía, no molestar…) al final de la isla, después de la hora
         plasma_script(bus, """
@@ -194,6 +215,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
+DESKTOP = 1  # igual, para el escritorio (sin iconos y con el widget de Apogeo)
 AESTHETICS = 11  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
@@ -458,6 +480,8 @@ def main():
             go(bus, int(sys.argv[2].partition(':')[2].strip('/')))
         return
     setup(bus)
+    import apogeo_datos
+    datos = apogeo_datos.Datos(bus)  # noqa: F841 (los datos de los widgets: el tiempo, el estudio… por D-Bus)
     floors = Floors(bus, dbus.SystemBus())
     bus.add_signal_receiver(lambda _id: floors.apply(current_index(bus)), signal_name='currentChanged',
                             dbus_interface='org.kde.KWin.VirtualDesktopManager', path='/VirtualDesktopManager')
