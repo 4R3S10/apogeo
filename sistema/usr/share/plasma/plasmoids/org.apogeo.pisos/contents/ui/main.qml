@@ -38,8 +38,8 @@ PlasmoidItem {
     }
 
     fullRepresentation: Item {
-        Layout.preferredWidth: 46
-        Layout.preferredHeight: column.implicitHeight + 8
+        Layout.preferredWidth: 48
+        Layout.preferredHeight: column.implicitHeight + 12
         Layout.minimumHeight: Layout.preferredHeight
 
         MouseArea {
@@ -56,7 +56,7 @@ PlasmoidItem {
         ColumnLayout {
             id: column
             anchors.centerIn: parent
-            spacing: 3
+            spacing: 8
 
             Repeater {
                 model: desktops.desktopIds
@@ -67,8 +67,8 @@ PlasmoidItem {
                     readonly property bool current: modelData === desktops.currentDesktop
                     readonly property string name: desktops.desktopNames[index] || ""
                     Layout.alignment: Qt.AlignHCenter
-                    implicitWidth: 38
-                    implicitHeight: 38
+                    implicitWidth: 40
+                    implicitHeight: 40
 
                     // El brillo de la pastilla activa (0 4px 18px -4px el rosa)
                     RectangularShadow {
@@ -84,14 +84,14 @@ PlasmoidItem {
                     Rectangle {
                         id: pill
                         anchors.fill: parent
-                        radius: 12
+                        radius: 14
                         color: floor.current ? root.accent : (hover.containsMouse ? root.hover : "transparent")
                         Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
                     }
                     Kirigami.Icon {
                         anchors.centerIn: parent
-                        width: 18
-                        height: 18
+                        width: 20
+                        height: 20
                         source: Qt.resolvedUrl("../icons/" + (root.icons[floor.name] || "navegar") + ".svg")
                         isMask: true
                         color: floor.current ? root.accentText : (hover.containsMouse ? root.text : root.muted)

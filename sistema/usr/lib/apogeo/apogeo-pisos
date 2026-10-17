@@ -76,10 +76,78 @@ def save_state(st):
 
 
 def plasma_script(bus, js):
+    """Ejecuta un script de Plasma y devuelve lo que imprima (None si Plasma no está)."""
     try:
-        bus.get_object('org.kde.plasmashell', '/PlasmaShell').evaluateScript(js, dbus_interface='org.kde.PlasmaShell')
+        return str(bus.get_object('org.kde.plasmashell', '/PlasmaShell').evaluateScript(js, dbus_interface='org.kde.PlasmaShell'))
     except dbus.DBusException as e:
         log('plasmashell:', e.get_dbus_message())
+        return None
+
+
+restart_plasma = {'pending': False}  # el estilo de Plasma recién puesto solo se ve al reiniciarlo
+
+
+def set_keys(path, group, values):
+    """Pone claves en un grupo de un archivo de configuración de KDE (con Plasma parado, para que no lo pise)."""
+    try:
+        with open(path) as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return
+    header = f'[{group}]'
+    out, inside, left = [], False, dict(values)
+    for line in lines:
+        if line.startswith('['):
+            if inside and left:
+                out += [f'{k}={v}' for k, v in left.items()]
+                left = {}
+            inside = line == header
+        elif inside and '=' in line and line.split('=', 1)[0] in left:
+            k = line.split('=', 1)[0]
+            out.append(f'{k}={left.pop(k)}')
+            continue
+        out.append(line)
+    if inside and left:
+        out += [f'{k}={v}' for k, v in left.items()]
+    elif left:
+        out += ['', header] + [f'{k}={v}' for k, v in left.items()]
+    with open(path, 'w') as f:
+        f.write('\n'.join(out) + '\n')
+
+
+def desktop_fill(bus):
+    """El widget del escritorio tiene que ocupar la pantalla entera. Plasma guarda el sitio de cada widget por tamaño de
+    pantalla y lo pisa al cerrarse, así que se corrige con Plasma parado (un instante, solo cuando hace falta: la
+    primera vez, al cambiar de pantalla o de resolución)."""
+    out = plasma_script(bus, """
+        var o = [];
+        desktops().forEach(function (d) {
+            var g = screenGeometry(d.screen);
+            d.widgets().forEach(function (w) {
+                if (w.type == 'org.apogeo.escritorio') o.push([d.id, w.id, g.width, g.height, w.geometry.x, w.geometry.y, w.geometry.width, w.geometry.height]);
+            });
+        });
+        print(JSON.stringify(o));
+    """)
+    if out is None:  # Plasma aún arrancando: se vuelve a mirar en un rato (hasta un minuto)
+        desktop_fill.tries = getattr(desktop_fill, 'tries', 0) + 1
+        return desktop_fill.tries < 12
+    try:
+        items = json.loads(out) if out else []
+    except ValueError:
+        items = []
+    # Plasma le quita el hueco de la isla cuando la isla no se esconde: eso vale
+    bad = [i for i in items if round(i[4]) != 0 or round(i[5]) != 0 or round(i[6]) != i[2] or not i[3] - 120 <= round(i[7]) <= i[3]]
+    if not bad and not restart_plasma['pending']:
+        return False
+    run('systemctl', '--user', 'stop', 'plasma-plasmashell')
+    rc = os.path.expanduser('~/.config/plasma-org.kde.plasma.desktop-appletsrc')
+    for cid, aid, w, h, *_ in bad:
+        v = f'Applet-{aid}:0,0,{w},{h},0;'
+        set_keys(rc, f'Containments][{cid}', {f'ItemGeometries-{w}x{h}': v, 'ItemGeometriesHorizontal': v})
+    restart_plasma['pending'] = False
+    run('systemctl', '--user', 'start', 'plasma-plasmashell')
+    return False
 
 
 def setup(bus):
@@ -102,7 +170,7 @@ def setup(bus):
             var p = new Panel;
             p.location = 'right';
             p.floating = true;
-            p.height = 52;
+            p.height = 56;
             p.lengthMode = 'fit';
             p.alignment = 'center';
             p.hiding = 'autohide';
@@ -116,7 +184,7 @@ def setup(bus):
             var p = new Panel;
             p.location = 'bottom';
             p.floating = true;
-            p.height = 52;
+            p.height = 56;
             p.lengthMode = 'fit';
             p.alignment = 'center';
             p.hiding = 'autohide';
@@ -181,16 +249,11 @@ def setup(bus):
                 var g = screenGeometry(d.screen);
                 var w = d.widgets().filter(function (x) { return x.type == 'org.apogeo.escritorio'; })[0];
                 if (!w) w = d.addWidget('org.apogeo.escritorio', 0, 0, g.width, g.height);
-                // A pantalla completa: Plasma guarda el sitio de cada widget así y solo lo lee al arrancar
-                var v = 'Applet-' + w.id + ':0,0,' + g.width + ',' + g.height + ',0;';
-                d.currentConfigGroup = [];
-                d.writeConfig('ItemGeometries-' + g.width + 'x' + g.height, v);
-                d.writeConfig('ItemGeometriesHorizontal', v);
             });
         """)
         st['escritorio'] = DESKTOP
         save_state(st)
-        GLib.timeout_add_seconds(2, lambda: (run('systemctl', '--user', 'restart', 'plasma-plasmashell'), False)[-1])
+        # A pantalla completa lo pone desktop_fill (se mira en cada inicio de sesión)
     if st.get('rapido', 0) < QUICK:
         # El panel rápido (red, bluetooth, volumen, energía, no molestar…) al final de la isla, después de la hora
         plasma_script(bus, """
@@ -201,9 +264,18 @@ def setup(bus):
             });
         """)
         st['rapido'] = QUICK
+    if st.get('cristal', 0) < CRYSTAL:
+        # B1 · Cristal de Ágape: la isla y la columna de pisos un poco más altas (56) para sus botones de 38-40
+        plasma_script(bus, """
+            panels().forEach(function (p) {
+                if (p.widgets().some(function (w) { return w.type == 'org.apogeo.isla' || w.type == 'org.apogeo.pisos'; })) p.height = 56;
+            });
+        """)
+        st['cristal'] = CRYSTAL
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
+        restart_plasma['pending'] = True
     save_state(st)
     island(bus, ajustes.load())
 
@@ -215,8 +287,9 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
                'org.kde.plasma.weather', 'org.kde.plasma.cameraindicator', 'Cachy-Update']
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
-DESKTOP = 1  # igual, para el escritorio (sin iconos y con el widget de Apogeo)
-AESTHETICS = 11  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+DESKTOP = 2  # igual, para el escritorio (sin iconos y con el widget de Apogeo a pantalla completa)
+CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
+AESTHETICS = 12  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -236,12 +309,43 @@ def kwin_reconfigure():
         log('kwin:', e.get_dbus_message())
 
 
+def plasma_theme():
+    """El estilo de Plasma «apogeo», escrito en la configuración del usuario. plasma-apply-desktoptheme y kwriteconfig6 no
+    lo escriben si /etc/xdg/plasmarc ya dice lo mismo, y entonces Plasma se quedaba con el estilo por defecto (gris)."""
+    path = os.path.expanduser('~/.config/plasmarc')
+    lines = []
+    try:
+        with open(path) as f:
+            lines = f.read().splitlines()
+    except OSError:
+        pass
+    out, group, done = [], None, False
+    for line in lines:
+        if line.startswith('[') and line.endswith(']'):
+            if group == '[Theme]' and not done:
+                out.append('name=apogeo')
+                done = True
+            group = line
+        elif group == '[Theme]' and line.startswith('name='):
+            if not done:
+                out.append('name=apogeo')
+                done = True
+            continue
+        out.append(line)
+    if not done:
+        if group != '[Theme]':
+            out += ([''] if out else []) + ['[Theme]']
+        out.append('name=apogeo')
+    with open(path, 'w') as f:
+        f.write('\n'.join(out) + '\n')
+
+
 def aesthetics():
     """La estética de Apogeo para cada usuario (CachyOS copia su propia configuración a las cuentas nuevas)."""
     run('plasma-apply-colorscheme', 'Apogeo')
     run('plasma-apply-cursortheme', 'Apogeo-cursor')
     run('/usr/lib/plasma-changeicons', 'Apogeo')  # Papirus con las carpetas en el rosa de Ágape
-    run('plasma-apply-desktoptheme', 'apogeo')    # la isla, los menús y los avisos con el cristal de Ágape
+    plasma_theme()                                # la isla, los menús y los avisos con el cristal de Ágape
     for key in ('font', 'menuFont', 'toolBarFont'):
         kw('kdeglobals', 'General', key, FONT)
     kw('kdeglobals', 'General', 'smallestReadableFont', FONT.replace(',10,', ',8,', 1))
@@ -494,6 +598,7 @@ def main():
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     welcome()
     floors.apply(current_index(bus))
+    GLib.timeout_add_seconds(6, lambda: desktop_fill(bus))
     # Los ajustes: al guardarlos (de golpe, con un archivo nuevo) se aplican
     monitor = Gio.File.new_for_path(os.path.dirname(ajustes.SETTINGS)).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES,
                                                                                           None)

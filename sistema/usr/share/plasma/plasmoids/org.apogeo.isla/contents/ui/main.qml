@@ -89,15 +89,15 @@ PlasmoidItem {
 
     function icon(name) { return Qt.resolvedUrl("../icons/" + name + ".svg") }
 
-    // Botón de Ágape (34 × 34, radio 12): sin fondo; al pasar el ratón, el fondo suave. «on» = la pastilla rosa con brillo
+    // Botón de Ágape (38 × 38, radio 13): sin fondo; al pasar el ratón, el fondo suave. «on» = la pastilla rosa con brillo
     component AgapeButton: Item {
         id: btn
         property string iconName
         property bool on: false
         property string tip
         signal clicked()
-        implicitWidth: 34
-        implicitHeight: 34
+        implicitWidth: 38
+        implicitHeight: 38
         RectangularShadow {
             anchors.fill: bg
             visible: btn.on
@@ -109,13 +109,13 @@ PlasmoidItem {
         Rectangle {
             id: bg
             anchors.fill: parent
-            radius: 12
+            radius: 13
             color: btn.on ? root.accent : (area.pressed ? root.press : area.containsMouse ? root.hover : "transparent")
             Behavior on color { ColorAnimation { duration: 180 } }
         }
         Kirigami.Icon {
             anchors.centerIn: parent
-            width: 17; height: 17
+            width: 18; height: 18
             source: root.icon(btn.iconName)
             isMask: true
             color: btn.on ? root.accentText : (area.containsMouse ? root.text : root.muted)
@@ -126,7 +126,7 @@ PlasmoidItem {
         QQC2.ToolTip.delay: 500
     }
 
-    // Chip de Ágape: icono + texto sobre el fondo suave; «on» = rosa
+    // Chip de Ágape: icono + texto sobre el cristal (el fondo suave solo al pasar el ratón); «on» = rosa
     component Chip: Item {
         id: chip
         property string iconName
@@ -135,8 +135,8 @@ PlasmoidItem {
         property bool on: false
         signal clicked()
         signal rightClicked()
-        implicitWidth: row.implicitWidth + 22
-        implicitHeight: 34
+        implicitWidth: row.implicitWidth + 20
+        implicitHeight: 38
         RectangularShadow {
             anchors.fill: chipBg
             visible: chip.on
@@ -148,8 +148,8 @@ PlasmoidItem {
         Rectangle {
             id: chipBg
             anchors.fill: parent
-            radius: 12
-            color: chip.on ? root.accent : (chipArea.containsMouse ? root.press : root.hover)
+            radius: 13
+            color: chip.on ? root.accent : (chipArea.containsMouse ? root.hover : "transparent")
             Behavior on color { ColorAnimation { duration: 180 } }
         }
         RowLayout {
@@ -168,7 +168,7 @@ PlasmoidItem {
                 color: chip.on ? root.accentText : chip.fg
                 font.family: root.font
                 font.weight: chip.on ? Font.Bold : Font.DemiBold
-                font.pixelSize: 13
+                font.pixelSize: 14
             }
         }
         MouseArea {
@@ -182,14 +182,14 @@ PlasmoidItem {
 
     component Separator: Rectangle {
         implicitWidth: 1
-        implicitHeight: 22
+        implicitHeight: 24
         color: root.border
-        Layout.leftMargin: 3
-        Layout.rightMargin: 3
+        Layout.leftMargin: 6
+        Layout.rightMargin: 6
     }
 
     fullRepresentation: RowLayout {
-        spacing: 4
+        spacing: 6
         Layout.minimumWidth: implicitWidth
         Layout.preferredWidth: implicitWidth
 
@@ -251,26 +251,26 @@ PlasmoidItem {
                 id: task
                 required property var model
                 required property int index
-                Layout.preferredWidth: 34
-                Layout.preferredHeight: 34
+                Layout.preferredWidth: 38
+                Layout.preferredHeight: 38
                 Rectangle {
                     anchors.fill: parent
-                    radius: 12
-                    color: task.model.IsActive ? root.press : (hoverTask.containsMouse ? root.hover : "transparent")
+                    radius: 13
+                    color: hoverTask.containsMouse ? root.hover : "transparent"
                     Behavior on color { ColorAnimation { duration: 180 } }
                 }
                 Kirigami.Icon {
                     anchors.centerIn: parent
-                    width: 22; height: 22
+                    width: 26; height: 26
                     source: task.model.decoration
                     opacity: task.model.IsMinimized ? 0.5 : 1
                 }
-                Rectangle { // la rayita rosa de la ventana activa
+                Rectangle { // el puntito rosa de cada ventana (en la activa, una rayita)
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: -3
-                    width: task.model.IsActive ? 14 : 4
-                    height: 3; radius: 2
+                    anchors.bottomMargin: -4
+                    width: task.model.IsActive ? 14 : 5
+                    height: 5; radius: 2.5
                     color: root.accent
                     opacity: task.model.IsMinimized ? 0.35 : 1
                     Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
@@ -298,17 +298,17 @@ PlasmoidItem {
         Rectangle {
             id: music
             visible: root.floor === "Navegar" && Plasmoid.configuration.extraNavegar && !!root.player && (root.player.track || "") !== ""
-            Layout.preferredHeight: 34
+            Layout.preferredHeight: 38
             Layout.preferredWidth: musicRow.implicitWidth + 12
-            radius: 12
-            color: root.hover
+            radius: 13
+            color: "transparent"
             RowLayout {
                 id: musicRow
                 anchors.centerIn: parent
-                spacing: 6
+                spacing: 9
                 Rectangle {
-                    Layout.preferredWidth: 24; Layout.preferredHeight: 24
-                    radius: 7
+                    Layout.preferredWidth: 30; Layout.preferredHeight: 30
+                    radius: 8
                     clip: true
                     color: root.accentSoft
                     Image {
@@ -317,14 +317,26 @@ PlasmoidItem {
                         fillMode: Image.PreserveAspectCrop
                     }
                 }
-                QQC2.Label {
-                    text: root.player ? root.player.track : ""
-                    font.family: root.font
-                    font.weight: Font.DemiBold
-                    font.pixelSize: 13
-                    color: root.text
-                    elide: Text.ElideRight
-                    Layout.maximumWidth: 170
+                ColumnLayout {
+                    spacing: 0
+                    QQC2.Label {
+                        text: root.player ? root.player.track : ""
+                        font.family: root.font
+                        font.weight: Font.DemiBold
+                        font.pixelSize: 13
+                        color: root.text
+                        elide: Text.ElideRight
+                        Layout.maximumWidth: 160
+                    }
+                    QQC2.Label {
+                        visible: text !== ""
+                        text: root.player ? (root.player.artist || "") : ""
+                        font.family: root.font
+                        font.pixelSize: 11
+                        color: root.muted
+                        elide: Text.ElideRight
+                        Layout.maximumWidth: 160
+                    }
                 }
                 AgapeButton {
                     implicitWidth: 28; implicitHeight: 28

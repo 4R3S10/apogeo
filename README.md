@@ -28,7 +28,10 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 - **Fondos:** los fondos animados de Ágape, uno por piso (Jugar «Luces», Navegar «Tinta», Estudiar «Seda»). Se
   dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica (máquina virtual) se quedan
   quietos.
-- **Isla y pisos:** el cristal translúcido de Ágape, con la pastilla rosa con brillo para lo activo y sus iconos de línea.
+- **Isla y pisos («B1 · Cristal de Ágape»):** una sola isla de cristal (radio 22) y la columna de pisos como una cápsula de
+  cristal. Las apps abiertas llevan un puntito rosa (la activa, una rayita). El buscador y el piso activo son la pastilla
+  rosa con brillo, y todo usa los iconos de línea de Ágape. El estilo de Plasma «apogeo» se escribe en `~/.config/plasmarc`
+  de cada usuario: si solo estaba en `/etc/xdg`, Plasma se quedaba con el gris por defecto.
 - **Ventanas:** la barra de Ágape (título en el centro y sus botones planos; la ✕ se pone roja).
 - **Menús y avisos:** las tarjetas de Ágape.
 - **Inicio de sesión y bloqueo:** una tarjeta con la hora grande, tu foto y tu nombre, el piso (el control segmentado de
@@ -67,10 +70,17 @@ luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
 
 ## Escritorios
 
-Sin iconos de apps. En **Navegar**, la hora grande con la fecha y el tiempo, y abajo una fila de widgets: lo que suena,
-los avisos, lo próximo del calendario de Ágape y tu PC. En **Estudiar**, tu carpeta `~/Estudios` (cada asignatura con
-Temas, Trabajos y Ejercicios), el temporizador 25/5 (el mismo que el de la isla), los exámenes con lo que falta y las
-tareas de hoy. Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`); el widget es `org.apogeo.escritorio`.
+Sin iconos de apps y con el estilo «D2 · Sin cajas»: todo escrito sobre el fondo, separado por rayas finas, con un velo
+oscuro arriba y abajo para que se lea.
+- **Navegar:** la hora muy grande a la izquierda con la fecha y el tiempo, y abajo una fila: lo que suena, los avisos, lo
+  próximo del calendario de Ágape y tu PC.
+- **Estudiar:** tu carpeta `~/Estudios` a la izquierda (cada asignatura con Temas, Trabajos y Ejercicios), el temporizador
+  25/5 en el centro (el mismo que el de la isla) y, a la derecha, los exámenes con lo que falta y las tareas de hoy.
+
+Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). El widget es `org.apogeo.escritorio`:
+- Se dibuja siempre del tamaño de la pantalla, aunque Plasma lo estreche al quedarse fijas la isla o los pisos.
+- Ocupar toda la pantalla lo asegura `apogeo-pisos` en cada inicio de sesión. Plasma guarda el sitio de cada widget por
+  resolución y lo pisa al cerrarse, así que, cuando hace falta, lo corrige con Plasma parado un instante.
 
 ## Música
 

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as QQC2
 import QtQuick.Effects
 import QtQuick.Shapes
@@ -10,11 +11,12 @@ import org.kde.taskmanager as TaskManager
 import org.kde.kirigami as Kirigami
 import Apogeo
 
-// El escritorio de Apogeo (sin iconos de apps), según el piso:
-//  - Navegar («N13 · Una fila abajo»): la hora grande arriba con la fecha y el tiempo, y abajo, encima de la isla, una
-//    fila de widgets: lo que suena, los avisos, lo próximo del calendario de Ágape y tu PC.
-//  - Estudiar («E6 · La carpeta a la izquierda»): tu carpeta ~/Estudios (asignaturas con Temas, Trabajos y Ejercicios)
-//    a la izquierda, el temporizador grande, los exámenes con lo que falta y las tareas de hoy.
+// El escritorio de Apogeo (sin iconos de apps), según el piso, con el estilo «D2 · Sin cajas»: todo escrito sobre el fondo,
+// separado por rayas finas, con un velo oscuro arriba y abajo para que se lea bien:
+//  - Navegar: la hora muy grande a la izquierda con la fecha y el tiempo, y abajo, encima de la isla, una fila: lo que
+//    suena, los avisos, lo próximo del calendario de Ágape y tu PC.
+//  - Estudiar: tu carpeta ~/Estudios (asignaturas con Temas, Trabajos y Ejercicios) a la izquierda, el temporizador
+//    grande en el centro y, a la derecha, los exámenes con lo que falta y las tareas de hoy.
 //  - Jugar: nada (está la consola).
 // Los datos los da apogeo-pisos (Datos, por D-Bus); solo se piden con el escritorio a la vista.
 PlasmoidItem {
@@ -86,14 +88,17 @@ PlasmoidItem {
 
     // ---------- Piezas ----------
 
-    component Tarjeta: Rectangle {
+    // Una sección sin caja; «linea»: la raya fina que la separa de la anterior (a su izquierda)
+    component Tarjeta: Item {
         default property alias contenido: caja.data
         property real relleno: 16
-        radius: 22
-        color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.62)
-        border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.09)
-        Rectangle { x: parent.radius; y: 1; width: parent.width - 2 * parent.radius; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
-        Item { id: caja; anchors.fill: parent; anchors.margins: parent.relleno }
+        property bool linea: false
+        Rectangle {
+            visible: parent.linea
+            y: parent.relleno; width: 1; height: parent.height - 2 * parent.relleno
+            color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.16)
+        }
+        Item { id: caja; anchors.fill: parent; anchors.margins: parent.relleno; anchors.leftMargin: parent.relleno + (parent.linea ? 12 : 0) }
     }
     component Titulo: Row {
         property string icono
@@ -110,31 +115,48 @@ PlasmoidItem {
     }
 
     fullRepresentation: Item {
+      // Se dibuja siempre del tamaño de la pantalla: Plasma estrecha el widget cuando la isla o los pisos se quedan fijos
+      // (al acercar el ratón al borde) y así el escritorio no da saltos
+      Item {
         id: lienzo
+        width: Screen.width
+        height: Screen.height
+        readonly property real abajo: 96
+        // El velo: oscurece un poco arriba y abajo para que el texto se lea sobre cualquier fondo
+        Rectangle {
+            anchors.fill: parent
+            visible: root.floor !== "jugar"
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.rgba(10 / 255, 6 / 255, 12 / 255, 0.42) }
+                GradientStop { position: 0.35; color: "transparent" }
+                GradientStop { position: 0.6; color: "transparent" }
+                GradientStop { position: 1.0; color: Qt.rgba(10 / 255, 6 / 255, 12 / 255, 0.6) }
+            }
+        }
+
         // ======================= Navegar =======================
         Item {
             anchors.fill: parent
+            anchors.leftMargin: 80
+            anchors.rightMargin: 80
             visible: root.floor === "navegar"
 
             Column {
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: parent.height * 0.14
-                spacing: 6
+                y: parent.height * 0.24
+                spacing: 4
                 Texto {
-                    anchors.horizontalCenter: parent.horizontalCenter
                     text: Qt.formatTime(root.ahora, "HH:mm")
-                    font.pixelSize: Math.min(150, lienzo.height * 0.17)
-                    font.weight: Font.ExtraBold
-                    font.letterSpacing: -2
-                    style: Text.Raised; styleColor: Qt.rgba(0, 0, 0, 0.15)
+                    font.pixelSize: Math.min(170, lienzo.height * 0.2)
+                    font.weight: Font.Bold
+                    font.letterSpacing: -4
+                    style: Text.Raised; styleColor: Qt.rgba(0, 0, 0, 0.18)
                 }
                 Texto {
-                    anchors.horizontalCenter: parent.horizontalCenter
                     color: Tema.apagado
-                    font.pixelSize: 17
+                    font.pixelSize: 19
                     text: {
-                        const d = Qt.locale("es_ES").toString(root.ahora, "dddd d 'de' MMMM");
-                        const t = root.tiempo && root.tiempo.temp !== undefined ? " · " + root.tiempo.temp + "° " + root.cielo(root.tiempo.codigo) : "";
+                        const d = Qt.locale("es_ES").toString(root.ahora, "dddd, d 'de' MMMM");
+                        const t = root.tiempo && root.tiempo.temp !== undefined ? " · " + root.tiempo.temp + "° " + root.cielo(root.tiempo.codigo) + (root.tiempo.ciudad ? " en " + root.tiempo.ciudad : "") : "";
                         return d.charAt(0).toUpperCase() + d.slice(1) + t;
                     }
                 }
@@ -142,59 +164,55 @@ PlasmoidItem {
 
             Row {
                 id: fila
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.left: parent.left
+                anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 92
-                spacing: 12
+                anchors.bottomMargin: lienzo.abajo
+                height: 150
 
                 // --- Lo que suena ---
                 Tarjeta {
                     id: musica
-                    width: 300; height: 158
+                    width: fila.width * 0.28; height: parent.height
+                    relleno: 10
                     readonly property var p: mpris.currentPlayer
-                    visible: !!p
                     Mpris.Mpris2Model { id: mpris }
-                    clip: true
-                    Image { // la portada, desenfocada, de fondo
-                        anchors.fill: parent
-                        source: musica.p ? musica.p.artUrl : ""
-                        fillMode: Image.PreserveAspectCrop
-                        opacity: 0.32
-                        layer.enabled: true
-                        layer.effect: MultiEffect { blurEnabled: true; blur: 1; blurMax: 48 }
-                    }
+                    Titulo { icono: "musica"; text: "Suena" }
+                    Texto { y: 28; visible: !musica.p; text: "Nada sonando"; color: Tema.apagado }
                     Row {
+                        y: 28
+                        visible: !!musica.p
                         width: parent.width
-                        spacing: 12
+                        spacing: 14
                         Rectangle {
-                            width: 56; height: 56; radius: 13
+                            width: 64; height: 64; radius: 14
                             color: Tema.rosaSuave
                             clip: true
                             Icono { anchors.centerIn: parent; nombre: "musica"; color: Tema.rosa }
                             Image { anchors.fill: parent; source: musica.p ? musica.p.artUrl : ""; fillMode: Image.PreserveAspectCrop }
                         }
                         Column {
-                            width: parent.width - 68
-                            anchors.verticalCenter: parent.verticalCenter
-                            Texto { width: parent.width; text: musica.p ? musica.p.track : ""; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                            Texto { width: parent.width; text: musica.p ? [musica.p.artist, musica.p.identity].filter(Boolean).join(" · ") : ""; color: Tema.apagado; font.pixelSize: 12; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                            Item { width: 1; height: 8 }
-                            Barra { width: parent.width; valor: musica.p && musica.p.length > 0 ? musica.p.position / musica.p.length : 0 }
+                            width: parent.width - 78
+                            spacing: 2
+                            Texto { width: parent.width; text: musica.p ? musica.p.track : ""; font.pixelSize: 17; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                            Texto { width: parent.width; text: musica.p ? [musica.p.artist, musica.p.identity].filter(Boolean).join(" · ") : ""; color: Tema.apagado; font.pixelSize: 13; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                            Row {
+                                topPadding: 6
+                                spacing: 6
+                                Boton { tipo: "plano"; icono: "anterior"; implicitHeight: 30; enabled: musica.p && musica.p.canGoPrevious; onClicked: musica.p.Previous() }
+                                Boton { tipo: "principal"; icono: musica.p && musica.p.playbackStatus === Mpris.PlaybackStatus.Playing ? "pausa" : "reproducir"; implicitHeight: 30; implicitWidth: 42; onClicked: musica.p.PlayPause() }
+                                Boton { tipo: "plano"; icono: "siguiente"; implicitHeight: 30; enabled: musica.p && musica.p.canGoNext; onClicked: musica.p.Next() }
+                            }
                         }
                     }
-                    Row {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        spacing: 6
-                        Boton { tipo: "plano"; icono: "anterior"; implicitHeight: 30; enabled: musica.p && musica.p.canGoPrevious; onClicked: musica.p.Previous() }
-                        Boton { tipo: "principal"; icono: musica.p && musica.p.playbackStatus === Mpris.PlaybackStatus.Playing ? "pausa" : "reproducir"; implicitHeight: 30; implicitWidth: 42; onClicked: musica.p.PlayPause() }
-                        Boton { tipo: "plano"; icono: "siguiente"; implicitHeight: 30; enabled: musica.p && musica.p.canGoNext; onClicked: musica.p.Next() }
-                    }
+                    Barra { visible: !!musica.p; anchors.bottom: parent.bottom; width: parent.width; valor: musica.p && musica.p.length > 0 ? musica.p.position / musica.p.length : 0 }
                 }
 
                 // --- Avisos ---
                 Tarjeta {
-                    width: 300; height: 158
+                    width: fila.width * 0.32; height: parent.height
+                    relleno: 10
+                    linea: true
                     NotificationManager.Notifications {
                         id: avisos
                         showExpired: true
@@ -206,10 +224,10 @@ PlasmoidItem {
                     }
                     Titulo { icono: "campana"; text: "Avisos" }
                     Column {
-                        y: 22
+                        y: 28
                         width: parent.width
                         spacing: 4
-                        Texto { visible: avisos.count === 0; text: "Nada nuevo"; color: Tema.apagado; topPadding: 20 }
+                        Texto { visible: avisos.count === 0; text: "Nada nuevo"; color: Tema.apagado }
                         Repeater {
                             model: avisos
                             delegate: Row {
@@ -218,55 +236,62 @@ PlasmoidItem {
                                 required property string applicationIconName
                                 required property var created
                                 width: parent.width
-                                spacing: 9
-                                height: 36
-                                Kirigami.Icon { width: 22; height: 22; source: parent.applicationIconName || "apogeo"; anchors.verticalCenter: parent.verticalCenter }
+                                spacing: 10
+                                height: 38
+                                Kirigami.Icon { width: 24; height: 24; source: parent.applicationIconName || "apogeo"; anchors.verticalCenter: parent.verticalCenter }
                                 Column {
-                                    width: parent.width - 31
+                                    width: parent.width - 34
                                     anchors.verticalCenter: parent.verticalCenter
-                                    Texto { width: parent.width; text: parent.parent.summary; font.pixelSize: 13; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                                    Texto { width: parent.width; text: parent.parent.applicationName; color: Tema.tenue; font.pixelSize: 11; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                                    Texto { width: parent.width; text: parent.parent.summary; font.pixelSize: 14; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                                    Texto { width: parent.width; text: parent.parent.applicationName; color: Tema.tenue; font.pixelSize: 12; elide: Text.ElideRight; wrapMode: Text.NoWrap }
                                 }
                             }
                         }
                     }
                 }
 
-                // --- Lo próximo y tu PC ---
-                Column {
-                    spacing: 12
-                    Tarjeta {
-                        width: 240; height: 73
-                        relleno: 14
-                        Titulo { icono: "calendario"; text: "Próximo" }
-                        Texto {
-                            y: 20; width: parent.width
-                            text: root.proximo.length ? root.proximo[0].texto : "Nada apuntado"
-                            font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap
-                        }
-                        Texto { y: 39; text: root.proximo.length ? root.cuando(root.proximo[0]) : "En el calendario de Ágape"; color: Tema.apagado; font.pixelSize: 12 }
+                // --- Lo próximo ---
+                Tarjeta {
+                    width: fila.width * 0.2; height: parent.height
+                    relleno: 10
+                    linea: true
+                    Titulo { icono: "calendario"; text: "Próximo" }
+                    Texto {
+                        y: 28; width: parent.width
+                        text: root.proximo.length ? root.proximo[0].texto : "Nada apuntado"
+                        font.pixelSize: 17; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap
                     }
-                    Tarjeta {
-                        width: 240; height: 73
-                        relleno: 14
-                        Titulo { icono: "temperatura"; text: "Tu PC" }
-                        Row {
-                            y: 24
-                            width: parent.width
-                            spacing: 14
-                            Repeater {
-                                model: [{ n: "Temp.", v: (root.pc.temp || 0) + "°", p: (root.pc.temp || 0) / 100 }, { n: "CPU", v: (root.pc.cpu || 0) + "%", p: (root.pc.cpu || 0) / 100 }]
-                                delegate: Column {
-                                    required property var modelData
-                                    width: (parent.width - 14) / 2
-                                    spacing: 5
-                                    Item {
-                                        width: parent.width; height: 16
-                                        Texto { text: parent.parent.modelData.n; color: Tema.apagado; font.pixelSize: 12 }
-                                        Texto { anchors.right: parent.right; text: parent.parent.modelData.v; font.pixelSize: 12; font.weight: Font.Bold }
-                                    }
-                                    Barra { width: parent.width; valor: parent.modelData.p }
+                    Texto { y: 52; text: root.proximo.length ? root.cuando(root.proximo[0]) : "En el calendario de Ágape"; color: Tema.apagado; font.pixelSize: 13 }
+                    Texto {
+                        y: 80; width: parent.width
+                        visible: root.proximo.length > 1
+                        text: root.proximo.length > 1 ? root.cuando(root.proximo[1]) + " · " + root.proximo[1].texto : ""
+                        color: Tema.apagado; font.pixelSize: 13; elide: Text.ElideRight; wrapMode: Text.NoWrap
+                    }
+                }
+
+                // --- Tu PC ---
+                Tarjeta {
+                    width: fila.width * 0.2; height: parent.height
+                    relleno: 10
+                    linea: true
+                    Titulo { icono: "temperatura"; text: "Tu PC" }
+                    Column {
+                        y: 30
+                        width: parent.width
+                        spacing: 12
+                        Repeater {
+                            model: [{ n: "Temperatura", v: (root.pc.temp || 0) + "°", p: (root.pc.temp || 0) / 100 }, { n: "Procesador", v: (root.pc.cpu || 0) + "%", p: (root.pc.cpu || 0) / 100 }]
+                            delegate: Column {
+                                required property var modelData
+                                width: parent.width
+                                spacing: 6
+                                Item {
+                                    width: parent.width; height: 18
+                                    Texto { text: parent.parent.modelData.n; color: Tema.apagado; font.pixelSize: 13 }
+                                    Texto { anchors.right: parent.right; text: parent.parent.modelData.v; font.pixelSize: 13; font.weight: Font.Bold }
                                 }
+                                Barra { width: parent.width; valor: parent.modelData.p }
                             }
                         }
                     }
@@ -277,15 +302,16 @@ PlasmoidItem {
         // ======================= Estudiar =======================
         Item {
             anchors.fill: parent
-            anchors.margins: 50
-            anchors.topMargin: 60
-            anchors.bottomMargin: 90
+            anchors.leftMargin: 64
+            anchors.rightMargin: 64
+            anchors.topMargin: 48
+            anchors.bottomMargin: lienzo.abajo - 4
             visible: root.floor === "estudiar"
 
             // --- Tu carpeta ---
             Tarjeta {
                 id: arbol
-                width: 330
+                width: 300
                 height: parent.height
                 Titulo { icono: "carpeta"; text: "Estudios" }
                 Flickable {
@@ -383,9 +409,10 @@ PlasmoidItem {
             // --- El temporizador ---
             Tarjeta {
                 id: reloj
-                x: arbol.width + 20
-                width: parent.width - x - examenesT.width - 20
-                height: parent.height * 0.6
+                linea: true
+                x: arbol.width + 8
+                width: parent.width - x - examenesT.width - 8
+                height: parent.height
                 readonly property real total: root.estudio.total || 1500
                 readonly property real quedan: root.estudio.quedan !== undefined ? root.estudio.quedan : 1500
                 Titulo {
@@ -398,7 +425,7 @@ PlasmoidItem {
                     id: anillo
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: -12
-                    readonly property real lado: Math.min(parent.width, parent.height - 90)
+                    readonly property real lado: Math.min(parent.width - 40, parent.height - 140, 340)
                     width: lado; height: lado
                     Shape {
                         anchors.fill: parent
@@ -437,7 +464,8 @@ PlasmoidItem {
                 }
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
+                    anchors.top: anillo.bottom
+                    anchors.topMargin: 26
                     spacing: 6
                     Boton { tipo: "principal"; text: root.estudio.corriendo ? "Pausa" : "Empezar"; icono: root.estudio.corriendo ? "pausa" : "reproducir"; onClicked: datos.hacer("EstudioAccion", ["alternar", ""]) }
                     Boton { text: "Saltar"; onClicked: datos.hacer("EstudioAccion", ["saltar", ""]) }
@@ -453,9 +481,10 @@ PlasmoidItem {
             // --- Exámenes ---
             Tarjeta {
                 id: examenesT
+                linea: true
                 anchors.right: parent.right
-                width: 290
-                height: reloj.height
+                width: 300
+                height: parent.height * 0.48
                 Titulo { icono: "calendario"; text: "Exámenes" }
                 Column {
                     y: 26
@@ -522,9 +551,10 @@ PlasmoidItem {
 
             // --- Hoy ---
             Tarjeta {
-                x: reloj.x
-                y: reloj.height + 20
-                width: parent.width - x
+                linea: true
+                x: examenesT.x
+                y: examenesT.height + 12
+                width: examenesT.width
                 height: parent.height - y
                 Titulo { icono: "hecho"; text: "Hoy" }
                 Flickable {
@@ -610,6 +640,7 @@ PlasmoidItem {
                 }
             }
         }
+      }
     }
 
     component Fila_: Rectangle {
