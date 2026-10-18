@@ -1,31 +1,33 @@
 # Apogeo encima de CachyOS (KDE): pisos, isla, consola de juegos, Ágape, ventanas, arranque, inicio de sesión y estética.
 # Se construye en GitHub Actions (.github/workflows/paquetes.yml) a partir de las carpetas sistema/ y herramientas/.
-pkgname=apogeo
+pkgbase=apogeo
+pkgname=(apogeo apogeo-programas)
 pkgver=1.r0
 pkgrel=1
 pkgdesc='Apogeo: el sistema de Ares sobre CachyOS'
 arch=('any')
 url='https://github.com/4R3S10/apogeo'
 license=('MIT')
-depends=(
-  plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
-  papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
-  python python-dbus python-gobject                         # los pisos
-  python-pyqt6 qt6-declarative milou kirigami               # la bienvenida, los ajustes y el buscador
-  pacman-contrib konsole polkit                             # ajustes: buscar actualizaciones e instalarlas
-  kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
-  power-profiles-daemon                                     # energía de cada piso
-  steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
-)
 makedepends=(git python-gobject python-cairo librsvg breeze papirus-icon-theme python-fonttools qt6-shadertools)
-install=apogeo.install
 _raiz="$startdir/../.."
 
 pkgver() {
   printf '1.r%s' "$(git -C "$_raiz" rev-list --count HEAD)"
 }
 
-package() {
+package_apogeo() {
+  depends=(
+    apogeo-programas                                          # los programas de serie (abajo)
+    plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
+    papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
+    python python-dbus python-gobject                         # los pisos
+    python-pyqt6 qt6-declarative milou kirigami               # la bienvenida, los ajustes y el buscador
+    pacman-contrib konsole polkit                             # ajustes: buscar actualizaciones e instalarlas
+    kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
+    power-profiles-daemon                                     # energía de cada piso
+    steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
+  )
+  install=apogeo.install
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"
   local h="$_raiz/herramientas"
   # Lo que se genera con la estética de Ágape: colores, letra (Bricolage Grotesque), ventanas, estilo de Plasma
@@ -38,7 +40,34 @@ package() {
   python "$h/kvantum.py" "$pkgdir/usr/share/Kvantum"
   python "$h/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
   python "$h/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
+  # El logo (el angelito volando) y sus copias para el arranque, el inicio de sesión, el menú y la terminal
+  local logo="$srcdir/logo"
+  install -d "$logo"
+  python "$h/logo.py" "$logo"
+  install -Dm644 "$logo/logo.svg" "$pkgdir/usr/share/apogeo/logo.svg"
+  install -Dm644 "$logo/logo-silueta.svg" "$pkgdir/usr/share/apogeo/logo-silueta.svg"
+  install -Dm644 "$logo/logo.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/apogeo.svg"
+  install -Dm644 "$logo/logo.svg" "$pkgdir/usr/share/sddm/themes/apogeo/logo.svg"
+  rsvg-convert -w 150 -h 150 "$logo/logo.svg" -o "$logo/150.png"
+  install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plymouth/themes/apogeo/logo.png"
+  install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/logo.png"
+  rsvg-convert -w 360 -h 360 "$logo/logo.svg" -o "$logo/360.png"
+  install -Dm644 "$logo/360.png" "$pkgdir/usr/share/apogeo/logo.png"
   local shaders="$pkgdir/usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders"
   install -d "$shaders"
   /usr/lib/qt6/bin/qsb --glsl '100es,120,150' -o "$shaders/fondo.frag.qsb" "$h/fondo/fondo.frag"
+}
+
+# Los programas de serie de Apogeo (todos de los repositorios de Arch y CachyOS; ONLYOFFICE y Stremio no están, y los
+# instala apogeo-flatpaks de Flathub al arrancar con internet)
+package_apogeo-programas() {
+  pkgdesc='Apogeo: los programas de serie'
+  depends=(
+    flameshot stacer spotify-launcher discord                       # capturas, limpiar el PC, música y chat
+    virtualbox virtualbox-host-dkms linux-cachyos-headers           # máquinas virtuales (módulos para el núcleo de CachyOS)
+    ghostty starship fastfetch ttf-jetbrains-mono-nerd flatpak      # la terminal de Apogeo y Flathub
+    mangohud lib32-mangohud gamemode lib32-gamemode protonplus lutris  # juegos
+    obs-studio vlc easyeffects qbittorrent                          # grabar, vídeos, sonido y descargas
+    localsend keepassxc obsidian coolercontrol                      # archivos al móvil, contraseñas, notas y ventiladores
+  )
 }

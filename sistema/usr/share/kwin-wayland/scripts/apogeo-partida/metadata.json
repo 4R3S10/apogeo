@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Description": "Meta+Tab en un juego: el juego sigue a la izquierda (en vivo, sin pararse) y Discord y lo que suena a la derecha",
+        "EnabledByDefault": true,
+        "Icon": "applications-games",
+        "Id": "apogeo-partida",
+        "License": "MIT",
+        "Name": "Apogeo: partida"
+    },
+    "X-Plasma-API": "declarativescript"
+}

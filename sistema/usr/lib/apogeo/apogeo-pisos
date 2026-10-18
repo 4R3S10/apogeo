@@ -289,7 +289,7 @@ CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
 DESKTOP = 2  # igual, para el escritorio (sin iconos y con el widget de Apogeo a pantalla completa)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
-AESTHETICS = 12  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+AESTHETICS = 13  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -361,6 +361,16 @@ def aesthetics():
     kw('kwinrc', 'org.kde.kdecoration2', 'ButtonsOnRight', 'IAX')
     kw('kwinrc', 'Plugins', 'apogeo-ventanasEnabled', 'true')
     kw('kwinrc', 'Plugins', 'apogeo-bordesEnabled', 'true')  # la isla y los pisos salen con una franja ancha del borde
+    kw('kwinrc', 'Plugins', 'apogeo-partidaEnabled', 'true')  # Meta+Tab en un juego: el juego al lado de Discord
+    # La terminal de Apogeo (Ghostty con el cristal de Ágape), la de siempre para Dolphin y los atajos
+    kw('kdeglobals', 'General', 'TerminalApplication', 'ghostty')
+    kw('kdeglobals', 'General', 'TerminalService', 'com.mitchellh.ghostty.desktop')
+    ghostty = os.path.expanduser('~/.config/ghostty/config')
+    if not os.path.exists(ghostty):
+        os.makedirs(os.path.dirname(ghostty), exist_ok=True)
+        with open(ghostty, 'w') as f:
+            f.write('# Ghostty con el estilo de Apogeo (se pone al día solo). Escribe tus cambios debajo.\n'
+                    'config-file = /usr/share/apogeo/terminal/ghostty\n')
     run('kwriteconfig6', '--file', 'kwinrc', '--group', 'Plugins', '--key', 'apogeo-botonesEnabled', '--delete')
     kwin_reconfigure()
     # Teclado ANSI: EE. UU. internacional
@@ -393,18 +403,30 @@ def aesthetics():
 
 
 def search_shortcuts():
-    """Los atajos del buscador, al momento (por D-Bus a kglobalaccel, que los guarda él; escribir su archivo no vale:
+    """Los atajos de Apogeo (el buscador, el modo partida, la terminal y las capturas), al momento (por D-Bus a kglobalaccel, que los guarda él; escribir su archivo no vale:
     solo lo lee al empezar la sesión)."""
     def keys(*codes):
         return dbus.Array([dbus.Struct([dbus.Array([dbus.Int32(c), 0, 0, 0], signature='i')]) for c in codes],
                           signature='(ai)')
     meta, alt_f1, alt_f2, alt_space, search = 0x01000022, 0x09000030, 0x09000031, 0x08000020, 0x01000092
+    alt_tab, meta_tab, ctrl_alt_t, print_key = 0x08000001, 0x11000001, 0x0C000054, 0x01000009
     try:
         g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
         g.setForeignShortcutKeys(['plasmashell', 'activate application launcher', '', ''], keys(alt_f1))
         g.setForeignShortcutKeys(['org.kde.krunner.desktop', '_launch', '', ''], keys(alt_f2))
         g.doRegister(['apogeo-buscador.desktop', '_launch', 'Buscador de Apogeo', 'Buscador de Apogeo'])
         g.setForeignShortcutKeys(['apogeo-buscador.desktop', '_launch', '', ''], keys(meta, alt_space, search))
+        # Meta+Tab: el modo partida (apogeo-partida, en KWin); el cambiador de ventanas se queda con Alt+Tab
+        g.setForeignShortcutKeys(['kwin', 'Walk Through Windows', '', ''], keys(alt_tab))
+        g.doRegister(['kwin', 'Apogeo partida', 'KWin', 'Apogeo: el juego con Discord y lo que suena al lado'])
+        g.setForeignShortcutKeys(['kwin', 'Apogeo partida', '', ''], keys(meta_tab))
+        # Ctrl+Alt+T abre Ghostty (no Konsole) e Impr Pant, Flameshot (no Spectacle)
+        g.setForeignShortcutKeys(['org.kde.konsole.desktop', '_launch', '', ''], keys())
+        g.doRegister(['com.mitchellh.ghostty.desktop', '_launch', 'Ghostty', 'Ghostty'])
+        g.setForeignShortcutKeys(['com.mitchellh.ghostty.desktop', '_launch', '', ''], keys(ctrl_alt_t))
+        g.setForeignShortcutKeys(['org.kde.spectacle.desktop', '_launch', '', ''], keys())
+        g.doRegister(['org.flameshot.Flameshot.desktop', 'Capture', 'Flameshot', 'Hacer una captura'])
+        g.setForeignShortcutKeys(['org.flameshot.Flameshot.desktop', 'Capture', '', ''], keys(print_key))
     except dbus.DBusException as e:
         log('atajos:', e.get_dbus_message())
 

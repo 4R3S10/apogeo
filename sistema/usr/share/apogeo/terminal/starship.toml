@@ -1,0 +1,29 @@
+# Apogeo · el prompt «T1 · Cristal con píldoras»: la carpeta en una píldora rosa y la rama de git en otra berenjena.
+# Se usa si no tienes tu propio ~/.config/starship.toml
+add_newline = true
+format = "$directory$git_branch$git_status$cmd_duration$character"
+
+[directory]
+style = "bg:#e0a9b4 fg:#1e1621 bold"
+format = "[](fg:#e0a9b4)[ $path$read_only ]($style)[](fg:#e0a9b4) "
+truncation_length = 3
+truncation_symbol = "…/"
+read_only = " "
+
+[git_branch]
+symbol = " "
+style = "bg:#3a2c3e fg:#f1e6ea"
+format = "[](fg:#3a2c3e)[$symbol$branch]($style)[](fg:#3a2c3e) "
+
+[git_status]
+style = "fg:#ff8fc6"
+format = "([$all_status$ahead_behind]($style) )"
+
+[cmd_duration]
+min_time = 3000
+style = "fg:#9e8f96"
+format = "[$duration]($style) "
+
+[character]
+success_symbol = "[❯](bold #ff8fc6)"
+error_symbol = "[❯](bold #ff8f9a)"

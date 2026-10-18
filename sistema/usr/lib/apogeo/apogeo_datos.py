@@ -11,6 +11,9 @@ Lo sirve apogeo-pisos, que ya está siempre en marcha. Todo se devuelve como tex
   Examenes() / GuardarExamenes(json)    los exámenes [{id, asignatura, fecha AAAA-MM-DD}]
   Asignaturas()       ~/Estudios: cada asignatura con sus carpetas (Temas, Trabajos, Ejercicios, que se crean solas)
   CrearAsignatura(n)  una carpeta nueva en ~/Estudios con sus tres carpetas
+  Abrir(app)          abre una app de la lista (discord, spotify): la pide el modo partida de KWin (Meta+Tab)
+  Musica()            lo que suena (MPRIS): {app, titulo, artista, portada, sonando}; {} si no suena nada
+  MusicaAccion(a)     Previous · PlayPause · Next en ese reproductor
 """
 import datetime
 import glob
@@ -70,6 +73,63 @@ class Datos(dbus.service.Object):
         self.tick_id = None
 
     # ---------- El tiempo ----------
+
+    # Solo estas: el modo partida (apogeo-partida, en KWin) abre Discord o Spotify si aún no están
+    APPS = {'discord': 'discord.desktop', 'spotify': 'spotify-launcher.desktop'}
+
+    @dbus.service.method(IFACE, in_signature='s')
+    def Abrir(self, app):
+        desktop = self.APPS.get(app)
+        if not desktop:
+            return
+        subprocess.Popen(['gtk-launch', desktop], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+    def _player(self):
+        """El reproductor que suena (si no, Spotify; si no, el primero), como en la isla."""
+        bus = dbus.SessionBus()
+        names = [n for n in bus.list_names() if str(n).startswith('org.mpris.MediaPlayer2.')]
+        best = None
+        for n in names:
+            try:
+                props = dbus.Interface(bus.get_object(n, '/org/mpris/MediaPlayer2'), 'org.freedesktop.DBus.Properties')
+                status = str(props.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus'))
+            except dbus.DBusException:
+                continue
+            rank = 2 if status == 'Playing' else 1 if 'spotify' in n.lower() else 0
+            if best is None or rank > best[0]:
+                best = (rank, n, props, status)
+        return best
+
+    @dbus.service.method(IFACE, out_signature='s')
+    def Musica(self):
+        best = self._player()
+        if not best:
+            return '{}'
+        _, name, props, status = best
+        try:
+            meta = props.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
+        except dbus.DBusException:
+            meta = {}
+        artist = meta.get('xesam:artist', [])
+        return json.dumps({
+            'app': name.split('.')[3] if name.count('.') >= 3 else name,
+            'titulo': str(meta.get('xesam:title', '')),
+            'artista': ', '.join(str(a) for a in artist) if isinstance(artist, (list, dbus.Array)) else str(artist),
+            'portada': str(meta.get('mpris:artUrl', '')),
+            'sonando': status == 'Playing',
+        }, ensure_ascii=False)
+
+    @dbus.service.method(IFACE, in_signature='s')
+    def MusicaAccion(self, action):
+        if action not in ('Previous', 'PlayPause', 'Next'):
+            return
+        best = self._player()
+        if best:
+            try:
+                dbus.SessionBus().get_object(best[1], '/org/mpris/MediaPlayer2').get_dbus_method(
+                    action, 'org.mpris.MediaPlayer2.Player')()
+            except dbus.DBusException:
+                pass
 
     @dbus.service.method(IFACE, out_signature='s')
     def Tiempo(self):

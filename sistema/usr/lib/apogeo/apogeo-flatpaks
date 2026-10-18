@@ -1,0 +1,9 @@
+#!/bin/sh
+# ONLYOFFICE y Stremio no están en los repositorios de Arch: se instalan de Flathub (los dos verificados por sus propias
+# empresas), para todos los usuarios. Lo lanza apogeo-flatpaks.service una vez, con internet; si falla, al siguiente
+# arranque vuelve a intentarlo.
+set -e
+flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --system --noninteractive -y flathub org.onlyoffice.desktopeditors com.stremio.Stremio
+mkdir -p /var/lib/apogeo
+touch /var/lib/apogeo/flatpaks-1

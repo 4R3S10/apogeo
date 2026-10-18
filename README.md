@@ -19,6 +19,14 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 - **Energía:** nunca «rendimiento». Jugar y Navegar en equilibrado, Estudiar en ahorro.
 - **La primera vez** que entras en un piso se abren sus apps (Jugar: la consola; Navegar: Ágape).
 
+## Logo
+
+La silueta de un angelito volando, como los putti de los museos, del arte y de las esculturas: rizos, mofletes, un brazo
+hacia delante, las piernas dobladas y alas de plumas en abanico. Va en el rosa de Ágape sobre un disco berenjena
+(«V1 · Silueta rosa»).
+- Se dibuja al construir el paquete con `herramientas/logo.py`, juntando formas sencillas del mismo color.
+- De ahí salen las copias del arranque, el inicio de sesión, el bloqueo, la bienvenida, el menú y la terminal.
+
 ## Aspecto
 
 Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
@@ -39,6 +47,29 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 - **Carpetas:** Papirus con el rosa empolvado de Ágape. Cursor berenjena, sonidos pocos y suaves y teclado EE. UU.
   internacional (ñ con AltGr+n).
 
+## Programas de serie
+
+Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
+- **Diario:** Flameshot (Impr Pant), Stacer, Spotify (`spotify-launcher`, que baja el oficial) y Discord.
+- **Máquinas virtuales:** VirtualBox con sus módulos para el núcleo de CachyOS. Las cuentas que ya existen entran en
+  `vboxusers`.
+- **Juegos:** MangoHud, GameMode, ProtonPlus y Lutris.
+- **Multimedia:** OBS Studio, VLC, EasyEffects y qBittorrent.
+- **Utilidades:** LocalSend, KeePassXC, Obsidian y CoolerControl.
+- **ONLYOFFICE y Stremio:** no están en los repositorios de Arch. Los instala `apogeo-flatpaks` de Flathub, donde los dos
+  están verificados por sus propias empresas, para todos los usuarios, una vez y en segundo plano cuando hay internet.
+- ChatGPT y Claude no van de serie (no tienen app oficial para Linux).
+
+## Terminal
+
+Ghostty con el estilo «T1 · Cristal con píldoras»: el cristal de Ágape (berenjena translúcido con desenfoque), la letra
+JetBrains Mono y los colores de Apogeo.
+- **Prompt:** Starship, con la carpeta en una píldora rosa y la rama de git en otra.
+- **Al abrir:** fastfetch con el angelito (en Ghostty, la imagen de verdad; en otras terminales, en letras).
+- **Dónde está:** la configuración, en `/usr/share/apogeo/terminal/`. Cada usuario la carga desde
+  `~/.config/ghostty/config`, donde puede añadir lo suyo.
+- **Por defecto:** es la terminal de siempre (Dolphin, Ctrl+Alt+T).
+
 ## Jugar
 
 - **Consola:** al entrar en el piso Jugar se abre a pantalla completa con todos tus juegos juntos (Steam, Epic y GOG con
@@ -46,6 +77,14 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
   Q/E cambiar de tienda, Esc salir.
 - **Tiendas:** Steam, Heroic (Epic y GOG), el lanzador oficial de Epic con Proton («Epic Games (oficial)», se instala la
   primera vez) e Hydra (de su GitHub oficial, sin fuentes de descarga añadidas).
+- **Modo partida (Meta+Tab, «S3 · Juego y Discord a la vez»):** con un juego a pantalla completa, el juego no se toca:
+  sigue a su resolución, sin minimizarse ni pararse, que es lo que da tirones y fallos con Alt+Tab.
+  - A la izquierda se ve en vivo, en pequeño (una imagen de KWin); debajo va lo que suena, con sus botones.
+  - A la derecha, Discord de verdad: se abre si no lo estaba.
+  - Para volver, Meta+Tab otra vez o pulsar el juego.
+  - Lo hace el script de KWin `apogeo-partida`. Los juegos de SDL no se minimizan al perder el foco
+    (`SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0`).
+  - Alt+Tab sigue siendo el cambiador de ventanas de siempre.
 - **Juegos de Windows** (Valorant, EA FC…): se abrirán en el Windows escondido; la lista está en
   `~/.config/apogeo/juegos-windows.json`.
 

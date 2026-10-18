@@ -1,0 +1,15 @@
+[Unit]
+Description=Apogeo: ONLYOFFICE y Stremio desde Flathub
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/apogeo/flatpaks-1
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-flatpaks
+Restart=on-failure
+RestartSec=10min
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

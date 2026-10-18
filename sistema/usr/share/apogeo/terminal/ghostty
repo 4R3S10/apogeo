@@ -1,0 +1,33 @@
+# Apogeo · terminal «T1 · Cristal con píldoras»: el cristal de Ágape (berenjena translúcido con desenfoque), la letra
+# JetBrains Mono y los colores de Apogeo. Lo carga ~/.config/ghostty/config; tus cambios, en ese archivo.
+font-family = JetBrainsMono Nerd Font
+font-size = 11
+background = #1e1621
+foreground = #f1e6ea
+background-opacity = 0.8
+background-blur = true
+cursor-color = #ff8fc6
+cursor-style = block
+selection-background = #7a4458
+selection-foreground = #f1e6ea
+window-padding-x = 16
+window-padding-y = 12
+window-padding-balance = true
+window-theme = dark
+confirm-close-surface = false
+palette = 0=#120d14
+palette = 1=#ff8f9a
+palette = 2=#a8d8b0
+palette = 3=#f3c58d
+palette = 4=#b9a3e3
+palette = 5=#ff8fc6
+palette = 6=#8fd0c8
+palette = 7=#e7dde2
+palette = 8=#5a4a5e
+palette = 9=#ffa3ad
+palette = 10=#bfe6c5
+palette = 11=#f7d4a8
+palette = 12=#cdbbf0
+palette = 13=#ffb3d6
+palette = 14=#a9e0d9
+palette = 15=#f1e6ea
