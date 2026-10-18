@@ -36,11 +36,18 @@ jobs:
           chown -R constructor "$GITHUB_WORKSPACE"
           printf '%s\n' "$GPG_PRIVATE_KEY" | runuser -u constructor -- gpg --batch --import
       - name: Última versión de Hydra
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          v=$(curl -fsSL https://api.github.com/repos/hydralauncher/hydra/releases/latest | jq -r .tag_name)
+          # Con el token del flujo (sin él, GitHub limita las consultas y da 403); si aun así no contesta, se queda la de antes
+          v=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/hydralauncher/hydra/releases/latest | jq -r '.tag_name // empty' || true)
           v=${v#v}
-          echo "Hydra $v"
-          sed -i "s/^pkgver=.*/pkgver=$v/" paquetes/apogeo-hydra/PKGBUILD
+          if [ -n "$v" ]; then
+            echo "Hydra $v"
+            sed -i "s/^pkgver=.*/pkgver=$v/" paquetes/apogeo-hydra/PKGBUILD
+          else
+            echo "No se sabe la última de Hydra: se queda $(grep ^pkgver= paquetes/apogeo-hydra/PKGBUILD)"
+          fi
           cd paquetes/apogeo-hydra && runuser -u constructor -- updpkgsums
       - name: Construir
         run: |
