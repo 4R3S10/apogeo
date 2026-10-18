@@ -5,8 +5,9 @@ import Apogeo
 
 // La consola del piso Jugar («C8 · Cinta panorámica»): tus juegos en una cinta de portadas abajo; el elegido se agranda y
 // pinta la pantalla con su arte. Arriba: Inicio (lo descargado, lo último jugado primero) y una pestaña por tienda o
-// plataforma con toda tu biblioteca para descargar y quitar. Mando o teclado: ← → elegir · A/Intro jugar o descargar ·
-// X/Supr quitar · LB RB/Q E pestaña · B/Esc atrás · ↓ bajar a Navegar. «consola» es apogeo-consola.
+// plataforma con toda tu biblioteca para descargar y quitar. Mando (PlayStation o Xbox) o teclado: ← → elegir · ✕ (A)/Intro
+// jugar o descargar · □ (X)/Supr quitar · L1 R1 (LB RB)/Q E pestaña · ○ (B)/Esc atrás · ↓ bajar a Navegar.
+// «consola» es apogeo-consola.
 Window {
     id: win
     title: "Jugar"
@@ -16,6 +17,9 @@ Window {
 
     // El fondo se mueve solo con la consola delante y con gráfica de verdad (en una máquina sin 3D lo haría el procesador)
     Binding { target: Tema; property: "animar"; value: consola.gpu && win.active && win.visibility !== Window.Minimized }
+    // Los botones como en tu mando: PlayStation (lo de serie) o Xbox (si el que hay conectado es de Xbox)
+    readonly property var btn: consola.mando === "xbox" ? { a: "A", b: "B", x: "X", lb: "LB", rb: "RB" }
+                                                        : { a: "✕", b: "○", x: "□", lb: "L1", rb: "R1" }
     readonly property var lib: consola.tabs
     readonly property var allTabs: [
         { clave: "inicio", texto: "Inicio" }, { clave: "steam", texto: "Steam" }, { clave: "epic", texto: "Epic" },
@@ -323,7 +327,7 @@ Window {
             color: Tema.apagado
             font.pixelSize: 17
             text: ({
-                inicio: "Elige Steam, Epic, Emuladores o PS5 arriba (LB / RB) y descarga lo que te apetezca.",
+                inicio: "Elige Steam, Epic, Emuladores o PS5 arriba (" + win.btn.lb + " / " + win.btn.rb + ") y descarga lo que te apetezca.",
                 steam: "Abre Steam y entra con tu cuenta: aquí saldrá toda tu biblioteca para descargar y quitar.",
                 epic: "Abre Heroic y entra con tu cuenta de Epic: aquí saldrá toda tu biblioteca.",
                 emuladores: "Copia tus juegos (tus copias de tus discos y cartuchos) en la carpeta de cada sistema, dentro de " + consola.folder + ". Salen aquí solos, con su portada. En LEEME.txt tienes cómo.",
@@ -435,9 +439,9 @@ Window {
         spacing: 22
         Repeater {
             model: [
-                { b: ["A"], t: win.game && !win.game.installed ? "Descargar" : "Jugar" },
-                { b: ["X"], t: "Quitar" },
-                { b: ["LB", "RB"], t: "Pestaña" },
+                { b: [win.btn.a], t: win.game && !win.game.installed ? "Descargar" : "Jugar" },
+                { b: [win.btn.x], t: "Quitar" },
+                { b: [win.btn.lb, win.btn.rb], t: "Pestaña" },
                 { b: ["↓"], t: "Navegar" }
             ]
             delegate: Row {
@@ -496,8 +500,8 @@ Window {
                 }
                 Row {
                     spacing: 10
-                    Boton { tipo: "principal"; text: "A · Quitar"; onClicked: win.confirmRemove() }
-                    Boton { text: "B · Cancelar"; onClicked: win.asking = false }
+                    Boton { tipo: "principal"; text: win.btn.a + "  Quitar"; onClicked: win.confirmRemove() }
+                    Boton { text: win.btn.b + "  Cancelar"; onClicked: win.asking = false }
                 }
             }
         }

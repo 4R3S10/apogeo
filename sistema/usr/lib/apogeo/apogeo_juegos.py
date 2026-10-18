@@ -399,11 +399,16 @@ def ps5_games():
 
 # ---------- Windows ----------
 
+OLD_EXAMPLE = [{'id': 'valorant', 'name': 'VALORANT'}, {'id': 'eafc', 'name': 'EA SPORTS FC 26'}]
+
+
 def windows_games():
-    """Los que solo van en Windows (anticheat del núcleo). Se pueden añadir más en ~/.config/apogeo/juegos-windows.json."""
-    if not os.path.exists(WINDOWS_LIST):
-        write_json(WINDOWS_LIST, [{'id': 'valorant', 'name': 'VALORANT'}, {'id': 'eafc', 'name': 'EA SPORTS FC 26'}])
+    """Los que solo van en el Windows escondido (anticheat del núcleo), los que añadas a
+    ~/.config/apogeo/juegos-windows.json. De serie, ninguno (la pestaña Windows no sale hasta que haya uno)."""
     items = read_json(WINDOWS_LIST, [])
+    if items == OLD_EXAMPLE:  # (los dos de ejemplo de antes, si no los habías tocado: fuera)
+        write_json(WINDOWS_LIST, [])
+        items = []
     return [game('windows', g['id'], g.get('name', g['id']), True, g.get('cover', ''), g.get('hero', ''), g.get('last', 0))
             for g in items if isinstance(g, dict) and g.get('id')]
 

@@ -91,9 +91,11 @@ JetBrains Mono y los colores de Apogeo.
     busca juegos: cada uno pone los suyos (`~/Juegos/LEEME.txt`).
   - **PS5 (AnyPS5, experimental):** tus juegos volcados de tu PS5 en `~/Juegos/PS5/<juego>/` se convierten con AnyPS5 en
     programas de Linux (sin emular). Por ahora van muy pocos; cada versión nueva de AnyPS5 los vuelve a probar sola.
-  - **Windows:** los que solo van en el Windows escondido (`~/.config/apogeo/juegos-windows.json`).
-  - Con el mando (lo lee la consola, sin Steam por medio) o el teclado: ← → elegir, A/Intro jugar o descargar, X/Supr
-    quitar, LB RB/Q E pestaña, ↓ bajar a Navegar. El botón central del mando trae la consola desde cualquier sitio.
+  - **Windows:** los que solo van en el Windows escondido (`~/.config/apogeo/juegos-windows.json`). De serie, ninguno: la
+    pestaña sale cuando añadas uno.
+  - Con el mando (lo lee la consola, sin Steam por medio) o el teclado: ← → elegir, ✕/Intro jugar o descargar, □/Supr
+    quitar, L1 R1/Q E pestaña, ○/Esc atrás, ↓ bajar a Navegar. El botón PS trae la consola desde cualquier sitio. Los
+    botones salen como en tu mando (PlayStation de serie; A B X Y LB RB con uno de Xbox).
 - **Al día solo (`apogeo-al-dia`), sin jugar:** cada 2 horas, si no estás jugando, se ponen al día los emuladores (Flatpak),
   GE-Proton, AnyPS5, los núcleos de RetroArch y Heroic pone al día tus juegos de Epic. Steam lo hace él (y no descarga
   mientras juegas).

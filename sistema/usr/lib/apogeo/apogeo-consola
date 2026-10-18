@@ -5,8 +5,8 @@ La consola del piso Jugar («C8 · Cinta panorámica»): a pantalla completa, tu
 tienda o plataforma (Steam, Epic, Emuladores, PS5 y Windows) con toda tu biblioteca para descargar y quitar.
 
 Con el mando (sin Steam por medio: lo lee este programa) o el teclado:
-  ← → elegir · A / Intro jugar o descargar · X / Supr quitar · LB RB / Q E pestaña · B / Esc atrás
-  el botón central del mando (PS o Xbox), desde cualquier sitio, trae la consola.
+  ← → elegir · ✕ (A) / Intro jugar o descargar · □ (X) / Supr quitar · L1 R1 (LB RB) / Q E pestaña · ○ (B) / Esc atrás
+  el botón central del mando (PS o Xbox), desde cualquier sitio, trae la consola. Los botones salen como en tu mando.
 
   apogeo-consola            la abre (o la trae delante, si ya está)
 D-Bus: org.apogeo.Consola /Consola org.apogeo.Consola.Show
@@ -49,6 +49,8 @@ def main():
         changed = pyqtSignal()
         shown = pyqtSignal()
         pad = pyqtSignal(str, arguments=['button'])   # el mando: izquierda, derecha, a, b, x, y, lb, rb
+        mandoChanged = pyqtSignal()
+        _kind = pyqtSignal(str)                       # (del hilo del mando: «ps» o «xbox»)
         _ready = pyqtSignal(object)                   # (de un hilo al principal)
 
         def __init__(self):
@@ -57,6 +59,8 @@ def main():
             self._tabs.update(descargas={}, emuladoresHay={}, anyps5=False)
             self._loading = False
             self._ready.connect(self._set)
+            self._mando = 'ps'
+            self._kind.connect(self._set_kind)
             self.timer = QTimer(self)
             self.timer.timeout.connect(self.refresh)
             self.timer.start(20000)
@@ -74,6 +78,16 @@ def main():
                 return 'file://' + path if path and os.path.isfile(path) else ''
             except Exception:
                 return ''
+
+        @pyqtProperty(str, notify=mandoChanged)
+        def mando(self):
+            """«ps» (lo de serie: ✕ ○ □ △ L1 R1) o «xbox» (A B X Y LB RB), según el mando conectado."""
+            return self._mando
+
+        def _set_kind(self, kind):
+            if kind != self._mando:
+                self._mando = kind
+                self.mandoChanged.emit()
 
         @pyqtProperty(bool, constant=True)
         def gpu(self):
@@ -201,6 +215,9 @@ def gamepads(consola):
                     continue
                 known[path] = d
                 sel.register(d, selectors.EVENT_READ)
+                # Sony (054c): PlayStation; Microsoft (045e) o lo que diga Xbox: Xbox
+                xbox = d.info.vendor == 0x045e or 'xbox' in d.name.lower()
+                consola._kind.emit('xbox' if xbox else 'ps')
             except OSError:
                 pass
 
