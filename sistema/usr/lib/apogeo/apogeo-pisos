@@ -2,7 +2,8 @@
 """
 Pisos de Apogeo: Jugar, Navegar y Estudiar son tres escritorios virtuales, uno encima de otro. Al cambiar de piso las
 ventanas se deslizan (efecto Deslizar de KWin) y este programa cambia lo demás: el fondo, los avisos (por defecto solo en
-Navegar; los demás se quedan en el historial) y la energía (nunca «rendimiento»: primero la salud del PC). La primera vez
+Navegar; los demás se quedan en el historial y, al volver, sale un resumen de lo que llegó: apogeo-resumen), la luz
+(en Estudiar, cálida por la noche) y la energía (nunca «rendimiento»: primero la salud del PC). La primera vez
 que se entra en un piso en la sesión se abren sus apps (Jugar: la consola); después, cada piso guarda sus ventanas.
 Todo eso sale de tus ajustes (Ajustes de Apogeo, ~/.config/apogeo/ajustes.json): se vigilan y se aplican al momento.
 
@@ -17,8 +18,11 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
 
 import dbus
+import dbus.bus
 import dbus.mainloop.glib
 from gi.repository import Gio, GLib
 
@@ -302,6 +306,18 @@ def kw(f, g, k, v):
     run('kwriteconfig6', '--file', f, '--group', g, '--key', k, v)
 
 
+def kwn(f, g, k, v):
+    """Como kw, pero avisando a quien lo use (KWin lo aplica al momento). El valor puede empezar por «-»."""
+    run('kwriteconfig6', '--notify', '--file', f, '--group', g, '--key', k, '--', v)
+
+
+def run_out(*c):
+    try:
+        return subprocess.run(list(c), capture_output=True, text=True, timeout=5).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
 def kwin_reconfigure():
     try:
         dbus.SessionBus().get_object('org.kde.KWin', '/KWin').reconfigure(dbus_interface='org.kde.KWin')
@@ -380,8 +396,6 @@ def aesthetics():
     run('dbus-send', '--session', '--type=signal', '/Layouts', 'org.kde.keyboard.reloadConfig')
     # Ágape como navegador (la primera vez que se abre, se instala)
     run('xdg-settings', 'set', 'default-web-browser', 'ares.desktop')
-    # La terminal con los colores de Apogeo
-    kw('konsolerc', 'Desktop Entry', 'DefaultProfile', 'Apogeo.profile')
     # La pantalla de carga y la de apagar de Apogeo (look-and-feel org.apogeo.desktop)
     kw('kdeglobals', 'KDE', 'LookAndFeelPackage', 'org.apogeo.desktop')
     kw('ksplashrc', 'KSplash', 'Engine', 'KSplashQML')
@@ -420,15 +434,103 @@ def search_shortcuts():
         g.setForeignShortcutKeys(['kwin', 'Walk Through Windows', '', ''], keys(alt_tab))
         g.doRegister(['kwin', 'Apogeo partida', 'KWin', 'Apogeo: el juego con Discord y lo que suena al lado'])
         g.setForeignShortcutKeys(['kwin', 'Apogeo partida', '', ''], keys(meta_tab))
-        # Ctrl+Alt+T abre Ghostty (no Konsole) e Impr Pant, Flameshot (no Spectacle)
-        g.setForeignShortcutKeys(['org.kde.konsole.desktop', '_launch', '', ''], keys())
+        # Ctrl+Alt+T abre Ghostty e Impr Pant, Flameshot (Konsole y Spectacle ya no están; si siguieran, sin atajo)
+        for old in ('org.kde.konsole.desktop', 'org.kde.spectacle.desktop'):
+            try:
+                g.setForeignShortcutKeys([old, '_launch', '', ''], keys())
+            except dbus.DBusException:
+                pass
         g.doRegister(['com.mitchellh.ghostty.desktop', '_launch', 'Ghostty', 'Ghostty'])
         g.setForeignShortcutKeys(['com.mitchellh.ghostty.desktop', '_launch', '', ''], keys(ctrl_alt_t))
-        g.setForeignShortcutKeys(['org.kde.spectacle.desktop', '_launch', '', ''], keys())
         g.doRegister(['org.flameshot.Flameshot.desktop', 'Capture', 'Flameshot', 'Hacer una captura'])
         g.setForeignShortcutKeys(['org.flameshot.Flameshot.desktop', 'Capture', '', ''], keys(print_key))
     except dbus.DBusException as e:
         log('atajos:', e.get_dbus_message())
+
+
+def zone_location():
+    """(latitud, longitud) de tu zona horaria (la ciudad de zone1970.tab: para el anochecer basta). Madrid si no se sabe."""
+    try:
+        zone = os.path.realpath('/etc/localtime').split('/zoneinfo/', 1)[1]
+        with open('/usr/share/zoneinfo/zone1970.tab') as f:
+            for line in f:
+                cols = line.split('\t')
+                if line.startswith('#') or len(cols) < 3 or cols[2].strip() != zone:
+                    continue
+                c = cols[1]
+                cut = max(c.rfind('+'), c.rfind('-'))
+                return dms(c[:cut]), dms(c[cut:])
+    except (OSError, IndexError, ValueError):
+        pass
+    return 40.4, -3.7
+
+
+def dms(text):
+    """«+4024» o «-00341» (grados y minutos, y a veces segundos) → grados."""
+    sign, d = (-1 if text[0] == '-' else 1), text[1:]
+    deg_len = 2 if len(d) in (4, 6) else 3
+    deg, rest = int(d[:deg_len]), d[deg_len:]
+    mins, secs = int(rest[:2]), int(rest[2:4] or 0)
+    return sign * (deg + mins / 60 + secs / 3600)
+
+
+class Missed:
+    """Los avisos que llegan mientras no salen (en Jugar y Estudiar, o con «No molestar»). Se escuchan en el bus (como
+    dbus-monitor, sin quitárselos a Plasma, que los guarda en su historial) y, al volver a un piso con avisos, si llegó
+    alguno, apogeo-resumen enseña el resumen encima de la isla."""
+    RESUMEN = '/usr/lib/apogeo/apogeo-resumen'
+
+    def __init__(self, bus):
+        self.since = None        # desde cuándo no salen
+        self.floors = []         # los pisos en los que has estado mientras tanto
+        self.items = []
+        try:
+            self.mon = dbus.bus.BusConnection(dbus.bus.BUS_SESSION)
+            self.mon.call_blocking('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus.Monitoring',
+                                   'BecomeMonitor', 'asu',
+                                   (["type='method_call',interface='org.freedesktop.Notifications',member='Notify'"], 0))
+            self.mon.add_message_filter(self.heard)
+        except dbus.DBusException as e:
+            log('resumen:', e.get_dbus_message())
+
+    def start(self, floor):
+        if self.since is None:
+            self.since = time.time()
+            self.floors, self.items = [], []
+        if floor not in self.floors:
+            self.floors.append(floor)
+
+    def heard(self, _conn, msg):
+        try:
+            if self.since is None or msg.get_member() != 'Notify':
+                return
+            app, _rid, icon, title, body, _actions, hints, _timeout = msg.get_args_list()[:8]
+            if hints.get('transient') or not (str(title).strip() or str(body).strip()):
+                return
+            self.items.append({
+                'app': str(app), 'icono': str(icon or hints.get('image-path', '') or ''), 'titulo': str(title)[:140],
+                'texto': ' '.join(str(body).split())[:240], 'hora': time.strftime('%H:%M'),
+                'urgencia': int(hints.get('urgency', 1)), 'desktop': str(hints.get('desktop-entry', '')),
+            })
+            del self.items[:-200]
+        except Exception as e:  # un aviso raro no tumba los pisos
+            log('resumen:', e)
+
+    def finish(self):
+        if self.since is None:
+            return
+        since, floors, items = self.since, self.floors, self.items
+        self.since, self.floors, self.items = None, [], []
+        if not items or not os.access(self.RESUMEN, os.X_OK):
+            return
+        data = {'pisos': floors, 'segundos': int(time.time() - since), 'avisos': items}
+        with tempfile.NamedTemporaryFile('w', suffix='.json', prefix='apogeo-resumen-', delete=False,
+                                         dir=os.environ.get('XDG_RUNTIME_DIR')) as f:
+            json.dump(data, f, ensure_ascii=False)
+        log('resumen:', len(items), 'avisos')
+        subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
+                          f'--unit=app-apogeo-resumen-{int(time.time())}', self.RESUMEN, f.name],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
 
 class Floors:
@@ -436,6 +538,9 @@ class Floors:
         self.bus = bus
         self.system = system
         self.cookie = None
+        self.light_cookie = None   # la luz nocturna de KWin, apagada (inhibida) fuera de Estudiar
+        self.light_conf = None     # lo último que se escribió en kwinrc (para no reescribirlo en cada piso)
+        self.missed = Missed(bus)  # los avisos que llegan mientras no salen (para el resumen al volver)
         self.visited = set()
         self.last = None
         self.rotate_timer = None   # «que cambie solo»: el temporizador del piso en el que estás
@@ -452,7 +557,8 @@ class Floors:
         log('piso', f['name'])
         self.wallpaper(self.pick_wallpaper(st, f['key'], entering=not force), st['animar'], f['key'])
         self.schedule_rotation(st, f['key'])
-        self.quiet(st['silencio'] or not mine['avisos'])
+        self.quiet(st['silencio'] or not mine['avisos'], f['key'])
+        self.light(st, f['key'])
         self.power(mine['energia'])
         if force:
             return
@@ -546,8 +652,11 @@ class Floors:
             });
         """ % (style, animate, floor, archivo_js))
 
-    def quiet(self, on):
-        """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos."""
+    def quiet(self, on, floor):
+        """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos y, al volver a un
+        piso con avisos, sale el resumen de lo que llegó."""
+        if on:
+            self.missed.start(floor)
         try:
             n = dbus.Interface(self.bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications'),
                                'org.freedesktop.Notifications')
@@ -558,6 +667,39 @@ class Floors:
                 self.cookie = None
         except dbus.DBusException as e:
             log('avisos:', e.get_dbus_message())
+        if not on:
+            self.missed.finish()
+
+    def light(self, st, floor):
+        """Luz cálida en Estudiar por la noche: la luz nocturna de KWin (sigue el día y la noche de tu zona: al anochecer
+        entra poco a poco y al amanecer se va), encendida con tu calor y apagada (inhibida) en los demás pisos. Si Plasma
+        no sabe dónde estás, tu zona sale de tu zona horaria (sin preguntar a internet)."""
+        luz = st['luz']
+        conf = (luz['activa'], luz['calor'])
+        if conf != self.light_conf:
+            self.light_conf = conf
+            if luz['activa']:
+                lat = run_out('kreadconfig6', '--file', 'knighttimerc', '--group', 'Location', '--key', 'Latitude')
+                auto = run_out('kreadconfig6', '--file', 'knighttimerc', '--group', 'Location', '--key', 'Automatic')
+                if not lat and auto != 'false':
+                    lat, lon = zone_location()
+                    kwn('knighttimerc', 'Location', 'Automatic', 'false')
+                    kwn('knighttimerc', 'Location', 'Latitude', f'{lat:.2f}')
+                    kwn('knighttimerc', 'Location', 'Longitude', f'{lon:.2f}')
+                kwn('kwinrc', 'NightColor', 'NightTemperature', str(luz['calor']))
+                kwn('kwinrc', 'NightColor', 'Active', 'true')
+            else:
+                kwn('kwinrc', 'NightColor', 'Active', 'false')
+        try:
+            nl = dbus.Interface(self.bus.get_object('org.kde.KWin', '/org/kde/KWin/NightLight'), 'org.kde.KWin.NightLight')
+            off = floor != 'estudiar' or not luz['activa']
+            if off and self.light_cookie is None:
+                self.light_cookie = nl.inhibit()
+            elif not off and self.light_cookie is not None:
+                nl.uninhibit(dbus.UInt32(self.light_cookie))
+                self.light_cookie = None
+        except dbus.DBusException as e:
+            log('luz:', e.get_dbus_message())
 
     def power(self, profile):
         try:

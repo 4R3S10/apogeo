@@ -34,7 +34,7 @@ ApplicationWindow {
     function plain(t) { return (t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") }
     function shown(sec) { return query === "" || plain(sec.titulo + " " + sec.palabras).indexOf(plain(query)) >= 0 }
 
-    readonly property var sections: [pisos, fondos, isla, salud, agape, perfil, actualizaciones]
+    readonly property var sections: [pisos, fondos, isla, salud, agape, perfil, copia, actualizaciones]
     property Item current: pisos
     property Item wanted: null       // la tocada a la izquierda (aunque no pueda subir del todo, por ser de las últimas)
     function go(sec) {
@@ -45,7 +45,7 @@ ApplicationWindow {
     }
     NumberAnimation { id: scroll; target: flick; property: "contentY"; duration: 280; easing.type: Easing.OutCubic }
     Component.onCompleted: {
-        const first = { pisos: pisos, fondos: fondos, isla: isla, salud: salud, agape: agape, perfil: perfil, actualizaciones: actualizaciones }[apogeo.section];
+        const first = { pisos: pisos, fondos: fondos, isla: isla, salud: salud, agape: agape, perfil: perfil, copia: copia, actualizaciones: actualizaciones }[apogeo.section];
         if (first && first !== pisos) Qt.callLater(() => go(first));
     }
 
@@ -69,7 +69,8 @@ ApplicationWindow {
         Repeater {
             model: [
                 { sec: pisos, icono: "pisos" }, { sec: fondos, icono: "imagen" }, { sec: isla, icono: "isla" }, { sec: salud, icono: "salud" },
-                { sec: agape, icono: "navegar" }, { sec: perfil, icono: "usuario" }, { sec: actualizaciones, icono: "actualizar" }
+                { sec: agape, icono: "navegar" }, { sec: perfil, icono: "usuario" }, { sec: copia, icono: "copia" },
+                { sec: actualizaciones, icono: "actualizar" }
             ]
             delegate: NavItem {
                 required property var modelData
@@ -151,7 +152,7 @@ ApplicationWindow {
             // ----- Pisos -----
             Seccion {
                 id: pisos
-                property string palabras: "fondo animado avisos notificaciones energia ahorro apps aplicaciones no molestar jugar navegar estudiar"
+                property string palabras: "fondo animado avisos notificaciones energia ahorro apps aplicaciones no molestar jugar navegar estudiar luz calida noche vista nocturna"
                 width: parent.width
                 visible: win.shown(pisos)
                 titulo: "Pisos"
@@ -178,6 +179,24 @@ ApplicationWindow {
                     Interruptor {
                         checked: win.mine.avisos
                         onToggled: apogeo.set("pisos." + win.fk + ".avisos", checked)
+                    }
+                }
+                Fila {
+                    visible: win.fk === "estudiar"
+                    titulo: "Luz cálida por la noche"
+                    detalle: win.s.luz.activa ? "Al anochecer entra poco a poco (en media hora) para cansar menos la vista; al amanecer se va"
+                                              : "Apagada: la pantalla igual de día y de noche"
+                    Interruptor { checked: win.s.luz.activa; onToggled: apogeo.set("luz.activa", checked) }
+                }
+                Fila {
+                    visible: win.fk === "estudiar" && win.s.luz.activa
+                    titulo: "Cuánto calor"
+                    detalle: "Más calor, menos luz azul"
+                    Segmentos {
+                        readonly property var valores: [4500, 3700, 3000]
+                        opciones: [{ texto: "Suave" }, { texto: "Media" }, { texto: "Fuerte" }]
+                        actual: Math.max(0, valores.indexOf(win.s.luz.calor))
+                        onElegido: i => apogeo.set("luz.calor", valores[i])
                     }
                 }
                 Fila {
@@ -540,6 +559,13 @@ ApplicationWindow {
                         Boton { text: apogeo.neuronsOn ? "Cambiar mis neuronas" : "Elegir mis neuronas"; tipo: apogeo.neuronsOn ? "normal" : "principal"; onClicked: neuronas.open() }
                     }
                 }
+            }
+
+            // ----- Copia -----
+            CopiaSeccion {
+                id: copia
+                width: parent.width
+                visible: win.shown(copia)
             }
 
             // ----- Actualizaciones -----

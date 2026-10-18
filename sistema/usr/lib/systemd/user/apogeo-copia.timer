@@ -1,0 +1,10 @@
+[Unit]
+Description=Mirar cada día si toca la copia de Apogeo (en un disco que no sea USB, o si el USB ya estaba puesto)
+
+[Timer]
+OnStartupSec=15min
+OnUnitActiveSec=1d
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

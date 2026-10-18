@@ -1,0 +1,12 @@
+[Unit]
+Description=Apogeo: revisión de tu sesión (después de actualizar y al entrar)
+After=graphical-session.target plasma-plasmashell.service apogeo-pisos.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-revision usuario
+TimeoutStartSec=5min
+Nice=10
+
+[Install]
+WantedBy=plasma-workspace.target

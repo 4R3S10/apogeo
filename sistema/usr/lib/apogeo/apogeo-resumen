@@ -1,0 +1,109 @@
+#!/usr/bin/python3
+"""
+Resumen al volver («H3»): al salir de un piso sin avisos (Jugar, Estudiar o con «No molestar»), una tarjeta encima de la
+isla con lo que llegó mientras tanto: lo importante delante y «Ver todos» para el resto. Pulsar un aviso abre su app.
+Se va sola al medio minuto si no la tocas; los avisos siguen en el historial de Plasma (la campana de la isla).
+
+  apogeo-resumen ARCHIVO.json   lo lanza apogeo-pisos ({pisos, segundos, avisos}); el archivo se borra al leerlo
+"""
+import json
+import os
+import sys
+
+os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
+from PyQt6.QtCore import QObject, QSize, QUrl, pyqtProperty, pyqtSlot  # noqa: E402
+from PyQt6.QtGui import QGuiApplication, QIcon  # noqa: E402
+from PyQt6.QtQml import QQmlApplicationEngine  # noqa: E402
+from PyQt6.QtQuick import QQuickImageProvider  # noqa: E402
+
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+import apogeo_comun as comun  # noqa: E402
+
+QML = os.environ.get('APOGEO_RESUMEN_QML', '/usr/share/apogeo/resumen/Resumen.qml')
+
+
+class Icons(QQuickImageProvider):
+    """image://icono/NOMBRE: un icono del tema o un archivo."""
+    def __init__(self):
+        super().__init__(QQuickImageProvider.ImageType.Pixmap)
+
+    def requestPixmap(self, name, requested):
+        side = max(requested.width(), requested.height(), 32)
+        icon = QIcon(name) if name.startswith('/') else QIcon.fromTheme(name, QIcon.fromTheme('preferences-desktop-notification'))
+        return icon.pixmap(QSize(side, side)), QSize(side, side)
+
+
+def icon_for(item):
+    """El icono del aviso: el suyo, o el de su app."""
+    icon = item.get('icono', '')
+    if icon.startswith('file://'):
+        icon = QUrl(icon).toLocalFile()
+    if icon and (not icon.startswith('/') or os.path.isfile(icon)):
+        return icon
+    desktop = item.get('desktop', '')
+    if desktop:
+        try:
+            info = comun.app_info(desktop + '.desktop')
+            if info:
+                return info[1]
+        except Exception:
+            pass
+    return 'preferences-desktop-notification'
+
+
+class Resumen(QObject):
+    def __init__(self, data):
+        super().__init__()
+        self._data = data
+
+    @pyqtProperty('QVariantMap', constant=True)
+    def data(self):
+        return self._data
+
+    @pyqtSlot(str)
+    def open(self, desktop):
+        """Abre la app del aviso (si se sabe cuál es)."""
+        if desktop and comun.desktop_info(desktop + '.desktop'):
+            comun.spawn('gio', 'launch', comun.desktop_info(desktop + '.desktop').get_filename())
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(__doc__.strip())
+        return 2
+    try:
+        with open(sys.argv[1]) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return 1
+    finally:
+        try:
+            os.remove(sys.argv[1])
+        except OSError:
+            pass
+    avisos = data.get('avisos') or []
+    if not avisos:
+        return 0
+    for a in avisos:
+        a['icono'] = icon_for(a)
+    # Lo importante delante: lo urgente y lo más nuevo
+    data['avisos'] = sorted(avisos, key=lambda a: (-a.get('urgencia', 1), -avisos.index(a)))
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Resumen de avisos')
+    app.setDesktopFileName('apogeo-resumen')
+    app.setWindowIcon(QIcon.fromTheme('apogeo'))
+    resumen = Resumen(data)
+    engine = QQmlApplicationEngine()
+    if os.environ.get('APOGEO_QML_DIR'):
+        engine.addImportPath(os.environ['APOGEO_QML_DIR'])
+    icons = Icons()  # (se guarda: si no, Python lo borraría)
+    engine.addImageProvider('icono', icons)
+    engine.rootContext().setContextProperty('resumen', resumen)
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

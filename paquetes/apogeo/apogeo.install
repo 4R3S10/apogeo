@@ -9,6 +9,7 @@ post_install() {
   # Teclado ANSI: EE. UU. internacional (también en la pantalla de inicio de sesión)
   localectl set-x11-keymap us pc105 intl 2>/dev/null || true
   _programas
+  _copia_revision
   echo ">>> Apogeo instalado. Reinicia para entrar."
 }
 
@@ -16,6 +17,12 @@ post_upgrade() {
   systemctl --global enable apogeo-pisos.service
   _actualizaciones
   _programas
+  _copia_revision
+}
+
+# La copia sola (cada día mira si toca; también al conectar el USB) y la revisión de cada sesión después de actualizar
+_copia_revision() {
+  systemctl --global enable apogeo-copia.timer apogeo-revision.service apogeo-revision.path
 }
 
 # Los programas de serie (apogeo-programas): ONLYOFFICE y Stremio de Flathub (en segundo plano, con internet) y
@@ -28,7 +35,7 @@ _programas() {
   done
 }
 
-# Avisos de actualización de Apogeo en lugar del actualizador de CachyOS (que sigue instalado, pero callado)
+# Avisos de actualización de Apogeo en lugar del actualizador de CachyOS (apogeo-limpieza lo quita; mientras, callado)
 _actualizaciones() {
   systemctl --global enable apogeo-actualizaciones.timer
   systemctl --global disable arch-update.timer 2>/dev/null || true
@@ -41,4 +48,5 @@ pre_remove() {
   systemctl disable apogeo-flatpaks.service 2>/dev/null || true
   systemctl --global disable apogeo-pisos.service
   systemctl --global disable apogeo-actualizaciones.timer
+  systemctl --global disable apogeo-copia.timer apogeo-revision.service apogeo-revision.path
 }

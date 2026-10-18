@@ -1,0 +1,9 @@
+[Unit]
+Description=Copia de Apogeo (sola: si toca y el disco elegido está conectado)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-copia hacer --sola
+TimeoutStartSec=2h
+Nice=10
+IOSchedulingClass=idle

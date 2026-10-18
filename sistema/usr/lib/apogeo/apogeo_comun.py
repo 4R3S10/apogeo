@@ -45,12 +45,23 @@ DEFAULTS = {
         'carpeta': FOLDER_DEFAULT,
         'cambiar': {k: {'activo': False, 'cada': 'hora', 'de': 'todos'} for k in ('jugar', 'navegar', 'estudiar')},
     },
+    # Luz cálida en Estudiar por la noche (la luz nocturna de KWin): entra poco a poco al anochecer en tu zona
+    'luz': {'activa': True, 'calor': 4500},
+    # La copia de Apogeo (apogeo-copia): sola cada semana al conectar el USB o disco elegido, y con el botón
+    'copia': {
+        'sola': True, 'guardar': 4,
+        'que': ['ajustes', 'fondos', 'estudios', 'tareas'],
+        'destino': {'uuid': '', 'carpeta': '', 'nombre': ''},  # el disco (por su UUID) y la carpeta dentro de él
+    },
     'animar': True,      # fondos animados (solo con gráfica de verdad)
     'silencio': False,   # «No molestar» en todos los pisos
     'isla': {'esconder': True, 'esconderPisos': True, 'jugar': True, 'navegar': True, 'estudiar': True},  # lo de cada piso: temperatura/FPS,
     'fps': 60,                                                                    # música, temporizador
     'version': VERSION,
 }
+WARMTH = (4500, 3700, 3000)  # luz cálida: suave, media, fuerte (kelvin)
+COPY_PARTS = ('ajustes', 'fondos', 'estudios', 'tareas', 'documentos')
+COPY_KEEP = (1, 4, 8)
 HEALTH_DEFAULT = {'limite': 80}
 FPS_CHOICES = (30, 45, 60)
 
@@ -102,6 +113,19 @@ def valid(st):
             c['cada'] = 'hora'
         if c.get('de') not in ('todos', 'tuyos', 'carpeta', 'animados'):
             c['de'] = 'todos'
+    luz = st['luz']
+    luz['activa'] = bool(luz.get('activa'))
+    if luz.get('calor') not in WARMTH:
+        luz['calor'] = WARMTH[0]
+    copia = st['copia']
+    copia['sola'] = bool(copia.get('sola'))
+    if copia.get('guardar') not in COPY_KEEP:
+        copia['guardar'] = 4
+    copia['que'] = [x for x in COPY_PARTS if x in (copia.get('que') or [])]
+    d = copia['destino']
+    for k in ('uuid', 'carpeta', 'nombre'):
+        if not isinstance(d.get(k), str):
+            d[k] = ''
     return st
 
 

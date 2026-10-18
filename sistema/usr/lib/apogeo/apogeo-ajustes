@@ -23,7 +23,7 @@ sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 import apogeo_comun as comun  # noqa: E402
 
 QML = os.environ.get('APOGEO_AJUSTES_QML', '/usr/share/apogeo/ajustes/Ajustes.qml')
-SECTIONS = ('pisos', 'fondos', 'isla', 'salud', 'agape', 'perfil', 'actualizaciones')
+SECTIONS = ('pisos', 'fondos', 'isla', 'salud', 'agape', 'perfil', 'copia', 'actualizaciones')
 
 
 def run(*cmd, timeout=5):
@@ -195,6 +195,8 @@ def window(section):
         _downloaded = pyqtSignal(str, str)  # (de un hilo al principal: ruta, piso)
         neuronsChanged = pyqtSignal()
         neuronsSaved = pyqtSignal(bool, str, arguments=['ok', 'message'])
+        copyChanged = pyqtSignal()
+        copyDone = pyqtSignal(str, bool, str, arguments=['what', 'ok', 'message'])  # (clave, hacer, donde, recuperar)
         stateChanged = pyqtSignal()  # (= changed de Base: PyQt no deja avisar con una señal de la clase madre)
 
         def __init__(self):
@@ -456,6 +458,73 @@ def window(section):
                 self.neuronsChanged.emit()
             threading.Thread(target=work, daemon=True).start()
 
+        # ----- La copia de Apogeo (apogeo-copia) -----
+        def _copia(self, *args, stdin=None, timeout=None):
+            r = subprocess.run([os.path.join(comun.LIB, 'apogeo-copia'), *args], input=stdin, text=True,
+                               capture_output=True, timeout=timeout)
+            return r.returncode == 0, r.stdout.strip(), (r.stderr.strip().splitlines() or [''])[-1]
+
+        @pyqtProperty('QVariantMap', notify=copyChanged)
+        def copyState(self):
+            """{fecha, archivo, tamano, donde, clave} de la última copia (y si ya hay contraseña)."""
+            if getattr(self, '_copy_state', None) is None:
+                self._copy_state = self._read_copy_state()
+            return self._copy_state
+
+        def _read_copy_state(self):
+            ok, out, _ = self._copia('estado', timeout=10)
+            try:
+                st = json.loads(out) if ok else {}
+            except ValueError:
+                st = {}
+            if st.get('tamano'):
+                st['tamanoTexto'] = comun.human(st['tamano'])
+            return st
+
+        def _copy_job(self, what, *args, stdin=None):
+            def work():
+                try:
+                    ok, _out, err = self._copia(*args, stdin=stdin)
+                except (OSError, subprocess.SubprocessError) as e:
+                    ok, err = False, str(e)
+                self._st = comun.load()
+                self._copy_state = self._read_copy_state()
+                self.copyDone.emit(what, ok, '' if ok else (err or 'No se ha podido.'))
+                self.copyChanged.emit()
+                self.settingsChanged.emit()
+            threading.Thread(target=work, daemon=True).start()
+
+        @pyqtSlot(str, str)
+        def setCopyPassword(self, a, b):
+            self._copy_job('clave', 'clave', stdin=f'{a}\n{b}\n')
+
+        @pyqtSlot()
+        def makeCopy(self):
+            self._copy_job('hacer', 'hacer')
+
+        @pyqtSlot('QVariant')
+        def setCopyFolder(self, url):
+            url = url.toVariant() if hasattr(url, 'toVariant') else url
+            path = (url if isinstance(url, QUrl) else QUrl(url)).toLocalFile()
+            if os.path.isdir(path):
+                self._copy_job('donde', 'donde', path)
+
+        @pyqtSlot('QVariant', result='QVariantMap')
+        def copyHeader(self, url):
+            """Lo que dice una copia antes de abrirla (fecha y qué lleva)."""
+            url = url.toVariant() if hasattr(url, 'toVariant') else url
+            path = (url if isinstance(url, QUrl) else QUrl(url)).toLocalFile()
+            ok, out, err = self._copia('ver', path, timeout=10)
+            try:
+                h = json.loads(out) if ok else {}
+            except ValueError:
+                h = {}
+            return {**h, 'ruta': path, 'error': '' if ok else err} if h else {'ruta': path, 'error': err or 'No es una copia de Apogeo'}
+
+        @pyqtSlot(str, str)
+        def restoreApogeo(self, path, password):
+            self._copy_job('recuperar', 'recuperar', path, stdin=password + '\n')
+
         # Actualizaciones
         @pyqtProperty(str, constant=True)
         def version(self):
@@ -485,7 +554,7 @@ def window(section):
         @pyqtSlot()
         def runUpdate(self):
             """En una terminal, a la vista: pide tu contraseña y enseña lo que hace."""
-            comun.spawn('konsole', '--hide-menubar', '-p', 'tabtitle=Actualizar Apogeo', '-e', 'bash', '-c',
+            comun.spawn('ghostty', '--title=Actualizar Apogeo', '-e', 'bash', '-c',
                         'echo "Actualizando Apogeo y el sistema…"; echo; sudo pacman -Syu; echo; '
                         'read -rp "Listo. Pulsa Intro para cerrar."')
 

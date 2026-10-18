@@ -22,7 +22,7 @@ package_apogeo() {
     papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
     python python-dbus python-gobject                         # los pisos
     python-pyqt6 qt6-declarative milou kirigami               # la bienvenida, los ajustes y el buscador
-    pacman-contrib konsole polkit                             # ajustes: buscar actualizaciones e instalarlas
+    pacman-contrib polkit gnupg                               # ajustes: actualizaciones; la copia de Apogeo
     kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
     power-profiles-daemon                                     # energía de cada piso
     qt6-multimedia qt6-multimedia-ffmpeg xdg-user-dirs        # fondos de vídeo y la carpeta de imágenes
@@ -70,5 +70,7 @@ package_apogeo-programas() {
     mangohud lib32-mangohud gamemode lib32-gamemode protonplus lutris  # juegos
     obs-studio vlc easyeffects qbittorrent                          # grabar, vídeos, sonido y descargas
     localsend keepassxc obsidian coolercontrol                      # archivos al móvil, contraseñas, notas y ventiladores
+    okular anki xournalpp                                           # estudiar: PDFs, tarjetas de memoria y escribir a mano
+    mission-center warehouse                                        # qué gasta el PC y los Flatpak
   )
 }

@@ -1,9 +1,12 @@
 #!/bin/sh
-# Las apps de CachyOS que no pintan nada en Apogeo, fuera del menú y del buscador (siguen instaladas, por si hacen
-# falta: se abren con su nombre desde una terminal). Lo lanza un gancho de pacman: si una actualización las vuelve a
-# poner, se vuelven a esconder.
+# Fuera del menú y del buscador lo que no pinta nada en Apogeo: las apps de CachyOS (si no las ha quitado ya
+# apogeo-limpieza) y las piezas de otros programas que no son apps (herramientas de Qt, de Avahi, de cámaras…). Siguen
+# instaladas: se abren con su nombre desde una terminal. Lo lanza un gancho de pacman: si una actualización las vuelve
+# a poner, se vuelven a esconder.
 set -e
-for f in cachyos-hello cachyos-pi org.cachyos.KernelManager org.cachyos.scx-manager arch-update arch-update-tray; do
+for f in cachyos-hello cachyos-pi org.cachyos.KernelManager org.cachyos.scx-manager arch-update arch-update-tray \
+         avahi-discover bssh bvnc assistant designer linguist qdbusviewer qv4l2 qvidcap lstopo kvantummanager \
+         org.kde.kwrite org.kde.kdeconnect.nonplasma org.kde.kdeconnect.sms; do
   p="/usr/share/applications/$f.desktop"
   [ -f "$p" ] || continue
   grep -q '^NoDisplay=true' "$p" && continue

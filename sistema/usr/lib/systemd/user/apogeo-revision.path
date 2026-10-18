@@ -1,0 +1,9 @@
+[Unit]
+Description=Apogeo: revisar tu sesión en cuanto acaba una actualización
+
+[Path]
+PathChanged=/var/lib/apogeo/revision.json
+Unit=apogeo-revision.service
+
+[Install]
+WantedBy=plasma-workspace.target

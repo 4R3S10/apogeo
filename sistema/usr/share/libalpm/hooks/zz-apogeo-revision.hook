@@ -1,0 +1,11 @@
+# Después de cada actualización (la última de todas): Apogeo se revisa y arregla lo que pueda (apogeo-revision)
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = *
+
+[Action]
+Description = Apogeo: revisión después de actualizar
+When = PostTransaction
+Exec = /usr/lib/apogeo/apogeo-revision sistema

@@ -1,0 +1,9 @@
+[Unit]
+Description=Apogeo: fuera los programas repetidos y los restos de CachyOS (una vez)
+ConditionPathExists=!/var/lib/apogeo/limpieza-1
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-limpieza
+TimeoutStartSec=45min
+Nice=10

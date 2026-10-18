@@ -8,6 +8,8 @@ import org.kde.kwin
 //    tareas y del cambiador de ventanas. Se esconde con Ágape delante (Ágape enseña la suya en el mismo sitio), con
 //    una ventana a pantalla completa (un juego, la consola) y en Navegar con el escritorio a la vista (allí ya está el
 //    widget de música del escritorio).
+//  - El resumen de avisos al volver (apogeo-resumen) va abajo en el centro, justo encima de la isla, encima de todo y
+//    en todos los pisos (sale al cambiar de piso, mientras se deslizan).
 Item {
     id: root
     property var pending: []
@@ -19,6 +21,7 @@ Item {
             pending.push(w);
             retry.start();
         }
+        if (cls.indexOf("apogeo-resumen") >= 0) summary(w);
         if (cls.indexOf("apogeo-musica") >= 0) {
             music = w;
             w.onAllDesktops = true;
@@ -32,6 +35,22 @@ Item {
         }
     }
     function removed(w) { if (w === music) music = null; }
+
+    function summary(w) {
+        w.onAllDesktops = true;
+        w.keepAbove = true;
+        w.skipTaskbar = true;
+        w.skipSwitcher = true;
+        w.skipPager = true;
+        const put = () => {
+            const area = Workspace.clientArea(KWin.FullScreenArea, w);
+            const g = w.frameGeometry;
+            const x = Math.round(area.x + (area.width - g.width) / 2), y = area.y + area.height - g.height - 74;
+            if (g.x !== x || g.y !== y) w.frameGeometry = Qt.rect(x, y, g.width, g.height);
+        };
+        put();
+        w.frameGeometryChanged.connect(put);
+    }
 
     function place() {
         if (!music) return;

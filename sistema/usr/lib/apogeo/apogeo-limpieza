@@ -1,0 +1,57 @@
+#!/bin/bash
+# Fuera los programas repetidos y los restos de CachyOS (una sola vez: si luego instalas alguno a mano, se queda).
+# Con cada uno se queda el de Apogeo: Ghostty (no Konsole ni Alacritty), Flameshot (no Spectacle), VLC (no Haruna ni
+# mpv), Ágape (no Firefox), Stacer y Mission Center (no btop, el Monitor del sistema ni Filelight), Kate y fish (no vim,
+# micro ni la zsh de CachyOS). Y lo de CachyOS que Apogeo ya hace a su manera: la bienvenida, el instalador de paquetes,
+# el gestor de núcleos, el actualizador y Shelly.
+#
+# Lo lanza la revisión de Apogeo después de una actualización (apogeo-limpieza.service). pacman está ocupado hasta que
+# acaba la actualización, así que primero espera a que termine. Lo que quita lo apunta en /var/lib/apogeo/limpieza.json
+# para que la revisión te lo cuente.
+set -u
+MARCA=/var/lib/apogeo/limpieza-1
+INFORME=/var/lib/apogeo/limpieza.json
+[ -e "$MARCA" ] && exit 0
+
+# En este orden: lo que depende de otro, antes
+QUITAR=(
+  cachyos-hello cachyos-packageinstaller cachyos-kernel-manager scx-manager cachy-update shelly
+  konsole alacritty spectacle
+  haruna mpvqt mpv firefox
+  btop plasma-systemmonitor filelight
+  cachyos-micro-settings micro
+)
+# La zsh de CachyOS (con sus complementos), solo si nadie la usa para entrar
+if ! getent passwd | awk -F: '$3 == 0 || ($3 >= 1000 && $3 < 60000)' | cut -d: -f7 | grep -q zsh; then
+  QUITAR+=(cachyos-zsh-config oh-my-zsh-git zsh-autosuggestions zsh-completions zsh-history-substring-search
+           zsh-syntax-highlighting zsh-theme-powerlevel10k vim)
+fi
+
+# Espera a que pacman acabe (hasta 30 min)
+for _ in $(seq 900); do
+  [ -e /var/lib/pacman/db.lck ] || break
+  sleep 2
+done
+[ -e /var/lib/pacman/db.lck ] && exit 1  # sigue ocupado: se intentará en la próxima actualización
+
+hay=()
+for p in "${QUITAR[@]}"; do pacman -Qq "$p" >/dev/null 2>&1 && hay+=("$p"); done
+quitados=()
+if [ ${#hay[@]} -gt 0 ]; then
+  # Todos a la vez; si alguno lo necesita otro programa, uno a uno (y ese se queda)
+  if pacman -Rns --noconfirm "${hay[@]}" >/dev/null 2>&1; then
+    quitados=("${hay[@]}")
+  else
+    for p in "${hay[@]}"; do
+      pacman -Qq "$p" >/dev/null 2>&1 || continue
+      pacman -Rns --noconfirm "$p" >/dev/null 2>&1 && quitados+=("$p")
+    done
+  fi
+fi
+
+mkdir -p /var/lib/apogeo
+python3 - "$INFORME" "${quitados[@]}" <<'PY'
+import json, sys, time
+json.dump({'fecha': int(time.time()), 'quitados': sys.argv[2:]}, open(sys.argv[1], 'w'))
+PY
+touch "$MARCA"

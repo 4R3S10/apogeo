@@ -1,0 +1,385 @@
+#!/usr/bin/python3
+"""
+La copia de Apogeo: lo tuyo en un archivo cerrado con contraseña (.apogeo), en un USB, un disco o una carpeta. Si
+cambias de PC o reinstalas, lo abres y vuelve todo como lo dejaste. Qué se guarda (Ajustes → Copia): tus ajustes y
+pisos (~/.config/apogeo), tus fondos (los tuyos, tu carpeta de fondos y sus créditos), ~/Estudios, tus tareas y exámenes
+y, si quieres, tus Documentos. Ágape tiene su propia copia (Personalizar → Avanzado).
+
+Cómo se cierra (con GnuPG, sin guardar la contraseña en ningún sitio): al ponerla se crea una llave; la parte pública
+cierra las copias (por eso la copia sola no necesita la contraseña) y la parte privada, protegida con tu contraseña, va
+dentro de cada copia. Para abrirla hace falta la contraseña; sin ella, nadie (ni tú) puede.
+
+El archivo: una línea «APOGEO-COPIA 1», una línea JSON (fecha, qué lleva, la llave privada protegida) y después los datos
+(tar.zst) cifrados con gpg.
+
+  apogeo-copia clave                    pone o cambia la contraseña (la lee de la entrada, dos líneas iguales)
+  apogeo-copia hacer [--sola]           hace una copia; con --sola, solo si toca (sola activada, el disco conectado y la
+                                        última de hace una semana o más): lo lanzan el USB al conectarse y un temporizador
+  apogeo-copia ver ARCHIVO              lo que dice la cabecera de una copia (JSON)
+  apogeo-copia recuperar ARCHIVO        la abre (contraseña por la entrada) y lo pone todo en su sitio
+  apogeo-copia estado                   la última copia y si hay contraseña (JSON)
+  apogeo-copia donde CARPETA            elige dónde se guardan (por el UUID de su disco)
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+import apogeo_comun as comun  # noqa: E402
+
+HOME = comun.HOME
+DATA = os.path.join(os.environ.get('XDG_DATA_HOME', os.path.join(HOME, '.local/share')), 'apogeo', 'copia')
+GNUPG = os.path.join(DATA, 'gnupg')
+KEY = os.path.join(DATA, 'clave.asc')       # la llave privada, protegida con tu contraseña
+STATE = os.path.join(os.environ.get('XDG_STATE_HOME', os.path.join(HOME, '.local/state')), 'apogeo', 'copia.json')
+MAGIC = b'APOGEO-COPIA 1\n'
+EVERY = 7 * 86400
+UID = 'Copia de Apogeo'
+
+
+def log(*a):
+    print('[copia]', *a, file=sys.stderr, flush=True)
+
+
+def read_json(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def notify(title, body, icon='apogeo'):
+    subprocess.run(['notify-send', '-a', 'Apogeo', '-i', icon, title, body],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def gpg(home, *args, passphrase=None, **kw):
+    """gpg sin preguntar nada en pantalla: la contraseña (si hace falta) va por un tubo aparte, nunca en la línea de
+    órdenes."""
+    cmd = ['gpg', '--homedir', home, '--batch', '--no-tty', '--quiet']
+    r = None
+    if passphrase is not None:
+        r, w = os.pipe()
+        os.write(w, passphrase.encode() + b'\n')
+        os.close(w)
+        cmd += ['--pinentry-mode', 'loopback', '--passphrase-fd', str(r)]
+        kw['pass_fds'] = (r,)
+    kw.setdefault('env', {**os.environ, 'LC_ALL': 'C'})  # (sus mensajes en inglés, para reconocer los errores)
+    try:
+        return subprocess.run(cmd + list(args), **kw)
+    finally:
+        if r is not None:
+            os.close(r)
+
+
+def fingerprint(home=GNUPG):
+    r = gpg(home, '--with-colons', '--list-keys', UID, capture_output=True, text=True)
+    for line in r.stdout.splitlines():
+        if line.startswith('fpr:'):
+            return line.split(':')[9]
+    return ''
+
+
+# ---------- La contraseña ----------
+
+def new_key(password):
+    """Una llave nueva con esa contraseña (las copias de antes siguen abriéndose con la de antes)."""
+    tmp = GNUPG + '.nueva'
+    shutil.rmtree(tmp, ignore_errors=True)
+    os.makedirs(tmp, mode=0o700)
+    r = gpg(tmp, '--quick-gen-key', UID, 'future-default', 'default', 'never', passphrase=password,
+            capture_output=True, text=True)
+    fpr = fingerprint(tmp)
+    if r.returncode or not fpr:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise RuntimeError('No se ha podido crear la llave: ' + (r.stderr.strip().splitlines() or ['?'])[-1])
+    r = gpg(tmp, '--armor', '--export-secret-keys', fpr, passphrase=password, capture_output=True, text=True)
+    if r.returncode or 'PRIVATE KEY' not in r.stdout:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise RuntimeError('No se ha podido guardar la llave')
+    subprocess.run(['gpgconf', '--homedir', tmp, '--kill', 'gpg-agent'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if os.path.isdir(GNUPG):
+        subprocess.run(['gpgconf', '--homedir', GNUPG, '--kill', 'gpg-agent'], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+        shutil.rmtree(GNUPG, ignore_errors=True)
+    os.replace(tmp, GNUPG)
+    with open(KEY + '.nuevo', 'w') as f:
+        f.write(r.stdout)
+    os.chmod(KEY + '.nuevo', 0o600)
+    os.replace(KEY + '.nuevo', KEY)
+
+
+def has_key():
+    return os.path.isfile(KEY) and bool(fingerprint())
+
+
+# ---------- Qué se guarda ----------
+
+def parts(st):
+    """[(ruta dentro de HOME)] de lo elegido (solo lo que existe)."""
+    que = st['copia']['que']
+    out = []
+    if 'ajustes' in que:
+        conf = os.path.join(comun.CONFIG, 'apogeo')
+        if os.path.isdir(conf):
+            out += [os.path.join(conf, n) for n in os.listdir(conf) if n != 'estudio.json' and not n.endswith('.nuevo')]
+    if 'tareas' in que:
+        out.append(os.path.join(comun.CONFIG, 'apogeo', 'estudio.json'))
+    if 'fondos' in que:
+        out += st['fondos']['tuyos']
+        out.append(comun.wallpaper_folder(st))
+        out.append(os.path.join(os.environ.get('XDG_DATA_HOME', os.path.join(HOME, '.local/share')), 'apogeo',
+                                'fondos-creditos.json'))
+    if 'estudios' in que:
+        out.append(os.path.join(HOME, 'Estudios'))
+    if 'documentos' in que:
+        try:
+            docs = subprocess.run(['xdg-user-dir', 'DOCUMENTS'], capture_output=True, text=True, timeout=3).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            docs = ''
+        if docs and docs != HOME:
+            out.append(docs)
+    home = HOME.rstrip('/') + '/'
+    rel = []
+    for p in out:
+        p = os.path.abspath(p)
+        if p.startswith(home) and os.path.exists(p):  # (lo de fuera de tu carpeta no viaja)
+            rel.append(os.path.relpath(p, HOME))
+    return sorted(set(rel))
+
+
+# ---------- Dónde ----------
+
+def findmnt(*args):
+    r = subprocess.run(['findmnt', '-J', '-o', 'TARGET,SOURCE,UUID,LABEL', *args], capture_output=True, text=True)
+    try:
+        return json.loads(r.stdout)['filesystems'][0]
+    except (ValueError, KeyError, IndexError):
+        return {}
+
+
+def choose(folder):
+    """Guarda dónde van las copias: el disco por su UUID (así se encuentra aunque se monte en otro sitio) y la carpeta."""
+    folder = os.path.realpath(folder)
+    fs = findmnt('-T', folder)
+    if not fs.get('uuid'):
+        raise RuntimeError('No se sabe en qué disco está esa carpeta')
+    if fs.get('uuid') == findmnt('-T', HOME).get('uuid'):
+        raise RuntimeError('Elige otro disco o un USB: en este mismo, si el disco falla, se pierde todo junto')
+    name = fs.get('label') or os.path.basename(fs.get('target', '')) or 'tu disco'
+    st = comun.load()
+    st['copia']['destino'] = {'uuid': fs['uuid'], 'carpeta': os.path.relpath(folder, fs['target']), 'nombre': name}
+    comun.save(st)
+    return name
+
+
+def mounted(uuid):
+    """El sitio donde está montado ese disco ('' si no lo está)."""
+    return findmnt('-n', '-S', f'UUID={uuid}').get('target', '') if uuid else ''
+
+
+def mount(uuid):
+    """Lo monta (como al abrirlo en Dolphin); devuelve dónde, o ''."""
+    dev = f'/dev/disk/by-uuid/{uuid}'
+    if not os.path.exists(dev):
+        return ''
+    subprocess.run(['udisksctl', 'mount', '--no-user-interaction', '-b', dev], capture_output=True, text=True, timeout=60)
+    return mounted(uuid)
+
+
+# ---------- Hacer ----------
+
+def make(sola=False):
+    st = comun.load()
+    cfg = st['copia']
+    dest = cfg['destino']
+    state = read_json(STATE, {})
+    if sola:
+        if not cfg['sola'] or not dest['uuid'] or not has_key():
+            return 0
+        if time.time() - state.get('fecha', 0) < EVERY:
+            return 0
+        if not os.path.exists(f'/dev/disk/by-uuid/{dest["uuid"]}'):
+            return 0  # el disco no está conectado
+    if not has_key():
+        raise RuntimeError('Primero pon la contraseña de la copia')
+    if not dest['uuid']:
+        raise RuntimeError('Primero elige dónde guardarla')
+    target = mounted(dest['uuid'])
+    we_mounted = False
+    if not target:
+        target = mount(dest['uuid'])
+        we_mounted = bool(target)
+    if not target:
+        raise RuntimeError(f'«{dest["nombre"]}» no está conectado')
+    try:
+        return _make(st, os.path.normpath(os.path.join(target, dest['carpeta'])), sola)
+    finally:
+        if we_mounted:
+            subprocess.run(['sync'])
+            subprocess.run(['udisksctl', 'unmount', '--no-user-interaction', '-b', f'/dev/disk/by-uuid/{dest["uuid"]}'],
+                           capture_output=True)
+
+
+def _make(st, folder, sola):
+    os.makedirs(folder, exist_ok=True)
+    paths = parts(st)
+    if not paths:
+        raise RuntimeError('No hay nada que guardar con lo que has marcado')
+    stamp = time.strftime('%Y-%m-%d')
+    name = f'Apogeo-{stamp}.apogeo'
+    if os.path.exists(os.path.join(folder, name)):
+        name = f'Apogeo-{stamp}-{time.strftime("%H%M")}.apogeo'
+    final = os.path.join(folder, name)
+    partial = final + '.parcial'
+    header = {'version': 1, 'fecha': int(time.time()), 'que': st['copia']['que'], 'home': HOME,
+              'clave': open(KEY).read()}
+    try:
+        with open(partial, 'wb') as out:
+            out.write(MAGIC)
+            out.write(json.dumps(header, ensure_ascii=False).encode() + b'\n')
+            out.flush()
+            tar = subprocess.Popen(['tar', '--zstd', '-C', HOME, '-cf', '-', '--', *paths], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+            enc = gpg(GNUPG, '--trust-model', 'always', '--compress-algo', 'none', '-r', fingerprint(), '--encrypt',
+                      stdin=tar.stdout, stdout=out, stderr=subprocess.PIPE)
+            tar.stdout.close()
+            tar_err = tar.stderr.read().decode(errors='replace')
+            tar.wait()
+        # tar acaba con 1 si un archivo cambia mientras se copia: la copia vale igual
+        if enc.returncode or tar.returncode not in (0, 1):
+            raise RuntimeError('No se ha podido escribir la copia' + (': ' + tar_err.strip().splitlines()[-1] if tar_err.strip() else ''))
+        os.replace(partial, final)
+    except BaseException:
+        try:
+            os.remove(partial)
+        except OSError:
+            pass
+        raise
+    size = os.path.getsize(final)
+    # Las más viejas fuera (solo las de Apogeo, en esta carpeta)
+    olds = sorted((f for f in os.listdir(folder) if f.startswith('Apogeo-') and f.endswith('.apogeo')),
+                  key=lambda f: os.path.getmtime(os.path.join(folder, f)), reverse=True)
+    for f in olds[st['copia']['guardar']:]:
+        try:
+            os.remove(os.path.join(folder, f))
+        except OSError:
+            pass
+    write_json(STATE, {'fecha': header['fecha'], 'archivo': name, 'tamano': size, 'donde': st['copia']['destino']['nombre']})
+    if sola:
+        notify('Copia de Apogeo hecha', f'En «{st["copia"]["destino"]["nombre"]}» ({comun.human(size)}). Ya puedes quitarlo.')
+    print(json.dumps({'archivo': final, 'tamano': size}))
+    return 0
+
+
+# ---------- Abrir ----------
+
+def read_header(path):
+    with open(path, 'rb') as f:
+        if f.readline() != MAGIC:
+            raise RuntimeError('Ese archivo no es una copia de Apogeo')
+        header = json.loads(f.readline())
+        return header, f.tell()
+
+
+def restore(path, password):
+    header, offset = read_header(path)
+    tmp = tempfile.mkdtemp(prefix='apogeo-copia-')
+    os.chmod(tmp, 0o700)
+    try:
+        r = gpg(tmp, '--import', input=header['clave'].encode(), capture_output=True)
+        if r.returncode:
+            raise RuntimeError('La copia está dañada (no tiene su llave)')
+        with open(path, 'rb') as f:
+            f.seek(offset)
+            # descifrar y desempaquetar a la vez (sin dejar los datos sin cifrar en ningún sitio intermedio)
+            out = os.path.join(tmp, 'datos')
+            os.makedirs(out)
+            p = subprocess.Popen(['tar', '--zstd', '-C', out, '-xf', '-'], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            dec = gpg(tmp, '--decrypt', passphrase=password, stdin=f, stdout=p.stdin, stderr=subprocess.PIPE)
+            p.stdin.close()
+            p.wait()
+        if dec.returncode:
+            err = dec.stderr.decode(errors='replace')
+            if 'bad passphrase' in err.lower() or 'no secret key' in err.lower():
+                raise RuntimeError('La contraseña no es esa')
+            raise RuntimeError('No se ha podido abrir la copia')
+        if p.returncode:
+            raise RuntimeError('La copia está incompleta o dañada')
+        # A su sitio: lo de la copia pisa lo que haya con el mismo nombre (lo demás se queda)
+        subprocess.run(['cp', '-a', '--', out + '/.', HOME + '/'], check=True)
+        _fix_paths(header.get('home', HOME))
+    finally:
+        subprocess.run(['gpgconf', '--homedir', tmp, '--kill', 'gpg-agent'], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+        shutil.rmtree(tmp, ignore_errors=True)
+    # Los pisos (y los widgets) leen lo recuperado
+    subprocess.run(['systemctl', '--user', 'restart', 'apogeo-pisos.service'], stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL)
+    return 0
+
+
+def _fix_paths(old_home):
+    """Si la copia era de otra cuenta (otra carpeta personal), las rutas de tus fondos apuntan aquí."""
+    if old_home == HOME:
+        return
+    st = comun.load()
+    fix = lambda p: HOME + p[len(old_home):] if isinstance(p, str) and p.startswith(old_home + '/') else p  # noqa: E731
+    st['fondos']['tuyos'] = [fix(p) for p in st['fondos']['tuyos']]
+    for k in comun.FLOOR_KEYS:
+        st['pisos'][k]['fondo'] = fix(st['pisos'][k]['fondo'])
+    comun.save(st)
+
+
+# ---------- Línea de órdenes ----------
+
+def main():
+    a = sys.argv[1:]
+    try:
+        if a == ['clave']:
+            lines = sys.stdin.read().split('\n')
+            if len(lines) < 2 or lines[0] != lines[1]:
+                raise RuntimeError('Las dos contraseñas no son iguales')
+            if len(lines[0]) < 8:
+                raise RuntimeError('Pon al menos 8 letras o números')
+            new_key(lines[0])
+            return 0
+        if a[:1] == ['hacer']:
+            return make(sola='--sola' in a)
+        if len(a) == 2 and a[0] == 'ver':
+            h, _ = read_header(a[1])
+            h.pop('clave', None)
+            print(json.dumps(h, ensure_ascii=False))
+            return 0
+        if len(a) == 2 and a[0] == 'recuperar':
+            return restore(a[1], sys.stdin.readline().rstrip('\n'))
+        if a == ['estado']:
+            print(json.dumps({**read_json(STATE, {}), 'clave': has_key()}, ensure_ascii=False))
+            return 0
+        if len(a) == 2 and a[0] == 'donde':
+            print(choose(a[1]))
+            return 0
+    except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as e:
+        print(str(e), file=sys.stderr)
+        if a[:1] == ['hacer'] and '--sola' in a:
+            notify('No se ha podido hacer la copia de Apogeo', str(e), 'dialog-warning')
+        return 1
+    print(__doc__.strip())
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())

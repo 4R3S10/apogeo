@@ -15,7 +15,13 @@ El escritorio son tres pisos, uno encima de otro: **Jugar**, **Navegar** y **Est
 sobre la columna de la derecha (o con un clic en su círculo) y las ventanas se deslizan como en un ascensor. Cada piso
 guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo en Jugar y más apagado en Estudiar).
 
-- **Avisos:** solo en Navegar; en Jugar y Estudiar no sale ninguno (se quedan en el historial).
+- **Avisos:** solo en Navegar; en Jugar y Estudiar no sale ninguno (se quedan en el historial). Al volver a un piso
+  con avisos sale el **resumen** («H3»): una tarjeta encima de la isla con lo que llegó («Has jugado 1 h 20 min»), lo
+  importante delante, «Ver todos» y un clic en un aviso abre su app. Se va sola al medio minuto
+  (`apogeo-resumen`, `sistema/usr/share/apogeo/resumen/`).
+- **Luz cálida en Estudiar por la noche:** la luz nocturna de KWin, solo en Estudiar: al anochecer en tu zona entra poco
+  a poco (Suave 4500 K de serie; Media y Fuerte en Ajustes → Pisos) y al amanecer se va. Tu zona sale de tu zona horaria,
+  sin preguntar a internet.
 - **Energía:** nunca «rendimiento». Jugar y Navegar en equilibrado, Estudiar en ahorro.
 - **La primera vez** que entras en un piso se abren sus apps (Jugar: la consola; Navegar: Ágape).
 
@@ -56,6 +62,8 @@ Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
 - **Juegos:** MangoHud, GameMode, ProtonPlus y Lutris.
 - **Multimedia:** OBS Studio, VLC, EasyEffects y qBittorrent.
 - **Utilidades:** LocalSend, KeePassXC, Obsidian y CoolerControl.
+- **Estudiar:** Okular (leer y subrayar PDFs), Anki (tarjetas de memoria) y Xournal++ (escribir a mano sobre apuntes).
+- **Sistema:** Mission Center (qué gasta el PC) y Warehouse (los Flatpak).
 - **ONLYOFFICE y Stremio:** no están en los repositorios de Arch. Los instala `apogeo-flatpaks` de Flathub, donde los dos
   están verificados por sus propias empresas, para todos los usuarios, una vez y en segundo plano cuando hay internet.
 - ChatGPT y Claude no van de serie (no tienen app oficial para Linux).
@@ -176,8 +184,33 @@ delante (que enseña la suya) ni con algo a pantalla completa.
 - **Pantalla de apagar:** una tarjeta con tu foto y Apagar, Reiniciar, Reposo y Cerrar sesión.
 - **Pantalla de carga** al entrar: la misma que al encender (el diamante, el brillo y la barra).
 - **Menú de arranque:** no sale; mantén pulsada una tecla al encender para verlo (con los colores de Apogeo).
-- **Apps de CachyOS** (bienvenida, tienda, núcleos, actualizador): escondidas, no quitadas. En su lugar, un aviso de
-  Apogeo cuando hay actualizaciones (uno al día como mucho; en Jugar y Estudiar se guarda para luego).
+- **Programas repetidos y apps de CachyOS, fuera** (una vez, después de actualizar: `apogeo-limpieza`): la bienvenida,
+  el instalador de paquetes, el gestor de núcleos, scx-manager, el actualizador y Shelly; Konsole y Alacritty (se queda
+  Ghostty), Spectacle (Flameshot), Haruna y mpv (VLC), Firefox (Ágape), btop, el Monitor del sistema y Filelight
+  (Stacer y Mission Center), vim, micro y la zsh de CachyOS (Kate y fish; zsh se queda si alguna cuenta entra con ella).
+  Si luego instalas alguno a mano, se queda. Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
+  En lugar del actualizador, un aviso de Apogeo cuando hay actualizaciones (uno al día como mucho; en Jugar y Estudiar
+  se guarda para luego).
+
+## Copia de Apogeo
+
+Ajustes → Copia: tus ajustes y pisos, tus fondos, `~/Estudios`, tus tareas y exámenes (y, si quieres, Documentos) en un
+archivo `.apogeo` cerrado con contraseña, en un USB, un disco o una carpeta de otro disco. Se hace **sola** al conectar
+ese USB si la última tiene una semana o más (lo monta, la guarda, lo desmonta y avisa) y con «Hacer copia ahora»; se
+guardan las 4 últimas. «Recuperar…» la abre con su contraseña y lo pone todo en su sitio.
+Va cerrada con GnuPG sin guardar la contraseña: la llave pública cierra las copias (por eso puede hacerse sola) y la
+privada, protegida con tu contraseña, va dentro de cada copia. Ágape tiene su propia copia (Personalizar → Avanzado).
+`sistema/usr/lib/apogeo/apogeo-copia` y `sistema/usr/share/apogeo/ajustes/CopiaSeccion.qml`.
+
+## Revisión después de actualizar
+
+Al acabar cada actualización, Apogeo se revisa y arregla lo que pueda (`apogeo-revision`): los servicios, el inicio de
+sesión, que no falten archivos y, en tu sesión, los pisos, la isla, la columna de pisos, el fondo, los scripts de KWin,
+el estilo y la música. Solo avisa si ha arreglado algo o si algo no ha podido arreglarlo.
+
+## Instalador (ISO) — decidido para cuando se haga
+
+- **Disco cifrado** (LUKS) de serie: la contraseña del disco se pide al encender.
 
 ## Ágape
 
