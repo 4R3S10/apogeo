@@ -541,8 +541,8 @@ class Floors:
         self.bus = bus
         self.system = system
         self.cookie = None
-        self.light_cookie = None   # la luz nocturna de KWin, apagada (inhibida) fuera de Estudiar
-        self.light_conf = None     # lo último que se escribió en kwinrc (para no reescribirlo en cada piso)
+        self.light_on = None       # la luz nocturna de KWin encendida (solo en Estudiar)
+        self.light_conf = None     # el calor que se escribió en kwinrc (para no reescribirlo en cada piso)
         self.missed = Missed(bus)  # los avisos que llegan mientras no salen (para el resumen al volver)
         self.visited = set()
         self.last = None
@@ -675,34 +675,24 @@ class Floors:
 
     def light(self, st, floor):
         """Luz cálida en Estudiar por la noche: la luz nocturna de KWin (sigue el día y la noche de tu zona: al anochecer
-        entra poco a poco y al amanecer se va), encendida con tu calor y apagada (inhibida) en los demás pisos. Si Plasma
-        no sabe dónde estás, tu zona sale de tu zona horaria (sin preguntar a internet)."""
+        entra poco a poco y al amanecer se va), encendida solo en Estudiar. Se enciende y se apaga con su ajuste (no
+        suspendiéndola: eso saca el aviso «Luz nocturna suspendida» al cambiar de piso). Si Plasma no sabe dónde estás, tu
+        zona sale de tu zona horaria (sin preguntar a internet)."""
         luz = st['luz']
-        conf = (luz['activa'], luz['calor'])
-        if conf != self.light_conf:
-            self.light_conf = conf
-            if luz['activa']:
-                lat = run_out('kreadconfig6', '--file', 'knighttimerc', '--group', 'Location', '--key', 'Latitude')
-                auto = run_out('kreadconfig6', '--file', 'knighttimerc', '--group', 'Location', '--key', 'Automatic')
-                if not lat and auto != 'false':
-                    lat, lon = zone_location()
-                    kwn('knighttimerc', 'Location', 'Automatic', 'false')
-                    kwn('knighttimerc', 'Location', 'Latitude', f'{lat:.2f}')
-                    kwn('knighttimerc', 'Location', 'Longitude', f'{lon:.2f}')
-                kwn('kwinrc', 'NightColor', 'NightTemperature', str(luz['calor']))
-                kwn('kwinrc', 'NightColor', 'Active', 'true')
-            else:
-                kwn('kwinrc', 'NightColor', 'Active', 'false')
-        try:
-            nl = dbus.Interface(self.bus.get_object('org.kde.KWin', '/org/kde/KWin/NightLight'), 'org.kde.KWin.NightLight')
-            off = floor != 'estudiar' or not luz['activa']
-            if off and self.light_cookie is None:
-                self.light_cookie = nl.inhibit()
-            elif not off and self.light_cookie is not None:
-                nl.uninhibit(dbus.UInt32(self.light_cookie))
-                self.light_cookie = None
-        except dbus.DBusException as e:
-            log('luz:', e.get_dbus_message())
+        if luz['activa'] and self.light_conf != luz['calor']:
+            self.light_conf = luz['calor']
+            lat = run_out('kreadconfig6', '--file', 'knighttimerc', '--group', 'Location', '--key', 'Latitude')
+            auto = run_out('kreadconfig6', '--file', 'knighttimerc', '--group', 'Location', '--key', 'Automatic')
+            if not lat and auto != 'false':
+                lat, lon = zone_location()
+                kwn('knighttimerc', 'Location', 'Automatic', 'false')
+                kwn('knighttimerc', 'Location', 'Latitude', f'{lat:.2f}')
+                kwn('knighttimerc', 'Location', 'Longitude', f'{lon:.2f}')
+            kwn('kwinrc', 'NightColor', 'NightTemperature', str(luz['calor']))
+        on = luz['activa'] and floor == 'estudiar'
+        if on != self.light_on:
+            self.light_on = on
+            kwn('kwinrc', 'NightColor', 'Active', 'true' if on else 'false')
 
     def power(self, profile):
         try:
