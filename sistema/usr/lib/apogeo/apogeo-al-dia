@@ -1,0 +1,248 @@
+#!/usr/bin/python3
+"""
+Todo lo de Jugar al día, solo cuando no juegas (nunca a mitad de partida ni gastando internet mientras juegas):
+
+  apogeo-al-dia sistema   (apogeo-al-dia.timer del sistema) los emuladores y demás Flatpak
+  apogeo-al-dia usuario   (apogeo-al-dia.timer de tu sesión) GE-Proton, AnyPS5 (y vuelve a convertir tus juegos de PS5
+                          con la versión nueva, también los que no iban), los núcleos de RetroArch y que Heroic ponga
+                          al día tus juegos de Epic solo
+Steam pone al día él solo sus juegos y Proton, y no descarga mientras juegas.
+Lo que viene de GitHub (GE-Proton y AnyPS5) se comprueba con su resumen (sha256 o sha512) antes de usarlo.
+"""
+import glob
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+import urllib.error
+import urllib.request
+import zipfile
+
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+
+UA = {'User-Agent': 'Apogeo/1.0 (https://github.com/4R3S10/apogeo)', 'Accept': 'application/vnd.github+json'}
+# Lo que es estar jugando: procesos de juegos, de Wine/Proton y de los emuladores
+PLAYING = re.compile(r'^(wineserver|wine64-preloader|wine-preloader|retroarch|pcsx2-qt|rpcs3|dolphin-emu|cemu|melonds|'
+                     r'azahar|ryujinx|gamescope|app\.elf)$', re.I)
+
+
+def log(*a):
+    print('[al-día]', *a, flush=True)
+
+
+def playing(uid=None):
+    """¿Alguien juega? (con uid, solo esa cuenta)."""
+    for pid in os.listdir('/proc'):
+        if not pid.isdigit():
+            continue
+        try:
+            if uid is not None and os.stat(f'/proc/{pid}').st_uid != uid:
+                continue
+            with open(f'/proc/{pid}/comm') as f:
+                comm = f.read().strip()
+            if PLAYING.match(comm):
+                return True
+            if comm == 'reaper':  # Steam lanza cada juego dentro de «reaper … SteamLaunch»
+                with open(f'/proc/{pid}/cmdline', 'rb') as f:
+                    if b'SteamLaunch' in f.read():
+                        return True
+        except OSError:
+            continue
+    r = subprocess.run(['gamemoded', '-s'], capture_output=True, text=True) if shutil.which('gamemoded') else None
+    return bool(r and 'is active' in r.stdout)
+
+
+def get(url, timeout=30):
+    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
+        return r.read()
+
+
+def download(url, dest, digest=None):
+    """Baja a dest comprobando el resumen («sha256:…» o «sha512:…»). Se para si empiezas a jugar."""
+    tmp = dest + '.parcial'
+    h = hashlib.new(digest.split(':')[0]) if digest else None
+    with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA['User-Agent']}), timeout=60) as r, \
+            open(tmp, 'wb') as f:
+        n = 0
+        while True:
+            chunk = r.read(1 << 20)
+            if not chunk:
+                break
+            f.write(chunk)
+            if h:
+                h.update(chunk)
+            n += 1
+            if n % 64 == 0 and playing(os.getuid() if os.getuid() else None):
+                raise InterruptedError('jugando')
+    if h and h.hexdigest() != digest.split(':', 1)[1]:
+        os.remove(tmp)
+        raise ValueError('el resumen no cuadra')
+    os.replace(tmp, dest)
+
+
+def latest(repo):
+    return json.loads(get(f'https://api.github.com/repos/{repo}/releases/latest'))
+
+
+# ---------- Sistema ----------
+
+def system():
+    if playing():
+        log('alguien juega: luego')
+        return 0
+    subprocess.run(['flatpak', 'update', '--system', '--noninteractive', '-y'], check=False)
+    subprocess.run(['flatpak', 'uninstall', '--system', '--unused', '--noninteractive', '-y'], check=False)
+    return 0
+
+
+# ---------- Tu sesión ----------
+
+HOME = os.path.expanduser('~')
+STATE = os.path.join(os.environ.get('XDG_STATE_HOME', os.path.join(HOME, '.local/state')), 'apogeo', 'al-dia.json')
+
+
+def ge_proton(state):
+    tools = os.path.join(HOME, '.local/share/Steam/compatibilitytools.d')
+    if not os.path.isdir(os.path.join(HOME, '.local/share/Steam')):
+        return
+    rel = latest('GloriousEggroll/proton-ge-custom')
+    tag = rel['tag_name']
+    if os.path.isdir(os.path.join(tools, tag)):
+        return
+    tar = next(a for a in rel['assets'] if a['name'].endswith('x86_64.tar.gz') or re.fullmatch(rf'{tag}\.tar\.gz', a['name']))
+    sha = next(a for a in rel['assets'] if a['name'] == tar['name'].replace('.tar.gz', '.sha512sum'))
+    digest = 'sha512:' + get(sha['browser_download_url']).decode().split()[0]
+    os.makedirs(tools, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=tools) as tmp:
+        path = os.path.join(tmp, tar['name'])
+        log('bajando', tag)
+        download(tar['browser_download_url'], path, digest)
+        with tarfile.open(path) as t:
+            t.extractall(tmp, filter='data')
+        os.rename(os.path.join(tmp, tag), os.path.join(tools, tag))
+    # Se quedan los dos últimos
+    olds = sorted(glob.glob(os.path.join(tools, 'GE-Proton*')), key=os.path.getmtime, reverse=True)
+    for d in olds[2:]:
+        shutil.rmtree(d, ignore_errors=True)
+    log('GE-Proton', tag)
+
+
+def anyps5(state):
+    import apogeo_juegos as juegos
+    rel = latest('boykopovar/AnyPS5')
+    tag = rel['tag_name']
+    base = juegos.ANYPS5
+    if os.path.exists(os.path.join(base, tag, 'relinker')):
+        return
+    assets = {a['name']: a for a in rel['assets']}
+    rl = assets.get(f'relinker-{tag}')
+    prx = assets.get(f'prx-linux-{tag}.tar.gz')
+    if not rl or not prx:
+        return
+    tmp = os.path.join(base, tag + '.nuevo')
+    shutil.rmtree(tmp, ignore_errors=True)
+    os.makedirs(tmp)
+    log('bajando AnyPS5', tag)
+    download(rl['browser_download_url'], os.path.join(tmp, 'relinker'), rl.get('digest'))
+    os.chmod(os.path.join(tmp, 'relinker'), 0o755)
+    download(prx['browser_download_url'], os.path.join(tmp, 'prx.tar.gz'), prx.get('digest'))
+    with tarfile.open(os.path.join(tmp, 'prx.tar.gz')) as t:
+        t.extractall(tmp, filter='data')
+    os.remove(os.path.join(tmp, 'prx.tar.gz'))
+    shutil.rmtree(os.path.join(base, tag), ignore_errors=True)
+    os.rename(tmp, os.path.join(base, tag))
+    link = os.path.join(base, 'actual')
+    if os.path.islink(link):
+        os.remove(link)
+    os.symlink(tag, link)
+    for d in glob.glob(os.path.join(base, 'v*')):
+        if os.path.basename(d) != tag:
+            shutil.rmtree(d, ignore_errors=True)
+    # Tus juegos de PS5, otra vez con la versión nueva (los convertidos y los que antes no iban)
+    for out in glob.glob(os.path.join(juegos.PS5_OUT, '*')):
+        name = os.path.basename(out).removesuffix('.fallo')
+        folder = os.path.join(juegos.JUEGOS, 'PS5', name)
+        if os.path.isdir(folder) and not out.endswith('.nuevo'):
+            juegos.convert_ps5(folder)
+    log('AnyPS5', tag)
+
+
+def cores(state):
+    import apogeo_juegos as juegos
+    r = subprocess.run(['flatpak', 'info', juegos.RA], capture_output=True)
+    if r.returncode:
+        return
+    os.makedirs(juegos.RA_CORES, exist_ok=True)
+    week = time.time() - 7 * 86400
+    for core in juegos.CORES:
+        path = os.path.join(juegos.RA_CORES, core + '.so')
+        if os.path.exists(path) and os.path.getmtime(path) > week:
+            continue
+        url = f'https://buildbot.libretro.com/nightly/linux/x86_64/latest/{core}.so.zip'
+        with tempfile.TemporaryDirectory() as tmp:
+            z = os.path.join(tmp, 'n.zip')
+            download(url, z)
+            with zipfile.ZipFile(z) as zf:
+                zf.extract(core + '.so', tmp)
+            os.replace(os.path.join(tmp, core + '.so'), path)
+        log('núcleo', core)
+
+
+def heroic(state):
+    """Que Heroic ponga al día tus juegos de Epic solo (y Steam ya no descarga mientras juegas)."""
+    import apogeo_juegos as juegos
+    path = os.path.join(juegos.HEROIC, 'config.json')
+    try:
+        with open(path) as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        return
+    d = cfg.setdefault('defaultSettings', {})
+    if d.get('autoUpdateGames') is True:
+        return
+    d['autoUpdateGames'] = True
+    with open(path + '.nuevo', 'w') as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(path + '.nuevo', path)
+
+
+def user():
+    if playing(os.getuid()):
+        log('jugando: luego')
+        return 0
+    try:
+        with open(STATE) as f:
+            state = json.load(f)
+    except (OSError, ValueError):
+        state = {}
+    for step in (heroic, cores, ge_proton, anyps5):
+        try:
+            step(state)
+        except InterruptedError:
+            log('has empezado a jugar: se sigue luego')
+            return 0
+        except Exception as e:  # sin internet, GitHub ocupado…: otra vez será
+            log(step.__name__, e)
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE, 'w') as f:
+        json.dump({**state, 'fecha': int(time.time())}, f)
+    return 0
+
+
+def main():
+    if sys.argv[1:] == ['sistema']:
+        return system()
+    if sys.argv[1:] == ['usuario']:
+        return user()
+    print(__doc__.strip())
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())

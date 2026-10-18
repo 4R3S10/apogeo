@@ -1,0 +1,10 @@
+[Unit]
+Description=Apogeo: GE-Proton, AnyPS5, núcleos de RetroArch y Heroic al día (si no juegas)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-al-dia usuario
+TimeoutStartSec=3h
+Nice=15
+IOSchedulingClass=idle

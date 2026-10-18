@@ -20,7 +20,7 @@ package_apogeo() {
     apogeo-programas                                          # los programas de serie (abajo)
     plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
     papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
-    python python-dbus python-gobject                         # los pisos
+    python python-dbus python-gobject python-evdev            # los pisos y la consola (el mando)
     python-pyqt6 qt6-declarative milou kirigami               # la bienvenida, los ajustes y el buscador
     pacman-contrib polkit gnupg                               # ajustes: actualizaciones; la copia de Apogeo
     kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)

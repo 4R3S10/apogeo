@@ -80,11 +80,25 @@ JetBrains Mono y los colores de Apogeo.
 
 ## Jugar
 
-- **Consola:** al entrar en el piso Jugar se abre a pantalla completa con todos tus juegos juntos (Steam, Epic y GOG con
-  Heroic, Hydra y los de Windows): el último en grande y el resto en fila. Teclado o mando: ← → elegir, Intro jugar,
-  Q/E cambiar de tienda, Esc salir.
-- **Tiendas:** Steam, Heroic (Epic y GOG), el lanzador oficial de Epic con Proton («Epic Games (oficial)», se instala la
-  primera vez) e Hydra (de su GitHub oficial, sin fuentes de descarga añadidas).
+- **Consola («C8 · Cinta panorámica»):** al entrar en el piso Jugar se abre a pantalla completa. Abajo, una cinta con las
+  portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte.
+  Arriba, **Inicio** y una pestaña por tienda o plataforma con toda tu biblioteca para **descargar y quitar**:
+  - **Steam:** los descargados y el resto de tu biblioteca (descargar y quitar los hace Steam).
+  - **Epic:** tu biblioteca de Heroic; descargar (con su progreso) y quitar con legendary, el de Heroic.
+  - **Emuladores:** tus copias de tus juegos en `~/Juegos/<sistema>/` (NES, SNES, N64, GB, GBC, GBA, Mega Drive, PS1, PSP,
+    PS2, PS3, GameCube, Wii, Wii U, DS, 3DS y Switch), con su portada de libretro-thumbnails. Emuladores de Flathub:
+    RetroArch, PCSX2, RPCS3, Dolphin, Cemu, melonDS, Azahar y Ryujinx. La BIOS va en `~/Juegos/BIOS`. Apogeo no trae ni
+    busca juegos: cada uno pone los suyos (`~/Juegos/LEEME.txt`).
+  - **PS5 (AnyPS5, experimental):** tus juegos volcados de tu PS5 en `~/Juegos/PS5/<juego>/` se convierten con AnyPS5 en
+    programas de Linux (sin emular). Por ahora van muy pocos; cada versión nueva de AnyPS5 los vuelve a probar sola.
+  - **Windows:** los que solo van en el Windows escondido (`~/.config/apogeo/juegos-windows.json`).
+  - Con el mando (lo lee la consola, sin Steam por medio) o el teclado: ← → elegir, A/Intro jugar o descargar, X/Supr
+    quitar, LB RB/Q E pestaña, ↓ bajar a Navegar. El botón central del mando trae la consola desde cualquier sitio.
+- **Al día solo (`apogeo-al-dia`), sin jugar:** cada 2 horas, si no estás jugando, se ponen al día los emuladores (Flatpak),
+  GE-Proton, AnyPS5, los núcleos de RetroArch y Heroic pone al día tus juegos de Epic. Steam lo hace él (y no descarga
+  mientras juegas).
+- **Tiendas:** Steam, Heroic (Epic), el lanzador oficial de Epic con Proton («Epic Games (oficial)») e Hydra (de su GitHub
+  oficial, sin fuentes de descarga añadidas).
 - **Modo partida (Meta+Tab, «S3 · Juego y Discord a la vez»):** con un juego a pantalla completa, el juego no se toca:
   sigue a su resolución, sin minimizarse ni pararse, que es lo que da tirones y fallos con Alt+Tab.
   - A la izquierda se ve en vivo, en pequeño (una imagen de KWin); debajo va lo que suena, con sus botones.
@@ -93,8 +107,8 @@ JetBrains Mono y los colores de Apogeo.
   - Lo hace el script de KWin `apogeo-partida`. Los juegos de SDL no se minimizan al perder el foco
     (`SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0`).
   - Alt+Tab sigue siendo el cambiador de ventanas de siempre.
-- **Juegos de Windows** (Valorant, EA FC…): se abrirán en el Windows escondido; la lista está en
-  `~/.config/apogeo/juegos-windows.json`.
+- **Juegos de Windows** (Valorant, EA FC…): se abrirán en el Windows escondido. Allí no hay Meta+Tab (Apogeo no está en
+  marcha): se usará el overlay de Discord y la Xbox Game Bar para Spotify.
 
 ## Bienvenida
 

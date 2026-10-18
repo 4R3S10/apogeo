@@ -45,7 +45,8 @@ def read_json(path, default):
 def system():
     fixed, failed = [], []
     # Servicios del sistema: la vigilancia de la temperatura y el inicio de sesión de Apogeo
-    for unit, what in (('apogeo-termico.service', 'la vigilancia de la temperatura'), ('sddm.service', 'el inicio de sesión')):
+    for unit, what in (('apogeo-termico.service', 'la vigilancia de la temperatura'), ('sddm.service', 'el inicio de sesión'),
+                       ('apogeo-al-dia.timer', 'lo de Jugar al día')):
         if sh('systemctl', 'is-enabled', unit)[1] != 'enabled':
             if sh('systemctl', 'enable', '-f', unit)[0] == 0:
                 fixed.append(what)
@@ -54,7 +55,7 @@ def system():
     # Los de cada sesión (para todas las cuentas)
     for unit, what in (('apogeo-pisos.service', 'los pisos'), ('apogeo-actualizaciones.timer', 'los avisos de actualización'),
                        ('apogeo-copia.timer', 'la copia sola'), ('apogeo-revision.service', 'esta revisión'),
-                       ('apogeo-revision.path', 'esta revisión')):
+                       ('apogeo-revision.path', 'esta revisión'), ('apogeo-al-dia.timer', 'lo de Jugar al día')):
         if sh('systemctl', '--global', 'is-enabled', unit)[1] != 'enabled':
             if sh('systemctl', '--global', 'enable', unit)[0] == 0:
                 if what not in fixed:

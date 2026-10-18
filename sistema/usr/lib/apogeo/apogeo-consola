@@ -1,0 +1,241 @@
+#!/usr/bin/python3
+"""
+La consola del piso Jugar («C8 · Cinta panorámica»): a pantalla completa, tus juegos descargados en una cinta abajo (el
+último jugado primero), con su portada; el elegido pinta la pantalla con su arte. Arriba, Inicio y una pestaña por
+tienda o plataforma (Steam, Epic, Emuladores, PS5 y Windows) con toda tu biblioteca para descargar y quitar.
+
+Con el mando (sin Steam por medio: lo lee este programa) o el teclado:
+  ← → elegir · A / Intro jugar o descargar · X / Supr quitar · LB RB / Q E pestaña · B / Esc atrás
+  el botón central del mando (PS o Xbox), desde cualquier sitio, trae la consola.
+
+  apogeo-consola            la abre (o la trae delante, si ya está)
+D-Bus: org.apogeo.Consola /Consola org.apogeo.Consola.Show
+La parte de los juegos es apogeo_juegos.py.
+"""
+import os
+import subprocess
+import sys
+import threading
+
+SERVICE, PATH, IFACE = 'org.apogeo.Consola', '/Consola', 'org.apogeo.Consola'
+QML = os.environ.get('APOGEO_CONSOLA_QML', '/usr/share/apogeo/consola/Consola.qml')
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+
+
+def already_running():
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        if not bus.name_has_owner(SERVICE):
+            return False
+        bus.get_object(SERVICE, PATH).Show(dbus_interface=IFACE)
+        return True
+    except dbus.DBusException:
+        return False
+
+
+def main():
+    if already_running():
+        return 0
+    os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
+    from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
+    from PyQt6.QtGui import QGuiApplication, QIcon
+    from PyQt6.QtQml import QQmlApplicationEngine
+    import apogeo_juegos as juegos
+    import apogeo_comun as comun
+
+    class Consola(QObject):
+        changed = pyqtSignal()
+        shown = pyqtSignal()
+        pad = pyqtSignal(str, arguments=['button'])   # el mando: izquierda, derecha, a, b, x, y, lb, rb
+        _ready = pyqtSignal(object)                   # (de un hilo al principal)
+
+        def __init__(self):
+            super().__init__()
+            self._tabs = {k: [] for k in ('inicio', 'steam', 'epic', 'emuladores', 'ps5', 'windows')}
+            self._tabs.update(descargas={}, emuladoresHay={}, anyps5=False)
+            self._loading = False
+            self._ready.connect(self._set)
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.refresh)
+            self.timer.start(20000)
+            juegos.prepare_folders()
+            self.refresh()
+
+        @pyqtProperty('QVariantMap', notify=changed)
+        def tabs(self):
+            return self._tabs
+
+        @pyqtProperty(str, constant=True)
+        def avatar(self):
+            try:
+                path = comun.Accounts().get('IconFile')
+                return 'file://' + path if path and os.path.isfile(path) else ''
+            except Exception:
+                return ''
+
+        @pyqtProperty(str, constant=True)
+        def folder(self):
+            return juegos.JUEGOS
+
+        @pyqtSlot()
+        def refresh(self):
+            """Todo otra vez (en otro hilo: leer las tiendas tarda un poco)."""
+            if self._loading:
+                return
+            self._loading = True
+
+            def work():
+                try:
+                    data = juegos.tabs()
+                except Exception as e:  # una tienda con un archivo raro no deja la consola vacía
+                    print('[consola]', e, file=sys.stderr)
+                    data = None
+                self._ready.emit(data)
+                if data:
+                    juegos.cache_boxarts(data['emuladores'])
+            threading.Thread(target=work, daemon=True).start()
+
+        def _set(self, data):
+            self._loading = False
+            if data:
+                self._tabs = data
+                self.changed.emit()
+            # Mientras algo se baja o se quita, se mira cada 2 segundos
+            self.timer.setInterval(2000 if self._tabs.get('descargas') else 20000)
+
+        @pyqtSlot('QVariant', result=str)
+        def play(self, g):
+            g = g.toVariant() if hasattr(g, 'toVariant') else g
+            msg = juegos.play(g)
+            if not msg:
+                QTimer.singleShot(1500, self.refresh)
+            return msg
+
+        @pyqtSlot('QVariant', result=str)
+        def install(self, g):
+            g = g.toVariant() if hasattr(g, 'toVariant') else g
+            msg = juegos.install(g)
+            QTimer.singleShot(800, self.refresh)
+            return msg
+
+        @pyqtSlot('QVariant', result=str)
+        def uninstall(self, g):
+            g = g.toVariant() if hasattr(g, 'toVariant') else g
+            msg = juegos.uninstall(g)
+            QTimer.singleShot(800, self.refresh)
+            return msg
+
+        @pyqtSlot(str)
+        def open(self, what):
+            """Abre una tienda, un emulador o tu carpeta de juegos."""
+            cmd = {'steam': ['steam'], 'epic': ['heroic'], 'carpeta': ['xdg-open', juegos.JUEGOS],
+                   'hydra': ['hydralauncher']}.get(what) or (['flatpak', 'run', what] if '.' in what else None)
+            if cmd:
+                juegos.detach(cmd)
+
+        @pyqtSlot(int)
+        def floor(self, n):
+            subprocess.Popen(['/usr/lib/apogeo/apogeo-pisos', 'ir', str(n)], start_new_session=True)
+
+    @pyqtClassInfo('D-Bus Interface', IFACE)
+    class Adaptor(QDBusAbstractAdaptor):
+        @pyqtSlot()
+        def Show(self):
+            self.parent().shown.emit()
+
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Jugar')
+    app.setDesktopFileName('apogeo-consola')
+    app.setWindowIcon(QIcon.fromTheme('input-gaming'))
+    bus = QDBusConnection.sessionBus()
+    if not bus.registerService(SERVICE):
+        return 0
+    consola = Consola()
+    Adaptor(consola)
+    bus.registerObject(PATH, consola)
+    engine = QQmlApplicationEngine()
+    if os.environ.get('APOGEO_QML_DIR'):
+        engine.addImportPath(os.environ['APOGEO_QML_DIR'])
+    engine.rootContext().setContextProperty('consola', consola)
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    threading.Thread(target=gamepads, args=(consola,), daemon=True).start()
+    return app.exec()
+
+
+# ---------- El mando ----------
+
+def gamepads(consola):
+    """Lee los mandos (evdev) y se los pasa a la consola (que solo hace caso con su ventana delante). El botón central la
+    trae siempre."""
+    try:
+        import evdev
+        from evdev import ecodes as e
+    except ImportError:
+        return
+    import selectors
+    import time
+    names = {e.BTN_SOUTH: 'a', e.BTN_EAST: 'b', e.BTN_WEST: 'x', e.BTN_NORTH: 'y', e.BTN_TL: 'lb', e.BTN_TR: 'rb',
+             e.BTN_START: 'start', e.BTN_DPAD_LEFT: 'izquierda', e.BTN_DPAD_RIGHT: 'derecha',
+             e.BTN_DPAD_UP: 'arriba', e.BTN_DPAD_DOWN: 'abajo'}
+    sel = selectors.DefaultSelector()
+    known = {}
+    stick = {}  # dispositivo → -1/0/1 en horizontal (para no repetir)
+
+    def scan():
+        for path in evdev.list_devices():
+            if path in known:
+                continue
+            try:
+                d = evdev.InputDevice(path)
+                keys = d.capabilities().get(e.EV_KEY, [])
+                if e.BTN_SOUTH not in keys and e.BTN_GAMEPAD not in keys:
+                    d.close()
+                    continue
+                known[path] = d
+                sel.register(d, selectors.EVENT_READ)
+            except OSError:
+                pass
+
+    def send(button):
+        if button == 'guia':
+            consola.shown.emit()
+        else:
+            consola.pad.emit(button)
+
+    last_scan = 0
+    while True:
+        if time.time() - last_scan > 3:  # mandos que se conectan después
+            scan()
+            last_scan = time.time()
+        for key, _ in sel.select(timeout=1):
+            d = key.fileobj
+            try:
+                for ev in d.read():
+                    if ev.type == e.EV_KEY and ev.value == 1:
+                        if ev.code == e.BTN_MODE:
+                            send('guia')
+                        elif ev.code in names:
+                            send(names[ev.code])
+                    elif ev.type == e.EV_ABS and ev.code in (e.ABS_HAT0X, e.ABS_HAT0Y) and ev.value:
+                        send({(e.ABS_HAT0X, -1): 'izquierda', (e.ABS_HAT0X, 1): 'derecha',
+                              (e.ABS_HAT0Y, -1): 'arriba', (e.ABS_HAT0Y, 1): 'abajo'}[(ev.code, ev.value)])
+                    elif ev.type == e.EV_ABS and ev.code == e.ABS_X:
+                        info = d.absinfo(e.ABS_X)
+                        mid = (info.max + info.min) / 2
+                        span = (info.max - info.min) / 2 or 1
+                        pos = (ev.value - mid) / span
+                        state = -1 if pos < -0.6 else 1 if pos > 0.6 else 0
+                        if state != stick.get(d.path, 0) and state:
+                            send('izquierda' if state < 0 else 'derecha')
+                        stick[d.path] = state
+            except OSError:  # desconectado
+                sel.unregister(d)
+                known.pop(d.path, None)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

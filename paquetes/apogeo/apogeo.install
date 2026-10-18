@@ -24,7 +24,8 @@ post_upgrade() {
 
 # La copia sola (cada día mira si toca; también al conectar el USB) y la revisión de cada sesión después de actualizar
 _copia_revision() {
-  systemctl --global enable apogeo-copia.timer apogeo-revision.service apogeo-revision.path
+  systemctl --global enable apogeo-copia.timer apogeo-revision.service apogeo-revision.path apogeo-al-dia.timer
+  systemctl enable --now apogeo-al-dia.timer 2>/dev/null || true   # lo de Jugar al día, sin jugar
 }
 
 # Los programas de serie (apogeo-programas): ONLYOFFICE y Stremio de Flathub (en segundo plano, con internet) y
@@ -32,9 +33,11 @@ _copia_revision() {
 _programas() {
   systemctl enable --now --no-block apogeo-flatpaks.service 2>/dev/null || true
   systemctl enable apogeo-limpieza.service 2>/dev/null || true  # (se pone en marcha al acabar: zz-apogeo-revision)
-  getent group vboxusers >/dev/null || return 0
+  # VirtualBox (vboxusers) y los juegos de PS5 con AnyPS5 (kvm: /dev/udmabuf)
   awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' /etc/passwd | while read -r u; do
-    gpasswd -a "$u" vboxusers >/dev/null 2>&1 || true
+    for g in vboxusers kvm; do
+      getent group "$g" >/dev/null && gpasswd -a "$u" "$g" >/dev/null 2>&1 || true
+    done
   done
 }
 
@@ -52,5 +55,6 @@ pre_remove() {
   systemctl disable apogeo-limpieza.service 2>/dev/null || true
   systemctl --global disable apogeo-pisos.service
   systemctl --global disable apogeo-actualizaciones.timer
-  systemctl --global disable apogeo-copia.timer apogeo-revision.service apogeo-revision.path
+  systemctl --global disable apogeo-copia.timer apogeo-revision.service apogeo-revision.path apogeo-al-dia.timer
+  systemctl disable apogeo-al-dia.timer 2>/dev/null || true
 }

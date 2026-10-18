@@ -1,9 +1,14 @@
 #!/bin/sh
-# ONLYOFFICE y Stremio no están en los repositorios de Arch: se instalan de Flathub (los dos verificados por sus propias
-# empresas), para todos los usuarios. Lo lanza apogeo-flatpaks.service una vez, con internet; si falla, al siguiente
-# arranque vuelve a intentarlo.
+# Lo que no está en los repositorios de Arch se instala de Flathub (verificado por sus autores), para todos los
+# usuarios: ONLYOFFICE, Stremio y los emuladores de Jugar (RetroArch para las clásicas, PCSX2, RPCS3, Dolphin, Cemu,
+# melonDS, Azahar y Ryujinx). Los emuladores pueden leer y guardar en ~/Juegos. Lo lanza apogeo-flatpaks.service una
+# vez, con internet; si falla, al siguiente arranque vuelve a intentarlo. Los pone al día apogeo-al-dia (sin jugar).
 set -e
 flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install --system --noninteractive -y flathub org.onlyoffice.desktopeditors com.stremio.Stremio
+EMUS="org.libretro.RetroArch net.pcsx2.PCSX2 net.rpcs3.RPCS3 org.DolphinEmu.dolphin-emu info.cemu.Cemu net.kuribo64.melonDS org.azahar_emu.Azahar io.github.ryubing.Ryujinx"
+flatpak install --system --noninteractive -y flathub org.onlyoffice.desktopeditors com.stremio.Stremio $EMUS
+for app in $EMUS; do
+  flatpak override --system --filesystem=~/Juegos "$app"
+done
 mkdir -p /var/lib/apogeo
-touch /var/lib/apogeo/flatpaks-1
+touch /var/lib/apogeo/flatpaks-2

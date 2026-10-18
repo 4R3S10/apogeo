@@ -1,214 +1,40 @@
 #!/usr/bin/python3
 """
-Los juegos de Apogeo, todos juntos, para la consola del piso Jugar:
+Los juegos de Apogeo desde la línea de órdenes (la consola los usa directamente: apogeo_juegos.py).
 
-  apogeo-juegos lista                 JSON con los juegos de Steam, Epic/GOG (Heroic), Hydra y los de Windows
-  apogeo-juegos jugar TIENDA ID       abre el juego (Steam, Heroic, Hydra o el Windows escondido) y aparta la consola
+  apogeo-juegos lista                 JSON con lo de cada pestaña de la consola
+  apogeo-juegos jugar TIENDA ID       abre ese juego (de la lista)
   apogeo-juegos consola               trae la consola delante (o la abre si no está)
-
-Solo lee las listas que cada tienda guarda en tu carpeta; no entra en tus cuentas.
 """
-import glob
 import json
 import os
-import re
-import shutil
 import subprocess
 import sys
-import time
 
-HOME = os.environ.get('APOGEO_JUEGOS_HOME', os.path.expanduser('~'))  # para probarlo con una carpeta de mentira
-STEAM = os.path.join(HOME, '.local/share/Steam')
-# Heroic instalado como paquete (CachyOS) o como Flatpak
-HEROIC = next((d for d in (os.path.join(HOME, '.config/heroic'),
-                           os.path.join(HOME, '.var/app/com.heroicgameslauncher.hgl/config/heroic')) if os.path.isdir(d)),
-              os.path.join(HOME, '.config/heroic'))
-WINDOWS_LIST = os.path.join(HOME, '.config/apogeo/juegos-windows.json')
-STEAM_CDN = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{}/{}'
-# Lo que Steam instala pero no son juegos
-NOT_GAMES = re.compile(r'Proton|Steam Linux Runtime|Steamworks|SteamVR|Redistributable', re.I)
-
-
-def vdf_values(text, key):
-    return re.findall(r'"%s"\s+"([^"]*)"' % re.escape(key), text, re.I)
-
-
-def steam_games():
-    games = []
-    libs = [os.path.join(STEAM, 'steamapps')]
-    try:
-        with open(os.path.join(STEAM, 'steamapps/libraryfolders.vdf')) as f:
-            libs += [os.path.join(p, 'steamapps') for p in vdf_values(f.read(), 'path')]
-    except OSError:
-        pass
-    seen = set()
-    for lib in dict.fromkeys(libs):
-        for acf in glob.glob(os.path.join(lib, 'appmanifest_*.acf')):
-            try:
-                with open(acf, encoding='utf-8', errors='replace') as f:
-                    text = f.read()
-            except OSError:
-                continue
-            appid = (vdf_values(text, 'appid') or [''])[0]
-            name = (vdf_values(text, 'name') or [''])[0]
-            if not appid or appid in seen or NOT_GAMES.search(name):
-                continue
-            seen.add(appid)
-            cache = os.path.join(STEAM, 'appcache/librarycache', appid)
-            cover = next(iter(sorted(glob.glob(f'{cache}/**/library_600x900*.jpg', recursive=True)
-                                     + glob.glob(f'{cache}/**/library_capsule*.jpg', recursive=True))), '')
-            hero = next(iter(sorted(glob.glob(f'{cache}/**/library_hero*.jpg', recursive=True))), '')
-            games.append({
-                'store': 'steam', 'id': appid, 'name': name,
-                'cover': 'file://' + cover if cover else STEAM_CDN.format(appid, 'library_600x900.jpg'),
-                'hero': 'file://' + hero if hero else STEAM_CDN.format(appid, 'library_hero.jpg'),
-                'last': int((vdf_values(text, 'LastPlayed') or ['0'])[0] or 0),
-                'installed': True,
-            })
-    return games
-
-
-def heroic_games():
-    games = []
-    for runner, path, key in (('legendary', 'legendary_library.json', 'library'), ('gog', 'gog_library.json', 'games')):
-        try:
-            with open(os.path.join(HEROIC, 'store_cache', path)) as f:
-                items = json.load(f).get(key, [])
-        except (OSError, ValueError):
-            continue
-        for g in items:
-            if not isinstance(g, dict) or not g.get('app_name'):
-                continue
-            games.append({
-                'store': 'epic' if runner == 'legendary' else 'gog', 'runner': runner,
-                'id': g['app_name'], 'name': g.get('title') or g['app_name'],
-                'cover': g.get('art_square') or g.get('art_cover') or '',
-                'hero': g.get('art_background') or g.get('art_cover') or '',
-                'last': 0, 'installed': bool(g.get('is_installed')),
-            })
-    return games
-
-
-def windows_games():
-    """Los que solo van en Windows (anticheat del núcleo). Se pueden añadir más en ~/.config/apogeo/juegos-windows.json."""
-    if not os.path.exists(WINDOWS_LIST):
-        os.makedirs(os.path.dirname(WINDOWS_LIST), exist_ok=True)
-        with open(WINDOWS_LIST, 'w') as f:
-            json.dump([{'id': 'valorant', 'name': 'VALORANT'}, {'id': 'eafc', 'name': 'EA SPORTS FC 26'}], f, indent=2)
-    try:
-        with open(WINDOWS_LIST) as f:
-            items = json.load(f)
-    except (OSError, ValueError):
-        return []
-    return [{'store': 'windows', 'id': g['id'], 'name': g.get('name', g['id']), 'cover': g.get('cover', ''),
-             'hero': g.get('hero', ''), 'last': g.get('last', 0), 'installed': True}
-            for g in items if isinstance(g, dict) and g.get('id')]
-
-
-# Las tiendas, para abrirlas desde la consola: (id, nombre, tienda, programa, icono)
-APPS = [
-    ('steam', 'Steam', 'steam', 'steam', 'steam'),
-    ('heroic', 'Heroic', 'epic', 'heroic', 'heroic'),
-    ('epic-oficial', 'Epic Games', 'epic', 'apogeo-epic', 'input-gaming'),
-    ('hydra', 'Hydra', 'hydra', 'hydralauncher', 'hydralauncher'),
-]
-
-
-def apps():
-    return [{'store': store, 'id': gid, 'name': name, 'cover': '', 'hero': '', 'last': 0, 'installed': True,
-             'app': True, 'icon': icon} for gid, name, store, exe, icon in APPS if shutil.which(exe)]
-
-
-def listing():
-    # Primero tus juegos (los últimos jugados delante), después las tiendas y al final los que van en Windows
-    games = steam_games() + heroic_games()
-    games.sort(key=lambda g: (-g.get('last', 0), g['name'].lower()))
-    windows = windows_games()
-    windows.sort(key=lambda g: (-g.get('last', 0), g['name'].lower()))
-    return games + apps() + windows
-
-
-def kwin(js):
-    """Ejecuta un momento un script de KWin (para mover la ventana de la consola)."""
-    import tempfile
-    import dbus
-    with tempfile.NamedTemporaryFile('w', suffix='.js', dir=os.environ.get('XDG_RUNTIME_DIR'), delete=False) as f:
-        f.write(js)
-    try:
-        scripting = dbus.Interface(dbus.SessionBus().get_object('org.kde.KWin', '/Scripting'), 'org.kde.kwin.Scripting')
-        name = 'apogeo-consola-' + str(os.getpid())
-        sid = scripting.loadScript(f.name, name, signature='ss')
-        dbus.SessionBus().get_object('org.kde.KWin', f'/Scripting/Script{sid}').run(dbus_interface='org.kde.kwin.Script')
-        time.sleep(0.3)
-        scripting.unloadScript(name)
-    except Exception:  # sin KWin (pruebas): no pasa nada
-        pass
-    finally:
-        os.remove(f.name)
-
-
-CONSOLE = 'w.caption === "Jugar" && (w.resourceClass || "").indexOf("plasmawindowed") >= 0'
-
-
-def hide_console():
-    """Al abrir algo, la consola (a pantalla completa) se aparta para que se vea."""
-    kwin('for (const w of workspace.windowList()) { if (%s) w.minimized = true; }' % CONSOLE)
-
-
-def show_console():
-    """La consola delante; si no está abierta, se abre."""
-    if subprocess.run(['pgrep', '-f', 'plasmawindowed org.apogeo.consola'], stdout=subprocess.DEVNULL).returncode:
-        detach(['apogeo-consola'])
-        return
-    kwin('for (const w of workspace.windowList()) { if (%s) { w.minimized = false; workspace.activeWindow = w; } }'
-         % CONSOLE)
-
-
-def detach(cmd):
-    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-
-
-def play(store, gid):
-    app = next((a for a in APPS if a[0] == gid and a[2] == store), None)
-    if app:
-        detach([app[3]])
-        hide_console()
-        return 0
-    if store == 'steam':
-        detach(['steam', '-silent', f'steam://rungameid/{gid}'])
-    elif store in ('epic', 'gog'):
-        runner = 'legendary' if store == 'epic' else 'gog'
-        detach(['xdg-open', f'heroic://launch?appName={gid}&runner={runner}'])
-    elif store == 'windows':
-        detach(['/usr/lib/apogeo/apogeo-windows', gid])
-    else:
-        return 1
-    hide_console()
-    # Se apunta cuándo se jugó a los de Windows (Steam lo apunta solo)
-    if store == 'windows':
-        try:
-            with open(WINDOWS_LIST) as f:
-                items = json.load(f)
-            for g in items:
-                if g.get('id') == gid:
-                    g['last'] = int(time.time())
-            with open(WINDOWS_LIST, 'w') as f:
-                json.dump(items, f, indent=2)
-        except (OSError, ValueError):
-            pass
-    return 0
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+import apogeo_juegos as juegos  # noqa: E402
 
 
 def main():
-    if len(sys.argv) >= 2 and sys.argv[1] == 'lista':
-        json.dump(listing(), sys.stdout, ensure_ascii=False)
+    a = sys.argv[1:]
+    if a[:1] == ['lista']:
+        json.dump(juegos.tabs(), sys.stdout, ensure_ascii=False)
         return 0
-    if len(sys.argv) >= 2 and sys.argv[1] == 'consola':
-        show_console()
+    if a[:1] == ['consola']:
+        subprocess.Popen(['apogeo-consola'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return 0
-    if len(sys.argv) >= 4 and sys.argv[1] == 'jugar':
-        return play(sys.argv[2], sys.argv[3])
-    print(__doc__)
+    if len(a) == 3 and a[0] == 'jugar':
+        tabs = juegos.tabs()
+        g = next((g for k in ('steam', 'epic', 'emuladores', 'ps5', 'windows') for g in tabs[k]
+                  if g['store'] == a[1] and g['id'] == a[2]), None)
+        if not g:
+            print('No está ese juego', file=sys.stderr)
+            return 1
+        msg = juegos.play(g)
+        if msg:
+            print(msg, file=sys.stderr)
+        return 1 if msg else 0
+    print(__doc__.strip())
     return 2
 
 

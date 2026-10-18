@@ -1,0 +1,10 @@
+[Unit]
+Description=Apogeo: mirar cada 2 horas si hay algo de Jugar que poner al día
+
+[Timer]
+OnBootSec=20min
+OnUnitActiveSec=2h
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

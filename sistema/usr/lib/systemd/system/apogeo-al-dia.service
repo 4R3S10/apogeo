@@ -1,0 +1,10 @@
+[Unit]
+Description=Apogeo: emuladores y demás Flatpak al día (si nadie juega)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-al-dia sistema
+Nice=15
+IOSchedulingClass=idle

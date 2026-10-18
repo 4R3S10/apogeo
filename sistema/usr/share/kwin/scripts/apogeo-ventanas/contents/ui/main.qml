@@ -1,9 +1,7 @@
 import QtQuick
 import org.kde.kwin
 
-// Ventanas de Apogeo:
-//  - La consola del piso Jugar se abre a pantalla completa. KWin no lo aplica hasta que la ventana tiene su título y se
-//    ve, así que se reintenta un momento después de aparecer.
+// Ventanas de Apogeo (la consola del piso Jugar se pone ella sola a pantalla completa):
 //  - La música (apogeo-musica) va abajo a la izquierda, encima de todo, en todos los pisos y fuera de la barra de
 //    tareas y del cambiador de ventanas. Se esconde con Ágape delante (Ágape enseña la suya en el mismo sitio), con
 //    una ventana a pantalla completa (un juego, la consola) y en Navegar con el escritorio a la vista (allí ya está el
@@ -12,15 +10,10 @@ import org.kde.kwin
 //    en todos los pisos (sale al cambiar de piso, mientras se deslizan).
 Item {
     id: root
-    property var pending: []
     property var music: null
 
     function added(w) {
         const cls = (w.resourceClass || "") + " " + (w.desktopFileName || "");
-        if (w.normalWindow && cls.indexOf("plasmawindowed") >= 0) {
-            pending.push(w);
-            retry.start();
-        }
         if (cls.indexOf("apogeo-resumen") >= 0) summary(w);
         if (cls.indexOf("apogeo-musica") >= 0) {
             music = w;
@@ -72,11 +65,6 @@ Item {
         if (music.minimized !== busy) music.minimized = busy;
     }
 
-    function console_(w) {
-        if (w.caption !== "Jugar") return false;
-        w.fullScreen = true;
-        return w.fullScreen;
-    }
     Component.onCompleted: Workspace.windows.forEach(added)
     Connections {
         target: Workspace
@@ -84,15 +72,6 @@ Item {
         function onWindowRemoved(w) { root.removed(w) }
         function onWindowActivated(w) { root.hideMusic() }
         function onCurrentDesktopChanged() { root.hideMusic() }
-    }
-    Timer {
-        id: retry
-        interval: 150
-        repeat: true
-        onTriggered: {
-            root.pending = root.pending.filter(x => x && !root.console_(x));
-            if (!root.pending.length) stop();
-        }
     }
     Timer { // por si una ventana se pone a pantalla completa sin cambiar de ventana activa
         interval: 1000
