@@ -13,16 +13,24 @@ import org.kde.taskmanager as TaskManager
 WallpaperItem {
     id: root
 
+    TaskManager.VirtualDesktopInfo { id: desktops }
     readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces"]
-    readonly property int kind: Math.max(0, styles.indexOf(root.configuration.Estilo))
-    readonly property string file: root.configuration.Archivo || ""
+    // El piso en el que estás (por el nombre del escritorio) y su fondo; en la pantalla de bloqueo, el de «Estilo»/«Archivo»
+    readonly property string floorName: {
+        const i = desktops.desktopIds.indexOf(desktops.currentDesktop);
+        const n = i >= 0 ? String(desktops.desktopNames[i] || "") : "";
+        return ["Jugar", "Navegar", "Estudiar"].indexOf(n) >= 0 ? n : "";
+    }
+    readonly property bool porPiso: root.configuration.PorPiso && floorName !== ""
+    readonly property string estilo: porPiso ? root.configuration["Estilo" + floorName] : root.configuration.Estilo
+    readonly property int kind: Math.max(0, styles.indexOf(estilo))
+    readonly property string file: (porPiso ? root.configuration["Archivo" + floorName] : root.configuration.Archivo) || ""
     function videoFile(f) { return /\.(mp4|webm|mkv|mov|m4v)$/i.test(f) }
     // Sin gráfica (el dibujo lo haría el procesador) se queda quieto: primero la salud del equipo
     readonly property bool animate: root.configuration.Animar && GraphicsInfo.api !== GraphicsInfo.Software
     property real time: 40
 
     // ¿Hay algo maximizado o a pantalla completa en este escritorio? Entonces el fondo no se ve: ni animar ni reproducir
-    TaskManager.VirtualDesktopInfo { id: desktops }
     TaskManager.TasksModel {
         id: tasks
         filterByVirtualDesktop: true

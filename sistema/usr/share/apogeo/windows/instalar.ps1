@@ -2,7 +2,7 @@
 # preparado para que Apogeo lo use solo para los juegos que no van en Apogeo:
 #  - C:\Apogeo con el puente (lo que ves al entrar), la tarea de arranque, el logo y la letra de Apogeo;
 #  - la tarea «Apogeo-Arranque» (como SISTEMA al encender: lee la nota de Apogeo y, al acabar, vuelve);
-#  - tu cuenta entra directamente en el puente en vez de en el escritorio (el escritorio sigue a mano: «Ir a Windows a
+#  - Windows entra solo (tu contraseña, cifrada en Windows: entrar-solo.ps1) y tu cuenta va directa al puente en vez de al escritorio (el escritorio sigue a mano: «Ir a Windows a
 #    instalar» desde la consola de Apogeo, o encender Windows a mano);
 #  - sin inicio rápido (Windows apagado del todo: si no, el disco se queda a medias y Apogeo no puede dejar su nota).
 # Para quitarlo: desinstalar.cmd.
@@ -48,15 +48,8 @@ Set-ItemProperty -Path $clave -Name Shell -Value "wscript.exe `"$Base\puente.vbs
 # ---------- Windows apagado del todo (sin inicio rápido ni hibernación) ----------
 powercfg /h off | Out-Null
 
-# ---------- Entrar sin escribir la contraseña ----------
-# Windows 11 esconde la casilla «Los usuarios deben escribir su nombre y contraseña»: se enseña y se abre la ventana
-# para que la quites tú (te pedirá tu contraseña: la guarda Windows, no Apogeo)
-New-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device' -Force | Out-Null
-Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device' -Name DevicePasswordLessBuildVersion -Value 0 -Type DWord
-
-Write-Host "  Listo. Falta una cosa que tienes que hacer tú:" -ForegroundColor Green
-Write-Host "  en la ventana que se abre, quita la casilla «Los usuarios deben escribir su nombre y contraseña»,"
-Write-Host "  pulsa Aceptar y escribe tu contraseña de Windows. Así Windows entra solo al ir a jugar.`n"
-Start-Process netplwiz -Wait
-Write-Host "  Ya está. Reinicia para volver a Apogeo (desde ahora, Windows se abre solo para tus juegos)." -ForegroundColor Green
+# ---------- Entrar sin escribir la contraseña (directo al juego) ----------
+Copy-Item -Force "$Origen\entrar-solo.ps1" "$Base\entrar-solo.ps1"
+. "$Origen\entrar-solo.ps1"
+Write-Host "`n  Ya está. Pulsa «Volver a Apogeo» o reinicia: desde ahora Windows se abre solo para tus juegos." -ForegroundColor Green
 Read-Host "  Pulsa Intro para cerrar"

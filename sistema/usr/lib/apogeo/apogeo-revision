@@ -101,6 +101,20 @@ def user():
             break
         time.sleep(1)
     time.sleep(8)  # (y a que los pisos hayan hecho lo suyo)
+
+    # Si Plasma se está reiniciando (los pisos lo hacen a veces al entrar), se espera a que lleve un rato quieto: mirar a
+    # media carga daba «falta la isla» y otro reinicio más
+    def plasma_age():
+        code, out = sh('systemctl', '--user', 'show', 'plasma-plasmashell.service', '-p', 'ActiveEnterTimestampMonotonic',
+                       '--value')
+        try:
+            return time.monotonic() - int(out) / 1e6
+        except ValueError:
+            return 999
+    for _ in range(12):
+        if plasma_age() > 25:
+            break
+        time.sleep(5)
     fixed, failed = [], []
 
     def kwin_loaded(name):
@@ -157,6 +171,9 @@ def user():
 
     # 3. La isla, la columna de pisos y el fondo de Apogeo
     lay = layout()
+    if lay is not None and not (lay['isla'] and lay['pisos'] and lay['fondo']):
+        time.sleep(15)  # (otra mirada, por si estaba a medias)
+        lay = layout() or lay
     if lay is not None and not (lay['isla'] and lay['pisos'] and lay['fondo']):
         state_path = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'pisos.json')
         state = read_json(state_path, {})

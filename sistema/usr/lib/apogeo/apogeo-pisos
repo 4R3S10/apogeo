@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 import dbus
@@ -143,7 +144,22 @@ def desktop_fill(bus):
     # Plasma le quita el hueco de la isla cuando la isla no se esconde: eso vale
     bad = [i for i in items if round(i[4]) != 0 or round(i[5]) != 0 or round(i[6]) != i[2] or not i[3] - 120 <= round(i[7]) <= i[3]]
     if not bad and not restart_plasma['pending']:
+        desktop_fill.seen = None
         return False
+    # Al entrar, la pantalla cambia de tamaño un momento (sobre todo en una máquina virtual) y el widget parece mal puesto
+    # sin estarlo: solo se arregla si sigue mal 8 segundos después con el mismo tamaño de pantalla, y una vez por sesión
+    # (reiniciar Plasma deja todo pillado unos segundos: antes pasaba varias veces seguidas)
+    key = json.dumps([[i[2], i[3], round(i[4]), round(i[5]), round(i[6]), round(i[7])] for i in bad])
+    if not restart_plasma['pending']:
+        if getattr(desktop_fill, 'done', False):
+            log('escritorio: sigue sin ocupar la pantalla; no se reinicia Plasma otra vez en esta sesión')
+            return False
+        if getattr(desktop_fill, 'seen', None) != key:
+            desktop_fill.seen = key
+            GLib.timeout_add_seconds(8, lambda: desktop_fill(bus))
+            return False
+    desktop_fill.done = True
+    log('escritorio a pantalla completa: Plasma se reinicia', key)
     run('systemctl', '--user', 'stop', 'plasma-plasmashell')
     rc = os.path.expanduser('~/.config/plasma-org.kde.plasma.desktop-appletsrc')
     for cid, aid, w, h, *_ in bad:
@@ -548,6 +564,8 @@ class Floors:
         self.last = None
         self.rotate_timer = None   # «que cambie solo»: el temporizador del piso en el que estás
         self.shown = {}            # piso → el fondo que se ve ahora (el elegido o el de «que cambie solo»)
+        self.wall_written = {}     # piso → lo último que se escribió de su fondo (para no reescribirlo)
+        self.lock_written = None   # lo último que se escribió para la pantalla de bloqueo
         self.chosen = {}           # piso → el que elegiste a mano (si cambia, se ve ese aunque cambie solo)
 
     def apply(self, index, force=False):
@@ -629,31 +647,52 @@ class Floors:
         return True
 
     def wallpaper(self, style, animate, floor):
-        """El fondo animado de Ágape del piso (org.apogeo.fondo). Sin gráfica de verdad, quieto (lo dibujaría el
-        procesador), y también si lo apagas en los ajustes. También en la pantalla de bloqueo, que así sabe en qué piso
-        estabas."""
+        """El fondo del piso (org.apogeo.fondo). Cada piso tiene el suyo en la configuración del fondo (EstiloJugar,
+        ArchivoJugar…) y el fondo elige solo según el piso en el que estás: aquí solo se escribe cuando cambia (elegir
+        otro, «que cambie solo»…), no en cada cambio de piso (eso daba tirones). Sin gráfica de verdad, quieto (lo
+        dibujaría el procesador), y también si lo apagas en los ajustes. La pantalla de bloqueo, que no sabe en qué piso
+        estás, recibe el del piso actual (sin esperar)."""
         animate = 'true' if animate and real_gpu() else 'false'
         # Un fondo animado de Apogeo o una imagen o un vídeo tuyo (Archivo)
         if style in ajustes.STYLES:
             archivo = ''
         else:
             archivo, style = style, 'tinta'
-        archivo_js = json.dumps(archivo)
-        run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--key', 'WallpaperPlugin',
-            'org.apogeo.fondo')
-        for key, value in (('Estilo', style), ('Animar', animate), ('Piso', floor), ('Archivo', archivo)):
-            run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
-                'org.apogeo.fondo', '--group', 'General', '--key', key, value)
+        lock = (style, animate, floor, archivo)
+        if lock != self.lock_written:
+            self.lock_written = lock
+
+            def write_lock():
+                run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--key', 'WallpaperPlugin',
+                    'org.apogeo.fondo')
+                for key, value in (('Estilo', style), ('Animar', animate), ('Piso', floor), ('Archivo', archivo)):
+                    run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper',
+                        '--group', 'org.apogeo.fondo', '--group', 'General', '--key', key, '--', value)
+            threading.Thread(target=write_lock, daemon=True).start()
+        want = (style, archivo, animate)
+        if self.wall_written.get(floor) == want:
+            return
+        self.wall_written[floor] = want
+        cap = floor.capitalize()
         plasma_script(self.bus, """
             desktops().forEach(function (d) {
                 d.wallpaperPlugin = 'org.apogeo.fondo';
                 d.currentConfigGroup = ['Wallpaper', 'org.apogeo.fondo', 'General'];
-                d.writeConfig('Estilo', '%s');
+                d.writeConfig('PorPiso', true);
+                d.writeConfig('Estilo%s', %s);
+                d.writeConfig('Archivo%s', %s);
                 d.writeConfig('Animar', %s);
-                d.writeConfig('Piso', '%s');
-                d.writeConfig('Archivo', %s);
             });
-        """ % (style, animate, floor, archivo_js))
+        """ % (cap, json.dumps(style), cap, json.dumps(archivo), animate))
+
+    def prepare_wallpapers(self):
+        """Al empezar: el fondo de los tres pisos (así el primer cambio a cada uno ya no escribe nada)."""
+        st = ajustes.load()
+        for f in FLOORS:
+            if self.last is not None and FLOORS[self.last]['key'] == f['key']:
+                continue
+            self.wallpaper(self.pick_wallpaper(st, f['key']), st['animar'], f['key'])
+        return False
 
     def quiet(self, on, floor):
         """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos y, al volver a un
@@ -811,6 +850,7 @@ def main():
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     welcome()
     floors.apply(current_index(bus))
+    GLib.timeout_add_seconds(3, floors.prepare_wallpapers)
     GLib.timeout_add_seconds(6, lambda: desktop_fill(bus))
     # Los ajustes: al guardarlos (de golpe, con un archivo nuevo) se aplican
     monitor = Gio.File.new_for_path(os.path.dirname(ajustes.SETTINGS)).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES,

@@ -33,9 +33,17 @@ PlasmoidItem {
         onNewData: source => disconnectSource(source)
     }
 
-    function pisos(args) {
-        runner.connectSource("/usr/lib/apogeo/apogeo-pisos " + args)
+    // Cambiar de piso: se le pide a KWin directamente (al momento y al piso exacto; antes se abría un programa por cada
+    // cambio, con retraso, y con varios seguidos se colaba en otro)
+    function go(index) {
+        const ids = desktops.desktopIds;
+        if (index < 0 || index >= ids.length || ids[index] === desktops.currentDesktop) return;
+        runner.connectSource("dbus-send --session --type=method_call --dest=org.kde.KWin /VirtualDesktopManager "
+                             + "org.freedesktop.DBus.Properties.Set string:org.kde.KWin.VirtualDesktopManager string:current "
+                             + "variant:string:" + ids[index]);
     }
+    readonly property int currentIndex: desktops.desktopIds.indexOf(desktops.currentDesktop)
+    property real wheelSum: 0
 
     fullRepresentation: Item {
         Layout.preferredWidth: 48
@@ -46,10 +54,15 @@ PlasmoidItem {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             onWheel: wheel => {
+                // Un piso por golpe de rueda: se suman los pasitos (ratones finos y touchpads) hasta un golpe entero, y
+                // después de cambiar se espera a que acabe el deslizamiento
                 const now = Date.now();
-                if (now - root.lastWheel < 350 || wheel.angleDelta.y === 0) return; // un piso por golpe de rueda
+                if (now - root.lastWheel < 450) { root.wheelSum = 0; return; }
+                root.wheelSum += wheel.angleDelta.y;
+                if (Math.abs(root.wheelSum) < 120) return;
                 root.lastWheel = now;
-                root.pisos(wheel.angleDelta.y > 0 ? "subir" : "bajar");
+                root.go(root.currentIndex + (root.wheelSum > 0 ? -1 : 1));
+                root.wheelSum = 0;
             }
         }
 
@@ -102,7 +115,7 @@ PlasmoidItem {
                         id: hover
                         anchors.fill: parent
                         hoverEnabled: true
-                        onClicked: root.pisos("ir " + floor.index)
+                        onClicked: root.go(floor.index)
                     }
                     QQC2.ToolTip.visible: hover.containsMouse
                     QQC2.ToolTip.text: floor.name
