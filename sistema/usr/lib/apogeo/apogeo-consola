@@ -75,6 +75,10 @@ def main():
             except Exception:
                 return ''
 
+        @pyqtProperty(bool, constant=True)
+        def gpu(self):
+            return comun.real_gpu()
+
         @pyqtProperty(str, constant=True)
         def folder(self):
             return juegos.JUEGOS

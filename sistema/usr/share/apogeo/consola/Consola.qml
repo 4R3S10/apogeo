@@ -14,6 +14,8 @@ Window {
     visible: true
     Component.onCompleted: showFullScreen()
 
+    // El fondo se mueve solo con la consola delante y con gráfica de verdad (en una máquina sin 3D lo haría el procesador)
+    Binding { target: Tema; property: "animar"; value: consola.gpu && win.active && win.visibility !== Window.Minimized }
     readonly property var lib: consola.tabs
     readonly property var allTabs: [
         { clave: "inicio", texto: "Inicio" }, { clave: "steam", texto: "Steam" }, { clave: "epic", texto: "Epic" },
@@ -127,7 +129,9 @@ Window {
         property string src: win.game ? (win.game.hero || win.game.cover) : ""
         property bool flip: false
         onSrcChanged: { flip = !flip; (flip ? b : a).source = src; }
-        Rectangle { anchors.fill: parent; color: win.game ? win.tint(win.game.name) : "#1e1621"; opacity: 0.55 }
+        // Sin arte (o mientras llega): el fondo animado de Jugar, «Luces»
+        Fondo { anchors.fill: parent; tipo: 7; visible: a.status !== Image.Ready && b.status !== Image.Ready }
+        Rectangle { anchors.fill: parent; visible: !!win.game; color: win.game ? win.tint(win.game.name) : "transparent"; opacity: 0.35 }
         Image {
             id: a
             anchors.fill: parent
