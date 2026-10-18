@@ -27,6 +27,7 @@ _copia_revision() {
   systemctl --global enable apogeo-copia.timer apogeo-revision.service apogeo-revision.path apogeo-al-dia.timer
   systemctl enable --now apogeo-al-dia.timer 2>/dev/null || true   # lo de Jugar al día, sin jugar
   systemctl enable apogeo-windows.service 2>/dev/null || true       # los juegos del Windows escondido, al encender
+  /usr/lib/apogeo/apogeo-windows sync 2>/dev/null || true           # (y Apogeo el primero al arrancar, ya)
 }
 
 # Los programas de serie (apogeo-programas): ONLYOFFICE y Stremio de Flathub (en segundo plano, con internet) y
