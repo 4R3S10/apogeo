@@ -17,16 +17,20 @@ Window {
     property string pinned: ""           // la que has puesto en grande
     property bool open: openAtStart
     readonly property var all: musica.sources
-    // Se enseña si algo suena o si Spotify está abierto (como en Ágape); delante, lo último que empezó
+    // Solo se enseña si algo suena; lo que pausas sigue un minuto (para poder reanudarlo) y luego desaparece.
+    // Delante, lo último que empezó
+    property var pausedAt: ({})          // clave → cuándo se pausó
+    property real now: Date.now()
+    Timer { interval: 5000; repeat: true; running: true; onTriggered: win.now = Date.now() }
     readonly property var list: {
-        const now = Date.now();
-        const s = win.started;
+        const now = win.now;
+        const s = win.started, p = win.pausedAt;
         for (const x of all) {
-            if (x.paused) delete s[x.key];
-            else if (!s[x.key]) s[x.key] = now;
+            if (x.paused) { if (s[x.key]) { p[x.key] = Date.now(); delete s[x.key]; } }
+            else { delete p[x.key]; if (!s[x.key]) s[x.key] = Date.now(); }
         }
         const playing = all.filter(x => !x.paused).sort((a, b) => s[b.key] - s[a.key]);
-        const rest = all.filter(x => x.paused && x.spotify);
+        const rest = all.filter(x => x.paused && p[x.key] && now - p[x.key] < 60000);
         let out = playing.concat(rest);
         const i = out.findIndex(x => x.key === win.pinned);
         if (i > 0) out.unshift(...out.splice(i, 1));
@@ -35,7 +39,8 @@ Window {
     readonly property var main: list.length ? list[0] : null
     readonly property bool idle: list.length === 0
     readonly property var last: musica.last
-    visible: true
+    // Sin nada sonando, no sale (KWin la vuelve a colocar abajo a la izquierda al volver a salir)
+    visible: !win.idle
 
     // Abrir al pasar el ratón; cerrar un poco después de salir (por si vuelve)
     Timer { id: closeTimer; interval: 350; onTriggered: win.open = false }

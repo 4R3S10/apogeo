@@ -6,7 +6,7 @@ encima de una cambia su volumen. Lo que suena sale de:
   - los reproductores del sistema (MPRIS: Spotify, otros navegadores, apps de música…);
   - cada pestaña de Ágape, por su socket ($XDG_RUNTIME_DIR/agape-musica.sock). El reproductor MPRIS de Ágape
     (Chromium) no se enseña: ya está cada pestaña por separado.
-Siempre está («A · Siempre a la vista»): si no suena nada, enseña lo último que sonó con «Seguir» y «Abrir Spotify».
+Sale solo mientras suena algo; lo que pausas sigue un minuto (para reanudarlo) y luego se va.
 No sale con Ágape delante (Ágape enseña el suyo) ni con una ventana a pantalla completa: eso lo hace el script de KWin
 apogeo-ventanas, que también la coloca y la pone encima de todo.
 

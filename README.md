@@ -125,7 +125,7 @@ Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). El widget es `org
 
 Abajo a la izquierda, una portada por cada cosa que suena (Spotify y otras apps de música, y **cada pestaña de Ágape**
 por su canal privado); al pasar el ratón, la tarjeta con el progreso y los botones; la rueda del ratón encima cambia el
-volumen de cada una. Si no suena nada, se queda lo último que sonó con «Seguir» y «Abrir Spotify». No sale con Ágape
+volumen de cada una. Solo sale mientras suena algo (lo que pausas sigue un minuto para reanudarlo). No sale con Ágape
 delante (que enseña la suya) ni con algo a pantalla completa.
 `sistema/usr/lib/apogeo/apogeo-musica` y `sistema/usr/share/apogeo/musica/`.
 
