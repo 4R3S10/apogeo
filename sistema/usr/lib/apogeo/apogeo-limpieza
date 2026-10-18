@@ -5,9 +5,10 @@
 # micro ni la zsh de CachyOS). Y lo de CachyOS que Apogeo ya hace a su manera: la bienvenida, el instalador de paquetes,
 # el gestor de núcleos, el actualizador y Shelly.
 #
-# Lo lanza la revisión de Apogeo después de una actualización (apogeo-limpieza.service). pacman está ocupado hasta que
-# acaba la actualización, así que primero espera a que termine. Lo que quita lo apunta en /var/lib/apogeo/limpieza.json
-# para que la revisión te lo cuente.
+# Lo lanza la revisión de Apogeo después de una actualización y, si no llegó a acabar (por ejemplo, porque se reinició
+# justo después), al encender (apogeo-limpieza.service). pacman está ocupado hasta que acaba la actualización, así que
+# primero espera a que termine; mientras quita, retrasa el apagado. Lo que quita lo apunta en
+# /var/lib/apogeo/limpieza.json para que la revisión te lo cuente.
 set -u
 MARCA=/var/lib/apogeo/limpieza-1
 INFORME=/var/lib/apogeo/limpieza.json
@@ -27,24 +28,35 @@ if ! getent passwd | awk -F: '$3 == 0 || ($3 >= 1000 && $3 < 60000)' | cut -d: -
            zsh-syntax-highlighting zsh-theme-powerlevel10k vim)
 fi
 
+# Un candado de pacman de antes de encender el PC no es de nadie (se cortó un pacman al apagar): fuera
+LCK=/var/lib/pacman/db.lck
+if [ -e "$LCK" ] && ! pgrep -x 'pacman|yay|paru|pamac-daemon' >/dev/null; then
+  boot=$(awk '/^btime/ {print $2}' /proc/stat)
+  [ "$(stat -c %Y "$LCK")" -lt "$boot" ] && rm -f "$LCK" && echo "candado de pacman viejo quitado"
+fi
+
 # Espera a que pacman acabe (hasta 30 min)
 for _ in $(seq 900); do
   [ -e /var/lib/pacman/db.lck ] || break
   sleep 2
 done
-[ -e /var/lib/pacman/db.lck ] && exit 1  # sigue ocupado: se intentará en la próxima actualización
+[ -e /var/lib/pacman/db.lck ] && exit 1  # sigue ocupado: se intenta otra vez al encender o tras la próxima actualización
 
 hay=()
 for p in "${QUITAR[@]}"; do pacman -Qq "$p" >/dev/null 2>&1 && hay+=("$p"); done
 quitados=()
 if [ ${#hay[@]} -gt 0 ]; then
   # Todos a la vez; si alguno lo necesita otro programa, uno a uno (y ese se queda)
-  if pacman -Rns --noconfirm "${hay[@]}" >/dev/null 2>&1; then
+  quitar() {
+    systemd-inhibit --what=shutdown:sleep --who=Apogeo --why='Quitando programas repetidos' --mode=block \
+      pacman -Rns --noconfirm "$@" >/dev/null 2>&1
+  }
+  if quitar "${hay[@]}"; then
     quitados=("${hay[@]}")
   else
     for p in "${hay[@]}"; do
       pacman -Qq "$p" >/dev/null 2>&1 || continue
-      pacman -Rns --noconfirm "$p" >/dev/null 2>&1 && quitados+=("$p")
+      quitar "$p" && quitados+=("$p")
     done
   fi
 fi

@@ -29,6 +29,7 @@ _copia_revision() {
 # VirtualBox para las cuentas que ya existen (hay que estar en su grupo)
 _programas() {
   systemctl enable --now --no-block apogeo-flatpaks.service 2>/dev/null || true
+  systemctl enable apogeo-limpieza.service 2>/dev/null || true  # (se pone en marcha al acabar: zz-apogeo-revision)
   getent group vboxusers >/dev/null || return 0
   awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' /etc/passwd | while read -r u; do
     gpasswd -a "$u" vboxusers >/dev/null 2>&1 || true
@@ -46,6 +47,7 @@ pre_remove() {
   /usr/lib/apogeo/apogeo-bloqueo quitar
   systemctl disable apogeo-termico.service
   systemctl disable apogeo-flatpaks.service 2>/dev/null || true
+  systemctl disable apogeo-limpieza.service 2>/dev/null || true
   systemctl --global disable apogeo-pisos.service
   systemctl --global disable apogeo-actualizaciones.timer
   systemctl --global disable apogeo-copia.timer apogeo-revision.service apogeo-revision.path

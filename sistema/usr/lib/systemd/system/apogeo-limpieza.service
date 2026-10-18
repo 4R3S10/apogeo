@@ -5,5 +5,11 @@ ConditionPathExists=!/var/lib/apogeo/limpieza-1
 [Service]
 Type=oneshot
 ExecStart=/usr/lib/apogeo/apogeo-limpieza
+# (si el apagado llega a media limpieza, pacman acaba lo que está haciendo)
+TimeoutStopSec=10min
+KillSignal=SIGINT
 TimeoutStartSec=45min
 Nice=10
+
+[Install]
+WantedBy=multi-user.target
