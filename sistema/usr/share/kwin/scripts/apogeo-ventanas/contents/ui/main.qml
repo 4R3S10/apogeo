@@ -1,7 +1,11 @@
 import QtQuick
 import org.kde.kwin
 
-// Ventanas de Apogeo (la consola del piso Jugar se pone ella sola a pantalla completa):
+// Ventanas de Apogeo:
+//  - La consola (se pone ella sola a pantalla completa) vive en el piso Jugar y no se mueve de ahí: al ir a otro piso,
+//    KWin le daba el foco aunque no se viera y la traía a ese piso (por «la ventana que se pone delante se viene a tu
+//    piso»); entonces Estudiar parecía Jugar y tus teclas iban a ella. Ahora se queda en Jugar y, fuera de Jugar, el
+//    foco va al escritorio del piso.
 //  - La música (apogeo-musica) va abajo a la izquierda, encima de todo, en todos los pisos y fuera de la barra de
 //    tareas y del cambiador de ventanas. Se esconde con Ágape delante (Ágape enseña la suya en el mismo sitio), con
 //    una ventana a pantalla completa (un juego, la consola) y en Navegar con el escritorio a la vista (allí ya está el
@@ -11,10 +15,31 @@ import org.kde.kwin
 Item {
     id: root
     property var music: null
+    property var consoleWin: null
+
+    function jugar() { return Workspace.desktops.find(d => d.name === "Jugar") || null }
+    function pinConsole() {
+        const w = consoleWin, j = jugar();
+        if (!w || !j) return;
+        if (w.onAllDesktops || w.desktops.length !== 1 || w.desktops[0] !== j) {
+            w.onAllDesktops = false;
+            w.desktops = [j];
+        }
+        // Fuera de Jugar, que no se quede con el foco (las teclas irían a ella sin verla): al escritorio del piso
+        if (Workspace.activeWindow === w && Workspace.currentDesktop !== j) {
+            const desk = Workspace.windows.find(x => x.desktopWindow && x.output === w.output) || Workspace.windows.find(x => x.desktopWindow);
+            if (desk) Workspace.activeWindow = desk;
+        }
+    }
 
     function added(w) {
         const cls = (w.resourceClass || "") + " " + (w.desktopFileName || "");
         if (cls.indexOf("apogeo-resumen") >= 0) summary(w);
+        if (cls.indexOf("apogeo-consola") >= 0 && w.normalWindow) {
+            consoleWin = w;
+            pinConsole();
+            w.desktopsChanged.connect(pinConsole);
+        }
         if (cls.indexOf("apogeo-musica") >= 0) {
             music = w;
             w.onAllDesktops = true;
@@ -27,7 +52,7 @@ Item {
             hideMusic();
         }
     }
-    function removed(w) { if (w === music) music = null; }
+    function removed(w) { if (w === music) music = null; if (w === consoleWin) consoleWin = null; }
 
     function summary(w) {
         w.onAllDesktops = true;
@@ -70,8 +95,8 @@ Item {
         target: Workspace
         function onWindowAdded(w) { root.added(w) }
         function onWindowRemoved(w) { root.removed(w) }
-        function onWindowActivated(w) { root.hideMusic() }
-        function onCurrentDesktopChanged() { root.hideMusic() }
+        function onWindowActivated(w) { root.hideMusic(); if (w && w === root.consoleWin) root.pinConsole() }
+        function onCurrentDesktopChanged() { root.hideMusic(); root.pinConsole() }
     }
     Timer { // por si una ventana se pone a pantalla completa sin cambiar de ventana activa
         interval: 1000

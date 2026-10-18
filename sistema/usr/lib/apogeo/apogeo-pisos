@@ -142,7 +142,10 @@ def desktop_fill(bus):
     except ValueError:
         items = []
     # Plasma le quita el hueco de la isla cuando la isla no se esconde: eso vale
-    bad = [i for i in items if round(i[4]) != 0 or round(i[5]) != 0 or round(i[6]) != i[2] or not i[3] - 120 <= round(i[7]) <= i[3]]
+    # (Plasma le quita al widget el hueco de una barra que no se esconde: la isla abajo o la columna de pisos a la derecha,
+    # hasta 120 px; eso vale)
+    bad = [i for i in items if round(i[4]) != 0 or round(i[5]) != 0 or not i[2] - 120 <= round(i[6]) <= i[2]
+           or not i[3] - 120 <= round(i[7]) <= i[3]]
     if not bad and not restart_plasma['pending']:
         desktop_fill.seen = None
         return False
