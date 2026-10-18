@@ -788,6 +788,21 @@ def island(bus, st):
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 
 
+def light_effects():
+    """Sin gráfica de verdad (una máquina virtual sin 3D), KWin lo dibuja todo con el procesador y el desenfoque del
+    cristal (la isla, los menús, los avisos) lo deja al límite: cambiar de piso iba a tirones. Ahí se quita el desenfoque
+    (y el contraste que va con él); con gráfica, el cristal de Ágape se queda. Se mira al entrar en cada sesión."""
+    want = 'true' if real_gpu() else 'false'
+    changed = False
+    for effect in ('blur', 'contrast'):
+        if run_out('kreadconfig6', '--file', 'kwinrc', '--group', 'Plugins', '--key', f'{effect}Enabled') != want:
+            kw('kwinrc', 'Plugins', f'{effect}Enabled', want)
+            changed = True
+    if changed:
+        log('efectos:', 'cristal' if want == 'true' else 'sin desenfoque (no hay gráfica de verdad)')
+        kwin_reconfigure()
+
+
 def welcome_open():
     return subprocess.run(['pgrep', '-f', WELCOME], stdout=subprocess.DEVNULL).returncode == 0
 
@@ -836,6 +851,7 @@ def main():
             go(bus, int(sys.argv[2].partition(':')[2].strip('/')))
         return
     setup(bus)
+    light_effects()
     import apogeo_datos
     datos = apogeo_datos.Datos(bus)  # noqa: F841 (los datos de los widgets: el tiempo, el estudio… por D-Bus)
     floors = Floors(bus, dbus.SystemBus())
