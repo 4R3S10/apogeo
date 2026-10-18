@@ -530,6 +530,16 @@ ApplicationWindow {
                     detalle: "La de iniciar sesión y desbloquear"
                     Boton { text: "Cambiar…"; onClicked: apogeo.open("usuarios") }
                 }
+                Fila {
+                    titulo: "Entrar con neuronas"
+                    detalle: apogeo.neuronsOn ? "Activado: al entrar y al desbloquear tocas las neuronas conectadas a las tuyas"
+                                              : "En vez de escribir: reconoces tus 5 neuronas y tocas una conectada a cada una. Nadie lo copia mirando"
+                    Row {
+                        spacing: 8
+                        Boton { visible: apogeo.neuronsOn; tipo: "plano"; text: "Quitar"; onClicked: apogeo.removeNeurons() }
+                        Boton { text: apogeo.neuronsOn ? "Cambiar mis neuronas" : "Elegir mis neuronas"; tipo: apogeo.neuronsOn ? "normal" : "principal"; onClicked: neuronas.open() }
+                    }
+                }
             }
 
             // ----- Actualizaciones -----
@@ -603,6 +613,80 @@ ApplicationWindow {
         foto: win.photo
         letra: win.name.trim().charAt(0).toUpperCase()
     }
+    // Elegir tus 5 neuronas (en orden)
+    Popup {
+        id: neuronas
+        anchors.centerIn: parent
+        width: 660
+        modal: true
+        padding: 26
+        property var elegidas: []
+        property string mensaje: ""
+        property bool guardando: false
+        onOpened: { elegidas = []; mensaje = ""; guardando = false; }
+        background: Rectangle { radius: 22; color: Tema.cromo; border.color: Tema.borde }
+        Overlay.modal: Rectangle { color: "#99000000" }
+        Connections {
+            target: apogeo
+            function onNeuronsSaved(ok, message) {
+                neuronas.guardando = false;
+                neuronas.mensaje = ok ? "Listo. Para sudo y la terminal, tu contraseña es: " + neuronas.elegidas.map(i => apogeo.neuronLetters[i]).join("") : message;
+            }
+        }
+        contentItem: Column {
+            spacing: 16
+            Texto { text: "Elige tus 5 neuronas, en orden"; font.pixelSize: 20; font.weight: Font.Bold }
+            Texto {
+                width: parent.width
+                color: Tema.apagado
+                text: "Fíjate en su forma y en su núcleo: al entrar estarán mezcladas con las demás, y tú tocarás una de las conectadas a cada una."
+            }
+            Grid {
+                columns: 10
+                spacing: 6
+                Repeater {
+                    model: 20
+                    delegate: AbstractButton {
+                        id: nb
+                        required property int index
+                        readonly property int orden: neuronas.elegidas.indexOf(index)
+                        width: 56; height: 64
+                        hoverEnabled: true
+                        enabled: orden >= 0 || neuronas.elegidas.length < 5
+                        background: Rectangle { radius: 12; color: nb.orden >= 0 ? Tema.rosaSuave : nb.hovered ? Tema.encima : "transparent" }
+                        contentItem: Item {
+                            Neurona { anchors.centerIn: parent; anchors.verticalCenterOffset: -4; width: 48; height: 48; numero: nb.index; on: nb.orden >= 0 }
+                            Texto { anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; visible: nb.orden >= 0; text: String(nb.orden + 1); font.pixelSize: 11; font.weight: Font.Bold; color: Tema.rosa }
+                        }
+                        onClicked: {
+                            const e = neuronas.elegidas.slice();
+                            if (orden >= 0) e.splice(orden, 1); else e.push(index);
+                            neuronas.elegidas = e;
+                        }
+                    }
+                }
+            }
+            Texto {
+                width: parent.width
+                visible: neuronas.mensaje !== ""
+                text: neuronas.mensaje
+                color: neuronas.mensaje.startsWith("Listo") ? Tema.rosa : "#ff8f9a"
+                font.weight: Font.DemiBold
+            }
+            Row {
+                anchors.right: parent.right
+                spacing: 8
+                Boton { text: "Cerrar"; tipo: "plano"; onClicked: neuronas.close() }
+                Boton {
+                    tipo: "principal"
+                    text: neuronas.guardando ? "Guardando…" : "Guardar (" + neuronas.elegidas.length + " de 5)"
+                    enabled: neuronas.elegidas.length === 5 && !neuronas.guardando
+                    onClicked: { neuronas.guardando = true; neuronas.mensaje = ""; apogeo.setNeurons(neuronas.elegidas.join("-")); }
+                }
+            }
+        }
+    }
+
     FileDialog {
         id: photoDialog
         title: "Elige tu foto"

@@ -1,0 +1,75 @@
+#!/usr/bin/python3
+"""
+Entrar con neuronas: guarda tus 5 neuronas (se ejecuta como administrador con pkexec, desde Ajustes → Tu perfil).
+
+  pkexec apogeo-neuronas poner    lee de la entrada tus neuronas («3-11-7-15-2», números 0-19, distintos), pone de
+                                  contraseña de tu cuenta sus letras (la que escribes en sudo y en la terminal) y guarda
+                                  el verificador en /var/lib/apogeo/neuronas/USUARIO.json (sal y resumen, para que la
+                                  pantalla de entrada sepa qué combinación es la tuya sin guardar tus neuronas)
+  pkexec apogeo-neuronas quitar   vuelve a la contraseña escrita (la de ahora sigue valiendo)
+
+Solo cambia la cuenta de quien lo pide (PKEXEC_UID).
+"""
+import grp
+import hashlib
+import json
+import os
+import pwd
+import secrets
+import subprocess
+import sys
+
+DIR = '/var/lib/apogeo/neuronas'
+LETTERS = 'abcdefghjkmnpqrstuvw'   # las mismas que en el módulo de QML (neuronas.js)
+N = 5
+ROUNDS = 64                        # (lo que la pantalla de entrada puede comprobar rápido en todas las combinaciones)
+
+
+def digest(salt, seq):
+    h = hashlib.md5(f'{salt}:{seq}'.encode()).hexdigest()
+    for _ in range(ROUNDS - 1):
+        h = hashlib.md5((h + salt).encode()).hexdigest()
+    return h
+
+
+def main():
+    uid = int(os.environ.get('PKEXEC_UID', '-1'))
+    if os.geteuid() != 0 or uid < 1000 or len(sys.argv) != 2 or sys.argv[1] not in ('poner', 'quitar'):
+        print(__doc__, file=sys.stderr)
+        return 2
+    user = pwd.getpwuid(uid)
+    path = os.path.join(DIR, user.pw_name + '.json')
+    if sys.argv[1] == 'quitar':
+        if os.path.exists(path):
+            os.remove(path)
+        return 0
+    try:
+        ids = [int(x) for x in sys.stdin.readline().strip().split('-')]
+    except ValueError:
+        return 2
+    if len(ids) != N or len(set(ids)) != N or any(not 0 <= i < len(LETTERS) for i in ids):
+        print('Hacen falta 5 neuronas distintas', file=sys.stderr)
+        return 2
+    password = ''.join(LETTERS[i] for i in ids)
+    r = subprocess.run(['chpasswd'], input=f'{user.pw_name}:{password}\n', text=True)
+    if r.returncode != 0:
+        return 1
+    salt = secrets.token_hex(16)
+    os.makedirs(DIR, mode=0o755, exist_ok=True)
+    tmp = path + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump({'sal': salt, 'resumen': digest(salt, '-'.join(map(str, ids))), 'n': N, 'vueltas': ROUNDS}, f)
+    # Lo leen tu sesión (la pantalla de bloqueo) y la pantalla de inicio de sesión (el usuario sddm)
+    os.chown(tmp, 0, user.pw_gid)
+    os.chmod(tmp, 0o640)
+    try:
+        grp.getgrnam('sddm')
+        subprocess.run(['setfacl', '-m', 'u:sddm:r', tmp], check=False)
+    except KeyError:
+        pass
+    os.replace(tmp, path)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

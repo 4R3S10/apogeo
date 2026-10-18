@@ -45,7 +45,7 @@ Seccion {
                 Image {
                     anchors.fill: parent
                     visible: !tile.item.video
-                    source: tile.item.video ? "" : (tile.item.url || "")
+                    source: tile.item && !tile.item.video && tile.item.url ? tile.item.url : ""
                     sourceSize: Qt.size(320, 180)
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true

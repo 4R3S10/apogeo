@@ -193,6 +193,8 @@ def window(section):
         libraryChanged = pyqtSignal()
         galleryChanged = pyqtSignal()
         _downloaded = pyqtSignal(str, str)  # (de un hilo al principal: ruta, piso)
+        neuronsChanged = pyqtSignal()
+        neuronsSaved = pyqtSignal(bool, str, arguments=['ok', 'message'])
         stateChanged = pyqtSignal()  # (= changed de Base: PyQt no deja avisar con una señal de la clase madre)
 
         def __init__(self):
@@ -424,6 +426,35 @@ def window(section):
                 return (self.accounts.get('RealName') if self.accounts else '') or os.environ.get('USER', '').capitalize()
             except Exception:
                 return os.environ.get('USER', '').capitalize()
+
+        # ----- Entrar con neuronas -----
+        @pyqtProperty(bool, notify=neuronsChanged)
+        def neuronsOn(self):
+            return os.path.exists(f'/var/lib/apogeo/neuronas/{os.environ.get("USER", "")}.json')
+
+        @pyqtProperty(str, constant=True)
+        def neuronLetters(self):
+            return 'abcdefghjkmnpqrstuvw'
+
+        @pyqtSlot(str)
+        def setNeurons(self, seq):
+            """«3-11-7-15-2»: pone la contraseña de tu cuenta (sus letras) y el verificador. Pide tu contraseña de ahora."""
+            def work():
+                r = subprocess.run(['pkexec', '/usr/lib/apogeo/apogeo-neuronas', 'poner'], input=seq + '\n', text=True,
+                                   capture_output=True)
+                ok = r.returncode == 0
+                msg = '' if ok else ('No se ha cambiado (cancelado o contraseña incorrecta).' if r.returncode in (126, 127)
+                                     else (r.stderr.strip() or 'No se ha podido guardar.'))
+                self.neuronsSaved.emit(ok, msg)
+                self.neuronsChanged.emit()
+            threading.Thread(target=work, daemon=True).start()
+
+        @pyqtSlot()
+        def removeNeurons(self):
+            def work():
+                subprocess.run(['pkexec', '/usr/lib/apogeo/apogeo-neuronas', 'quitar'], capture_output=True)
+                self.neuronsChanged.emit()
+            threading.Thread(target=work, daemon=True).start()
 
         # Actualizaciones
         @pyqtProperty(str, constant=True)
