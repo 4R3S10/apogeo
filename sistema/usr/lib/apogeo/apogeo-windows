@@ -1,11 +1,202 @@
-#!/bin/sh
-# Juegos que solo van en Windows (anticheat del núcleo): reinicia en el Windows escondido con el juego y, al cerrarlo,
-# vuelve a Apogeo. Mientras no haya Windows instalado, lo explica.
-if ! efibootmgr 2>/dev/null | grep -qi "Windows Boot Manager"; then
-  kdialog --title "Jugar en Windows" --sorry "Este juego solo funciona en Windows (su anticheat no deja jugar en Linux).
+#!/usr/bin/python3
+"""
+El Windows escondido, solo para los juegos que no van en Apogeo (anticheat del núcleo: Valorant, EA FC…).
 
-Todavía no hay un Windows instalado en este PC. Cuando lo instalemos, al pulsar Jugar el PC se reiniciará en Windows con el juego y volverá solo a Apogeo al cerrarlo."
-  exit 0
-fi
-# TODO: viaje a Windows (tarjeta con cuenta atrás de 10 s, arranque único con efibootmgr --bootnext y vuelta a Apogeo)
-kdialog --title "Jugar en Windows" --sorry "El viaje a Windows aún se está preparando."
+Apogeo y Windows se hablan por una nota en la partición de arranque de Windows (EFI/apogeo/):
+  - puente.json   lo que tiene que hacer Windows al encender: abrir un juego (y al cerrarlo volver) o, para instalar
+                  juegos, el escritorio con «Volver a Apogeo». Lo escribe Apogeo; Windows lo lee y lo borra.
+  - juegos.json   tus juegos de Windows, con su nombre, cómo se abren y su portada. Lo escribe Windows al apagarse;
+                  Apogeo lo copia al encender a /var/lib/apogeo/windows-juegos.json (la consola los enseña).
+El salto: «arrancar la próxima vez en Windows» (BootNext, una sola vez) y reiniciar. Al reiniciarse Windows, el orden
+de siempre vuelve a Apogeo (y si Windows se ha puesto el primero, al encender Apogeo se pone otra vez él delante).
+
+  apogeo-windows estado          (sin permisos) {"windows": bool}: ¿hay un Windows en el PC?
+  pkexec apogeo-windows ir       (lee de la entrada {"modo": "juego", "id", "nombre", "lanzar", "proceso"} o
+                                 {"modo": "escritorio"}): deja la nota y reinicia en Windows
+  apogeo-windows sync            (al encender, como administrador) trae juegos.json y deja Apogeo el primero
+"""
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+VAR = '/var/lib/apogeo'
+GAMES = os.path.join(VAR, 'windows-juegos.json')
+WINDOWS_LOADER = 'EFI/Microsoft/Boot/bootmgfw.efi'
+
+
+def efi_entries():
+    """{número: nombre} de las entradas de arranque, el orden y la actual."""
+    out = subprocess.run(['efibootmgr'], capture_output=True, text=True).stdout
+    entries = dict(re.findall(r'^Boot([0-9A-Fa-f]{4})\*?\s+(.+?)(?:\t|$)', out, re.M))
+    order = (re.search(r'^BootOrder:\s*(\S+)', out, re.M) or [None, ''])[1].split(',')
+    current = (re.search(r'^BootCurrent:\s*(\S+)', out, re.M) or [None, ''])[1]
+    return entries, [o for o in order if o], current
+
+
+def windows_entry():
+    entries, _order, _cur = efi_entries()
+    return next((n for n, name in entries.items() if 'windows boot manager' in name.lower()), None)
+
+
+def esps():
+    """Las particiones de arranque (EFI) del PC."""
+    r = subprocess.run(['lsblk', '-J', '-o', 'PATH,FSTYPE,PARTTYPE,MOUNTPOINT'], capture_output=True, text=True)
+    out = []
+
+    def walk(items):
+        for d in items or []:
+            if (d.get('parttype') or '').lower() == 'c12a7328-f81f-11d2-ba4b-00a0c93ec93b' and d.get('fstype') == 'vfat':
+                out.append(d)
+            walk(d.get('children'))
+    try:
+        walk(json.loads(r.stdout)['blockdevices'])
+    except (ValueError, KeyError):
+        pass
+    return out
+
+
+class WindowsEsp:
+    """La partición de arranque que tiene el arranque de Windows, montada mientras dura el «with»."""
+
+    def __enter__(self):
+        self.tmp = None
+        for d in esps():
+            mnt = d.get('mountpoint')
+            if not mnt:
+                self.tmp = tempfile.mkdtemp(prefix='apogeo-esp-')
+                if subprocess.run(['mount', '-t', 'vfat', '-o', 'umask=0077', d['path'], self.tmp]).returncode:
+                    os.rmdir(self.tmp)
+                    self.tmp = None
+                    continue
+                mnt = self.tmp
+            if os.path.exists(os.path.join(mnt, WINDOWS_LOADER)) or self._ci_exists(mnt, WINDOWS_LOADER):
+                self.path = os.path.join(mnt, 'EFI', 'apogeo')
+                return self
+            self._release()
+        raise RuntimeError('No se encuentra el arranque de Windows')
+
+    @staticmethod
+    def _ci_exists(root, rel):
+        """(en FAT las mayúsculas dan igual, pero la ruta puede venir escrita de otra forma)"""
+        path = root
+        for part in rel.split('/'):
+            try:
+                found = next((n for n in os.listdir(path) if n.lower() == part.lower()), None)
+            except OSError:
+                return False
+            if not found:
+                return False
+            path = os.path.join(path, found)
+        return True
+
+    def _release(self):
+        if self.tmp:
+            subprocess.run(['umount', self.tmp])
+            os.rmdir(self.tmp)
+            self.tmp = None
+
+    def __exit__(self, *_):
+        subprocess.run(['sync'])
+        self._release()
+
+
+def apogeo_first():
+    """Apogeo (Limine) el primero del orden de arranque (Windows se pone delante al instalarse o actualizarse)."""
+    entries, order, _cur = efi_entries()
+    limine = next((n for n, name in entries.items() if 'limine' in name.lower()), None)
+    if limine and order and order[0] != limine:
+        new = [limine] + [o for o in order if o != limine]
+        subprocess.run(['efibootmgr', '-q', '-o', ','.join(new)])
+
+
+def clean(text, n=200):
+    return str(text or '')[:n]
+
+
+def go():
+    try:
+        req = json.loads(sys.stdin.read(65536))
+    except ValueError:
+        return 'Petición rara'
+    modo = req.get('modo')
+    if modo == 'juego':
+        note = {'modo': 'juego', 'id': clean(req.get('id'), 80), 'nombre': clean(req.get('nombre'), 120),
+                'lanzar': clean(req.get('lanzar'), 600), 'proceso': clean(req.get('proceso'), 120)}
+        if not note['lanzar']:
+            return 'No se sabe cómo abrir ese juego en Windows'
+    elif modo == 'escritorio':
+        note = {'modo': 'escritorio'}
+    else:
+        return 'Petición rara'
+    entry = windows_entry()
+    if not entry:
+        return 'No hay un Windows en este PC'
+    with WindowsEsp() as esp:
+        os.makedirs(esp.path, exist_ok=True)
+        with open(os.path.join(esp.path, 'puente.json'), 'w') as f:
+            json.dump(note, f, ensure_ascii=False)
+    apogeo_first()
+    if subprocess.run(['efibootmgr', '-q', '-n', entry]).returncode:
+        return 'No se ha podido elegir Windows para el próximo arranque'
+    subprocess.Popen(['systemctl', 'reboot'])
+    return ''
+
+
+def sync():
+    """Al encender: los juegos que apuntó Windows y Apogeo el primero."""
+    if not windows_entry():
+        return
+    apogeo_first()
+    try:
+        with WindowsEsp() as esp:
+            src = os.path.join(esp.path, 'juegos.json')
+            if os.path.exists(src):
+                with open(src, encoding='utf-8-sig') as f:
+                    games = json.load(f)
+                games = [g for g in games if isinstance(g, dict) and g.get('id') and g.get('lanzar')][:200]
+                os.makedirs(VAR, exist_ok=True)
+                tmp = GAMES + '.nuevo'
+                with open(tmp, 'w') as f:
+                    json.dump(games, f, ensure_ascii=False)
+                os.chmod(tmp, 0o644)
+                os.replace(tmp, GAMES)
+                # Las portadas que manda Windows (png en EFI/apogeo/portadas), para la consola
+                pics = os.path.join(esp.path, 'portadas')
+                if os.path.isdir(pics):
+                    dest = os.path.join(VAR, 'windows-portadas')
+                    os.makedirs(dest, exist_ok=True)
+                    for p in glob.glob(os.path.join(pics, '*.png'))[:200]:
+                        shutil.copyfile(p, os.path.join(dest, os.path.basename(p)))
+                        os.chmod(os.path.join(dest, os.path.basename(p)), 0o644)
+    except (RuntimeError, OSError, ValueError) as e:
+        print('apogeo-windows:', e, file=sys.stderr)
+
+
+def main():
+    a = sys.argv[1:]
+    if a == ['estado']:
+        print(json.dumps({'windows': bool(windows_entry())}))
+        return 0
+    if os.geteuid() != 0:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    if a == ['ir']:
+        msg = go()
+        if msg:
+            print(msg, file=sys.stderr)
+            return 1
+        return 0
+    if a == ['sync']:
+        sync()
+        return 0
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -46,7 +46,7 @@ def system():
     fixed, failed = [], []
     # Servicios del sistema: la vigilancia de la temperatura y el inicio de sesión de Apogeo
     for unit, what in (('apogeo-termico.service', 'la vigilancia de la temperatura'), ('sddm.service', 'el inicio de sesión'),
-                       ('apogeo-al-dia.timer', 'lo de Jugar al día')):
+                       ('apogeo-al-dia.timer', 'lo de Jugar al día'), ('apogeo-windows.service', 'el Windows escondido')):
         if sh('systemctl', 'is-enabled', unit)[1] != 'enabled':
             if sh('systemctl', 'enable', '-f', unit)[0] == 0:
                 fixed.append(what)

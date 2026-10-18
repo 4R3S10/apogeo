@@ -403,14 +403,44 @@ OLD_EXAMPLE = [{'id': 'valorant', 'name': 'VALORANT'}, {'id': 'eafc', 'name': 'E
 
 
 def windows_games():
-    """Los que solo van en el Windows escondido (anticheat del núcleo), los que añadas a
-    ~/.config/apogeo/juegos-windows.json. De serie, ninguno (la pestaña Windows no sale hasta que haya uno)."""
+    """Los que solo van en el Windows escondido (anticheat del núcleo). Los apunta el propio Windows al apagarse
+    (/var/lib/apogeo/windows-juegos.json, lo trae apogeo-windows al encender) y se pueden añadir a mano en
+    ~/.config/apogeo/juegos-windows.json. De serie, ninguno."""
     items = read_json(WINDOWS_LIST, [])
     if items == OLD_EXAMPLE:  # (los dos de ejemplo de antes, si no los habías tocado: fuera)
         write_json(WINDOWS_LIST, [])
         items = []
-    return [game('windows', g['id'], g.get('name', g['id']), True, g.get('cover', ''), g.get('hero', ''), g.get('last', 0))
-            for g in items if isinstance(g, dict) and g.get('id')]
+    seen, out = set(), []
+    played = read_json(PLAYED, {})
+    for g in read_json('/var/lib/apogeo/windows-juegos.json', []) + items:
+        if not isinstance(g, dict) or not g.get('id') or g['id'] in seen:
+            continue
+        seen.add(g['id'])
+        cover = g.get('cover', '')
+        pic = os.path.join('/var/lib/apogeo/windows-portadas', re.sub(r'[^\w.-]', '_', g['id']) + '.png')
+        if not cover and os.path.exists(pic):
+            cover = file_url(pic)
+        out.append(game('windows', g['id'], g.get('name') or g.get('nombre') or g['id'], True, cover, g.get('hero', ''),
+                        max(g.get('last', 0), played.get('windows:' + g['id'], 0)),
+                        lanzar=g.get('lanzar', ''), proceso=g.get('proceso', '')))
+    return out
+
+
+def windows_installed():
+    r = subprocess.run(['/usr/lib/apogeo/apogeo-windows', 'estado'], capture_output=True, text=True)
+    try:
+        return bool(json.loads(r.stdout).get('windows'))
+    except ValueError:
+        return False
+
+
+def to_windows(note):
+    """Reinicia en Windows con la nota (un juego o el escritorio para instalar). Devuelve '' o el problema."""
+    r = subprocess.run(['pkexec', '/usr/lib/apogeo/apogeo-windows', 'ir'], input=json.dumps(note), text=True,
+                       capture_output=True)
+    if r.returncode in (126, 127):
+        return 'Cancelado'
+    return '' if r.returncode == 0 else (r.stderr.strip().splitlines() or ['No se ha podido'])[-1]
 
 
 # ---------- Todo junto ----------
@@ -428,6 +458,7 @@ def tabs():
            'windows': lib(win), 'descargas': downloads()}
     out['emuladoresHay'] = emulators_installed() if shutil.which('flatpak') else {}
     out['anyps5'] = os.path.exists(os.path.join(ANYPS5, 'actual', 'relinker'))
+    out['windowsHay'] = windows_installed()
     return out
 
 
@@ -453,12 +484,9 @@ def play(g):
         detach(['xdg-open', f'heroic://launch?appName={gid}&runner=legendary'])
         mark_played('epic:' + gid)
     elif store == 'windows':
-        detach(['/usr/lib/apogeo/apogeo-windows', gid])
-        items = read_json(WINDOWS_LIST, [])
-        for it in items:
-            if it.get('id') == gid:
-                it['last'] = int(time.time())
-        write_json(WINDOWS_LIST, items)
+        mark_played('windows:' + gid)
+        return to_windows({'modo': 'juego', 'id': gid, 'nombre': g['name'], 'lanzar': g.get('lanzar', ''),
+                           'proceso': g.get('proceso', '')})
     elif store == 'emu':
         s = system(g.get('system'))
         if not s:

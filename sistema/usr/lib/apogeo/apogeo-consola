@@ -145,6 +145,11 @@ def main():
             QTimer.singleShot(800, self.refresh)
             return msg
 
+        @pyqtSlot(result=str)
+        def windowsDesktop(self):
+            """A Windows con el escritorio, para instalar juegos (con «Volver a Apogeo»)."""
+            return juegos.to_windows({'modo': 'escritorio'})
+
         @pyqtSlot(str)
         def open(self, what):
             """Abre una tienda, un emulador o tu carpeta de juegos."""

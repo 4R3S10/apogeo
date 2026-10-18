@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Jugar en el Windows escondido: dejar la nota en el arranque de Windows y reiniciar en él. Sin contraseña para quien
+     está delante del equipo (como apagar o reiniciar); con contraseña de administrador para cualquier otro. -->
+<policyconfig>
+  <vendor>Apogeo</vendor>
+  <action id="org.apogeo.windows">
+    <description>Reiniciar en Windows para jugar</description>
+    <message>Apogeo quiere reiniciar en Windows para abrir un juego</message>
+    <icon_name>apogeo</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/apogeo/apogeo-windows</annotate>
+  </action>
+</policyconfig>

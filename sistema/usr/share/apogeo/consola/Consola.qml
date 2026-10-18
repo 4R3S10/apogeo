@@ -25,8 +25,8 @@ Window {
         { clave: "inicio", texto: "Inicio" }, { clave: "steam", texto: "Steam" }, { clave: "epic", texto: "Epic" },
         { clave: "emuladores", texto: "Emuladores" }, { clave: "ps5", texto: "PS5" }, { clave: "windows", texto: "Windows" }
     ]
-    // Windows solo si hay alguno; las demás, siempre (aunque estén vacías: ahí se explica qué hacer)
-    readonly property var shownTabs: allTabs.filter(t => t.clave !== "windows" || (lib.windows || []).length > 0)
+    // Windows solo si hay un Windows escondido (o algún juego suyo); las demás, siempre (vacías explican qué hacer)
+    readonly property var shownTabs: allTabs.filter(t => t.clave !== "windows" || lib.windowsHay || (lib.windows || []).length > 0)
     property int tab: 0
     readonly property string tabKey: shownTabs[Math.min(tab, shownTabs.length - 1)].clave
     property string sys: ""                       // el sistema elegido en Emuladores ("" = todos)
@@ -55,6 +55,7 @@ Window {
 
     function primary() {
         if (!game || (dl && dl.estado !== "error")) return;
+        if (game.store === "windows") { salto = game; cuenta = 10; return; }   // «W1»: 10 s para cancelar
         if (game.installed) {
             const msg = consola.play(game);
             if (msg) say(msg);
@@ -75,7 +76,23 @@ Window {
     }
     Timer { id: hideTimer; interval: 1200; onTriggered: win.visibility = Window.Minimized } // (el juego se ve)
 
+    // ---------- A Windows («W1 · Cuenta atrás») ----------
+    property var salto: null          // el juego (o "escritorio", para instalar) al que se va
+    property int cuenta: 10
+    Timer { interval: 1000; repeat: true; running: win.salto !== null; onTriggered: { win.cuenta -= 1; if (win.cuenta <= 0) win.irAWindows(); } }
+    function irAWindows() {
+        const s = salto;
+        salto = null;
+        const msg = s === "escritorio" ? consola.windowsDesktop() : consola.play(s);
+        say(msg || "Reiniciando en Windows…");
+    }
+
     function key(k) {
+        if (salto !== null) {
+            if (k === "a") irAWindows();
+            else if (k === "b") salto = null;
+            return;
+        }
         if (asking) {
             if (k === "a") confirmRemove();
             else if (k === "b") asking = false;
@@ -320,7 +337,7 @@ Window {
             width: parent.width
             font.pixelSize: 40; font.weight: Font.ExtraBold
             text: ({ inicio: "Aún no tienes juegos descargados", steam: "Entra en Steam", epic: "Entra en Epic con Heroic",
-                     emuladores: "Pon tus juegos y a jugar", ps5: "Tus juegos de PS5", windows: "" })[win.tabKey] || ""
+                     emuladores: "Pon tus juegos y a jugar", ps5: "Tus juegos de PS5", windows: "Instala tus juegos de Windows" })[win.tabKey] || ""
         }
         Texto {
             width: parent.width
@@ -331,7 +348,8 @@ Window {
                 steam: "Abre Steam y entra con tu cuenta: aquí saldrá toda tu biblioteca para descargar y quitar.",
                 epic: "Abre Heroic y entra con tu cuenta de Epic: aquí saldrá toda tu biblioteca.",
                 emuladores: "Copia tus juegos (tus copias de tus discos y cartuchos) en la carpeta de cada sistema, dentro de " + consola.folder + ". Salen aquí solos, con su portada. En LEEME.txt tienes cómo.",
-                ps5: "Pon cada juego volcado de tu PS5 en una carpeta dentro de " + consola.folder + "/PS5 y Apogeo lo convierte con AnyPS5. Es experimental: por ahora van muy pocos juegos."
+                ps5: "Pon cada juego volcado de tu PS5 en una carpeta dentro de " + consola.folder + "/PS5 y Apogeo lo convierte con AnyPS5. Es experimental: por ahora van muy pocos juegos.",
+                windows: "Solo para los que no van en Apogeo (Valorant, EA FC…). Ve a Windows, instálalos con su tienda (Riot, EA app…) y pulsa «Volver a Apogeo»: saldrán aquí solos."
             })[win.tabKey] || ""
         }
         Rectangle {
@@ -342,11 +360,14 @@ Window {
                 id: ol
                 anchors.centerIn: parent
                 color: Tema.sobreRosa; font.pixelSize: 16; font.weight: Font.Bold
-                text: ({ steam: "Abrir Steam", epic: "Abrir Heroic", emuladores: "Abrir la carpeta", ps5: "Abrir la carpeta" })[win.tabKey] || ""
+                text: ({ steam: "Abrir Steam", epic: "Abrir Heroic", emuladores: "Abrir la carpeta", ps5: "Abrir la carpeta", windows: "Ir a Windows a instalar" })[win.tabKey] || ""
             }
             MouseArea {
                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                onClicked: consola.open(({ steam: "steam", epic: "epic" })[win.tabKey] || "carpeta")
+                onClicked: {
+                    if (win.tabKey === "windows") { win.salto = "escritorio"; win.cuenta = 10; }
+                    else consola.open(({ steam: "steam", epic: "epic" })[win.tabKey] || "carpeta");
+                }
             }
         }
     }
@@ -465,6 +486,63 @@ Window {
         anchors.bottom: parent.bottom; anchors.bottomMargin: 27
         text: "Meta+Tab en un juego: Discord y la música"
         color: Tema.apagado; font.pixelSize: 13
+    }
+
+    // ---------- La cuenta atrás a Windows ----------
+    Rectangle {
+        visible: win.salto !== null
+        anchors.fill: parent
+        z: 10
+        color: "#a60a070b"
+        MouseArea { anchors.fill: parent }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 560; height: sc.implicitHeight + 64; radius: 24
+            color: Tema.cromo; border.color: Tema.borde
+            Column {
+                id: sc
+                anchors.centerIn: parent
+                width: parent.width - 64
+                spacing: 12
+                Item {
+                    width: 120; height: 120
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    Canvas {
+                        id: aro
+                        anchors.fill: parent
+                        property real parte: win.cuenta / 10
+                        onParteChanged: requestPaint()
+                        onPaint: {
+                            const g = getContext("2d");
+                            g.reset();
+                            g.lineWidth = 8; g.lineCap = "round";
+                            g.strokeStyle = Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1);
+                            g.beginPath(); g.arc(60, 60, 52, 0, 2 * Math.PI); g.stroke();
+                            g.strokeStyle = "#e0a9b4";
+                            g.beginPath(); g.arc(60, 60, 52, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * parte); g.stroke();
+                        }
+                    }
+                    Texto { anchors.centerIn: parent; text: String(win.cuenta); font.pixelSize: 40; font.weight: Font.ExtraBold }
+                }
+                Texto {
+                    width: parent.width; horizontalAlignment: Text.AlignHCenter
+                    text: win.salto === "escritorio" ? "A Windows, a instalar juegos" : (win.salto ? win.salto.name : "") + " va en Windows"
+                    font.pixelSize: 24; font.weight: Font.Bold
+                }
+                Texto {
+                    width: parent.width; horizontalAlignment: Text.AlignHCenter
+                    color: Tema.apagado; font.pixelSize: 15
+                    text: win.salto === "escritorio" ? "Apogeo se reinicia en Windows con su escritorio. Cuando acabes, pulsa «Volver a Apogeo»."
+                                                     : "Apogeo se reinicia en Windows y lo abre. Al cerrar el juego vuelves aquí solo."
+                }
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 10
+                    Boton { tipo: "principal"; text: win.btn.a + "  Ya"; onClicked: win.irAWindows() }
+                    Boton { text: win.btn.b + "  Cancelar"; onClicked: win.salto = null }
+                }
+            }
+        }
     }
 
     // ---------- Avisos y «¿Quitar?» ----------

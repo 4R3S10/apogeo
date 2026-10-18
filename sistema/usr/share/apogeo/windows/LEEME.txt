@@ -1,0 +1,12 @@
+Apogeo · Windows escondido
+==========================
+
+Este Windows es solo para los juegos que no van en Apogeo (su antitrampas no deja jugar en Linux: Valorant, EA FC…).
+Desde la consola de Apogeo (piso Jugar, pestaña Windows) eliges el juego: Apogeo se reinicia aquí, se abre el juego
+y, al cerrarlo, vuelves a Apogeo solo.
+
+Para instalar juegos: en la consola, pestaña Windows, «Ir a Windows a instalar». Se abre el escritorio de siempre;
+instala el juego con su tienda (Riot Client, EA app, Epic…) y pulsa «Volver a Apogeo»: el juego sale en la consola.
+
+Para prepararlo (una vez): abre instalar.cmd y acepta el permiso de administrador.
+Para quitarlo: desinstalar.cmd.

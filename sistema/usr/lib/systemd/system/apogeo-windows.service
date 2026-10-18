@@ -1,0 +1,10 @@
+[Unit]
+Description=Apogeo: los juegos que apuntó el Windows escondido y Apogeo el primero al arrancar
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-windows sync
+
+[Install]
+WantedBy=multi-user.target

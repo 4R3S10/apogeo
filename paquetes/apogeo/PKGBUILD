@@ -54,6 +54,10 @@ package_apogeo() {
   install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/logo.png"
   rsvg-convert -w 360 -h 360 "$logo/logo.svg" -o "$logo/360.png"
   install -Dm644 "$logo/360.png" "$pkgdir/usr/share/apogeo/logo.png"
+  # Lo que va al Windows escondido: el logo y la letra de Apogeo para su pantalla de carga
+  install -Dm644 "$logo/360.png" "$pkgdir/usr/share/apogeo/windows/logo.png"
+  install -d "$pkgdir/usr/share/apogeo/windows/letra"
+  cp "$pkgdir"/usr/share/fonts/apogeo/*.ttf "$pkgdir/usr/share/apogeo/windows/letra/"
   local shaders="$pkgdir/usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders"
   install -d "$shaders"
   /usr/lib/qt6/bin/qsb --glsl '100es,120,150' -o "$shaders/fondo.frag.qsb" "$h/fondo/fondo.frag"

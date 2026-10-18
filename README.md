@@ -109,8 +109,19 @@ JetBrains Mono y los colores de Apogeo.
   - Lo hace el script de KWin `apogeo-partida`. Los juegos de SDL no se minimizan al perder el foco
     (`SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0`).
   - Alt+Tab sigue siendo el cambiador de ventanas de siempre.
-- **Juegos de Windows** (Valorant, EA FC…): se abrirán en el Windows escondido. Allí no hay Meta+Tab (Apogeo no está en
-  marcha): se usará el overlay de Discord y la Xbox Game Bar para Spotify.
+- **Windows escondido** (solo para los juegos que no van en Apogeo por su antitrampas: Valorant, EA FC…):
+  - En la consola, pestaña Windows (sale cuando hay un Windows en el PC), eliges el juego: «W1 · Cuenta atrás» de 10 s
+    (✕ ya, ○ cancelar) y Apogeo se reinicia en Windows una sola vez (BootNext) con una nota en el arranque de Windows
+    (`EFI/apogeo/puente.json`). Lo hace `apogeo-windows` (pkexec, sin contraseña para quien está delante).
+  - En Windows («V1 · Solo el juego»): sin escritorio, la pantalla de carga de Apogeo, el juego y, al cerrarlo, de vuelta
+    a Apogeo solo. Si el juego no aparece, deja elegir escritorio o volver.
+  - Para instalar juegos: «Ir a Windows a instalar» → el escritorio de siempre con «Volver a Apogeo». Al volver, Windows
+    apunta tus juegos (Riot, Epic, EA app, Steam) en `EFI/apogeo/juegos.json` y Apogeo los enseña en la consola.
+  - En Windows lo pone `instalar.cmd` (de `/usr/share/apogeo/windows`, una vez): la tarea «Apogeo-Arranque» (como
+    SISTEMA), el puente como escritorio de tu cuenta, sin inicio rápido y entrar sin contraseña (lo eliges tú).
+  - Allí no hay Meta+Tab (Apogeo no está en marcha): el overlay de Discord y la Xbox Game Bar para Spotify.
+  - Valorant y EA FC piden Secure Boot y TPM 2.0: en el PC de verdad, Apogeo arrancará con Secure Boot (firmado con
+    claves propias). Nunca se salta ningún antitrampas.
 
 ## Bienvenida
 
