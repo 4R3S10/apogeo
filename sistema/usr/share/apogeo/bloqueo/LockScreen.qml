@@ -147,7 +147,7 @@ Item {
         y: 40
         width: root.width - x - 40
         height: root.height - 80
-        usuario: kscreenlocker_userName || ""
+        propio: true   // (kscreenlocker_userName es el nombre que se ve, «Ares», no el de la cuenta)
         onContrasena: clave => { root.start(); root.unlock(clave); }
         onFallo: { root.error = "No es esa combinación. Vuelve a empezar."; shake.start(); }
     }

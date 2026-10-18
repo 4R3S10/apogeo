@@ -15,6 +15,8 @@ import "neuronas.js" as Dibujo
 Item {
     id: red
     property string usuario: ""
+    property bool propio: false               // la cuenta que está corriendo (el bloqueo: KDE solo da el nombre que se ve)
+    property string cuenta: ""                // (su nombre de cuenta, cuando es la propia)
     property var verificador: null          // { sal, resumen, n, vueltas }
     readonly property bool lista: !!verificador
     property int toques: 0
@@ -104,9 +106,30 @@ Item {
     }
 
     // ---------- El verificador de la cuenta ----------
+    // El nombre de la cuenta de este programa: el uid de /proc/self/status y su nombre en /etc/passwd
+    function leer(ruta, hecho) {
+        const x = new XMLHttpRequest();
+        x.onreadystatechange = () => { if (x.readyState === XMLHttpRequest.DONE) hecho(x.responseText || ""); };
+        x.open("GET", "file://" + ruta);
+        x.send();
+    }
+    function cuentaPropia(hecho) {
+        leer("/proc/self/status", st => {
+            const m = st.match(/^Uid:\s+(\d+)/m);
+            if (!m) return;
+            leer("/etc/passwd", pw => {
+                for (const l of pw.split("\n")) {
+                    const c = l.split(":");
+                    if (c.length > 2 && c[2] === m[1]) { hecho(c[0]); return; }
+                }
+            });
+        });
+    }
     function cargar() {
         verificador = null;
-        if (!usuario) return;
+        if (propio && !cuenta) { cuentaPropia(n => { red.cuenta = n; red.cargar(); }); return; }
+        const quien = propio ? cuenta : usuario;
+        if (!quien) return;
         const x = new XMLHttpRequest();
         x.onreadystatechange = () => {
             if (x.readyState !== XMLHttpRequest.DONE) return;
@@ -115,7 +138,7 @@ Item {
                 if (v && v.sal && v.resumen && v.n >= 3) { red.verificador = v; red.empezar(); }
             } catch (e) { red.verificador = null; }
         };
-        x.open("GET", "file:///var/lib/apogeo/neuronas/" + encodeURIComponent(usuario) + ".json");
+        x.open("GET", "file:///var/lib/apogeo/neuronas/" + encodeURIComponent(quien) + ".json");
         x.send();
     }
     onUsuarioChanged: cargar()
