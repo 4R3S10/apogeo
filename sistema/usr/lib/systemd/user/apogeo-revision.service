@@ -1,6 +1,6 @@
 [Unit]
 Description=Apogeo: revisión de tu sesión (después de actualizar y al entrar)
-After=graphical-session.target plasma-plasmashell.service apogeo-pisos.service
+After=plasma-workspace.target apogeo-pisos.service
 
 [Service]
 Type=oneshot
