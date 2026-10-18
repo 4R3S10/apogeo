@@ -26,12 +26,24 @@ LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 VERSION = 2  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado)
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
 STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
+# Fondos tuyos: imágenes y vídeos en alta calidad
+IMAGES = ('.jpg', '.jpeg', '.png', '.webp', '.avif', '.jxl', '.bmp', '.tif', '.tiff')
+VIDEOS = ('.mp4', '.webm', '.mkv', '.mov', '.m4v')
+EVERY = {'15min': 15 * 60, 'hora': 3600, 'dia': 86400, 'piso': 0}  # «que cambie solo»; «piso»: al entrar en el piso
+FOLDER_DEFAULT = '~/Imágenes/Fondos'
 DEFAULTS = {
     'pisos': {
         # Un solo rosa (el de Ágape) en todo; cada piso con su fondo animado. Energía: nunca «rendimiento».
         'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop']},
         'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': ['ares.desktop']},
         'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': []},
+    },
+    # El fondo de cada piso (pisos.X.fondo) es un fondo animado de Apogeo o la ruta de una imagen o un vídeo tuyo.
+    # «tuyos»: los que has añadido; «carpeta»: la que se vigila (lo que metas ahí entra solo); «cambiar»: que cambie solo
+    'fondos': {
+        'tuyos': [],
+        'carpeta': FOLDER_DEFAULT,
+        'cambiar': {k: {'activo': False, 'cada': 'hora', 'de': 'todos'} for k in ('jugar', 'navegar', 'estudiar')},
     },
     'animar': True,      # fondos animados (solo con gráfica de verdad)
     'silencio': False,   # «No molestar» en todos los pisos
@@ -71,7 +83,7 @@ def valid(st):
     """Lo que no tenga sentido vuelve a su valor por defecto (nunca «rendimiento», FPS de la lista…)."""
     for k in FLOOR_KEYS:
         f = st['pisos'][k]
-        if f.get('fondo') not in STYLES:
+        if f.get('fondo') not in STYLES and not is_wallpaper_file(f.get('fondo')):
             f['fondo'] = DEFAULTS['pisos'][k]['fondo']
         if f.get('energia') not in ('power-saver', 'balanced'):
             f['energia'] = 'balanced'
@@ -79,7 +91,66 @@ def valid(st):
         f['apps'] = [a for a in f.get('apps', []) if isinstance(a, str) and a.endswith('.desktop')]
     if st.get('fps') not in FPS_CHOICES:
         st['fps'] = 60
+    fondos = st['fondos']
+    fondos['tuyos'] = list(dict.fromkeys(x for x in fondos.get('tuyos', []) if is_wallpaper_file(x)))
+    if not isinstance(fondos.get('carpeta'), str):
+        fondos['carpeta'] = FOLDER_DEFAULT
+    for k in FLOOR_KEYS:
+        c = fondos['cambiar'][k]
+        c['activo'] = bool(c.get('activo'))
+        if c.get('cada') not in EVERY:
+            c['cada'] = 'hora'
+        if c.get('de') not in ('todos', 'tuyos', 'carpeta', 'animados'):
+            c['de'] = 'todos'
     return st
+
+
+# ---------- Fondos ----------
+
+def is_wallpaper_file(path):
+    return isinstance(path, str) and path.lower().endswith(IMAGES + VIDEOS) and os.path.isfile(path)
+
+
+def is_video(path):
+    return isinstance(path, str) and path.lower().endswith(VIDEOS)
+
+
+def wallpaper_folder(st):
+    """La carpeta vigilada; por defecto, «Fondos» dentro de tu carpeta de imágenes (sea cual sea su nombre)."""
+    folder = st['fondos'].get('carpeta') or FOLDER_DEFAULT
+    if folder == FOLDER_DEFAULT:
+        try:
+            pics = subprocess.run(['xdg-user-dir', 'PICTURES'], capture_output=True, text=True, timeout=3).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            pics = ''
+        if pics and pics != HOME:
+            return os.path.join(pics, 'Fondos')
+    return os.path.expanduser(folder)
+
+
+def folder_wallpapers(st):
+    """Las imágenes y vídeos de la carpeta vigilada (y sus subcarpetas), los más nuevos primero."""
+    folder = wallpaper_folder(st)
+    out = []
+    if folder and os.path.isdir(folder):
+        for root, _dirs, files in os.walk(folder):
+            for name in files:
+                if name.lower().endswith(IMAGES + VIDEOS) and not name.startswith('.'):
+                    out.append(os.path.join(root, name))
+    return sorted(out, key=lambda p: os.path.getmtime(p), reverse=True)[:500]
+
+
+def rotation_pool(st, floor):
+    """Los fondos por los que pasa «que cambie solo» en ese piso."""
+    de = st['fondos']['cambiar'][floor]['de']
+    pool = []
+    if de in ('todos', 'tuyos'):
+        pool += st['fondos']['tuyos']
+    if de in ('todos', 'carpeta'):
+        pool += folder_wallpapers(st)
+    if de == 'animados' or not pool:  # (sin fondos tuyos todavía: los animados de Apogeo)
+        pool = list(STYLES)
+    return list(dict.fromkeys(pool))
 
 
 def save(st):

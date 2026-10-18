@@ -34,7 +34,7 @@ ApplicationWindow {
     function plain(t) { return (t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") }
     function shown(sec) { return query === "" || plain(sec.titulo + " " + sec.palabras).indexOf(plain(query)) >= 0 }
 
-    readonly property var sections: [pisos, isla, salud, agape, perfil, actualizaciones]
+    readonly property var sections: [pisos, fondos, isla, salud, agape, perfil, actualizaciones]
     property Item current: pisos
     property Item wanted: null       // la tocada a la izquierda (aunque no pueda subir del todo, por ser de las últimas)
     function go(sec) {
@@ -45,7 +45,7 @@ ApplicationWindow {
     }
     NumberAnimation { id: scroll; target: flick; property: "contentY"; duration: 280; easing.type: Easing.OutCubic }
     Component.onCompleted: {
-        const first = { pisos: pisos, isla: isla, salud: salud, agape: agape, perfil: perfil, actualizaciones: actualizaciones }[apogeo.section];
+        const first = { pisos: pisos, fondos: fondos, isla: isla, salud: salud, agape: agape, perfil: perfil, actualizaciones: actualizaciones }[apogeo.section];
         if (first && first !== pisos) Qt.callLater(() => go(first));
     }
 
@@ -68,7 +68,7 @@ ApplicationWindow {
         Item { width: 1; height: 8 }
         Repeater {
             model: [
-                { sec: pisos, icono: "pisos" }, { sec: isla, icono: "isla" }, { sec: salud, icono: "salud" },
+                { sec: pisos, icono: "pisos" }, { sec: fondos, icono: "imagen" }, { sec: isla, icono: "isla" }, { sec: salud, icono: "salud" },
                 { sec: agape, icono: "navegar" }, { sec: perfil, icono: "usuario" }, { sec: actualizaciones, icono: "actualizar" }
             ]
             delegate: NavItem {
@@ -168,47 +168,8 @@ ApplicationWindow {
                 }
                 Fila {
                     titulo: "Fondo"
-                    ancha: true
-                    Flow {
-                        id: walls
-                        width: parent.width
-                        spacing: 10
-                        readonly property real side: Math.floor((width - (Tema.fondos.length - 1) * spacing - 8) / Tema.fondos.length)
-                        Repeater {
-                            model: Tema.fondos.length
-                            delegate: Column {
-                                id: wall
-                                required property int index
-                                readonly property bool on: Tema.fondos[index] === win.mine.fondo
-                                spacing: 6
-                                Item {
-                                    width: walls.side; height: Math.round(walls.side * 0.56)
-                                    Fondo { anchors.fill: parent; tipo: wall.index; radio: 12 }
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        anchors.margins: -4
-                                        radius: 15
-                                        color: "transparent"
-                                        border.width: 2
-                                        border.color: wall.on ? Tema.rosa : wallArea.containsMouse ? Tema.borde : "transparent"
-                                    }
-                                    MouseArea {
-                                        id: wallArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: apogeo.set("pisos." + win.fk + ".fondo", Tema.fondos[wall.index])
-                                    }
-                                }
-                                Texto {
-                                    text: Tema.nombresFondos[wall.index]
-                                    color: wall.on ? Tema.texto : Tema.apagado
-                                    font.pixelSize: 12
-                                    font.weight: wall.on ? Font.Bold : Font.Normal
-                                }
-                            }
-                        }
-                    }
+                    detalle: "Animados, tus imágenes y vídeos, la galería y que cambie solo"
+                    Boton { text: "Elegir fondo"; icono: "imagen"; onClicked: { fondos.floor = win.floor; win.go(fondos); } }
                 }
                 Fila {
                     titulo: "Avisos"
@@ -298,6 +259,13 @@ ApplicationWindow {
                         onToggled: apogeo.set("silencio", checked)
                     }
                 }
+            }
+
+            // ----- Fondos -----
+            FondosSeccion {
+                id: fondos
+                width: parent.width
+                visible: win.shown(fondos)
             }
 
             // ----- Isla -----

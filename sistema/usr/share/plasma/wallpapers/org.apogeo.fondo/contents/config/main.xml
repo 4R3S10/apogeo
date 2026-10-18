@@ -8,6 +8,8 @@
     <entry name="Estilo" type="String"><default>tinta</default></entry>
     <!-- Animado (como en Ágape); sin gráfica de verdad se queda quieto -->
     <entry name="Animar" type="Bool"><default>true</default></entry>
+    <!-- Una imagen o un vídeo tuyo (ruta); vacío: el fondo animado de «Estilo» -->
+    <entry name="Archivo" type="String"><default></default></entry>
     <!-- El piso (jugar, navegar, estudiar): lo pone apogeo-pisos; lo lee la pantalla de bloqueo -->
     <entry name="Piso" type="String"><default>navegar</default></entry>
   </group>

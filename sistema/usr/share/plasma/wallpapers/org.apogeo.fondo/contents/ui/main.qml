@@ -1,47 +1,146 @@
 import QtQuick
+import QtQuick.Window
+import QtMultimedia
 import org.kde.plasma.plasmoid
+import org.kde.taskmanager as TaskManager
 
-// Fondo de Apogeo: los fondos animados de Ágape con sus colores (Berenjena). Se dibuja a un tercio de la resolución y
-// como mucho a 30 imágenes por segundo (son suaves y así apenas gasta), como en Ágape. Cada piso pone su estilo.
+// Fondo de Apogeo. Cada piso pone el suyo (apogeo-pisos):
+//  - los fondos animados de Ágape con sus colores (Berenjena): se dibujan a un tercio de la resolución y como mucho a 30
+//    imágenes por segundo, como en Ágape;
+//  - o una imagen o un vídeo tuyo en alta calidad («Archivo»). El vídeo va en bucle, sin sonido, y se para cuando una
+//    ventana maximizada o a pantalla completa lo tapa (primero la salud del equipo).
+// Al cambiar de fondo, el nuevo aparece fundiéndose sobre el anterior.
 WallpaperItem {
     id: root
 
     readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces"]
     readonly property int kind: Math.max(0, styles.indexOf(root.configuration.Estilo))
+    readonly property string file: root.configuration.Archivo || ""
+    function videoFile(f) { return /\.(mp4|webm|mkv|mov|m4v)$/i.test(f) }
     // Sin gráfica (el dibujo lo haría el procesador) se queda quieto: primero la salud del equipo
     readonly property bool animate: root.configuration.Animar && GraphicsInfo.api !== GraphicsInfo.Software
     property real time: 40
 
+    // ¿Hay algo maximizado o a pantalla completa en este escritorio? Entonces el fondo no se ve: ni animar ni reproducir
+    TaskManager.VirtualDesktopInfo { id: desktops }
+    TaskManager.TasksModel {
+        id: tasks
+        filterByVirtualDesktop: true
+        virtualDesktop: desktops.currentDesktop
+        filterMinimized: true
+        groupMode: TaskManager.TasksModel.GroupDisabled
+    }
+    property int covering: 0
+    Instantiator {
+        model: tasks
+        delegate: QtObject {
+            readonly property bool covers: !!(model.IsMaximized || model.IsFullScreen)
+            onCoversChanged: root.covering += covers ? 1 : -1
+            Component.onCompleted: if (covers) root.covering += 1
+            Component.onDestruction: if (covers) root.covering -= 1
+        }
+    }
+    readonly property bool seen: root.visible && covering <= 0
+
     Rectangle { anchors.fill: parent; color: "#120d14" }
 
-    ShaderEffect {
-        id: fx
-        width: Math.max(2, Math.round(root.width / 3))
-        height: Math.max(2, Math.round(root.height / 3))
-        property real t: root.time
-        property real kind: root.kind
-        property real light: 0
-        property size res: Qt.size(root.width, root.height)
-        property color base: "#120d14"
-        property color c1: "#4a2c4f"
-        property color c2: "#7a4458"
-        property color c3: "#e0a9b4"
-        fragmentShader: Qt.resolvedUrl("../shaders/fondo.frag.qsb")
-    }
-    ShaderEffectSource {
+    // ----- El animado -----
+    Item {
+        id: animated
         anchors.fill: parent
-        sourceItem: fx
-        textureSize: Qt.size(fx.width, fx.height)
-        smooth: true
-        live: true
-        hideSource: true
+        visible: root.file === "" || opacity > 0
+        opacity: root.file === "" ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
+        ShaderEffect {
+            id: fx
+            width: Math.max(2, Math.round(root.width / 3))
+            height: Math.max(2, Math.round(root.height / 3))
+            property real t: root.time
+            property real kind: root.kind
+            property real light: 0
+            property size res: Qt.size(root.width, root.height)
+            property color base: "#120d14"
+            property color c1: "#4a2c4f"
+            property color c2: "#7a4458"
+            property color c3: "#e0a9b4"
+            fragmentShader: Qt.resolvedUrl("../shaders/fondo.frag.qsb")
+        }
+        ShaderEffectSource {
+            anchors.fill: parent
+            sourceItem: fx
+            textureSize: Qt.size(fx.width, fx.height)
+            smooth: true
+            live: true
+            hideSource: true
+        }
     }
-
     // 30 imágenes por segundo como mucho (lo mismo que Ágape)
     Timer {
         interval: 33
         repeat: true
-        running: root.animate && root.visible
+        running: root.animate && root.seen && root.file === ""
         onTriggered: root.time += 0.033
     }
+
+    // ----- Imagen tuya: la nueva se funde sobre la anterior -----
+    property bool front: false
+    Image {
+        id: imgA
+        anchors.fill: parent
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        cache: false
+        smooth: true
+        mipmap: true
+        sourceSize: Qt.size(root.width * Screen.devicePixelRatio, root.height * Screen.devicePixelRatio)
+        opacity: 0
+        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
+        onStatusChanged: if (status === Image.Ready && !root.front) { opacity = 1; imgB.opacity = 0 }
+    }
+    Image {
+        id: imgB
+        anchors.fill: parent
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        cache: false
+        smooth: true
+        mipmap: true
+        sourceSize: imgA.sourceSize
+        opacity: 0
+        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
+        onStatusChanged: if (status === Image.Ready && root.front) { opacity = 1; imgA.opacity = 0 }
+    }
+
+    // ----- Vídeo tuyo: en bucle y sin sonido -----
+    Video {
+        id: video
+        anchors.fill: parent
+        fillMode: VideoOutput.PreserveAspectCrop
+        loops: MediaPlayer.Infinite
+        muted: true
+        opacity: 0
+        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
+        onPlaybackStateChanged: if (playbackState === MediaPlayer.PlayingState) opacity = 1
+    }
+
+    function show() {
+        if (root.file === "") {
+            video.stop(); video.source = ""; video.opacity = 0;
+            imgA.opacity = 0; imgB.opacity = 0;
+            return;
+        }
+        const url = "file://" + root.file.split("/").map(encodeURIComponent).join("/");
+        if (videoFile(root.file)) {
+            imgA.opacity = 0; imgB.opacity = 0;
+            if (video.source.toString() !== url) { video.opacity = 0; video.source = url; }
+            if (root.seen) video.play();
+            return;
+        }
+        video.stop(); video.source = ""; video.opacity = 0;
+        root.front = !root.front;
+        (root.front ? imgB : imgA).source = url;
+    }
+    onFileChanged: show()
+    onSeenChanged: if (videoFile(root.file)) { if (root.seen) video.play(); else video.pause(); }
+    Component.onCompleted: show()
 }

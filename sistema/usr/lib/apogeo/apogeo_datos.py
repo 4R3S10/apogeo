@@ -14,6 +14,9 @@ Lo sirve apogeo-pisos, que ya está siempre en marcha. Todo se devuelve como tex
   Abrir(app)          abre una app de la lista (discord, spotify): la pide el modo partida de KWin (Meta+Tab)
   Musica()            lo que suena (MPRIS): {app, titulo, artista, portada, sonando}; {} si no suena nada
   MusicaAccion(a)     Previous · PlayPause · Next en ese reproductor
+  Fondos()            tu biblioteca de fondos (animados, tuyos, carpeta), el de cada piso y «que cambie solo»
+  PonerFondo(p, v)    el fondo del piso p (un animado o la ruta de una imagen o un vídeo); se ve al momento
+  CambiarSolo(p, on)  «que cambie solo» en el piso p
 """
 import datetime
 import glob
@@ -79,6 +82,10 @@ class Datos(dbus.service.Object):
 
     @dbus.service.method(IFACE, in_signature='s')
     def Abrir(self, app):
+        if app == 'fondos':  # «Más…» del carrusel de fondos: Ajustes → Fondos
+            subprocess.Popen(['/usr/lib/apogeo/apogeo-ajustes', 'fondos'], stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            return
         desktop = self.APPS.get(app)
         if not desktop:
             return
@@ -130,6 +137,34 @@ class Datos(dbus.service.Object):
                     action, 'org.mpris.MediaPlayer2.Player')()
             except dbus.DBusException:
                 pass
+
+    @dbus.service.method(IFACE, out_signature='s')
+    def Fondos(self):
+        import apogeo_comun as comun
+        import apogeo_fondos as fondos
+        st = comun.load()
+        out = fondos.library(st)
+        out['pisos'] = {k: st['pisos'][k]['fondo'] for k in comun.FLOOR_KEYS}
+        out['cambiar'] = st['fondos']['cambiar']
+        return json.dumps(out, ensure_ascii=False)
+
+    @dbus.service.method(IFACE, in_signature='ss')
+    def PonerFondo(self, floor, value):
+        import apogeo_comun as comun
+        if floor not in comun.FLOOR_KEYS or (value not in comun.STYLES and not comun.is_wallpaper_file(value)):
+            return
+        st = comun.load()
+        st['pisos'][floor]['fondo'] = value
+        comun.save(st)  # apogeo-pisos lo ve y lo pone
+
+    @dbus.service.method(IFACE, in_signature='ss')  # (on: «true» o «false»: los widgets solo mandan texto)
+    def CambiarSolo(self, floor, on):
+        import apogeo_comun as comun
+        if floor not in comun.FLOOR_KEYS:
+            return
+        st = comun.load()
+        st['fondos']['cambiar'][floor]['activo'] = str(on).lower() == 'true'
+        comun.save(st)
 
     @dbus.service.method(IFACE, out_signature='s')
     def Tiempo(self):

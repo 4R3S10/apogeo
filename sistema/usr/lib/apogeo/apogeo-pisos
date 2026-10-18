@@ -438,6 +438,9 @@ class Floors:
         self.cookie = None
         self.visited = set()
         self.last = None
+        self.rotate_timer = None   # «que cambie solo»: el temporizador del piso en el que estás
+        self.shown = {}            # piso → el fondo que se ve ahora (el elegido o el de «que cambie solo»)
+        self.chosen = {}           # piso → el que elegiste a mano (si cambia, se ve ese aunque cambie solo)
 
     def apply(self, index, force=False):
         if index == self.last and not force:
@@ -447,7 +450,8 @@ class Floors:
         st = ajustes.load()
         mine = st['pisos'][f['key']]
         log('piso', f['name'])
-        self.wallpaper(mine['fondo'], st['animar'], f['key'])
+        self.wallpaper(self.pick_wallpaper(st, f['key'], entering=not force), st['animar'], f['key'])
+        self.schedule_rotation(st, f['key'])
         self.quiet(st['silencio'] or not mine['avisos'])
         self.power(mine['energia'])
         if force:
@@ -470,14 +474,65 @@ class Floors:
         self.apply(self.last if self.last is not None else current_index(self.bus), force=True)
         island(self.bus, ajustes.load())
 
+    # ----- «Que cambie solo» -----
+
+    def pick_wallpaper(self, st, floor, entering=False, advance=False):
+        """El fondo que toca en el piso: el que elegiste o, con «que cambie solo», el siguiente de la lista (al entrar en
+        el piso, si es «al entrar», o cuando pasa el tiempo)."""
+        rot = st['fondos']['cambiar'][floor]
+        chosen = st['pisos'][floor]['fondo']
+        if not rot['activo'] or self.chosen.get(floor, chosen) != chosen:
+            # Sin «que cambie solo», o acabas de elegir uno a mano: se ve ese
+            self.chosen[floor] = chosen
+            self.shown[floor] = chosen
+            return chosen
+        self.chosen[floor] = chosen
+        if advance or (entering and rot['cada'] == 'piso') or floor not in self.shown:
+            pool = ajustes.rotation_pool(st, floor)
+            state = load_state()
+            idx = state.setdefault('rotacion', {}).get(floor, -1)
+            if advance or (entering and rot['cada'] == 'piso'):
+                idx += 1
+            idx = max(0, idx) % len(pool)
+            state['rotacion'][floor] = idx
+            save_state(state)
+            self.shown[floor] = pool[idx]
+        return self.shown[floor]
+
+    def schedule_rotation(self, st, floor):
+        if self.rotate_timer:
+            GLib.source_remove(self.rotate_timer)
+            self.rotate_timer = None
+        rot = st['fondos']['cambiar'][floor]
+        every = ajustes.EVERY[rot['cada']]
+        if rot['activo'] and every:
+            self.rotate_timer = GLib.timeout_add_seconds(every, self.rotate, floor)
+
+    def rotate(self, floor):
+        if self.last is None or FLOORS[self.last]['key'] != floor:
+            self.rotate_timer = None
+            return False
+        st = ajustes.load()
+        if not st['fondos']['cambiar'][floor]['activo']:
+            self.rotate_timer = None
+            return False
+        self.wallpaper(self.pick_wallpaper(st, floor, advance=True), st['animar'], floor)
+        return True
+
     def wallpaper(self, style, animate, floor):
         """El fondo animado de Ágape del piso (org.apogeo.fondo). Sin gráfica de verdad, quieto (lo dibujaría el
         procesador), y también si lo apagas en los ajustes. También en la pantalla de bloqueo, que así sabe en qué piso
         estabas."""
         animate = 'true' if animate and real_gpu() else 'false'
+        # Un fondo animado de Apogeo o una imagen o un vídeo tuyo (Archivo)
+        if style in ajustes.STYLES:
+            archivo = ''
+        else:
+            archivo, style = style, 'tinta'
+        archivo_js = json.dumps(archivo)
         run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--key', 'WallpaperPlugin',
             'org.apogeo.fondo')
-        for key, value in (('Estilo', style), ('Animar', animate), ('Piso', floor)):
+        for key, value in (('Estilo', style), ('Animar', animate), ('Piso', floor), ('Archivo', archivo)):
             run('kwriteconfig6', '--file', 'kscreenlockerrc', '--group', 'Greeter', '--group', 'Wallpaper', '--group',
                 'org.apogeo.fondo', '--group', 'General', '--key', key, value)
         plasma_script(self.bus, """
@@ -487,8 +542,9 @@ class Floors:
                 d.writeConfig('Estilo', '%s');
                 d.writeConfig('Animar', %s);
                 d.writeConfig('Piso', '%s');
+                d.writeConfig('Archivo', %s);
             });
-        """ % (style, animate, floor))
+        """ % (style, animate, floor, archivo_js))
 
     def quiet(self, on):
         """No molestar mientras se esté en el piso: lo que llegue se queda en el historial de avisos."""

@@ -107,6 +107,27 @@ momento.
 Al final de la isla está el **panel rápido**: red, bluetooth, fondo animado, no molestar, ahorro de energía del piso,
 luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
 
+## Fondos
+
+Cada piso con el suyo; el animado de siempre es el de por defecto. Se cambian en Ajustes → Fondos o con el botón derecho
+en el escritorio: sale un carrusel y el fondo se ve al momento, con «Cancelar» para volver al de antes.
+
+- **Animados de Apogeo:** los ocho de Ágape. Se dibujan a un tercio de la resolución y a 30 imágenes por segundo como
+  mucho.
+- **Tus fondos:** imágenes (JPG, PNG, WebP, AVIF, JPEG XL…) y vídeos (MP4, WebM, MKV, MOV) en alta calidad.
+  - Las imágenes se cargan a la resolución de la pantalla, con un fundido al cambiar.
+  - Los vídeos van en bucle y sin sonido, y se paran cuando una ventana maximizada o a pantalla completa los tapa.
+- **Tu carpeta:** por defecto «Fondos» dentro de tu carpeta de imágenes. Lo que metas ahí aparece solo.
+- **Galería de internet:** busca en las imágenes destacadas de Wikimedia Commons, que son fotos de alta calidad con
+  licencia libre y no piden clave ni cuenta.
+  - Solo enseña las apaisadas de 2560 px o más.
+  - Al ponerla, se baja a tu carpeta, y su autor y licencia se apuntan en `~/.local/share/apogeo/fondos-creditos.json`.
+- **Que cambie solo:** cada 15 minutos, cada hora, cada día o al entrar en el piso. Pasa por tus fondos y los de la
+  carpeta, solo por unos u otros, o por los animados.
+
+Lo hacen `apogeo_fondos.py` (biblioteca y galería), `apogeo-pisos` (el de cada piso y que cambie solo) y el fondo de
+Plasma `org.apogeo.fondo`.
+
 ## Escritorios
 
 Sin iconos de apps y con el estilo «D2 · Sin cajas»: todo escrito sobre el fondo, separado por rayas finas, con un velo
