@@ -2,7 +2,7 @@
 #  1. Trae la nota de Apogeo (EFI\apogeo\puente.json, en la partición de arranque) a C:\Apogeo\estado\puente.json y
 #     la borra de allí (si luego enciendes Windows a mano, no vuelve a abrir el juego).
 #  2. Espera a que el puente (la sesión) pida volver (C:\Apogeo\estado\volver): apunta tus juegos de Windows en
-#     EFI\apogeo\juegos.json para que Apogeo los enseñe en su consola y reinicia (el orden de arranque vuelve a Apogeo).
+#     EFI\apogeo\juegos.json para que Apogeo los enseñe en su consola y reinicia en Apogeo (BootNext a Limine).
 $ErrorActionPreference = 'Continue'
 $Base = 'C:\Apogeo'
 $Estado = Join-Path $Base 'estado'
@@ -104,5 +104,11 @@ try {
     }
 } catch { Write-Output "juegos: $_" }
 Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Estado 'volver')
+# El próximo arranque, Apogeo (aunque Windows se haya puesto el primero): la entrada de Limine del firmware, una vez
+try {
+    $bloques = (bcdedit /enum firmware | Out-String) -split '(\r?\n){2,}'
+    $apogeo = $bloques | Where-Object { $_ -match '(?i)limine|apogeo' } | Select-Object -First 1
+    if ($apogeo -and $apogeo -match '\{[0-9a-fA-F-]{36}\}') { bcdedit /set '{fwbootmgr}' bootsequence $Matches[0] | Out-Null }
+} catch { Write-Output "arranque: $_" }
 Stop-Transcript | Out-Null
 Restart-Computer -Force
