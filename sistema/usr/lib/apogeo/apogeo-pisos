@@ -281,6 +281,9 @@ def setup(bus):
         st['estetica'] = AESTHETICS
         restart_plasma['pending'] = True
     save_state(st)
+    # Al volver de un piso sin avisos sale el resumen de Apogeo, no el «Notificaciones sin leer» de Plasma (también en
+    # /etc/xdg; aquí por si la cuenta tenía el suyo). Plasma lo lee la primera vez que lo necesita en la sesión
+    kw('libnotificationmanager.notifyrc', 'Event/inhibitionSummary', 'Action', '')
     island(bus, ajustes.load())
 
 

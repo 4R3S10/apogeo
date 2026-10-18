@@ -1,0 +1,4 @@
+# Apogeo: sin el aviso de Plasma «Notificaciones sin leer» al acabar el «No molestar»; en su lugar sale el resumen
+# de Apogeo encima de la isla (apogeo-resumen). Los avisos siguen en el historial.
+[Event/inhibitionSummary]
+Action=
