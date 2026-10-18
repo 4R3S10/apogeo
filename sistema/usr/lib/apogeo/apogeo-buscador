@@ -1,19 +1,51 @@
 #!/usr/bin/python3
 """
-Buscador de Apogeo («B2 · Paleta en el centro», como el buscador de Ágape): una tarjeta en el centro con lo que
-encuentran los buscadores de KDE (apps, archivos, ajustes, calculadora…) agrupado, y al final «Buscar en la web con
-Ágape». Todo con el teclado: ↑ ↓ elegir, Intro abrir, Esc cerrar. Se queda preparado en segundo plano (lo arranca
-apogeo-pisos al entrar, o D-Bus la primera vez) para salir al momento.
+Apps y buscador de Apogeo («A1»): el cajón encima de la isla con todas tus apps por tipo (Jugar, Estudiar, Internet y
+chat, Ver y crear, Sistema) y, en cuanto escribes, lo que encuentran los buscadores de KDE (apps, archivos, ajustes,
+calculadora…) agrupado, y al final «Buscar en la web con Ágape». Todo con el teclado: flechas elegir, Intro abrir, Esc
+cerrar. Se queda preparado en segundo plano (lo arranca apogeo-pisos al entrar, o D-Bus la primera vez) para salir al
+momento.
 
   apogeo-buscador           lo enseña (o lo esconde, si ya se ve)
   apogeo-buscador --fondo   lo deja preparado, sin enseñarlo
-D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (la lupa de la isla y la tecla Meta)
+D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (el botón rosa de la isla y la tecla Meta)
 """
 import os
 import sys
 
 SERVICE, PATH, IFACE = 'org.apogeo.Buscador', '/Buscador', 'org.apogeo.Buscador'
 QML = os.environ.get('APOGEO_BUSCADOR_QML', '/usr/share/apogeo/buscador/Buscador.qml')
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+
+# Los grupos del cajón, en orden. Una app va al primero que encaje: primero por su nombre (las de Apogeo), luego por sus
+# categorías (las del .desktop)
+GROUPS = [
+    ('Jugar', {'steam.desktop', 'com.heroicgameslauncher.hgl.desktop', 'net.lutris.Lutris.desktop', 'discord.desktop',
+               'apogeo-consola.desktop', 'hydralauncher.desktop', 'com.vysp3r.ProtonPlus.desktop'}, {'Game'}),
+    ('Estudiar', {'obsidian.desktop', 'org.kde.okular.desktop', 'com.github.xournalpp.xournalpp.desktop', 'anki.desktop'},
+     {'Education', 'Office', 'Science', 'Dictionary'}),
+    ('Internet y chat', {'ares.desktop'}, {'Network', 'WebBrowser', 'Email', 'Chat', 'InstantMessaging'}),
+    ('Ver y crear', set(), {'AudioVideo', 'Audio', 'Video', 'Graphics', 'Photography', 'Music'}),
+    ('Sistema', set(), set()),  # (lo demás)
+]
+
+
+def grouped_apps():
+    """[{grupo, apps: [{id, nombre, icono}]}] con las apps del menú."""
+    import gi
+    gi.require_version('Gio', '2.0')
+    from gi.repository import Gio
+    out = {g[0]: [] for g in GROUPS}
+    for info in Gio.AppInfo.get_all():
+        if not info.should_show() or not info.get_id():
+            continue
+        did = info.get_id()
+        cats = set((info.get_categories() or '').split(';')) if hasattr(info, 'get_categories') else set()
+        group = next((name for name, ids, wanted in GROUPS if did in ids), None) or \
+            next((name for name, ids, wanted in GROUPS if cats & wanted), 'Sistema')
+        icon = info.get_icon()
+        out[group].append({'id': did, 'nombre': info.get_name(), 'icono': icon.to_string() if icon else 'application-x-executable'})
+    return [{'grupo': g, 'apps': sorted(a, key=lambda x: x['nombre'].lower())} for g, a in out.items() if a]
 
 
 def already_running():
@@ -34,13 +66,42 @@ def main():
     if already_running():
         return 0
     os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
-    from PyQt6.QtCore import QObject, QUrl, pyqtClassInfo, pyqtSignal, pyqtSlot
+    from PyQt6.QtCore import QObject, QUrl, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
     from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
     from PyQt6.QtGui import QDesktopServices, QGuiApplication, QIcon
     from PyQt6.QtQml import QQmlApplicationEngine
 
     class Buscador(QObject):
         toggled = pyqtSignal()
+        appsChanged = pyqtSignal()
+
+        def __init__(self):
+            super().__init__()
+            self._apps = []
+
+        @pyqtProperty('QVariantList', notify=appsChanged)
+        def apps(self):
+            return self._apps
+
+        @pyqtSlot()
+        def refresh(self):
+            """Las apps otra vez (al abrir el cajón: por si has instalado o quitado alguna)."""
+            self._apps = grouped_apps()
+            self.appsChanged.emit()
+
+        @pyqtSlot(str)
+        def launch(self, desktop_id):
+            """Abre la app como si la abrieras tú (en su propio grupo de systemd)."""
+            import gi
+            gi.require_version('Gio', '2.0')
+            from gi.repository import Gio
+            try:
+                path = Gio.DesktopAppInfo.new(desktop_id).get_filename()
+            except TypeError:
+                return
+            import subprocess
+            subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice', 'gio', 'launch', path],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
         @pyqtSlot(str)
         def web(self, text):

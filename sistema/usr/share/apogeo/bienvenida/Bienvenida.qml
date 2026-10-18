@@ -249,7 +249,7 @@ ApplicationWindow {
             Repeater {
                 model: [
                     { title: "Saltar por ahora", sub: "Vuelve a salir en el próximo inicio", done: false },
-                    { title: "No volver a mostrar", sub: "La tienes en el buscador («Bienvenida»)", done: true }
+                    { title: "No volver a mostrar", sub: "La tienes en el botón de apps de la isla («Bienvenida»)", done: true }
                 ]
                 delegate: AbstractButton {
                     id: opt
@@ -681,7 +681,7 @@ ApplicationWindow {
             spacing: 0
             Header_ {
                 title: "¡Todo listo!"
-                lead: "Si algo lo dejaste para luego, vuelve a abrir la bienvenida desde el buscador de la isla («Bienvenida»)."
+                lead: "Si algo lo dejaste para luego, vuelve a abrir la bienvenida desde el botón de apps de la isla (escribe «Bienvenida»)."
             }
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter

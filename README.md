@@ -23,7 +23,7 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
   a poco (Suave 4500 K de serie; Media y Fuerte en Ajustes → Pisos) y al amanecer se va. Tu zona sale de tu zona horaria,
   sin preguntar a internet.
 - **Energía:** nunca «rendimiento». Jugar y Navegar en equilibrado, Estudiar en ahorro.
-- **La primera vez** que entras en un piso se abren sus apps (Jugar: la consola; Navegar: Ágape).
+- **La primera vez** que entras en un piso se abren sus apps (Jugar: la consola; en Navegar y Estudiar, ninguna de serie: se eligen en Ajustes → Pisos).
 
 ## Logo
 
@@ -135,25 +135,6 @@ en el escritorio: sale un carrusel y el fondo se ve al momento, con «Cancelar»
 
 Lo hacen `apogeo_fondos.py` (biblioteca y galería), `apogeo-pisos` (el de cada piso y que cambie solo) y el fondo de
 Plasma `org.apogeo.fondo`.
-
-## Entrar con neuronas
-
-En la pantalla de inicio de sesión y en la de bloqueo, en vez de escribir la contraseña («E5», pensado para que no se pueda
-copiar mirando):
-- Tu código son 5 neuronas de 20. Cada una se reconoce por su tipo de dendritas (estrella, axón largo, puntas en Y,
-  rizos, abanico) y su núcleo (lleno, anillo, rombo, doble).
-- En cada toque las 20 cambian de sitio y de cables, y no tocas la tuya: tocas una de las conectadas a ella. Quien mira
-  ve toques en neuronas distintas cada vez.
-- **Comprobación:** al acabar se prueban las combinaciones posibles (2-3 vecinas por toque) contra un verificador con sal
-  en `/var/lib/apogeo/neuronas/USUARIO.json`. Si una cuadra, se entra con la contraseña de la cuenta. Si no, se vuelve
-  a empezar sin gastar intentos de la cuenta.
-- **La contraseña:** son las letras de tus neuronas. La pone `apogeo-neuronas` (con pkexec, pidiendo la de ahora) y es la
-  que se escribe en sudo y en la terminal.
-- **Siempre a mano:** «Escribir la contraseña» sigue disponible.
-- **Dónde se elige:** en Ajustes → Tu perfil → Entrar con neuronas.
-
-Es más cómoda que segura: la contraseña son 5 letras de 20 posibles. Para que nadie pueda sacarla del disco, conviene
-tener el disco cifrado.
 
 ## Escritorios
 

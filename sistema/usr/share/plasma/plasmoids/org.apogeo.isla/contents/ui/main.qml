@@ -9,7 +9,8 @@ import org.kde.taskmanager as TaskManager
 import org.kde.kirigami as Kirigami
 import Apogeo
 
-// La isla de Apogeo (abajo, se esconde sola), con los botones y chips de Ágape. Siempre: el buscador (la pastilla rosa).
+// La isla de Apogeo (abajo, se esconde sola), con los botones y chips de Ágape. Siempre: tus apps y el buscador en uno (el
+// botón rosa, «A1»; también con la tecla Meta).
 // Además, según el piso:
 //  - Jugar: temperatura, el límite de FPS y un botón para ver el escritorio.
 //  - Navegar: tus ventanas del piso y la música que suena.
@@ -193,11 +194,11 @@ PlasmoidItem {
         Layout.minimumWidth: implicitWidth
         Layout.preferredWidth: implicitWidth
 
-        // El buscador (apps, archivos, calculadora, la web…): la pastilla rosa, como el botón principal de Ágape
+        // Tus apps por tipo y, al escribir, el buscador (apps, archivos, calculadora, la web…): la pastilla rosa
         AgapeButton {
-            iconName: "buscar"
+            iconName: "apps"
             on: true
-            tip: "Buscar"
+            tip: "Apps y buscar (Meta)"
             onClicked: root.run("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle")
         }
 

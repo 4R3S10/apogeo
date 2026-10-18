@@ -1,12 +1,10 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
-import Apogeo
 
 // Pantalla de bloqueo de Apogeo («Tarjeta con piso», como la de inicio de sesión): tu nombre, el piso al que vuelves y
 // la contraseña. Sustituye a la de Plasma (la copia apogeo-bloqueo). Si algún día no carga, el bloqueo de KDE pone su
 // pantalla básica y se puede desbloquear igual.
-// Con «Entrar con neuronas», a la derecha sale la red de neuronas en vez de la contraseña escrita (que sigue a mano).
 //
 // Lo que pide el bloqueo de KDE a este archivo: viewVisible, notification, clearPassword() y notificationRepeated(); el
 // resto lo da él: authenticator (la contraseña), kscreenlocker_userName y el fondo (detrás de todo).
@@ -49,8 +47,6 @@ Item {
     property string error: ""
     property bool busy: false
     property string pending: ""   // contraseña escrita antes de que KDE la pida
-    property bool escribir: false  // con neuronas, escribir la contraseña de todos modos
-    readonly property bool conNeuronas: red.lista && !escribir
 
     onClearPassword: { password.text = ""; pending = ""; }
 
@@ -68,7 +64,6 @@ Item {
             watchdog.stop();
             root.error = "Contraseña incorrecta";
             password.text = "";
-            red.empezar();
             shake.start();
             retry.restart();
         }
@@ -110,16 +105,15 @@ Item {
         }
     }
 
-    function unlock(clave) {
-        const p = clave !== undefined ? clave : password.text;
-        if (busy || p === "") return;
+    function unlock() {
+        if (busy || password.text === "") return;
         error = "";
         busy = true;
         watchdog.restart();
         if (authenticator.promptForSecret) {
-            authenticator.respond(p);
+            authenticator.respond(password.text);
         } else {
-            pending = p;
+            pending = password.text;
             start();
         }
     }
@@ -137,19 +131,6 @@ Item {
         hoverEnabled: true
         onPressed: { root.start(); password.forceActiveFocus(); }
         onPositionChanged: root.start()
-    }
-
-    // La red de neuronas, a la derecha de la tarjeta
-    Neuronas {
-        id: red
-        visible: root.conNeuronas
-        x: card.x + card.width + 40
-        y: 40
-        width: root.width - x - 40
-        height: root.height - 80
-        propio: true   // (kscreenlocker_userName es el nombre que se ve, «Ares», no el de la cuenta)
-        onContrasena: clave => { root.start(); root.unlock(clave); }
-        onFallo: { root.error = "No es esa combinación. Vuelve a empezar."; shake.start(); }
     }
 
     // La tarjeta de Ágape: el cromo casi opaco, borde del 10 %, brillo arriba y radio 20
@@ -319,43 +300,9 @@ Item {
 
             Item { width: 1; height: 6 }
 
-            // Con neuronas: cuántas llevas y cómo se hace
-            Column {
-                visible: root.conNeuronas
-                width: parent.width
-                spacing: 10
-                Row {
-                    spacing: 9
-                    Repeater {
-                        model: red.total
-                        delegate: Rectangle {
-                            required property int index
-                            width: 12; height: 12; radius: 6
-                            color: index < red.toques ? root.accent : "transparent"
-                            border.color: index < red.toques ? root.accent : root.muted
-                            border.width: 1.5
-                        }
-                    }
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: root.muted
-                    font { family: root.font; pixelSize: 14 }
-                    text: root.busy || red.comprobando ? "Comprobando…" : "Busca cada una de tus neuronas y toca una de las que están conectadas a ella."
-                }
-                Text {
-                    text: "Escribir la contraseña"
-                    color: root.accent
-                    font { family: root.font; pixelSize: 14; weight: Font.DemiBold }
-                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.escribir = true; password.forceActiveFocus(); } }
-                }
-            }
-
             // La contraseña, como la barra de direcciones de Ágape
             TextField {
                 id: password
-                visible: !root.conNeuronas
                 width: parent.width
                 height: 44
                 echoMode: TextInput.Password

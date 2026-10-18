@@ -23,7 +23,7 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
-VERSION = 2  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado)
+VERSION = 3  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado); 3: Navegar ya no abre Ágape solo
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
 STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
 # Fondos tuyos: imágenes y vídeos en alta calidad
@@ -35,7 +35,7 @@ DEFAULTS = {
     'pisos': {
         # Un solo rosa (el de Ágape) en todo; cada piso con su fondo animado. Energía: nunca «rendimiento».
         'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop']},
-        'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': ['ares.desktop']},
+        'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': []},
         'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': []},
     },
     # El fondo de cada piso (pisos.X.fondo) es un fondo animado de Apogeo o la ruta de una imagen o un vídeo tuyo.
@@ -87,6 +87,8 @@ def load():
     st = _merge(DEFAULTS, raw)
     if raw.get('version', 1) < 2 and st['pisos']['jugar']['fondo'] == 'remolino':
         st['pisos']['jugar']['fondo'] = 'luces'
+    if raw.get('version', 1) < 3 and st['pisos']['navegar']['apps'] == ['ares.desktop']:
+        st['pisos']['navegar']['apps'] = []  # (si no lo habías cambiado)
     return st
 
 

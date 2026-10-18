@@ -3,9 +3,9 @@ import org.kde.milou as Milou
 import org.kde.kirigami as Kirigami
 import Apogeo
 
-// Buscador de Apogeo («B2 · Paleta en el centro»): la tarjeta del buscador de Ágape en el centro de la pantalla, con lo
-// que encuentran los buscadores de KDE (Milou) agrupado por tipo, y al final «Buscar en la web con Ágape».
-// ↑ ↓ (o Tab) elegir · Intro abrir · Esc o un clic fuera cerrar. La parte de dentro es apogeo-buscador («buscador»).
+// Apps y buscador de Apogeo («A1»): el cajón de cristal encima de la isla. Sin escribir, todas tus apps por tipo; al
+// escribir, lo que encuentran los buscadores de KDE (Milou) agrupado, y al final «Buscar en la web con Ágape».
+// Flechas (o Tab) elegir · Intro abrir · Esc o un clic fuera cerrar. La parte de dentro es apogeo-buscador («buscador»).
 Window {
     id: win
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
@@ -15,9 +15,13 @@ Window {
 
     readonly property string query: field.text.trim()
     property int sel: 0
-    readonly property int total: list.count + (query !== "" ? 1 : 0) // + la de la web
+    readonly property int total: query === "" ? flat.length : list.count + 1 // + la de la web
+    // Las apps del cajón, en una lista (para moverse con las flechas) y cuántas caben por fila
+    readonly property var flat: { const o = []; for (const g of buscador.apps) for (const a of g.apps) o.push(a); return o; }
+    readonly property int cols: Math.max(1, Math.floor((card.width - 36) / 92))
 
     function open() {
+        buscador.refresh();
         field.text = "";
         sel = 0;
         showFullScreen();
@@ -30,7 +34,9 @@ Window {
         field.text = "";
     }
     function activate(i) {
-        if (i < list.count) {
+        if (query === "") {
+            if (flat[i]) { buscador.launch(flat[i].id); close(); }
+        } else if (i < list.count) {
             if (results.run(results.index(i, 0))) close();
         } else if (query !== "") {
             buscador.web(query);
@@ -40,7 +46,7 @@ Window {
     function move(d) {
         if (total === 0) return;
         sel = (sel + d + total) % total;
-        if (sel < list.count) list.positionViewAtIndex(sel, ListView.Contain);
+        if (query !== "" && sel < list.count) list.positionViewAtIndex(sel, ListView.Contain);
     }
 
     Connections {
@@ -66,10 +72,10 @@ Window {
 
     Rectangle {
         id: card
-        width: Math.min(640, win.width - 40)
+        width: Math.min(760, win.width - 40)
         x: Math.round((win.width - width) / 2)
-        y: Math.round(win.height * 0.18)
-        height: col.height
+        y: win.height - height - 84   // encima de la isla
+        height: Math.min(col.height, win.height - 120)
         radius: 24
         color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.96)
         border.color: Tema.borde
@@ -105,8 +111,10 @@ Window {
                     clip: true
                     focus: true
                     Keys.onEscapePressed: win.close()
-                    Keys.onDownPressed: win.move(1)
-                    Keys.onUpPressed: win.move(-1)
+                    Keys.onDownPressed: win.move(win.query === "" ? win.cols : 1)
+                    Keys.onUpPressed: win.move(win.query === "" ? -win.cols : -1)
+                    Keys.onRightPressed: event => { if (win.query === "") win.move(1); else event.accepted = false; }
+                    Keys.onLeftPressed: event => { if (win.query === "") win.move(-1); else event.accepted = false; }
                     Keys.onTabPressed: win.move(1)
                     Keys.onBacktabPressed: win.move(-1)
                     Keys.onReturnPressed: win.activate(win.sel)
@@ -114,7 +122,7 @@ Window {
                     Texto {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: field.text === ""
-                        text: "Busca apps, archivos, ajustes o en la web"
+                        text: "Escribe para buscar apps, archivos, ajustes o en la web"
                         color: Tema.tenue
                         font.pixelSize: 19
                     }
@@ -131,7 +139,78 @@ Window {
                     Texto { id: escText; anchors.centerIn: parent; text: "Esc para cerrar"; color: Tema.tenue; font.pixelSize: 11; font.weight: Font.DemiBold }
                 }
             }
-            Rectangle { width: parent.width; height: 1; color: Tema.borde; visible: win.query !== "" }
+            Rectangle { width: parent.width; height: 1; color: Tema.borde }
+
+            // Sin escribir: tus apps por tipo
+            Flickable {
+                id: cajon
+                visible: win.query === ""
+                width: parent.width
+                height: visible ? Math.min(grupos.height + 12, win.height - 220) : 0
+                contentHeight: grupos.height + 12
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                Column {
+                    id: grupos
+                    x: 18
+                    width: parent.width - 36
+                    Repeater {
+                        model: buscador.apps
+                        delegate: Column {
+                            id: grupo
+                            required property var modelData
+                            required property int index
+                            // dónde empieza este grupo en la lista de todas
+                            readonly property int start: { let n = 0; for (let i = 0; i < index; i++) n += buscador.apps[i].apps.length; return n; }
+                            width: grupos.width
+                            Texto {
+                                topPadding: 12; bottomPadding: 4; leftPadding: 4
+                                text: grupo.modelData.grupo
+                                color: Tema.tenue; font.pixelSize: 11; font.weight: Font.Bold
+                                font.letterSpacing: 0.8; font.capitalization: Font.AllUppercase
+                            }
+                            Flow {
+                                width: parent.width
+                                Repeater {
+                                    model: grupo.modelData.apps
+                                    delegate: Rectangle {
+                                        id: tile
+                                        required property var modelData
+                                        required property int index
+                                        readonly property int pos: grupo.start + index
+                                        readonly property bool on: win.sel === pos
+                                        width: 92; height: 88
+                                        radius: 16
+                                        color: on ? Tema.rosaSuave : area.containsMouse ? Tema.encima : "transparent"
+                                        onOnChanged: if (on) {
+                                            const p = tile.mapToItem(grupos, 0, 0);
+                                            if (p.y < cajon.contentY) cajon.contentY = p.y;
+                                            else if (p.y + height > cajon.contentY + cajon.height) cajon.contentY = p.y + height - cajon.height;
+                                        }
+                                        Kirigami.Icon { anchors.horizontalCenter: parent.horizontalCenter; y: 12; width: 40; height: 40; source: tile.modelData.icono }
+                                        Texto {
+                                            y: 58; width: parent.width - 8; x: 4
+                                            horizontalAlignment: Text.AlignHCenter
+                                            text: tile.modelData.nombre
+                                            color: tile.on ? Tema.texto : Tema.apagado
+                                            font.pixelSize: 12
+                                            elide: Text.ElideRight; wrapMode: Text.NoWrap
+                                        }
+                                        MouseArea {
+                                            id: area
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onEntered: win.sel = tile.pos
+                                            onClicked: { buscador.launch(tile.modelData.id); win.close(); }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Lo que encuentran los buscadores de KDE
             ListView {

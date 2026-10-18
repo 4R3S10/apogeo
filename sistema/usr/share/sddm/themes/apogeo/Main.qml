@@ -1,13 +1,10 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
-import Apogeo
 
 // Inicio de sesión de Apogeo, con la estética de Ágape: a la izquierda la tarjeta (la hora grande, tu nombre, en qué piso
 // empiezas y la contraseña) y detrás el fondo de Ágape del piso elegido. Cada piso es una sesión («Apogeo · Jugar»,
 // etc.): así la elección llega a la sesión sin que esta pantalla toque tus archivos.
-// Si tienes «Entrar con neuronas», a la derecha sale la red de neuronas en vez de pedir la contraseña escrita (que
-// sigue a mano con «Escribir la contraseña»).
 Rectangle {
     id: root
     width: 1920
@@ -34,8 +31,6 @@ Rectangle {
     property var userReal: []
     property var userIcons: []
     property string error: ""
-    property bool escribir: false     // con neuronas, escribir la contraseña de todos modos
-    readonly property bool conNeuronas: red.lista && !escribir
 
     // Las sesiones y los usuarios solo se pueden leer como modelos: se copian a listas
     Repeater {
@@ -90,19 +85,6 @@ Rectangle {
         hideSource: true
     }
     Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.2 }
-
-    // La red de neuronas, a la derecha de la tarjeta
-    Neuronas {
-        id: red
-        visible: root.conNeuronas
-        x: card.x + card.width + 40
-        y: 40
-        width: root.width - x - 40
-        height: root.height - 80
-        usuario: root.userNames[root.user] || userModel.lastUser || ""
-        onContrasena: clave => root.login(clave)
-        onFallo: root.error = "No es esa combinación. Vuelve a empezar."
-    }
 
     RectangularShadow {
         anchors.fill: card
@@ -270,42 +252,8 @@ Rectangle {
 
             Item { width: 1; height: 6 }
 
-            // Con neuronas: cuántas llevas y cómo se hace
-            Column {
-                visible: root.conNeuronas
-                width: parent.width
-                spacing: 10
-                Row {
-                    spacing: 9
-                    Repeater {
-                        model: red.total
-                        delegate: Rectangle {
-                            required property int index
-                            width: 12; height: 12; radius: 6
-                            color: index < red.toques ? root.accent : "transparent"
-                            border.color: index < red.toques ? root.accent : root.muted
-                            border.width: 1.5
-                        }
-                    }
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: root.muted
-                    font { family: root.font; pixelSize: 14 }
-                    text: red.comprobando ? "Comprobando…" : "Busca cada una de tus neuronas y toca una de las que están conectadas a ella."
-                }
-                Text {
-                    text: "Escribir la contraseña"
-                    color: root.accent
-                    font { family: root.font; pixelSize: 14; weight: Font.DemiBold }
-                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.escribir = true; password.forceActiveFocus(); } }
-                }
-            }
-
             TextField {
                 id: password
-                visible: !root.conNeuronas
                 width: parent.width
                 height: 44
                 echoMode: TextInput.Password
@@ -386,11 +334,11 @@ Rectangle {
         }
     }
 
-    function login(clave) {
+    function login() {
         const key = floors[floor].key;
         const s = sessionIndex[key] !== undefined ? sessionIndex[key] : sessionModel.lastIndex;
         error = "";
-        sddm.login(userNames[user] || userModel.lastUser, clave !== undefined ? clave : password.text, s);
+        sddm.login(userNames[user] || userModel.lastUser, password.text, s);
     }
 
     Connections {
@@ -398,7 +346,6 @@ Rectangle {
         function onLoginFailed() {
             root.error = "Contraseña incorrecta";
             password.text = "";
-            red.empezar();
             password.forceActiveFocus();
         }
     }
