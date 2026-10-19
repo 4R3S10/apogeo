@@ -39,7 +39,7 @@ Seccion {
             Rectangle {
                 anchors.fill: parent
                 visible: tile.item.tipo !== "animado"
-                radius: 12
+                radius: Tema.r(12)
                 color: Tema.encima
                 clip: true
                 Image {
@@ -61,7 +61,7 @@ Seccion {
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: -4
-                radius: 15
+                radius: Tema.r(15)
                 color: "transparent"
                 border.width: 2
                 border.color: tile.on ? Tema.rosa : area.containsMouse ? Tema.borde : "transparent"
@@ -79,7 +79,7 @@ Seccion {
                 anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 6
                 width: 24; height: 24
                 hoverEnabled: true
-                background: Rectangle { radius: 8; color: quitar.hovered ? "#e5484d" : "#cc120d14" }
+                background: Rectangle { radius: Tema.r(8); color: quitar.hovered ? "#e5484d" : "#cc120d14" }
                 contentItem: Icono { nombre: "cerrar"; width: 12; height: 12; color: Tema.texto }
                 onClicked: apogeo.removeWallpaper(tile.item.valor)
                 ToolTip.visible: hovered; ToolTip.text: "Quitar de tus fondos"
@@ -208,7 +208,7 @@ Seccion {
                         spacing: 5
                         Rectangle {
                             width: parent.width; height: Math.round(width * 0.56)
-                            radius: 12
+                            radius: Tema.r(12)
                             color: Tema.encima
                             clip: true
                             Image { anchors.fill: parent; source: foto.modelData.mini; fillMode: Image.PreserveAspectCrop; asynchronous: true }

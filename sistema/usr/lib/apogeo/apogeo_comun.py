@@ -31,6 +31,8 @@ IMAGES = ('.jpg', '.jpeg', '.png', '.webp', '.avif', '.jxl', '.bmp', '.tif', '.t
 VIDEOS = ('.mp4', '.webm', '.mkv', '.mov', '.m4v')
 EVERY = {'15min': 15 * 60, 'hora': 3600, 'dia': 86400, 'piso': 0}  # «que cambie solo»; «piso»: al entrar en el piso
 FOLDER_DEFAULT = '~/Imágenes/Fondos'
+import apogeo_aspecto as _aspecto  # noqa: E402
+
 DEFAULTS = {
     'pisos': {
         # Un solo rosa (el de Ágape) en todo; cada piso con su fondo animado. Energía: nunca «rendimiento».
@@ -57,6 +59,8 @@ DEFAULTS = {
     'silencio': False,   # «No molestar» en todos los pisos
     'isla': {'esconder': True, 'esconderPisos': True, 'jugar': True, 'navegar': True, 'estudiar': True},  # lo de cada piso: temperatura/FPS,
     'fps': 60,                                                                    # música, temporizador
+    # Ajustes → Aspecto (apogeo_aspecto): lo de serie es la estética de Ágape
+    'aspecto': dict(_aspecto.DEFAULT),
     'version': VERSION,
 }
 WARMTH = (4500, 3700, 3000)  # luz cálida: suave, media, fuerte (kelvin)

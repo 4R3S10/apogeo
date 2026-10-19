@@ -84,7 +84,7 @@ Seccion {
             id: paper
             width: parent.width
             height: 260
-            radius: 16
+            radius: Tema.r(16)
             color: Tema.encima
             border.color: Tema.borde
             Canvas {

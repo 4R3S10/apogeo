@@ -202,7 +202,7 @@ Item {
                     height: 30
                     hoverEnabled: true
                     onClicked: root.cancelRequested()
-                    background: Rectangle { radius: 9; color: cancel.hovered ? Tema.encima : "transparent" }
+                    background: Rectangle { radius: Tema.r(9); color: cancel.hovered ? Tema.encima : "transparent" }
                     contentItem: Item {
                         Row {
                             id: cancelRow
@@ -210,7 +210,7 @@ Item {
                             spacing: 6
                             Texto { text: "Cancelar"; font.pixelSize: 13; color: cancel.hovered ? Tema.texto : Tema.apagado; anchors.verticalCenter: parent.verticalCenter }
                             Rectangle {
-                                width: esc.implicitWidth + 12; height: 20; radius: 6
+                                width: esc.implicitWidth + 12; height: 20; radius: Tema.r(6)
                                 color: Tema.encima
                                 anchors.verticalCenter: parent.verticalCenter
                                 Texto { id: esc; anchors.centerIn: parent; text: "Esc"; font.pixelSize: 11; font.weight: Font.DemiBold; color: Tema.tenue }
@@ -254,12 +254,12 @@ Item {
                             anchors.fill: parent
                             visible: b.on
                             offset.y: 6; blur: 24; spread: -6
-                            radius: 18
+                            radius: Tema.r(18)
                             color: Tema.rosa
                             opacity: 0.85
                         }
                         background: Rectangle {
-                            radius: 18
+                            radius: Tema.r(18)
                             color: b.on ? Tema.rosa : (b.pressed ? Tema.pulsado : Tema.encima)
                             Behavior on color { ColorAnimation { duration: 150 } }
                         }
@@ -299,7 +299,7 @@ Item {
                     id: appsNote
                     visible: root.apps.length > 0
                     width: updateNote.visible ? (parent.width - 10) / 2 : parent.width
-                    height: 42; radius: 14
+                    height: 42; radius: Tema.r(14)
                     color: Tema.encima
                     Row {
                         anchors.verticalCenter: parent.verticalCenter
@@ -324,7 +324,7 @@ Item {
                     height: 42
                     hoverEnabled: true
                     onClicked: root.toggleUpdates()
-                    background: Rectangle { radius: 14; color: root.updates.marcado ? Tema.rosaSuave : (updateNote.hovered ? Tema.pulsado : Tema.encima) }
+                    background: Rectangle { radius: Tema.r(14); color: root.updates.marcado ? Tema.rosaSuave : (updateNote.hovered ? Tema.pulsado : Tema.encima) }
                     contentItem: Item {
                         Row {
                             anchors.verticalCenter: parent.verticalCenter

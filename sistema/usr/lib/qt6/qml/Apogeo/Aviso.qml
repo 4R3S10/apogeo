@@ -5,7 +5,7 @@ Rectangle {
     property alias text: t.text
     implicitWidth: 470
     implicitHeight: t.implicitHeight + 20
-    radius: 12
+    radius: Tema.r(12)
     color: Tema.aviso
     visible: t.text !== ""
     Texto {

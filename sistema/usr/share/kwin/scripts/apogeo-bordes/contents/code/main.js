@@ -1,4 +1,4 @@
-// Apogeo: la isla (abajo) y la barra de pisos (derecha) se esconden del todo, pero salen en cuanto el ratón entra en
+// Apogeo: la isla (abajo, o arriba) y la barra de pisos (derecha, o izquierda) se esconden del todo, pero salen en cuanto el ratón entra en
 // una franja ancha del borde (no hace falta llegar al último píxel). Mientras el ratón esté encima, se quedan; al
 // alejarse, se vuelven a esconder solas (las esconde Plasma). Con una ventana a pantalla completa (un juego, la
 // consola) no sale nada.
@@ -11,7 +11,7 @@ const KEEP = 110;         // mientras el ratón esté a esta distancia del borde
 const ISLAND = 0.3;       // la isla sale en el 40 % central del borde de abajo (de 0.3 a 0.7)
 const RAIL = 0.25;        // los pisos, en el 50 % central del borde derecho (de 0.25 a 0.75)
 
-const shown = { bottom: false, right: false };
+const shown = { island: false, rail: false };
 
 function setHiding(location, mode) {
     callDBus("org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript",
@@ -25,27 +25,30 @@ function fullscreen() {
 
 function update() {
     const island = readConfig("isla", true), rail = readConfig("pisos", true); // (Ajustes → Isla: esconderse sola)
+    // Dónde están (Ajustes → Aspecto): la isla abajo o arriba; la columna a la derecha o a la izquierda
+    const top = readConfig("islaArriba", false), left = readConfig("pisosIzquierda", false);
+    const islandAt = top ? "top" : "bottom", railAt = left ? "left" : "right";
     const pos = workspace.cursorPos;
     const g = workspace.activeScreen.geometry;
-    const fromBottom = g.y + g.height - pos.y;
-    const fromRight = g.x + g.width - pos.x;
+    const fromIslandEdge = top ? pos.y - g.y : g.y + g.height - pos.y;
+    const fromRailEdge = left ? pos.x - g.x : g.x + g.width - pos.x;
     const fx = (pos.x - g.x) / g.width;
     const fy = (pos.y - g.y) / g.height;
 
-    if (island && !shown.bottom && fromBottom <= BAND && fx > ISLAND && fx < 1 - ISLAND && !fullscreen()) {
-        shown.bottom = true;
-        setHiding("bottom", "windowsgobelow");
-    } else if (island && shown.bottom && (fromBottom > KEEP || fx < ISLAND - 0.12 || fx > 1 - ISLAND + 0.12)) {
-        shown.bottom = false;
-        setHiding("bottom", "autohide");
+    if (island && !shown.island && fromIslandEdge <= BAND && fx > ISLAND && fx < 1 - ISLAND && !fullscreen()) {
+        shown.island = true;
+        setHiding(islandAt, "windowsgobelow");
+    } else if (island && shown.island && (fromIslandEdge > KEEP || fx < ISLAND - 0.12 || fx > 1 - ISLAND + 0.12)) {
+        shown.island = false;
+        setHiding(islandAt, "autohide");
     }
 
-    if (rail && !shown.right && fromRight <= BAND && fy > RAIL && fy < 1 - RAIL && !fullscreen()) {
-        shown.right = true;
-        setHiding("right", "windowsgobelow");
-    } else if (rail && shown.right && (fromRight > KEEP || fy < RAIL - 0.1 || fy > 1 - RAIL + 0.1)) {
-        shown.right = false;
-        setHiding("right", "autohide");
+    if (rail && !shown.rail && fromRailEdge <= BAND && fy > RAIL && fy < 1 - RAIL && !fullscreen()) {
+        shown.rail = true;
+        setHiding(railAt, "windowsgobelow");
+    } else if (rail && shown.rail && (fromRailEdge > KEEP || fy < RAIL - 0.1 || fy > 1 - RAIL + 0.1)) {
+        shown.rail = false;
+        setHiding(railAt, "autohide");
     }
 }
 

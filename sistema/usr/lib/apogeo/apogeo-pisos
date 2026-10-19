@@ -29,6 +29,7 @@ from gi.repository import Gio, GLib
 
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 import apogeo_comun as ajustes  # noqa: E402
+import apogeo_aspecto as aspecto  # noqa: E402
 
 FLOORS = [{'name': 'Jugar', 'key': 'jugar'}, {'name': 'Navegar', 'key': 'navegar'}, {'name': 'Estudiar', 'key': 'estudiar'}]
 HOME = os.path.expanduser('~')
@@ -451,6 +452,7 @@ def aesthetics():
         f.write('[Desktop Entry]\nType=Application\nName=Arch-Update\nHidden=true\n')
     run('systemctl', '--user', 'disable', '--now', 'arch-update.timer')
     run('pkill', '-f', 'arch-update --tray')
+    aspecto.apply(ajustes.load(), log=log)   # (si has cambiado el aspecto, el tuyo encima de lo de serie)
     log('estética aplicada')
 
 
@@ -616,9 +618,11 @@ class Floors:
         return False
 
     def settings_changed(self):
-        """Has cambiado algo en los ajustes: el piso en el que estás y la isla, ya."""
+        """Has cambiado algo en los ajustes: el piso en el que estás, la isla y tu aspecto, ya."""
         self.apply(self.last if self.last is not None else current_index(self.bus), force=True)
-        island(self.bus, ajustes.load())
+        st = ajustes.load()
+        island(self.bus, st)
+        apply_look(st)
 
     # ----- «Que cambie solo» -----
 
@@ -781,15 +785,27 @@ def island(bus, st):
     """La isla como en los ajustes: si se esconde sola, lo de cada piso (temperatura y FPS, música, temporizador) y los
     números de la salud del PC que enseña en Jugar."""
     cfg = st['isla']
+    # Dónde van y su tamaño (Ajustes → Aspecto): la isla abajo o arriba, la columna a la derecha o a la izquierda
+    t = aspecto.tokens(aspecto.settings_of(st))
+    top, left = t['posicion'] == 'arriba-dcha', t['posicion'] == 'abajo-izq'
     # Las dos se esconden del todo (o no, si lo quitas en los ajustes); el script de KWin «apogeo-bordes» las saca al
-    # acercar el ratón a una franja ancha del borde, y tiene que saber si lo hace
+    # acercar el ratón a una franja ancha del borde, y tiene que saber si lo hace (y en qué borde están)
     kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if cfg['esconder'] else 'false')
     kw('kwinrc', 'Script-apogeo-bordes', 'pisos', 'true' if cfg['esconderPisos'] else 'false')
+    kw('kwinrc', 'Script-apogeo-bordes', 'islaArriba', 'true' if top else 'false')
+    kw('kwinrc', 'Script-apogeo-bordes', 'pisosIzquierda', 'true' if left else 'false')
     kwin_reconfigure()
     plasma_script(bus, """
         panels().forEach(function (p) {
-            if (p.location == 'right') p.hiding = %s;
-            if (p.location != 'bottom') return;
+            var types = p.widgets().map(function (w) { return w.type; });
+            if (types.indexOf('org.apogeo.pisos') >= 0) {
+                if (p.location != %s) p.location = %s;
+                if (p.height != %d) p.height = %d;
+                p.hiding = %s;
+            }
+            if (types.indexOf('org.apogeo.isla') < 0) return;
+            if (p.location != %s) p.location = %s;
+            if (p.height != %d) p.height = %d;
             p.hiding = %s;
             p.widgets().forEach(function (w) {
                 if (w.type != 'org.apogeo.isla') return;
@@ -802,9 +818,25 @@ def island(bus, st):
                 w.reloadConfig();
             });
         });
-    """ % (json.dumps('autohide' if cfg['esconderPisos'] else 'none'), json.dumps('autohide' if cfg['esconder'] else 'none'),
+    """ % (json.dumps('left' if left else 'right'), json.dumps('left' if left else 'right'), t['isla'], t['isla'],
+           json.dumps('autohide' if cfg['esconderPisos'] else 'none'),
+           json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
+           json.dumps('autohide' if cfg['esconder'] else 'none'),
            json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
+
+
+_look = {'ultimo': None}
+
+
+def apply_look(st, force=False):
+    """Ajustes → Aspecto: solo si ha cambiado (genera temas y los pone: tarda un poco) y en segundo plano. Con «según la
+    hora», también al pasar de día a noche (lo mira el reloj de cada minuto)."""
+    want = json.dumps(aspecto.tokens(aspecto.settings_of(st)), sort_keys=True)
+    if not force and want == _look['ultimo']:
+        return
+    _look['ultimo'] = want
+    threading.Thread(target=lambda: aspecto.apply(st, log=log), daemon=True).start()
 
 
 def light_effects():
@@ -884,6 +916,9 @@ def main():
                           f'--unit=app-apogeo-{name}-{os.getpid()}', f'/usr/lib/apogeo/apogeo-{name}', *args],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     welcome()
+    # Tu aspecto (Ajustes → Aspecto) y, con «según la hora», el cambio de claro a oscuro (se mira cada 10 minutos)
+    apply_look(ajustes.load())
+    GLib.timeout_add_seconds(600, lambda: (apply_look(ajustes.load()), True)[-1])
     floors.apply(current_index(bus))
     GLib.timeout_add_seconds(3, floors.prepare_wallpapers)
     GLib.timeout_add_seconds(6, lambda: desktop_fill(bus))

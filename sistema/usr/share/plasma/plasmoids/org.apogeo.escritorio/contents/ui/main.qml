@@ -191,7 +191,7 @@ PlasmoidItem {
                         width: parent.width
                         spacing: 14
                         Rectangle {
-                            width: 64; height: 64; radius: 14
+                            width: 64; height: 64; radius: Tema.r(14)
                             color: Tema.rosaSuave
                             clip: true
                             Icono { anchors.centerIn: parent; nombre: "musica"; color: Tema.rosa }
@@ -584,7 +584,7 @@ PlasmoidItem {
                                 Rectangle { width: parent.width; height: 1; color: Tema.linea; visible: tarea.index > 0 }
                                 Rectangle {
                                     id: caja
-                                    width: 20; height: 20; radius: 7
+                                    width: 20; height: 20; radius: Tema.r(7)
                                     anchors.verticalCenter: parent.verticalCenter
                                     color: tarea.modelData.hecha ? Tema.rosa : "transparent"
                                     border.width: tarea.modelData.hecha ? 0 : 1.5
@@ -685,7 +685,7 @@ PlasmoidItem {
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 40
-                width: aviso.implicitWidth + 36; height: 40; radius: 14
+                width: aviso.implicitWidth + 36; height: 40; radius: Tema.r(14)
                 color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.88)
                 border.color: Tema.borde
                 Texto {
@@ -702,7 +702,7 @@ PlasmoidItem {
                 anchors.bottomMargin: lienzo.abajo + 10
                 width: Math.min(parent.width - 80, filaFondos.implicitWidth + botones.width + 48)
                 height: 150
-                radius: 24
+                radius: Tema.r(24)
                 color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.9)
                 border.color: Tema.borde
                 MouseArea { anchors.fill: parent } // (que pulsar dentro no cierre)
@@ -729,12 +729,12 @@ PlasmoidItem {
                                     Rectangle {
                                         anchors.fill: parent
                                         visible: mini.modelData.tipo !== "animado"
-                                        radius: 12; color: Tema.encima; clip: true
+                                        radius: Tema.r(12); color: Tema.encima; clip: true
                                         Image { anchors.fill: parent; visible: !mini.modelData.video; source: mini.modelData.video ? "" : (mini.modelData.url || ""); sourceSize: Qt.size(320, 180); fillMode: Image.PreserveAspectCrop; asynchronous: true }
                                         Icono { anchors.centerIn: parent; visible: !!mini.modelData.video; nombre: "video"; color: Tema.rosa }
                                     }
                                     Rectangle {
-                                        anchors.fill: parent; anchors.margins: -4; radius: 15; color: "transparent"; border.width: 2
+                                        anchors.fill: parent; anchors.margins: -4; radius: Tema.r(15); color: "transparent"; border.width: 2
                                         border.color: mini.on ? Tema.rosa : zonaMini.containsMouse ? Tema.borde : "transparent"
                                     }
                                     MouseArea { id: zonaMini; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: carrusel.poner(mini.modelData.valor) }
@@ -785,7 +785,7 @@ PlasmoidItem {
         signal doble()
         width: parent ? parent.width : 0
         height: 32
-        radius: 10
+        radius: Tema.r(10)
         color: on ? Tema.rosaSuave : zona.containsMouse ? Tema.encima : "transparent"
         Icono { x: 8 + f.sangria; anchors.verticalCenter: parent.verticalCenter; nombre: f.icono; color: Tema.rosa; width: 15; height: 15 }
         Texto {

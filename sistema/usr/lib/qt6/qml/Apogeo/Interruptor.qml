@@ -15,7 +15,7 @@ AbstractButton {
         Rectangle {
             x: s.checked ? parent.width - width - 3 : 3
             y: 3
-            width: 18; height: 18; radius: 9
+            width: 18; height: 18; radius: Tema.r(9)
             color: "#ffffff"
             Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         }

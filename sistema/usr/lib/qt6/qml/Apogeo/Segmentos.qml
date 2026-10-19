@@ -9,7 +9,7 @@ Rectangle {
     signal elegido(int indice)
     implicitWidth: fila.implicitWidth + 6
     implicitHeight: 36
-    radius: 12
+    radius: Tema.r(12)
     color: Tema.encima
     Row {
         id: fila
@@ -28,13 +28,13 @@ Rectangle {
                     anchors.fill: parent
                     visible: op.on
                     offset.y: 4; blur: 14; spread: -4
-                    radius: 9
+                    radius: Tema.r(9)
                     color: Tema.rosa
                     opacity: 0.85
                 }
                 Rectangle {
                     anchors.fill: parent
-                    radius: 9
+                    radius: Tema.r(9)
                     color: op.on ? Tema.rosa : "transparent"
                     Behavior on color { ColorAnimation { duration: 180 } }
                 }

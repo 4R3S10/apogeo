@@ -27,16 +27,16 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
 
     // Colores de Ágape (tema Berenjena oscuro)
-    readonly property color accent: "#e0a9b4"
-    readonly property color accentText: "#2a1c26"
-    readonly property color accentSoft: Qt.rgba(224 / 255, 169 / 255, 180 / 255, 0.2)
-    readonly property color text: "#f1e6ea"
-    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
-    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
-    readonly property color press: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.13)
-    readonly property color border: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
+    readonly property color accent: Tema.rosa
+    readonly property color accentText: Tema.sobreRosa
+    readonly property color accentSoft: Tema.rosaSuave
+    readonly property color text: Tema.texto
+    readonly property color muted: Tema.apagado
+    readonly property color hover: Tema.encima
+    readonly property color press: Tema.pulsado
+    readonly property color border: Tema.borde
     readonly property color warn: "#ff8f9a"
-    readonly property string font: "Bricolage Grotesque"
+    readonly property string font: Tema.letra
 
     TaskManager.VirtualDesktopInfo { id: desktops }
     TaskManager.ActivityInfo { id: activities }
@@ -160,7 +160,7 @@ PlasmoidItem {
         Rectangle {
             id: bg
             anchors.fill: parent
-            radius: 13
+            radius: Tema.r(13)
             color: btn.on ? root.accent : (area.pressed ? root.press : area.containsMouse ? root.hover : "transparent")
             Behavior on color { ColorAnimation { duration: 180 } }
         }
@@ -199,7 +199,7 @@ PlasmoidItem {
         Rectangle {
             id: chipBg
             anchors.fill: parent
-            radius: 13
+            radius: Tema.r(13)
             color: chip.on ? root.accent : (chipArea.containsMouse ? root.hover : "transparent")
             Behavior on color { ColorAnimation { duration: 180 } }
         }
@@ -310,7 +310,7 @@ PlasmoidItem {
                 Layout.preferredHeight: 40
                 Rectangle {
                     anchors.fill: parent
-                    radius: 13
+                    radius: Tema.r(13)
                     color: hoverTask.pressed ? root.press : hoverTask.containsMouse || task.model.IsActive ? root.hover : "transparent"
                     Behavior on color { ColorAnimation { duration: 180 } }
                 }
@@ -376,7 +376,7 @@ PlasmoidItem {
                         Rectangle {
                             x: 0; y: 0
                             width: parent.width; height: 146
-                            radius: 12
+                            radius: Tema.r(12)
                             color: Qt.rgba(0, 0, 0, 0.25)
                             clip: true
                             Kirigami.Icon { anchors.centerIn: parent; width: 48; height: 48; source: task.model.decoration; visible: !thumb.visible }
@@ -410,7 +410,7 @@ PlasmoidItem {
                             id: closeBtn
                             anchors.right: parent.right
                             y: 156
-                            width: 28; height: 28; radius: 9
+                            width: 28; height: 28; radius: Tema.r(9)
                             color: closeArea.containsMouse ? "#e5484d" : "transparent"
                             Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: closeArea.containsMouse ? "#ffffff" : Tema.apagado }
                             MouseArea { id: closeArea; anchors.fill: parent; hoverEnabled: true; onClicked: tasks.requestClose(tasks.makeModelIndex(task.index)) }
@@ -427,7 +427,7 @@ PlasmoidItem {
             visible: root.floor === "Navegar" && Plasmoid.configuration.extraNavegar && !!root.player && (root.player.track || "") !== ""
             Layout.preferredHeight: 38
             Layout.preferredWidth: musicRow.implicitWidth + 12
-            radius: 13
+            radius: Tema.r(13)
             color: "transparent"
             RowLayout {
                 id: musicRow
@@ -435,7 +435,7 @@ PlasmoidItem {
                 spacing: 9
                 Rectangle {
                     Layout.preferredWidth: 30; Layout.preferredHeight: 30
-                    radius: 8
+                    radius: Tema.r(8)
                     clip: true
                     color: root.accentSoft
                     Image {

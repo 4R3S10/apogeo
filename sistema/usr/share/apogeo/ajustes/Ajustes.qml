@@ -34,8 +34,8 @@ ApplicationWindow {
     function plain(t) { return (t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") }
     function shown(sec) { return query === "" || plain(sec.titulo + " " + sec.palabras).indexOf(plain(query)) >= 0 }
 
-    readonly property var sections: [pisos, fondos, isla, bloqueo, salud, agape, perfil, copia, actualizaciones]
-    property Item current: pisos
+    readonly property var sections: [aspecto, pisos, fondos, isla, bloqueo, salud, agape, perfil, copia, actualizaciones]
+    property Item current: aspecto
     property Item wanted: null       // la tocada a la izquierda (aunque no pueda subir del todo, por ser de las últimas)
     function go(sec) {
         wanted = sec;
@@ -45,8 +45,8 @@ ApplicationWindow {
     }
     NumberAnimation { id: scroll; target: flick; property: "contentY"; duration: 280; easing.type: Easing.OutCubic }
     Component.onCompleted: {
-        const first = { pisos: pisos, fondos: fondos, isla: isla, bloqueo: bloqueo, salud: salud, agape: agape, perfil: perfil, copia: copia, actualizaciones: actualizaciones }[apogeo.section];
-        if (first && first !== pisos) Qt.callLater(() => go(first));
+        const first = { aspecto: aspecto, pisos: pisos, fondos: fondos, isla: isla, bloqueo: bloqueo, salud: salud, agape: agape, perfil: perfil, copia: copia, actualizaciones: actualizaciones }[apogeo.section];
+        if (first && first !== aspecto) Qt.callLater(() => go(first));
     }
 
     // ---------- La columna de la izquierda ----------
@@ -68,7 +68,7 @@ ApplicationWindow {
         Item { width: 1; height: 8 }
         Repeater {
             model: [
-                { sec: pisos, icono: "pisos" }, { sec: fondos, icono: "imagen" }, { sec: isla, icono: "isla" }, { sec: bloqueo, icono: "llave" }, { sec: salud, icono: "salud" },
+                { sec: aspecto, icono: "aspecto" }, { sec: pisos, icono: "pisos" }, { sec: fondos, icono: "imagen" }, { sec: isla, icono: "isla" }, { sec: bloqueo, icono: "llave" }, { sec: salud, icono: "salud" },
                 { sec: agape, icono: "navegar" }, { sec: perfil, icono: "usuario" }, { sec: copia, icono: "copia" },
                 { sec: actualizaciones, icono: "actualizar" }
             ]
@@ -99,7 +99,7 @@ ApplicationWindow {
         height: 38
         hoverEnabled: true
         background: Rectangle {
-            radius: 11
+            radius: Tema.r(11)
             color: ni.on ? Tema.rosaSuave : ni.hovered ? Tema.encima : "transparent"
             Behavior on color { ColorAnimation { duration: 150 } }
         }
@@ -130,7 +130,7 @@ ApplicationWindow {
             if (win.wanted && !scroll.running && Math.abs(contentY - scroll.to) < 1) return; // (el final del salto)
             win.wanted = null;
             // La sección que se ve arriba es la marcada a la izquierda
-            let cur = win.sections.find(x => x.visible) || pisos;
+            let cur = win.sections.find(x => x.visible) || aspecto;
             for (const sec of win.sections) if (sec.visible && sec.y <= contentY + 60) cur = sec;
             win.current = cur;
         }
@@ -147,6 +147,13 @@ ApplicationWindow {
                 horizontalAlignment: Text.AlignHCenter
                 color: Tema.apagado
                 text: "No hay ningún ajuste con «" + win.query + "»."
+            }
+
+            // ----- Aspecto -----
+            AspectoSeccion {
+                id: aspecto
+                width: parent.width
+                visible: win.shown(aspecto)
             }
 
             // ----- Pisos -----
@@ -222,7 +229,7 @@ ApplicationWindow {
                                 required property var modelData
                                 width: chipRow.implicitWidth + 16
                                 height: 34
-                                radius: 10
+                                radius: Tema.r(10)
                                 color: Tema.encima
                                 Row {
                                     id: chipRow
@@ -241,7 +248,7 @@ ApplicationWindow {
                                         width: 22; height: 22
                                         anchors.verticalCenter: parent.verticalCenter
                                         hoverEnabled: true
-                                        background: Rectangle { radius: 7; color: rm.hovered ? Tema.pulsado : "transparent" }
+                                        background: Rectangle { radius: Tema.r(7); color: rm.hovered ? Tema.pulsado : "transparent" }
                                         contentItem: Item { Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: rm.hovered ? Tema.texto : Tema.tenue } }
                                         onClicked: apogeo.removeApp(win.fk, chip.modelData.id)
                                         ToolTip.visible: hovered
@@ -520,7 +527,7 @@ ApplicationWindow {
                                 }
                             }
                             Rectangle {
-                                width: 36; height: 36; radius: 18
+                                width: 36; height: 36; radius: Tema.r(18)
                                 color: pickPhoto.containsMouse ? Tema.pulsado : Tema.encima
                                 border.width: win.face === 4 ? 2 : 1.5
                                 border.color: win.face === 4 ? Tema.rosa : Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.2)
@@ -679,7 +686,7 @@ ApplicationWindow {
         property var all: []
         onAboutToShow: { all = apogeo.allApps(); find.text = ""; find.forceActiveFocus(); }
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.35) }
-        background: Rectangle { radius: 20; color: Tema.cromo; border.color: Tema.borde }
+        background: Rectangle { radius: Tema.r(20); color: Tema.cromo; border.color: Tema.borde }
         contentItem: Column {
             spacing: 10
             Texto { text: "Añadir a " + win.floors[win.floor].texto; font.pixelSize: 17; font.weight: Font.ExtraBold }
@@ -704,7 +711,7 @@ ApplicationWindow {
                     width: ListView.view.width
                     height: 42
                     hoverEnabled: true
-                    background: Rectangle { radius: 11; color: appRow.hovered ? Tema.encima : "transparent" }
+                    background: Rectangle { radius: Tema.r(11); color: appRow.hovered ? Tema.encima : "transparent" }
                     contentItem: Row {
                         leftPadding: 10
                         spacing: 12

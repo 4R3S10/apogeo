@@ -99,7 +99,7 @@ PlasmoidItem {
             id: bg
             anchors.centerIn: parent
             width: chip.implicitWidth; height: 38
-            radius: 13
+            radius: Tema.r(13)
             color: root.expanded ? Tema.pulsado : area.containsMouse ? Tema.encima : "transparent"
             Behavior on color { ColorAnimation { duration: 180 } }
         }
@@ -118,7 +118,7 @@ PlasmoidItem {
                 Rectangle { // los avisos sin leer
                     visible: compact.unread > 0
                     x: 8; y: -5
-                    width: Math.max(15, n.implicitWidth + 7); height: 15; radius: 7.5
+                    width: Math.max(15, n.implicitWidth + 7); height: 15; radius: Tema.r(7.5)
                     color: Tema.rosa
                     Texto { id: n; anchors.centerIn: parent; text: compact.unread > 9 ? "9+" : compact.unread; font.pixelSize: 9; font.weight: Font.Black; color: Tema.sobreRosa }
                 }
@@ -152,7 +152,7 @@ PlasmoidItem {
         hoverEnabled: true
         opacity: enabled ? 1 : 0.5
         background: Rectangle {
-            radius: 16
+            radius: Tema.r(16)
             color: t.hovered ? Tema.pulsado : Tema.encima
             Behavior on color { ColorAnimation { duration: 150 } }
         }
@@ -162,10 +162,10 @@ PlasmoidItem {
                 x: 12
                 anchors.verticalCenter: parent.verticalCenter
                 width: 34; height: 34
-                RectangularShadow { anchors.fill: parent; visible: t.on; radius: 11; blur: 14; spread: -4; offset.y: 4; color: Tema.rosa }
+                RectangularShadow { anchors.fill: parent; visible: t.on; radius: Tema.r(11); blur: 14; spread: -4; offset.y: 4; color: Tema.rosa }
                 Rectangle {
                     anchors.fill: parent
-                    radius: 11
+                    radius: Tema.r(11)
                     color: t.on ? Tema.rosa : Tema.pulsado
                     Behavior on color { ColorAnimation { duration: 180 } }
                     Icono { anchors.centerIn: parent; nombre: t.icono; color: t.on ? Tema.sobreRosa : Tema.texto }
@@ -189,7 +189,7 @@ PlasmoidItem {
         signal elegido(int value)
         width: 380
         height: 44
-        radius: 16
+        radius: Tema.r(16)
         color: Tema.encima
         Icono { x: 14; anchors.verticalCenter: parent.verticalCenter; nombre: lv.icono; color: Tema.apagado }
         Deslizador {
@@ -287,7 +287,7 @@ PlasmoidItem {
             Rectangle {
                 width: parent.width
                 height: avisos.implicitHeight + 16
-                radius: 16
+                radius: Tema.r(16)
                 color: Tema.encima
                 Column {
                     id: avisos
@@ -306,7 +306,7 @@ PlasmoidItem {
                             width: clearText.implicitWidth + 16; height: 24
                             hoverEnabled: true
                             onClicked: notifs.clear(NotificationManager.Notifications.ClearExpired)
-                            background: Rectangle { radius: 8; color: clearAll.hovered ? Tema.pulsado : "transparent" }
+                            background: Rectangle { radius: Tema.r(8); color: clearAll.hovered ? Tema.pulsado : "transparent" }
                             contentItem: Texto { id: clearText; text: "Borrar todo"; font.pixelSize: 12; color: Tema.apagado; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
@@ -328,7 +328,7 @@ PlasmoidItem {
                             height: visible ? 50 : 0
                             hoverEnabled: true
                             onClicked: { notifs.invokeDefaultAction(notifs.index(index, 0)); root.expanded = false; }
-                            background: Rectangle { radius: 12; color: nd.hovered ? Tema.pulsado : "transparent" }
+                            background: Rectangle { radius: Tema.r(12); color: nd.hovered ? Tema.pulsado : "transparent" }
                             contentItem: Item {
                                 Kirigami.Icon {
                                     id: appIcon
@@ -354,7 +354,7 @@ PlasmoidItem {
                                     visible: nd.hovered
                                     hoverEnabled: true
                                     onClicked: notifs.close(notifs.index(nd.index, 0))
-                                    background: Rectangle { radius: 8; color: close.hovered ? Tema.pulsado : "transparent" }
+                                    background: Rectangle { radius: Tema.r(8); color: close.hovered ? Tema.pulsado : "transparent" }
                                     contentItem: Item { Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: Tema.apagado } }
                                 }
                             }

@@ -7,7 +7,7 @@ Rectangle {
     property string intro
     default property alias filas: col.data
     implicitHeight: col.implicitHeight + 34
-    radius: 18
+    radius: Tema.r(18)
     color: Tema.cristal
     border.color: Tema.borde
     Rectangle { x: s.radius; y: 1; width: s.width - 2 * s.radius; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }

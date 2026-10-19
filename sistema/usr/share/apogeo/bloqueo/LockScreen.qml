@@ -1,4 +1,5 @@
 import QtQuick
+import Apogeo
 import QtQuick.Controls
 import QtQuick.Effects
 import org.kde.coreaddons as KCoreAddons
@@ -24,13 +25,13 @@ Item {
     implicitHeight: 600
 
     // Colores y letra de Ágape (tema Berenjena oscuro)
-    readonly property color text: "#f1e6ea"
-    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
-    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
-    readonly property color border: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
-    readonly property color accent: "#e0a9b4"
-    readonly property color accentText: "#2a1c26"
-    readonly property string font: "Bricolage Grotesque"
+    readonly property color text: Tema.texto
+    readonly property color muted: Tema.apagado
+    readonly property color hover: Tema.encima
+    readonly property color border: Tema.borde
+    readonly property color accent: Tema.rosa
+    readonly property color accentText: Tema.sobreRosa
+    readonly property string font: Tema.letra
     readonly property var floors: [
         { key: "jugar", name: "Jugar", fondo: "luces" },
         { key: "navegar", name: "Navegar", fondo: "tinta" },
@@ -254,7 +255,7 @@ Item {
         x: 40; y: 40
         width: Math.min(440, parent.width - 80)
         height: parent.height - 80
-        radius: 20
+        radius: Tema.r(20)
         color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.92)
         border.color: root.border
         Rectangle { // el brillo de 1 px de arriba
@@ -336,7 +337,7 @@ Item {
             Rectangle {
                 width: seg.implicitWidth + 6
                 height: 40
-                radius: 14
+                radius: Tema.r(14)
                 color: root.hover
                 Row {
                     id: seg
@@ -362,7 +363,7 @@ Item {
                             Rectangle {
                                 id: optBg
                                 anchors.fill: parent
-                                radius: 11
+                                radius: Tema.r(11)
                                 color: opt.on ? root.accent : (optArea.containsMouse ? root.hover : "transparent")
                                 Behavior on color { ColorAnimation { duration: 180 } }
                             }
@@ -422,7 +423,7 @@ Item {
                 focus: true
                 enabled: !root.busy && !retry.running
                 background: Rectangle {
-                    radius: 14
+                    radius: Tema.r(14)
                     color: root.hover
                     border.color: password.activeFocus ? root.accent : "transparent"
                     border.width: 1

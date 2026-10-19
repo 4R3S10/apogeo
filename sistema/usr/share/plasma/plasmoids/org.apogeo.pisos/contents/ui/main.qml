@@ -19,11 +19,11 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
 
     // Colores de Ágape (tema Berenjena oscuro)
-    readonly property color accent: "#e0a9b4"
-    readonly property color accentText: "#2a1c26"
-    readonly property color text: "#f1e6ea"
-    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
-    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
+    readonly property color accent: Tema.rosa
+    readonly property color accentText: Tema.sobreRosa
+    readonly property color text: Tema.texto
+    readonly property color muted: Tema.apagado
+    readonly property color hover: Tema.encima
 
     readonly property var icons: ({ "Jugar": "jugar", "Navegar": "navegar", "Estudiar": "estudiar" })
     property double lastWheel: 0
@@ -33,7 +33,7 @@ PlasmoidItem {
     // Tus ventanas con su sitio en la pantalla (las cuenta KWin): se piden al pasar el ratón por un piso
     property var windows: []
     function loadWindows() { datos.pedir("Ventanas", [], d => { if (Array.isArray(d)) root.windows = d; }) }
-    readonly property var tints: ({ "Jugar": "#5a1f45", "Navegar": "#4a2c4f", "Estudiar": "#3b3342" })
+    readonly property var tints: ({ "Jugar": Tema.wp[1], "Navegar": Tema.wp[0], "Estudiar": Qt.tint(Tema.wp[0], Qt.rgba(0.5, 0.5, 0.5, 0.3)) })
 
     P5Support.DataSource {
         id: runner
@@ -114,7 +114,7 @@ PlasmoidItem {
                     Rectangle {
                         id: pill
                         anchors.fill: parent
-                        radius: 14
+                        radius: Tema.r(14)
                         color: floor.current ? root.accent : (hover.containsMouse ? root.hover : "transparent")
                         Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
                     }
@@ -131,7 +131,7 @@ PlasmoidItem {
                     Rectangle { // el número de ventanas del piso
                         visible: floorTasks.count > 0
                         x: parent.width - width + 4; y: -4
-                        width: Math.max(16, count.implicitWidth + 8); height: 16; radius: 8
+                        width: Math.max(16, count.implicitWidth + 8); height: 16; radius: Tema.r(8)
                         color: floor.current ? root.accentText : root.accent
                         border.width: 2
                         border.color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.9)
@@ -181,11 +181,11 @@ PlasmoidItem {
                                 id: mini
                                 x: 4; y: 28
                                 width: 240; height: 135
-                                radius: 10
+                                radius: Tema.r(10)
                                 clip: true
                                 gradient: Gradient {
                                     GradientStop { position: 0; color: Qt.lighter(root.tints[floor.name] || "#4a2c4f", 1.25) }
-                                    GradientStop { position: 1; color: "#120d14" }
+                                    GradientStop { position: 1; color: Tema.fondo }
                                 }
                                 border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
                                 Repeater {

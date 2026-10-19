@@ -61,7 +61,7 @@ Window {
         opacity: win.entrada
         width: win.width - 36
         height: col.implicitHeight + 44
-        radius: 22
+        radius: Tema.r(22)
         color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.96)
         border.color: Tema.borde
         HoverHandler { id: zona }
@@ -75,7 +75,7 @@ Window {
             Row {
                 spacing: 14
                 Rectangle {
-                    width: 46; height: 46; radius: 14
+                    width: 46; height: 46; radius: Tema.r(14)
                     color: Tema.rosaSuave
                     Icono {
                         anchors.centerIn: parent
@@ -111,7 +111,7 @@ Window {
                     height: Math.max(56, cuerpo.implicitHeight + 20)
                     hoverEnabled: true
                     background: Rectangle {
-                        radius: 14
+                        radius: Tema.r(14)
                         color: fila.hovered && fila.modelData.desktop ? Tema.pulsado : Tema.encima
                         border.width: fila.modelData.urgencia >= 2 ? 1 : 0
                         border.color: Tema.rosa

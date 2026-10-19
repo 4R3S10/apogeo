@@ -76,7 +76,7 @@ Window {
         x: Math.round((win.width - width) / 2)
         y: win.height - height - 84   // encima de la isla
         height: Math.min(col.height, win.height - 120)
-        radius: 24
+        radius: Tema.r(24)
         color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.96)
         border.color: Tema.borde
         clip: true
@@ -134,7 +134,7 @@ Window {
                     anchors.verticalCenter: parent.verticalCenter
                     width: escText.implicitWidth + 14
                     height: 22
-                    radius: 7
+                    radius: Tema.r(7)
                     color: Tema.encima
                     Texto { id: escText; anchors.centerIn: parent; text: "Esc para cerrar"; color: Tema.tenue; font.pixelSize: 11; font.weight: Font.DemiBold }
                 }
@@ -180,7 +180,7 @@ Window {
                                         readonly property int pos: grupo.start + index
                                         readonly property bool on: win.sel === pos
                                         width: 92; height: 88
-                                        radius: 16
+                                        radius: Tema.r(16)
                                         color: on ? Tema.rosaSuave : area.containsMouse ? Tema.encima : "transparent"
                                         onOnChanged: if (on) {
                                             const p = tile.mapToItem(grupos, 0, 0);
@@ -290,13 +290,13 @@ Window {
         readonly property bool on: win.sel === index
         width: ListView.view ? ListView.view.width : parent.width
         height: 48
-        radius: 12
+        radius: Tema.r(12)
         color: on ? Tema.rosaSuave : "transparent"
         Rectangle {
             id: badge
             x: 12
             anchors.verticalCenter: parent.verticalCenter
-            width: 30; height: 30; radius: 9
+            width: 30; height: 30; radius: Tema.r(9)
             color: r.iconName ? Tema.rosaSuave : "transparent"
             Icono { visible: r.iconName !== ""; anchors.centerIn: parent; nombre: r.iconName; color: Tema.rosa }
             Kirigami.Icon { visible: r.iconName === ""; anchors.fill: parent; source: r.decoration || "" }

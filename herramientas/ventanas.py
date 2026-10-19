@@ -10,9 +10,9 @@ import os
 import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/aurorae/themes'
-THEME = 'apogeo'
+from fichas import SURFACE, TEXT, NOMBRE, r
 
-SURFACE, TEXT = '#1e1621', '#f1e6ea'
+THEME = NOMBRE or 'apogeo'
 
 
 def mix(a, b, t):
@@ -30,10 +30,10 @@ HOVER = mix(BAR, TEXT, 0.07)            # --hover
 PRESS = mix(BAR, TEXT, 0.13)            # --press
 CLOSE = '#e5484d'                       # la ✕ de Ágape al pasar el ratón
 
-TITLE_H, R = 38, 12                     # alto de la barra y radio de las esquinas de arriba
+TITLE_H, R = 38, r(12)                    # alto de la barra y radio de las esquinas de arriba
 PAD = 24                                # margen de la sombra
 BTN_W, BTN_H, BTN_TOP = 32, 28, 5       # botones de Ágape (32 × 28, radio 9)
-BTN_R = 9
+BTN_R = r(9)
 
 # Iconos de Ágape (ui/js/icons.js), en su cuadro de 24 y trazo 1,8, dibujados a 15 px
 ICONS = {

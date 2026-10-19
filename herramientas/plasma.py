@@ -16,9 +16,9 @@ import os
 import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/plasma/desktoptheme'
-THEME = 'apogeo'
+from fichas import SURFACE, TEXT, NOMBRE, CRISTAL, r
 
-SURFACE, TEXT = '#1e1621', '#f1e6ea'
+THEME = NOMBRE or 'apogeo'
 
 
 def mix(a, b, t):
@@ -157,14 +157,14 @@ def main():
     root = os.path.join(DST, THEME)
     files = {
         # Isla y columna de pisos: cristal de Ágape
-        'translucent/widgets/panel-background.svg': frame_svg(20, 6, SURFACE, 0.55, 22, 0.32),
-        'widgets/panel-background.svg': frame_svg(20, 6, CHROME, 0.97, 22, 0.32),
+        'translucent/widgets/panel-background.svg': frame_svg(r(20), 6, SURFACE, CRISTAL, 22, 0.32),
+        'widgets/panel-background.svg': frame_svg(r(20), 6, CHROME, 0.97, 22, 0.32),
         # Menús, avisos y ventanitas: tarjeta de Ágape
-        'translucent/dialogs/background.svg': frame_svg(16, 12, CHROME, 0.9, 32, 0.45),
-        'dialogs/background.svg': frame_svg(16, 12, CHROME, 0.98, 32, 0.45),
+        'translucent/dialogs/background.svg': frame_svg(r(16), 12, CHROME, min(0.98, CRISTAL + 0.35), 32, 0.45),
+        'dialogs/background.svg': frame_svg(r(16), 12, CHROME, 0.98, 32, 0.45),
         # Bocadillos
-        'translucent/widgets/tooltip.svg': frame_svg(10, 8, CHROME, 0.94, 16, 0.35, highlight=False),
-        'widgets/tooltip.svg': frame_svg(10, 8, CHROME, 0.98, 16, 0.35, highlight=False),
+        'translucent/widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.94, 16, 0.35, highlight=False),
+        'widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.98, 16, 0.35, highlight=False),
     }
     for rel, text in files.items():
         path = os.path.join(root, rel)
@@ -174,7 +174,7 @@ def main():
     with open(os.path.join(root, 'metadata.json'), 'w') as f:
         json.dump({
             'KPlugin': {
-                'Id': THEME, 'Name': 'Apogeo', 'Description': 'El cristal y las tarjetas de Ágape',
+                'Id': THEME, 'Name': 'Apogeo' if THEME == 'apogeo' else 'Apogeo (tu aspecto)', 'Description': 'El cristal y las tarjetas de Ágape',
                 'Authors': [{'Name': 'Ares'}], 'License': 'MIT', 'Version': '1.0', 'Category': '',
             },
             'X-Plasma-API-Minimum-Version': '6.0',

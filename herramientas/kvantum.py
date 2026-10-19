@@ -14,9 +14,10 @@ import os
 import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/Kvantum'
-THEME = 'Apogeo'
+from fichas import BG, SURFACE, TEXT, ACCENT, ACCENT_TEXT, NOMBRE, RADIO
+import re
 
-BG, SURFACE, TEXT, ACCENT, ACCENT_TEXT = '#120d14', '#1e1621', '#f1e6ea', '#e0a9b4', '#2a1c26'
+THEME = NOMBRE or 'Apogeo'
 
 
 def mix(a, b, t):
@@ -663,8 +664,11 @@ interior=false
 def main():
     d = os.path.join(DST, THEME)
     os.makedirs(d, exist_ok=True)
+    # Tus esquinas: los marcos redondeados (no los rectos, 0, ni las pastillas, 100) crecen o encogen
+    conf = re.sub(r'frame\.expansion=(\d+)', lambda m: 'frame.expansion=' + (
+        m[1] if int(m[1]) in (0, 100) else str(max(2, round(int(m[1]) * RADIO)))), KVCONFIG)
     with open(os.path.join(d, f'{THEME}.kvconfig'), 'w') as f:
-        f.write(KVCONFIG)
+        f.write(conf)
     with open(os.path.join(d, f'{THEME}.svg'), 'w') as f:
         f.write(build_svg())
     print('Kvantum: tema', THEME)

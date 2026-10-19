@@ -10,11 +10,7 @@ import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/color-schemes/Apogeo.colors'
 
-BG = '#120d14'
-SURFACE = '#1e1621'
-TEXT = '#f1e6ea'
-ACCENT = '#e0a9b4'
-ACCENT_TEXT = '#2a1c26'
+from fichas import BG, SURFACE, TEXT, ACCENT, ACCENT_TEXT, NOMBRE
 NEGATIVE = '#e5484d'  # la ✕ de Ágape
 NEUTRAL = '#f5c98b'
 POSITIVE = '#9fd8a8'
@@ -85,8 +81,8 @@ Enable=false
         group('View', VIEW, mix(VIEW, TEXT, 0.03)),
         group('Window', SURFACE, CHROME),
         f"""[General]
-ColorScheme=Apogeo
-Name=Apogeo
+ColorScheme={NOMBRE or 'Apogeo'}
+Name={NOMBRE or 'Apogeo'}
 shadeSortColumn=true
 
 [KDE]

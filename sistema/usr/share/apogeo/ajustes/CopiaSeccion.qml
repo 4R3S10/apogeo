@@ -41,11 +41,11 @@ Seccion {
     Rectangle {
         width: parent.width
         height: 78
-        radius: 16
+        radius: Tema.r(16)
         color: Tema.encima
         Rectangle {
             x: 16; anchors.verticalCenter: parent.verticalCenter
-            width: 46; height: 46; radius: 14
+            width: 46; height: 46; radius: Tema.r(14)
             color: Tema.rosaSuave
             Icono { anchors.centerIn: parent; width: 20; height: 20; nombre: "copia"; color: Tema.rosa }
         }
@@ -109,7 +109,7 @@ Seccion {
                     width: fila.implicitWidth + 24
                     leftPadding: 12; rightPadding: 12; topPadding: 0; bottomPadding: 0
                     hoverEnabled: true
-                    background: Rectangle { radius: 16; color: chip.on ? Tema.rosaSuave : chip.hovered ? Tema.pulsado : Tema.encima }
+                    background: Rectangle { radius: Tema.r(16); color: chip.on ? Tema.rosaSuave : chip.hovered ? Tema.pulsado : Tema.encima }
                     contentItem: Row {
                         id: fila
                         spacing: 6
@@ -184,7 +184,7 @@ Seccion {
         property bool guardando: false
         property string mensaje: ""
         onOpened: { uno.text = ""; dos.text = ""; mensaje = ""; guardando = false; uno.forceActiveFocus(); }
-        background: Rectangle { radius: 22; color: Tema.cromo; border.color: Tema.borde }
+        background: Rectangle { radius: Tema.r(22); color: Tema.cromo; border.color: Tema.borde }
         Overlay.modal: Rectangle { color: "#99000000" }
         contentItem: Column {
             spacing: 14
@@ -234,7 +234,7 @@ Seccion {
         property bool bien: false
         property string mensaje: ""
         onOpened: { pass.text = ""; mensaje = ""; bien = false; abriendo = false; pass.forceActiveFocus(); }
-        background: Rectangle { radius: 22; color: Tema.cromo; border.color: Tema.borde }
+        background: Rectangle { radius: Tema.r(22); color: Tema.cromo; border.color: Tema.borde }
         Overlay.modal: Rectangle { color: "#99000000" }
         readonly property var nombres: ({ ajustes: "tus ajustes y pisos", fondos: "tus fondos", estudios: "~/Estudios", tareas: "tus tareas y exámenes", documentos: "tus Documentos" })
         contentItem: Column {

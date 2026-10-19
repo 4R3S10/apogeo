@@ -109,7 +109,7 @@ Item {
                             width: 24; height: 24
                             hoverEnabled: true
                             onClicked: popups.close(pop.idx())
-                            background: Rectangle { radius: 8; color: closeX.hovered ? Tema.pulsado : "transparent" }
+                            background: Rectangle { radius: Tema.r(8); color: closeX.hovered ? Tema.pulsado : "transparent" }
                             contentItem: Item { Icono { anchors.centerIn: parent; width: 11; height: 11; nombre: "cerrar"; color: Tema.apagado } }
                         }
                     }
@@ -146,7 +146,7 @@ Item {
                         Rectangle {
                             id: pic
                             visible: !!pop.model.image || (!!pop.model.iconName && !!pop.model.applicationIconName && pop.model.iconName !== pop.model.applicationIconName)
-                            width: 52; height: 52; radius: 12
+                            width: 52; height: 52; radius: Tema.r(12)
                             color: Tema.encima
                             clip: true
                             Image { anchors.fill: parent; source: pop.model.image || ""; fillMode: Image.PreserveAspectCrop; visible: !!pop.model.image }

@@ -1,4 +1,5 @@
 import QtQuick
+import Apogeo
 import QtQuick.Window
 import QtMultimedia
 import org.kde.plasma.plasmoid
@@ -67,10 +68,10 @@ WallpaperItem {
             property real kind: root.kind
             property real light: 0
             property size res: Qt.size(root.width, root.height)
-            property color base: "#120d14"
-            property color c1: "#4a2c4f"
-            property color c2: "#7a4458"
-            property color c3: "#e0a9b4"
+            property color base: Tema.fondo
+            property color c1: Tema.wp[0]
+            property color c2: Tema.wp[1]
+            property color c3: Tema.wp[2]
             fragmentShader: Qt.resolvedUrl("../shaders/fondo.frag.qsb")
         }
         ShaderEffectSource {

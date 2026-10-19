@@ -41,6 +41,9 @@ package_apogeo() {
   python "$h/kvantum.py" "$pkgdir/usr/share/Kvantum"
   python "$h/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
   python "$h/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
+  # Los generadores de temas, también para «Aspecto» (apogeo-aspecto los usa con tus colores)
+  install -d "$pkgdir/usr/lib/apogeo/temas"
+  install -m644 "$h"/{fichas,colores,kvantum,plasma,ventanas}.py "$pkgdir/usr/lib/apogeo/temas/"
   # El logo (el búho batiendo las alas) y sus copias para el arranque, el inicio de sesión, el menú y la terminal
   local logo="$srcdir/logo"
   install -d "$logo"
