@@ -5,6 +5,11 @@ temas (colores de KDE, Kvantum, Plasma y barra de ventana, con los generadores d
 
 Lo que lee todo lo de Apogeo hecho en QML (Tema): ~/.config/apogeo/aspecto.json (las fichas ya calculadas).
 
+«Como Ágape» (lo de serie): Apogeo sigue lo que elijas en Ágape → Personalizar (sus colores, claro u oscuro, los
+colores del fondo, la letra, las esquinas, el cristal y la velocidad de las animaciones). Se lee de los ajustes de
+Ágape (~/.config/ARES/settings.json, solo leer) y apogeo-pisos lo vuelve a mirar cada vez que Ágape los guarda. Con
+Ágape como viene, es exactamente lo de Apogeo.
+
   ajustes['aspecto'] = {estilo, acento, modo, letra, esquinas, cristal, tamano, animaciones, posicion}
 """
 import datetime
@@ -19,6 +24,7 @@ HOME = os.path.expanduser('~')
 CONFIG = os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
 DATA = os.environ.get('XDG_DATA_HOME', os.path.join(HOME, '.local', 'share'))
 TOKENS = os.path.join(CONFIG, 'apogeo', 'aspecto.json')
+AGAPE = os.path.join(CONFIG, 'ARES', 'settings.json')
 GENERATORS = os.environ.get('APOGEO_TEMAS', '/usr/lib/apogeo/temas')   # (otra carpeta, para probar)
 MINE = 'ApogeoTuAspecto'          # el nombre de tus temas generados
 
@@ -35,7 +41,7 @@ STYLES = {
     'papel': {'nombre': 'Papel', 'claro': True, 'fondo': '#f6f0ee', 'superficie': '#fffdfc', 'texto': '#2a1c26',
               'acento': '#b0476a', 'sobreAcento': '#ffffff', 'vivo': '#c4507a', 'wp': ['#ecdde1', '#dcbcc8', '#b0476a']},
 }
-DEFAULT = {'estilo': 'apogeo', 'acento': '', 'modo': 'oscuro', 'letra': 'Bricolage Grotesque', 'esquinas': 'redondas',
+DEFAULT = {'estilo': 'agape', 'acento': '', 'modo': 'oscuro', 'letra': 'Bricolage Grotesque', 'esquinas': 'redondas',
            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
 CORNERS = {'rectas': 0.35, 'suaves': 0.7, 'redondas': 1.0}
 SIZES = {'compacto': (9, 50), 'normal': (10, 56), 'grande': (11.5, 64)}     # (letra en pt, alto de la isla)
@@ -55,6 +61,42 @@ def luminance(h):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
+def agape_style():
+    """El aspecto que tienes en Ágape, como un estilo más (None si Ágape no está)."""
+    try:
+        with open(AGAPE) as f:
+            g = json.load(f)
+    except (OSError, ValueError):
+        return None
+    def col(k, d):
+        v = str(g.get(k) or d)
+        return v.lower() if len(v) == 7 and v.startswith('#') else d
+    st = STYLES['apogeo']
+    acc = col('accent', st['acento'])
+    stock = acc == st['acento']
+    font = str(g.get('font') or '').split(',')[0].strip().strip('"\'') or 'Bricolage Grotesque'
+    speed = float(g.get('animSpeed', 1) or 0)
+    return {
+        'nombre': 'Ágape', 'claro': g.get('mode') == 'light',
+        'fondo': col('bg', st['fondo']), 'superficie': col('surface', st['superficie']), 'texto': col('text', st['texto']),
+        'acento': acc,
+        # el texto encima del acento, como en Ágape (el de serie, el de Apogeo)
+        'sobreAcento': st['sobreAcento'] if stock else ('#121218' if wcag(acc) > 0.36 else '#f6f7fc'),
+        'vivo': st['vivo'] if stock else mix(acc, '#ffffff', 0.25),
+        'wp': [col('wpColor1', st['wp'][0]), col('wpColor2', st['wp'][1]), col('wpColor3', st['wp'][2])],
+        'radio': max(0.3, min(1.6, float(g.get('radius', 12) or 12) / 12)),
+        'cristal': max(0.3, min(0.98, float(g.get('chromeOpacity', 0.5) or 0.5) + 0.05)),
+        'letra': font,
+        'animaciones': 0.0 if speed <= 0.05 else round(min(2.0, 1 / speed), 2),
+    }
+
+
+def wcag(h):
+    f = lambda v: v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = (f(c / 255) for c in rgb(h))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
 def light_now():
     """«Según la hora»: claro de 8:00 a 20:00."""
     return 8 <= datetime.datetime.now().hour < 20
@@ -63,7 +105,7 @@ def light_now():
 def settings_of(st):
     a = dict(DEFAULT)
     a.update({k: v for k, v in (st.get('aspecto') or {}).items() if k in DEFAULT})
-    if a['estilo'] not in STYLES:
+    if a['estilo'] not in STYLES and a['estilo'] != 'agape':
         a['estilo'] = 'apogeo'
     return a
 
@@ -74,6 +116,17 @@ def is_default(a):
 
 def tokens(a):
     """Las fichas de tu aspecto (lo que leen Tema y los generadores)."""
+    g = agape_style() if a['estilo'] == 'agape' else None
+    if g:
+        font_pt, island = SIZES.get(a['tamano'], SIZES['normal'])
+        t = {'estilo': 'agape', 'claro': g['claro'], 'fondo': g['fondo'], 'superficie': g['superficie'],
+             'texto': g['texto'], 'acento': g['acento'], 'sobreAcento': g['sobreAcento'], 'vivo': g['vivo'],
+             'wp': g['wp'], 'radio': g['radio'], 'cristal': round(g['cristal'], 3), 'letra': g['letra'],
+             'letraPt': font_pt, 'isla': island, 'animaciones': g['animaciones'], 'posicion': a['posicion']}
+        t['nombre'] = None if stock(t) else MINE
+        return t
+    if a['estilo'] == 'agape':
+        a = dict(a, estilo='apogeo')
     s = dict(STYLES[a['estilo']])
     dark_style = not s.get('claro')
     want_light = a['modo'] == 'claro' or (a['modo'] == 'hora' and light_now())
@@ -95,8 +148,7 @@ def tokens(a):
         s['wp'] = [s['wp'][0], mix(s['wp'][1], acc, 0.35), acc]
     font_pt, island = SIZES.get(a['tamano'], SIZES['normal'])
     cristal = max(0.3, min(0.98, 1 - float(a['cristal']) / 100 * 0.75))   # 0 = opaco, 100 = muy transparente
-    return {
-        'nombre': None if is_default(a) else MINE,
+    t = {
         'estilo': a['estilo'], 'claro': bool(s.get('claro')),
         'fondo': s['fondo'], 'superficie': s['superficie'], 'texto': s['texto'], 'acento': s['acento'],
         'sobreAcento': s['sobreAcento'], 'vivo': s['vivo'], 'wp': s['wp'],
@@ -104,6 +156,17 @@ def tokens(a):
         'letra': a['letra'] or DEFAULT['letra'], 'letraPt': font_pt, 'isla': island,
         'animaciones': ANIMS.get(a['animaciones'], 1.0), 'posicion': a['posicion'],
     }
+    t['nombre'] = None if stock(t) else MINE
+    return t
+
+
+# Lo que cambia los temas generados (colores, esquinas, cristal y claro u oscuro): si es lo de Apogeo, los del paquete
+_STOCK = {'fondo': '#120d14', 'superficie': '#1e1621', 'texto': '#f1e6ea', 'acento': '#e0a9b4', 'sobreAcento': '#2a1c26',
+          'radio': 1.0, 'claro': False}
+
+
+def stock(t):
+    return all(t.get(k) == v for k, v in _STOCK.items()) and abs(t.get('cristal', 0) - 0.587) < 0.04
 
 
 def _run(*c, env=None):

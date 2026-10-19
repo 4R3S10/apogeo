@@ -5,17 +5,19 @@ import Apogeo
 
 // Ajustes → Aspecto («K2 con vista previa»): arriba, los estilos completos de un clic (Apogeo es el de siempre y viene
 // puesto); en medio, cómo queda (en pequeño, al momento); debajo, cada detalle a mano. Todo se aplica solo en todo el
-// sistema (lo hace apogeo-pisos con apogeo_aspecto) y «Volver a lo de Apogeo» lo deja como venía.
+// sistema (lo hace apogeo-pisos con apogeo_aspecto) y «Volver a lo de serie» lo deja como venía. De serie, «Como Ágape»:
+// los colores y las formas los manda Ágape (Personalizar) y aquí solo quedan el tamaño y dónde van la isla y la columna.
 Seccion {
     id: sec
     property string palabras: "aspecto tema estilo color colores acento claro oscuro letra fuente esquinas redondas cristal transparencia tamaño animaciones isla columna posicion personalizar"
     titulo: "Aspecto"
-    intro: "Los colores, la letra y las formas de todo Apogeo. Lo de serie es la estética de Ágape."
+    intro: "Los colores, la letra y las formas de todo Apogeo. De serie, Apogeo sigue el aspecto de Ágape: lo que cambies en Ágape → Personalizar cambia aquí solo."
 
     readonly property var a: apogeo.settings.aspecto || ({})
     readonly property var t: apogeo.lookTokens(a)          // las fichas de cómo queda (las mismas que se aplican)
     readonly property var estilos: apogeo.lookStyles
-    readonly property var orden: ["apogeo", "medianoche", "bosque", "arena", "papel"]
+    readonly property var orden: ["agape", "apogeo", "medianoche", "bosque", "arena", "papel"]
+    readonly property bool sigueAgape: a.estilo === "agape"
     function put(k, v) { apogeo.set("aspecto." + k, v) }
 
     // ---------- Los estilos ----------
@@ -30,12 +32,12 @@ Seccion {
                 required property string modelData
                 readonly property var e: sec.estilos[modelData] || ({})
                 readonly property bool on: sec.a.estilo === modelData
-                width: 132; height: 112
+                width: 118; height: 108
                 hoverEnabled: true
                 onClicked: {
                     sec.put("estilo", modelData);
                     sec.put("acento", "");
-                    if (sec.a.modo !== "hora") sec.put("modo", e.claro ? "claro" : "oscuro");
+                    if (modelData !== "agape" && sec.a.modo !== "hora") sec.put("modo", e.claro ? "claro" : "oscuro");
                 }
                 background: Rectangle {
                     radius: Tema.r(16)
@@ -143,6 +145,14 @@ Seccion {
 
     // ---------- A tu gusto ----------
     Fila {
+        visible: sec.sigueAgape
+        titulo: "Sigue a Ágape"
+        detalle: "Los colores, claro u oscuro, la letra, las esquinas, el cristal y las animaciones los eliges en Ágape → Personalizar"
+        Boton { text: "Abrir Ágape"; icono: "navegar"; onClicked: apogeo.open("agape") }
+    }
+    Fila {
+        enabled: !sec.sigueAgape
+        opacity: enabled ? 1 : 0.45
         titulo: "Color"
         detalle: sec.a.acento ? "El tuyo" : "El del estilo"
         Row {
@@ -186,6 +196,8 @@ Seccion {
         }
     }
     Fila {
+        enabled: !sec.sigueAgape
+        opacity: enabled ? 1 : 0.45
         titulo: "Claro u oscuro"
         detalle: sec.a.modo === "hora" ? "Claro de 8:00 a 20:00" : ""
         Segmentos {
@@ -196,6 +208,8 @@ Seccion {
         }
     }
     Fila {
+        enabled: !sec.sigueAgape
+        opacity: enabled ? 1 : 0.45
         titulo: "Letra"
         detalle: sec.a.letra || "Bricolage Grotesque"
         Segmentos {
@@ -210,6 +224,8 @@ Seccion {
         }
     }
     Fila {
+        enabled: !sec.sigueAgape
+        opacity: enabled ? 1 : 0.45
         titulo: "Esquinas"
         Segmentos {
             readonly property var valores: ["rectas", "suaves", "redondas"]
@@ -219,6 +235,8 @@ Seccion {
         }
     }
     Fila {
+        enabled: !sec.sigueAgape
+        opacity: enabled ? 1 : 0.45
         titulo: "Cristal"
         detalle: "Lo transparente de la isla, la columna y los menús"
         Deslizador {
@@ -239,6 +257,8 @@ Seccion {
         }
     }
     Fila {
+        enabled: !sec.sigueAgape
+        opacity: enabled ? 1 : 0.45
         titulo: "Animaciones"
         Segmentos {
             readonly property var valores: ["sin", "rapidas", "suaves"]
@@ -258,8 +278,8 @@ Seccion {
     }
     Fila {
         linea: false
-        titulo: "Volver a lo de Apogeo"
-        detalle: "Los colores, la letra y las formas de serie"
+        titulo: "Volver a lo de serie"
+        detalle: "Seguir a Ágape, con la isla y la columna como venían"
         Boton {
             text: "Volver"
             icono: "actualizar"

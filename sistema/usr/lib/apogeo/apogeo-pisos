@@ -946,6 +946,21 @@ def main():
         pending['id'] = GLib.timeout_add(250, lambda: (pending.update(id=None), floors.settings_changed(), False)[-1])
     os.makedirs(os.path.dirname(ajustes.SETTINGS), exist_ok=True)
     monitor.connect('changed', changed)
+    # «Como Ágape»: cuando Ágape guarda sus ajustes (cambias su aspecto en Personalizar), Apogeo lo sigue (solo hace
+    # algo si lo de su aspecto ha cambiado)
+    os.makedirs(os.path.dirname(aspecto.AGAPE), exist_ok=True)
+    agape_monitor = Gio.File.new_for_path(os.path.dirname(aspecto.AGAPE)).monitor_directory(
+        Gio.FileMonitorFlags.WATCH_MOVES, None)
+    agape_pending = {'id': None}
+
+    def agape_changed(_m, f, other, _event):
+        if os.path.basename(aspecto.AGAPE) not in {x.get_basename() for x in (f, other) if x}:
+            return
+        if agape_pending['id']:
+            GLib.source_remove(agape_pending['id'])
+        agape_pending['id'] = GLib.timeout_add(1500, lambda: (agape_pending.update(id=None),
+                                                              apply_look(ajustes.load()), False)[-1])
+    agape_monitor.connect('changed', agape_changed)
     GLib.MainLoop().run()
 
 

@@ -58,14 +58,17 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 
 ### Tu aspecto (Ajustes → Aspecto, «K2 con vista previa»)
 
-Lo de arriba es lo de serie. En Ajustes → Aspecto hay estilos completos de un clic (Apogeo, Medianoche, Bosque, Arena y
+Lo de arriba es lo de serie. **De serie, Apogeo sigue a Ágape («Como Ágape»)**: lo que elijas en Ágape → Personalizar (sus
+colores, claro u oscuro, los colores del fondo, la letra, las esquinas, el cristal y la velocidad de las animaciones)
+cambia también Apogeo, al momento (`apogeo-pisos` vigila los ajustes de Ágape y solo los lee). Con Ágape como viene, es
+exactamente lo de arriba. En Ajustes → Aspecto también hay estilos propios de un clic (Apogeo, Medianoche, Bosque, Arena y
 Papel) y cada detalle a mano: el color, claro u oscuro (o según la hora: claro de 8:00 a 20:00), la letra, las esquinas
 (rectas, suaves o redondas), el cristal, el tamaño (letra e isla), las animaciones y dónde van la isla y la columna
 (abajo y a la derecha, abajo y a la izquierda, o arriba y a la derecha), con una vista en pequeño de cómo queda.
 - Las carpetas van del color de tu estilo (un tema de iconos por color, `ApogeoCarpetas-<color>`, que hereda de Papirus).
 - Con lo de serie se usan los temas del paquete. Con otra cosa, `apogeo_aspecto` genera tus temas (colores de KDE,
   Kvantum, Plasma y barra de ventana, con los mismos generadores de `herramientas/`, instalados en
-  `/usr/lib/apogeo/temas`) y los pone; «Volver a lo de Apogeo» los quita.
+  `/usr/lib/apogeo/temas`) y los pone; «Volver a lo de serie» los quita.
 - Lo de Apogeo hecho en QML (Tema) lee `~/.config/apogeo/aspecto.json` y cambia solo, también los fondos animados.
 
 ### La isla («I1 · Una sola isla»)

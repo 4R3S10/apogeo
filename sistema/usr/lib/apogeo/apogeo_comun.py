@@ -23,7 +23,8 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
-VERSION = 3  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado); 3: Navegar ya no abre Ágape solo
+VERSION = 4  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado); 3: Navegar ya no abre Ágape solo;
+# 4: el aspecto pasa a «Como Ágape» (si no lo habías cambiado)
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
 STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
 # Fondos tuyos: imágenes y vídeos en alta calidad
@@ -93,6 +94,9 @@ def load():
         st['pisos']['jugar']['fondo'] = 'luces'
     if raw.get('version', 1) < 3 and st['pisos']['navegar']['apps'] == ['ares.desktop']:
         st['pisos']['navegar']['apps'] = []  # (si no lo habías cambiado)
+    old = dict(_aspecto.DEFAULT, estilo='apogeo')
+    if raw.get('version', 1) < 4 and all(st['aspecto'].get(k) == v for k, v in old.items()):
+        st['aspecto']['estilo'] = 'agape'  # (si no lo habías cambiado)
     return st
 
 

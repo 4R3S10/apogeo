@@ -236,7 +236,8 @@ def window(section):
         # ----- Aspecto -----
         @pyqtProperty('QVariantMap', constant=True)
         def lookStyles(self):
-            return aspecto.STYLES
+            g = aspecto.agape_style() or dict(aspecto.STYLES['apogeo'])
+            return {**aspecto.STYLES, 'agape': {**g, 'nombre': 'Como Ágape'}}
 
         @pyqtProperty('QVariantMap', constant=True)
         def lookDefault(self):
