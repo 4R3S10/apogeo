@@ -28,6 +28,8 @@ _copia_revision() {
   systemctl enable --now apogeo-al-dia.timer 2>/dev/null || true   # lo de Jugar al día, sin jugar
   systemctl enable apogeo-windows.service 2>/dev/null || true       # los juegos del Windows escondido, al encender
   systemctl enable --now apogeo-actualizar-al-apagar.service 2>/dev/null || true  # «Actualizar al apagar»
+  systemctl enable --now scx_loader.service 2>/dev/null || true     # el planificador de escritorio y juegos (scx_lavd)
+  systemctl enable --now paccache.timer 2>/dev/null || true         # la caché de paquetes, limpia cada semana
   /usr/lib/apogeo/apogeo-windows sync 2>/dev/null || true           # (y Apogeo el primero al arrancar, ya)
 }
 

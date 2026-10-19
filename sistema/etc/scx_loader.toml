@@ -1,0 +1,5 @@
+# Apogeo: el planificador de CachyOS para el escritorio y los juegos (sched_ext). scx_lavd responde antes a lo que
+# tocas y a los juegos, y en modo «Auto» ahorra energía cuando el equipo está tranquilo (primero la salud del PC).
+# Si algo falla, el núcleo vuelve solo a su planificador de siempre.
+default_sched = "scx_lavd"
+default_mode = "Auto"

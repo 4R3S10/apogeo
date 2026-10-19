@@ -19,6 +19,7 @@ package_apogeo() {
   depends=(
     apogeo-programas                                          # los programas de serie (abajo)
     plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
+    scx-scheds scx-tools pacman-contrib                       # planificador para escritorio y juegos, caché de paquetes
     papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
     python python-dbus python-gobject python-evdev            # los pisos y la consola (el mando)
     python-pyqt6 qt6-declarative milou kirigami               # la bienvenida, los ajustes y el buscador

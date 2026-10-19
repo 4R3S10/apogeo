@@ -15,6 +15,7 @@ La parte de los juegos es apogeo_juegos.py.
 import os
 import subprocess
 import sys
+import ctypes
 import threading
 
 SERVICE, PATH, IFACE = 'org.apogeo.Consola', '/Consola', 'org.apogeo.Consola'
@@ -157,6 +158,24 @@ def main():
                    'hydra': ['hydralauncher']}.get(what) or (['flatpak', 'run', what] if '.' in what else None)
             if cmd:
                 juegos.detach(cmd)
+
+        # ----- Dormida (sin la consola delante): sin mirar los juegos y devolviendo la memoria -----
+        @pyqtSlot(bool)
+        def activa(self, on):
+            if on and not self.timer.isActive():
+                self.timer.start(20000)
+                self.refresh()
+            elif not on:
+                self.timer.stop()
+
+        @pyqtSlot()
+        def dormir(self):
+            engine.trimComponentCache()
+            engine.collectGarbage()
+            try:  # lo que ya no se usa, de vuelta al sistema (si no, se queda apartado para esta app)
+                ctypes.CDLL('libc.so.6').malloc_trim(0)
+            except OSError:
+                pass
 
         @pyqtSlot(int)
         def floor(self, n):

@@ -50,8 +50,37 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 - **Menús y avisos:** las tarjetas de Ágape.
 - **Inicio de sesión y bloqueo:** una tarjeta con la hora grande, tu foto y tu nombre, el piso (el control segmentado de
   Ágape) y la contraseña, sobre el fondo del piso.
-- **Carpetas:** Papirus con el rosa empolvado de Ágape. Cursor berenjena, sonidos pocos y suaves y teclado EE. UU.
-  internacional (ñ con AltGr+n).
+- **Carpetas:** Papirus con el rosa empolvado de Ágape. Cursor berenjena y teclado EE. UU. internacional (ñ con AltGr+n).
+- **Sonidos:** propios y suaves (marimba de madera con un poco de sala) para avisos, errores, USB, volumen, capturas y lo
+  hecho; al entrar, el «uu-uu» del búho sobre un acorde cálido. Se sintetizan al construir el paquete
+  (`herramientas/sonidos.py`).
+- **Arranque y apagado:** el búho batiendo las alas (Plymouth y la pantalla de carga al entrar).
+
+### Tu aspecto (Ajustes → Aspecto, «K2 con vista previa»)
+
+Lo de arriba es lo de serie. En Ajustes → Aspecto hay estilos completos de un clic (Apogeo, Medianoche, Bosque, Arena y
+Papel) y cada detalle a mano: el color, claro u oscuro (o según la hora: claro de 8:00 a 20:00), la letra, las esquinas
+(rectas, suaves o redondas), el cristal, el tamaño (letra e isla), las animaciones y dónde van la isla y la columna
+(abajo y a la derecha, abajo y a la izquierda, o arriba y a la derecha), con una vista en pequeño de cómo queda.
+- Con lo de serie se usan los temas del paquete. Con otra cosa, `apogeo_aspecto` genera tus temas (colores de KDE,
+  Kvantum, Plasma y barra de ventana, con los mismos generadores de `herramientas/`, instalados en
+  `/usr/lib/apogeo/temas`) y los pone; «Volver a lo de Apogeo» los quita.
+- Lo de Apogeo hecho en QML (Tema) lee `~/.config/apogeo/aspecto.json` y cambia solo, también los fondos animados.
+
+### La isla («I1 · Una sola isla»)
+
+Todo en el mismo cristal: el botón rosa de las apps, **tus apps del piso** (las fijadas, aunque estén cerradas, y las
+abiertas; clic derecho para fijar o dejar de fijar, en cada piso las suyas), lo de cada piso (Jugar: temperatura y FPS;
+Navegar: la música; Estudiar: el temporizador) y, al final, la red, el sonido, la campana con los avisos sin leer y la
+hora. Al pasar por una app abierta, su vista en vivo (y ✕ para cerrarla). En la bandeja de KDE solo quedan los iconos de
+tus apps (Discord, Steam…).
+- **Panel rápido** (al pulsar la hora): la hora y el día, red, bluetooth, fondo animado, no molestar, ahorro, luz
+  nocturna, volumen, brillo, **tus avisos** (abrirlos o quitarlos), tú, «Todos los ajustes» y apagar.
+- **Avisos en pantalla:** los de Apogeo, abajo a la derecha, apilados, con sus botones y una rayita rosa con el tiempo
+  que les queda (se paran con el ratón encima). Respetan No molestar y los pisos sin avisos.
+- **Columna de pisos:** cada piso con cuántas ventanas tiene; al pasar, la vista del piso (sus ventanas en su sitio).
+  Una ventana soltada encima de un piso se va a ese piso (script de KWin `apogeo-ventanas`, que también cuenta las
+  ventanas a `apogeo-pisos`).
 
 ## Programas de serie
 
@@ -189,8 +218,13 @@ delante (que enseña la suya) ni con algo a pantalla completa.
 
 - **Buscador:** la lupa de la isla, la tecla Meta o Alt+Espacio abren una tarjeta en el centro, como el buscador de
   Ágape, con lo que encuentran los buscadores de KDE (apps, archivos, ajustes…) y «Buscar en la web con Ágape».
-- **Pantalla de apagar:** una tarjeta con tu foto y Apagar, Reiniciar, Reposo y Cerrar sesión.
-- **Pantalla de carga** al entrar: la misma que al encender (el diamante, el brillo y la barra).
+- **Pantalla de apagar («A1 · La isla se abre»):** la isla de abajo crece y se convierte en el menú: tu foto, desde
+  cuándo está encendido, Apagar, Reiniciar, Reposo, Ir a Windows (si hay Windows escondido), Salir y Bloquear; cuántas
+  apps se cierran (Ágape guarda sus pestañas) y **«Actualizar al apagar»** si hay actualizaciones (las instala el
+  servicio `apogeo-actualizar-al-apagar` antes de apagarse, con su aviso en la pantalla del búho; si algo falla no
+  toca nada y avisa al volver). Desde Plasma 6.8 vive en el escritorio de Plasma: `apogeo-bloqueo` la pone, como la de
+  bloqueo.
+- **Pantalla de carga** al entrar: la misma que al encender (el búho batiendo las alas, el brillo y la barra).
 - **Menú de arranque:** no sale; mantén pulsada una tecla al encender para verlo (con los colores de Apogeo).
 - **Programas repetidos y apps de CachyOS, fuera** (una vez, después de actualizar: `apogeo-limpieza`): la bienvenida,
   el instalador de paquetes, el gestor de núcleos, scx-manager, el actualizador y Shelly; Konsole y Alacritty (se queda
@@ -199,6 +233,27 @@ delante (que enseña la suya) ni con algo a pantalla completa.
   Si luego instalas alguno a mano, se queda. Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
   En lugar del actualizador, un aviso de Apogeo cuando hay actualizaciones (uno al día como mucho; en Jugar y Estudiar
   se guarda para luego).
+
+## Bloqueo: tu símbolo
+
+En Ajustes → Bloqueo dibujas tu símbolo tres veces (de un solo trazo) y, en la pantalla de bloqueo, lo dibujas con el
+ratón en cualquier parte y entras. Se reconoce la forma y el sentido (no el sitio ni el tamaño). La contraseña sigue
+igual y siempre sirve: al encender y al iniciar sesión se pide ella.
+- El dibujo va por el mismo camino que la contraseña, con «apogeo-simbolo:» delante: `/etc/pam.d/kde` lo pasa primero
+  por `apogeo-simbolo` (pam_exec). Si no es tu símbolo, se para ahí: no cuenta como contraseña equivocada ni bloquea la
+  cuenta. Tras 5 dibujos que no son, solo vale la contraseña durante 10 minutos.
+- Lo guardado está en `/var/lib/apogeo/simbolo/<tú>.json` (solo lo lees tú; cambiarlo pide tu contraseña).
+
+## Optimización
+
+- **Planificador de CachyOS para escritorio y juegos** (sched_ext `scx_lavd` en modo Auto, con `scx_loader`): responde
+  antes y ahorra energía en reposo; si falla, vuelve solo al de siempre.
+- **Caché de paquetes** limpia cada semana (`paccache`: las 2 últimas versiones).
+- **El índice de los manuales** (man-db) con la prioridad más baja: ya no compite con el escritorio al arrancar.
+- **Fuera de en medio** el menú global y el ayudante de accesibilidad (no se usan).
+- **La consola de Jugar duerme** sin estar delante: deja de mirar tus juegos cada 20 segundos y suelta las imágenes; el
+  arte se carga al tamaño de la pantalla.
+- Sin gráfica de verdad (máquina virtual), sin desenfoque; los fondos animados solo se mueven a la vista.
 
 ## Copia de Apogeo
 

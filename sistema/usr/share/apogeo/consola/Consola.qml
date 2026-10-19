@@ -15,6 +15,18 @@ Window {
     visible: true
     Component.onCompleted: showFullScreen()
 
+    // Dormida: si llevas 2 minutos sin la consola delante, suelta las imágenes (portadas y arte) y deja de mirar tus
+    // juegos cada 20 segundos; al volver a ella se despierta al momento
+    readonly property bool despierta: win.active || awake.running
+    Timer { id: awake; interval: 120000; running: true }
+    onActiveChanged: { if (!active) awake.restart(); }
+    onDespiertaChanged: {
+        consola.activa(despierta);
+        if (despierta) { fondo.reload(); return; }
+        a.source = ""; b.source = "";
+        Qt.callLater(() => { gc(); win.releaseResources(); consola.dormir(); });
+    }
+
     // El fondo se mueve solo con la consola delante y con gráfica de verdad (en una máquina sin 3D lo haría el procesador)
     Binding { target: Tema; property: "animar"; value: consola.gpu && win.active && win.visibility !== Window.Minimized }
     // Los botones como en tu mando: PlayStation (lo de serie) o Xbox (si el que hay conectado es de Xbox)
@@ -149,7 +161,8 @@ Window {
         anchors.fill: parent
         property string src: win.game ? (win.game.hero || win.game.cover) : ""
         property bool flip: false
-        onSrcChanged: { flip = !flip; (flip ? b : a).source = src; }
+        onSrcChanged: reload()
+        function reload() { if (!win.despierta) return; flip = !flip; (flip ? b : a).source = src; }
         // Sin arte (o mientras llega): el fondo animado de Jugar, «Luces»
         Fondo { anchors.fill: parent; tipo: 7; visible: a.status !== Image.Ready && b.status !== Image.Ready }
         Rectangle { anchors.fill: parent; visible: !!win.game; color: win.game ? win.tint(win.game.name) : "transparent"; opacity: 0.35 }
@@ -157,6 +170,7 @@ Window {
             id: a
             anchors.fill: parent
             fillMode: Image.PreserveAspectCrop
+            sourceSize.height: win.height   // (el arte, al tamaño de la pantalla: no más grande)
             asynchronous: true
             opacity: !fondo.flip && status === Image.Ready ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 450 } }
@@ -165,6 +179,7 @@ Window {
             id: b
             anchors.fill: parent
             fillMode: Image.PreserveAspectCrop
+            sourceSize.height: win.height
             asynchronous: true
             opacity: fondo.flip && status === Image.Ready ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 450 } }
@@ -408,7 +423,7 @@ Window {
                 Image {
                     id: portada
                     anchors.fill: parent
-                    source: d.modelData.cover
+                    source: win.despierta ? d.modelData.cover : ""
                     sourceSize: Qt.size(344, 516)
                     // (las cajas de los emuladores tienen cada una su forma: enteras, sin recortar)
                     fillMode: d.modelData.store === "emu" ? Image.PreserveAspectFit : Image.PreserveAspectCrop
