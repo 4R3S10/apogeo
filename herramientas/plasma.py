@@ -16,7 +16,7 @@ import os
 import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/plasma/desktoptheme'
-from fichas import SURFACE, TEXT, NOMBRE, CRISTAL, r
+from fichas import SURFACE, TEXT, ACCENT, NOMBRE, CRISTAL, r
 
 THEME = NOMBRE or 'apogeo'
 
@@ -153,6 +153,93 @@ def frame_svg(R, M, fill, opacity, shadow_size, shadow_alpha, highlight=True, ex
             f'<defs>{"".join(defs)}</defs>\n' + '\n'.join(out) + '\n</svg>\n')
 
 
+def plain_frames(items, R, M):
+    """Varios marcos de 9 trozos sin sombra, uno por prefijo (normal, hover, selected…), con sus pistas de margen.
+    items: [(prefijo, relleno, opacidad, borde o None, opacidad del borde)]."""
+    E = 6
+    out = ['<rect id="hint-tile-center" x="0" y="0" width="5" height="5" fill="none"/>']
+    size = 2 * R + E + 4
+
+    def corner(ax, ay, dx, dy, rr):
+        sweep = 1 if dx * dy > 0 else 0
+        return f'M{ax} {ay} L{ax + dx * rr} {ay} A{rr} {rr} 0 0 {sweep} {ax} {ay + dy * rr} Z'
+
+    for row, (prefix, fill, op, border, bop) in enumerate(items):
+        y0 = row * (size + 6)
+        pos = {'topleft': (0, 0, R, R), 'top': (R + 2, 0, E, R), 'topright': (R + E + 4, 0, R, R),
+               'left': (0, R + 2, R, E), 'center': (R + 2, R + 2, E, E), 'right': (R + E + 4, R + 2, R, E),
+               'bottomleft': (0, R + E + 4, R, R), 'bottom': (R + 2, R + E + 4, E, R),
+               'bottomright': (R + E + 4, R + E + 4, R, R)}
+        dirs = {'topleft': (-1, -1), 'topright': (1, -1), 'bottomleft': (-1, 1), 'bottomright': (1, 1)}
+        body = f'fill="{fill}" fill-opacity="{op}"'
+        for name, (x, y, w, h) in pos.items():
+            y += y0
+            g = [f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="#000" fill-opacity="0"/>']
+            if name in dirs:
+                dx, dy = dirs[name]
+                ax, ay = (x + R if dx < 0 else x), (y + R if dy < 0 else y)
+                g.append(f'<path d="{corner(ax, ay, dx, dy, R)}" {body}/>')
+                if border:
+                    sweep = 1 if dx * dy > 0 else 0
+                    g.append(f'<path d="M{ax + dx * R} {ay} A{R} {R} 0 0 {sweep} {ax} {ay + dy * R} L{ax} {ay + dy * (R - 1)} '
+                             f'A{R - 1} {R - 1} 0 0 {1 - sweep} {ax + dx * (R - 1)} {ay} Z" fill="{border}" fill-opacity="{bop}"/>')
+            else:
+                g.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" {body}/>')
+                if border and name != 'center':
+                    bx, by, bw, bh = {'top': (x, y, w, 1), 'bottom': (x, y + h - 1, w, 1), 'left': (x, y, 1, h),
+                                      'right': (x + w - 1, y, 1, h)}[name]
+                    g.append(f'<rect x="{bx}" y="{by}" width="{bw}" height="{bh}" fill="{border}" fill-opacity="{bop}"/>')
+            out.append(f'<g id="{prefix}-{name}">{"".join(g)}</g>')
+        for s in ('top', 'bottom', 'left', 'right'):
+            out.append(f'<rect id="{prefix}-hint-{s}-margin" x="0" y="{y0}" width="{M if s in ("left", "right") else 2}" '
+                       f'height="{M if s in ("top", "bottom") else 2}" fill="none"/>')
+    w, h = 2 * R + E + 8, len(items) * (size + 6)
+    return out, w, h
+
+
+def svg_doc(parts, w, h):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">\n'
+            + '\n'.join(parts) + '\n</svg>\n')
+
+
+def widgets():
+    """Las piezas de los menús y ventanitas de Plasma con las formas de Ágape: la fila de una lista (al pasar, la
+    elegida), los botones, los campos de texto, los deslizadores (como el del volumen) y las barras de progreso."""
+    files = {}
+    # Listas: al pasar, el fondo suave; la elegida, el rosa suave
+    p, w, h = plain_frames([('normal', TEXT, 0, None, 0), ('hover', TEXT, 0.07, None, 0),
+                            ('selected', ACCENT, 0.22, None, 0), ('selected+hover', ACCENT, 0.3, None, 0)], r(10), 6)
+    files['widgets/viewitem.svg'] = svg_doc(p, w, h)
+    # Botones y botones de barra (los de Ágape: fondo suave, radio 12)
+    p, w, h = plain_frames([('normal', TEXT, 0.07, TEXT, 0.08), ('hover', TEXT, 0.11, TEXT, 0.1),
+                            ('pressed', TEXT, 0.15, TEXT, 0.1), ('focus', TEXT, 0.07, ACCENT, 0.9),
+                            ('toolbutton-hover', TEXT, 0.08, None, 0), ('toolbutton-pressed', TEXT, 0.14, None, 0),
+                            ('toolbutton-focus', TEXT, 0.06, ACCENT, 0.9)], r(12), 6)
+    files['widgets/button.svg'] = svg_doc(p, w, h)
+    # Campos de texto (como la barra de direcciones de Ágape)
+    p, w, h = plain_frames([('base', TEXT, 0.07, None, 0), ('hover', TEXT, 0.09, TEXT, 0.12),
+                            ('focus', TEXT, 0.07, ACCENT, 0.95)], r(12), 6)
+    files['widgets/lineedit.svg'] = svg_doc(p, w, h)
+    # Barras de progreso: una pastilla fina, rosa lo hecho
+    p, w, h = plain_frames([('bar-inactive', TEXT, 0.12, None, 0), ('bar-active', ACCENT, 1, None, 0)], 3, 0)
+    p.append(f'<rect id="hint-bar-size" x="0" y="0" width="6" height="6" fill="none"/>')
+    files['widgets/bar_meter_horizontal.svg'] = svg_doc(p, w, h)
+    # Deslizadores: la ranura fina y el tirador redondo blanco (con el anillo rosa al tener el foco)
+    p, w, h = plain_frames([('groove', TEXT, 0.14, None, 0), ('groove-highlight', ACCENT, 1, None, 0)], 3, 0)
+    y = h + 10
+    for kind in ('horizontal', 'vertical'):
+        p += [f'<circle id="{kind}-slider-handle" cx="{12}" cy="{y + 12}" r="9" fill="#ffffff"/>',
+              f'<g id="{kind}-slider-hover"><circle cx="{40}" cy="{y + 12}" r="11" fill="{ACCENT}" fill-opacity="0.25"/>'
+              f'<circle cx="40" cy="{y + 12}" r="9" fill="#ffffff"/></g>',
+              f'<g id="{kind}-slider-focus"><circle cx="{68}" cy="{y + 12}" r="11" fill="{ACCENT}"/>'
+              f'<circle cx="68" cy="{y + 12}" r="9" fill="#ffffff"/></g>',
+              f'<circle id="{kind}-slider-shadow" cx="{96}" cy="{y + 13}" r="10" fill="#000" fill-opacity="0.25"/>']
+        y += 30
+    p.append(f'<rect id="hint-handle-size" x="0" y="{h + 10}" width="24" height="24" fill="none"/>')
+    files['widgets/slider.svg'] = svg_doc(p, max(w, 110), y)
+    return files
+
+
 def main():
     root = os.path.join(DST, THEME)
     files = {
@@ -166,6 +253,7 @@ def main():
         'translucent/widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.94, 16, 0.35, highlight=False),
         'widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.98, 16, 0.35, highlight=False),
     }
+    files.update(widgets())
     for rel, text in files.items():
         path = os.path.join(root, rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)
