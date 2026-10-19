@@ -7,14 +7,19 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.plasma.private.mpris as Mpris
 import org.kde.taskmanager as TaskManager
 import org.kde.kirigami as Kirigami
+import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.extras as PlasmaExtras
+import org.kde.pipewire as PipeWire
 import Apogeo
 
 // La isla de Apogeo (abajo, se esconde sola), con los botones y chips de Ágape. Siempre: tus apps y el buscador en uno (el
 // botón rosa, «A1»; también con la tecla Meta).
+// En todos los pisos, tus apps: las fijadas de ese piso (aunque estén cerradas) y las ventanas abiertas en él; al pasar
+// por una, su vista en vivo (y ✕ para cerrarla); clic derecho para fijarla en el piso o dejar de fijarla.
 // Además, según el piso:
 //  - Jugar: temperatura, el límite de FPS y un botón para ver el escritorio.
-//  - Navegar: tus ventanas del piso y la música que suena.
-//  - Estudiar: temporizador de concentración (25 min estudio / 5 descanso), lo estudiado hoy y tus ventanas.
+//  - Navegar: la música que suena.
+//  - Estudiar: temporizador de concentración (25 min estudio / 5 descanso) y lo estudiado hoy.
 // Lo de cada piso se puede quitar en Ajustes de Apogeo → Isla (apogeo-pisos lo escribe en la configuración de este widget).
 // La hora, el sonido, la red y los avisos son los widgets de Plasma que van a su lado en el mismo panel.
 PlasmoidItem {
@@ -78,7 +83,7 @@ PlasmoidItem {
     Mpris.Mpris2Model { id: mpris }
     readonly property var player: mpris.currentPlayer
 
-    // ---------- Ventanas del piso ----------
+    // ---------- Tus apps del piso: las fijadas y las ventanas abiertas ----------
     TaskManager.TasksModel {
         id: tasks
         filterByVirtualDesktop: true
@@ -86,6 +91,51 @@ PlasmoidItem {
         filterByActivity: true
         activity: activities.currentActivity
         groupMode: TaskManager.TasksModel.GroupDisabled
+        separateLaunchers: false
+        launchInPlace: true
+        // Fijar o dejar de fijar (requestAddLauncher…) cambia la lista: se guarda en la del piso
+        onLauncherListChanged: if (!root.loadingPins) Plasmoid.configuration["fijadas" + root.floor] = launcherList
+    }
+    property bool loadingPins: false
+    function loadPins() {
+        loadingPins = true;
+        tasks.launcherList = Plasmoid.configuration["fijadas" + floor] || [];
+        loadingPins = false;
+    }
+    onFloorChanged: loadPins()
+    Component.onCompleted: loadPins()
+    // La consola de Jugar y las ventanitas de Apogeo no van en la isla (tienen su botón o se colocan solas)
+    function hiddenApp(id) { return /apogeo-(consola|musica|resumen|buscador)/.test(id || "") }
+
+    // El menú de una app (clic derecho)
+    property var menuTask: null
+    PlasmaExtras.Menu {
+        id: taskMenu
+        placement: PlasmaExtras.Menu.TopPosedLeftAlignedPopup
+        PlasmaExtras.MenuItem {
+            visible: !!root.menuTask && !root.menuTask.pinned
+            text: "Fijar en " + root.floor
+            icon: "window-pin"
+            onClicked: tasks.requestAddLauncher(root.menuTask.url)
+        }
+        PlasmaExtras.MenuItem {
+            visible: !!root.menuTask && root.menuTask.pinned
+            text: "Dejar de fijar en " + root.floor
+            icon: "window-unpin"
+            onClicked: tasks.requestRemoveLauncher(root.menuTask.url)
+        }
+        PlasmaExtras.MenuItem {
+            visible: !!root.menuTask && root.menuTask.window
+            text: "Abrir otra ventana"
+            icon: "window-new"
+            onClicked: tasks.requestNewInstance(tasks.makeModelIndex(root.menuTask.index))
+        }
+        PlasmaExtras.MenuItem {
+            visible: !!root.menuTask && root.menuTask.window
+            text: "Cerrar"
+            icon: "window-close"
+            onClicked: tasks.requestClose(tasks.makeModelIndex(root.menuTask.index))
+        }
     }
 
     function icon(name) { return Qt.resolvedUrl("../icons/" + name + ".svg") }
@@ -243,35 +293,42 @@ PlasmoidItem {
             iconName: "libro"
             text: "Hoy " + root.hm(root.studied())
         }
-        Separator { visible: root.floor === "Estudiar" && tasks.count > 0 && Plasmoid.configuration.extraEstudiar }
+        Separator { visible: tasks.count > 0 && (root.floor === "Jugar" || (root.floor === "Estudiar" && Plasmoid.configuration.extraEstudiar)) }
 
-        // ----- Ventanas del piso (Navegar y Estudiar) -----
+        // ----- Tus apps del piso: fijadas y abiertas -----
         Repeater {
-            model: root.floor === "Jugar" ? null : tasks
+            model: tasks
             delegate: Item {
                 id: task
                 required property var model
                 required property int index
-                Layout.preferredWidth: 38
-                Layout.preferredHeight: 38
+                readonly property bool launcher: !!model.IsLauncher
+                readonly property string url: model.LauncherUrlWithoutIcon ? model.LauncherUrlWithoutIcon.toString() : ""
+                readonly property bool pinned: Plasmoid.configuration["fijadas" + root.floor].indexOf(url) >= 0
+                visible: !root.hiddenApp(model.AppId)
+                Layout.preferredWidth: visible ? 40 : 0
+                Layout.preferredHeight: 40
                 Rectangle {
                     anchors.fill: parent
                     radius: 13
-                    color: hoverTask.containsMouse ? root.hover : "transparent"
+                    color: hoverTask.pressed ? root.press : hoverTask.containsMouse || task.model.IsActive ? root.hover : "transparent"
                     Behavior on color { ColorAnimation { duration: 180 } }
                 }
                 Kirigami.Icon {
                     anchors.centerIn: parent
                     width: 26; height: 26
                     source: task.model.decoration
-                    opacity: task.model.IsMinimized ? 0.5 : 1
+                    opacity: task.launcher ? 0.82 : task.model.IsMinimized ? 0.5 : 1
+                    scale: hoverTask.pressed ? 0.9 : 1
+                    Behavior on scale { NumberAnimation { duration: 120 } }
                 }
-                Rectangle { // el puntito rosa de cada ventana (en la activa, una rayita)
+                Rectangle { // el puntito rosa de cada ventana abierta (en la activa, una rayita); las fijadas cerradas, sin él
+                    visible: !task.launcher
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: -4
+                    anchors.bottomMargin: -3
                     width: task.model.IsActive ? 14 : 5
-                    height: 5; radius: 2.5
+                    height: 4; radius: 2
                     color: root.accent
                     opacity: task.model.IsMinimized ? 0.35 : 1
                     Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
@@ -280,17 +337,86 @@ PlasmoidItem {
                     id: hoverTask
                     anchors.fill: parent
                     hoverEnabled: true
-                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                     onClicked: mouse => {
                         const idx = tasks.makeModelIndex(task.index);
-                        if (mouse.button === Qt.MiddleButton) tasks.requestClose(idx);
-                        else if (task.model.IsActive) tasks.requestToggleMinimized(idx);
-                        else tasks.requestActivate(idx);
+                        if (mouse.button === Qt.RightButton) {
+                            root.menuTask = { index: task.index, url: task.url, pinned: task.pinned, window: !task.launcher };
+                            taskMenu.visualParent = task;
+                            taskMenu.openRelative();
+                        } else if (mouse.button === Qt.MiddleButton) {
+                            task.launcher ? tasks.requestActivate(idx) : tasks.requestNewInstance(idx);
+                        } else if (task.launcher) {
+                            tasks.requestActivate(idx);   // (en un lanzador, abre la app)
+                        } else if (task.model.IsActive) {
+                            tasks.requestToggleMinimized(idx);
+                        } else {
+                            tasks.requestActivate(idx);
+                        }
                     }
                 }
-                QQC2.ToolTip.visible: hoverTask.containsMouse
-                QQC2.ToolTip.text: task.model.display || ""
-                QQC2.ToolTip.delay: 500
+                // Al pasar el ratón: la vista en vivo de la ventana (o el nombre, si está cerrada)
+                PlasmaCore.ToolTipArea {
+                    anchors.fill: parent
+                    interactive: !task.launcher
+                    location: PlasmaCore.Types.BottomEdge
+                    mainText: task.launcher ? (task.model.display || "") : ""
+                    subText: task.launcher ? "Abrir" : ""
+                    mainItem: task.launcher ? null : preview
+                    Item {
+                        id: preview
+                        visible: false
+                        width: 260
+                        height: 190
+                        TaskManager.ScreencastingRequest {
+                            id: cast
+                            // solo mientras se ve la vista (no gasta nada si no)
+                            uuid: preview.visible && task.model.WinIdList && task.model.WinIdList.length ? task.model.WinIdList[0] : ""
+                        }
+                        Rectangle {
+                            x: 0; y: 0
+                            width: parent.width; height: 146
+                            radius: 12
+                            color: Qt.rgba(0, 0, 0, 0.25)
+                            clip: true
+                            Kirigami.Icon { anchors.centerIn: parent; width: 48; height: 48; source: task.model.decoration; visible: !thumb.visible }
+                            PipeWire.PipeWireSourceItem {
+                                id: thumb
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                nodeId: cast.nodeId
+                                visible: nodeId > 0 && ready
+                            }
+                        }
+                        Texto {
+                            x: 4; y: 154
+                            width: parent.width - 40
+                            elide: Text.ElideRight
+                            wrapMode: Text.NoWrap
+                            font.weight: Font.Bold
+                            font.pixelSize: 13
+                            text: task.model.display || ""
+                        }
+                        Texto {
+                            x: 4; y: 172
+                            width: parent.width - 40
+                            elide: Text.ElideRight
+                            wrapMode: Text.NoWrap
+                            color: Tema.apagado
+                            font.pixelSize: 11
+                            text: task.model.AppName || ""
+                        }
+                        Rectangle {
+                            id: closeBtn
+                            anchors.right: parent.right
+                            y: 156
+                            width: 28; height: 28; radius: 9
+                            color: closeArea.containsMouse ? "#e5484d" : "transparent"
+                            Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: closeArea.containsMouse ? "#ffffff" : Tema.apagado }
+                            MouseArea { id: closeArea; anchors.fill: parent; hoverEnabled: true; onClicked: tasks.requestClose(tasks.makeModelIndex(task.index)) }
+                        }
+                    }
+                }
             }
         }
 

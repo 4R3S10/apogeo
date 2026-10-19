@@ -34,7 +34,7 @@ ApplicationWindow {
     function plain(t) { return (t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") }
     function shown(sec) { return query === "" || plain(sec.titulo + " " + sec.palabras).indexOf(plain(query)) >= 0 }
 
-    readonly property var sections: [pisos, fondos, isla, salud, agape, perfil, copia, actualizaciones]
+    readonly property var sections: [pisos, fondos, isla, bloqueo, salud, agape, perfil, copia, actualizaciones]
     property Item current: pisos
     property Item wanted: null       // la tocada a la izquierda (aunque no pueda subir del todo, por ser de las últimas)
     function go(sec) {
@@ -45,7 +45,7 @@ ApplicationWindow {
     }
     NumberAnimation { id: scroll; target: flick; property: "contentY"; duration: 280; easing.type: Easing.OutCubic }
     Component.onCompleted: {
-        const first = { pisos: pisos, fondos: fondos, isla: isla, salud: salud, agape: agape, perfil: perfil, copia: copia, actualizaciones: actualizaciones }[apogeo.section];
+        const first = { pisos: pisos, fondos: fondos, isla: isla, bloqueo: bloqueo, salud: salud, agape: agape, perfil: perfil, copia: copia, actualizaciones: actualizaciones }[apogeo.section];
         if (first && first !== pisos) Qt.callLater(() => go(first));
     }
 
@@ -68,7 +68,7 @@ ApplicationWindow {
         Item { width: 1; height: 8 }
         Repeater {
             model: [
-                { sec: pisos, icono: "pisos" }, { sec: fondos, icono: "imagen" }, { sec: isla, icono: "isla" }, { sec: salud, icono: "salud" },
+                { sec: pisos, icono: "pisos" }, { sec: fondos, icono: "imagen" }, { sec: isla, icono: "isla" }, { sec: bloqueo, icono: "llave" }, { sec: salud, icono: "salud" },
                 { sec: agape, icono: "navegar" }, { sec: perfil, icono: "usuario" }, { sec: copia, icono: "copia" },
                 { sec: actualizaciones, icono: "actualizar" }
             ]
@@ -321,6 +321,13 @@ ApplicationWindow {
                     detalle: "25 minutos de estudio y 5 de descanso, y lo que llevas hoy"
                     Interruptor { checked: win.s.isla.estudiar; onToggled: apogeo.set("isla.estudiar", checked) }
                 }
+            }
+
+            // ----- Bloqueo (tu símbolo) -----
+            BloqueoSeccion {
+                id: bloqueo
+                width: parent.width
+                visible: win.shown(bloqueo)
             }
 
             // ----- Salud del PC -----

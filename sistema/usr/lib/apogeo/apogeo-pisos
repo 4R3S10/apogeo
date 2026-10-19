@@ -213,15 +213,7 @@ def setup(bus):
             p.hiding = 'autohide';
             p.addWidget('org.apogeo.isla');
             p.addWidget('org.kde.plasma.systemtray');
-            var clock = p.addWidget('org.kde.plasma.digitalclock');
             p.addWidget('org.apogeo.rapido');
-            clock.currentConfigGroup = ['Appearance'];
-            clock.writeConfig('showDate', false);
-            clock.writeConfig('dateDisplayFormat', 'DisableDate');
-            clock.writeConfig('autoFontAndSize', false);
-            clock.writeConfig('fontFamily', 'Bricolage Grotesque');
-            clock.writeConfig('boldText', true);
-            clock.writeConfig('fontSize', 12);
         """)
         st['isla'] = ISLAND
     if st.get('bandeja', 0) < TRAY:
@@ -287,6 +279,29 @@ def setup(bus):
             });
         """)
         st['rapido'] = QUICK
+    if st.get('isla2', 0) < ISLAND2:
+        # I1 · Una sola isla: la red, el sonido, los avisos y la hora van en el panel rápido de Apogeo (dentro de la
+        # isla). Fuera el reloj de KDE y, de la bandeja, lo del sistema: solo quedan los iconos de tus apps (Discord,
+        # Steam…), sin la flechita. Los avisos (los da Plasma igual, sin su campana) salen abajo a la derecha.
+        plasma_script(bus, """
+            panels().forEach(function (p) {
+                if (p.location != 'bottom') return;
+                if (!p.widgets().some(function (w) { return w.type == 'org.apogeo.isla'; })) return;
+                p.widgets().forEach(function (w) {
+                    if (w.type == 'org.kde.plasma.digitalclock') w.remove();
+                    if (w.type == 'org.kde.plasma.systemtray') {
+                        w.currentConfigGroup = ['General'];
+                        w.writeConfig('extraItems', []);
+                        w.writeConfig('hiddenItems', []);
+                        w.reloadConfig();
+                    }
+                });
+                if (!p.widgets().some(function (w) { return w.type == 'org.apogeo.rapido'; })) p.addWidget('org.apogeo.rapido');
+            });
+        """)
+        run('kwriteconfig6', '--notify', '--file', 'plasmanotifyrc', '--group', 'Notifications', '--key',
+            'PopupPosition', 'BottomRight')
+        st['isla2'] = ISLAND2
     if st.get('cristal', 0) < CRYSTAL:
         # B1 · Cristal de Ágape: la isla y la columna de pisos un poco más altas (56) para sus botones de 38-40
         plasma_script(bus, """
@@ -314,6 +329,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
 DESKTOP = 2  # igual, para el escritorio (sin iconos y con el widget de Apogeo a pantalla completa)
+ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
 AESTHETICS = 13  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape

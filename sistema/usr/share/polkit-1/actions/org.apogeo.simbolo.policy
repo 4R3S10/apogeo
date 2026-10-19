@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- «Tu símbolo» para desbloquear: guardarlo o quitarlo pide tu contraseña (es para entrar en tu cuenta). -->
+<policyconfig>
+  <vendor>Apogeo</vendor>
+  <action id="org.apogeo.simbolo">
+    <description>Cambiar tu símbolo para desbloquear</description>
+    <message>Para cambiar tu símbolo de desbloqueo, escribe tu contraseña</message>
+    <icon_name>apogeo</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_self</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/apogeo/apogeo-simbolo</annotate>
+  </action>
+</policyconfig>

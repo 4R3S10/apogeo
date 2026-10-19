@@ -1,10 +1,14 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
+import org.kde.coreaddons as KCoreAddons
 
 // Pantalla de bloqueo de Apogeo («Tarjeta con piso», como la de inicio de sesión): tu nombre, el piso al que vuelves y
 // la contraseña. Sustituye a la de Plasma (la copia apogeo-bloqueo). Si algún día no carga, el bloqueo de KDE pone su
 // pantalla básica y se puede desbloquear igual.
+// «Tu símbolo» (D7): si tienes uno (Ajustes → Bloqueo), lo dibujas con el ratón en cualquier parte de la pantalla y
+// entras. El dibujo va por el mismo camino que la contraseña, con «apogeo-simbolo:» delante: lo comprueba
+// apogeo-simbolo (/etc/pam.d/kde) y, si no es, no llega a la contraseña (no cuenta como contraseña equivocada).
 //
 // Lo que pide el bloqueo de KDE a este archivo: viewVisible, notification, clearPassword() y notificationRepeated(); el
 // resto lo da él: authenticator (la contraseña), kscreenlocker_userName y el fondo (detrás de todo).
@@ -48,12 +52,53 @@ Item {
     property bool busy: false
     property string pending: ""   // contraseña escrita antes de que KDE la pida
 
+    // ---------- Tu símbolo ----------
+    KCoreAddons.KUser { id: kuser }
+    property bool hasSymbol: false
+    property bool lastWasSymbol: false
+    property int symbolFails: 0
+    readonly property bool symbolOn: hasSymbol && symbolFails < 5
+    function checkSymbol() {
+        // (el archivo solo lo puedes leer tú; lo guarda Ajustes → Bloqueo)
+        const x = new XMLHttpRequest();
+        x.onreadystatechange = () => { if (x.readyState === XMLHttpRequest.DONE) root.hasSymbol = x.responseText.length > 10; };
+        x.open("GET", "file:///var/lib/apogeo/simbolo/" + kuser.loginName + ".json");
+        try { x.send(); } catch (e) { root.hasSymbol = false; }
+    }
+    // El dibujo: 64 puntos en un cuadro de 0 a 127 (sin deformarlo; así btoa no lo cambia), en base64, con «apogeo-simbolo:» delante
+    function encode(pts) {
+        let len = 0;
+        for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        const n = 64, step = len / (n - 1), out = [pts[0]];
+        let acc = 0, prev = pts[0], i = 1;
+        while (i < pts.length && out.length < n) {
+            const cur = pts[i], d = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+            if (acc + d >= step && d > 0) {
+                const t = (step - acc) / d;
+                const q = { x: prev.x + t * (cur.x - prev.x), y: prev.y + t * (cur.y - prev.y) };
+                out.push(q); prev = q; acc = 0;
+            } else { acc += d; prev = cur; i++; }
+        }
+        while (out.length < n) out.push(pts[pts.length - 1]);
+        const xs = out.map(p => p.x), ys = out.map(p => p.y);
+        const x0 = Math.min(...xs), y0 = Math.min(...ys);
+        const s = Math.max(Math.max(...xs) - x0, Math.max(...ys) - y0) || 1;
+        let bin = "";
+        for (const p of out) bin += String.fromCharCode(Math.round((p.x - x0) / s * 127), Math.round((p.y - y0) / s * 127));
+        return "apogeo-simbolo:" + Qt.btoa(bin);
+    }
+    function unlockSymbol(pts) {
+        if (busy || retry.running || pts.length < 8) return;
+        lastWasSymbol = true;
+        send(encode(pts));
+    }
+
     onClearPassword: { password.text = ""; pending = ""; }
 
     // KDE ignora «empezar» durante los primeros segundos del bloqueo (el margen para volver sin contraseña), así que se
     // pide cada vez que tocas el ratón o el teclado y justo antes de comprobar la contraseña, como hace el suyo
     function start() { authenticator.startAuthenticating() }
-    Component.onCompleted: start()
+    Component.onCompleted: { start(); checkSymbol(); }
 
     Connections {
         target: authenticator
@@ -62,7 +107,14 @@ Item {
             root.busy = false;
             root.pending = "";
             watchdog.stop();
-            root.error = "Contraseña incorrecta";
+            if (root.lastWasSymbol) {
+                root.symbolFails++;
+                root.error = root.symbolOn ? "No es tu símbolo" : "Usa tu contraseña";
+                ink.fail();
+            } else {
+                root.error = "Contraseña incorrecta";
+            }
+            root.lastWasSymbol = false;
             password.text = "";
             shake.start();
             retry.restart();
@@ -107,13 +159,17 @@ Item {
 
     function unlock() {
         if (busy || password.text === "") return;
+        lastWasSymbol = false;
+        send(password.text);
+    }
+    function send(secret) {
         error = "";
         busy = true;
         watchdog.restart();
         if (authenticator.promptForSecret) {
-            authenticator.respond(password.text);
+            authenticator.respond(secret);
         } else {
-            pending = password.text;
+            pending = secret;
             start();
         }
     }
@@ -125,12 +181,64 @@ Item {
         opacity: 0.25
     }
 
-    // Mover el ratón o pulsar una tecla lleva a la contraseña
+    // Mover el ratón o pulsar una tecla lleva a la contraseña; arrastrar (con tu símbolo puesto) dibuja
     MouseArea {
+        id: drawArea
         anchors.fill: parent
         hoverEnabled: true
-        onPressed: { root.start(); password.forceActiveFocus(); }
-        onPositionChanged: root.start()
+        property var pts: []
+        property bool drawing: false
+        onPressed: mouse => {
+            root.start();
+            pts = [{ x: mouse.x, y: mouse.y }];
+            drawing = false;
+        }
+        onPositionChanged: mouse => {
+            root.start();
+            if (!pressed || !root.symbolOn) return;
+            const last = pts[pts.length - 1];
+            if (Math.hypot(mouse.x - last.x, mouse.y - last.y) < 3) return;
+            pts.push({ x: mouse.x, y: mouse.y });
+            if (!drawing && Math.hypot(mouse.x - pts[0].x, mouse.y - pts[0].y) > 14) { drawing = true; ink.begin(); }
+            if (drawing) ink.add(mouse.x, mouse.y, pts);
+        }
+        onReleased: {
+            if (drawing) {
+                drawing = false;
+                ink.done();
+                root.unlockSymbol(pts);
+            } else {
+                password.forceActiveFocus();
+            }
+        }
+    }
+
+    // El trazo del símbolo: rosa con brillo mientras dibujas; si no es, se pone rojo y se apaga
+    Canvas {
+        id: ink
+        anchors.fill: parent
+        property var pts: []
+        property color tint: "#ff8fc6"
+        opacity: 0
+        function begin() { pts = []; tint = "#ff8fc6"; fade.stop(); opacity = 1; }
+        function add(x, y, all) { pts = all; requestPaint(); }
+        function done() { fade.start(); }
+        function fail() { tint = "#ff8f9a"; requestPaint(); fade.restart(); }
+        NumberAnimation on opacity { id: fade; running: false; to: 0; duration: 900; easing.type: Easing.InQuad }
+        onPaint: {
+            const c = getContext("2d");
+            c.reset();
+            if (pts.length < 2) return;
+            c.lineCap = "round"; c.lineJoin = "round";
+            for (const [w, a] of [[16, 0.12], [8, 0.3], [3.5, 1]]) {
+                c.strokeStyle = Qt.rgba(tint.r, tint.g, tint.b, a);
+                c.lineWidth = w;
+                c.beginPath();
+                c.moveTo(pts[0].x, pts[0].y);
+                for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
+                c.stroke();
+            }
+        }
     }
 
     // La tarjeta de Ágape: el cromo casi opaco, borde del 10 %, brillo arriba y radio 20
@@ -326,6 +434,12 @@ Item {
                 Keys.onEscapePressed: text = ""
             }
 
+            Text {
+                text: "o dibuja tu símbolo en cualquier parte de la pantalla"
+                visible: root.symbolOn && root.error === ""
+                color: root.muted
+                font { family: root.font; pixelSize: 13 }
+            }
             Text {
                 text: root.error
                 visible: root.error !== ""

@@ -6,10 +6,14 @@ import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.taskmanager as TaskManager
 import org.kde.kirigami as Kirigami
+import org.kde.plasma.core as PlasmaCore
+import Apogeo
 
 // Columna de pisos, como la pastilla de pestañas de Ágape: un botón por piso con su icono de línea; el piso en el que
 // estás es la pastilla rosa con su brillo. La rueda del ratón sube o baja de piso y un clic va directo. El cambio lo
 // hace apogeo-pisos (que también pone el fondo, los avisos y la energía de cada piso).
+// Cada piso enseña cuántas ventanas tiene y, al pasar el ratón, una vista del piso (sus ventanas en su sitio, con el
+// icono de cada app). Una ventana soltada encima de un piso se va a ese piso (lo hace el script de KWin apogeo-ventanas).
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
@@ -25,6 +29,11 @@ PlasmoidItem {
     property double lastWheel: 0
 
     TaskManager.VirtualDesktopInfo { id: desktops }
+    Datos { id: datos }
+    // Tus ventanas con su sitio en la pantalla (las cuenta KWin): se piden al pasar el ratón por un piso
+    property var windows: []
+    function loadWindows() { datos.pedir("Ventanas", [], d => { if (Array.isArray(d)) root.windows = d; }) }
+    readonly property var tints: ({ "Jugar": "#5a1f45", "Navegar": "#4a2c4f", "Estudiar": "#3b3342" })
 
     P5Support.DataSource {
         id: runner
@@ -83,6 +92,14 @@ PlasmoidItem {
                     implicitWidth: 40
                     implicitHeight: 40
 
+                    // Cuántas ventanas hay en este piso
+                    TaskManager.TasksModel {
+                        id: floorTasks
+                        filterByVirtualDesktop: true
+                        virtualDesktop: floor.modelData
+                        groupMode: TaskManager.TasksModel.GroupDisabled
+                    }
+
                     // El brillo de la pastilla activa (0 4px 18px -4px el rosa)
                     RectangularShadow {
                         anchors.fill: pill
@@ -111,15 +128,101 @@ PlasmoidItem {
                         Behavior on color { ColorAnimation { duration: 180 } }
                     }
 
+                    Rectangle { // el número de ventanas del piso
+                        visible: floorTasks.count > 0
+                        x: parent.width - width + 4; y: -4
+                        width: Math.max(16, count.implicitWidth + 8); height: 16; radius: 8
+                        color: floor.current ? root.accentText : root.accent
+                        border.width: 2
+                        border.color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.9)
+                        Text {
+                            id: count
+                            anchors.centerIn: parent
+                            text: floorTasks.count > 9 ? "9+" : floorTasks.count
+                            color: floor.current ? root.accent : root.accentText
+                            font { family: "Bricolage Grotesque"; pixelSize: 9; weight: Font.Black }
+                        }
+                    }
+
                     MouseArea {
                         id: hover
                         anchors.fill: parent
                         hoverEnabled: true
                         onClicked: root.go(floor.index)
+                        onContainsMouseChanged: if (containsMouse) root.loadWindows()
                     }
-                    QQC2.ToolTip.visible: hover.containsMouse
-                    QQC2.ToolTip.text: floor.name
-                    QQC2.ToolTip.delay: 400
+                    // La vista del piso: sus ventanas en su sitio, con el icono de cada app
+                    PlasmaCore.ToolTipArea {
+                        anchors.fill: parent
+                        location: PlasmaCore.Types.LeftEdge
+                        mainItem: Item {
+                            width: 248
+                            height: 182
+                            readonly property var here: root.windows.filter(w => !w.min && (w.pisos.indexOf("*") >= 0 || w.pisos.indexOf(floor.name) >= 0))
+                            Row {
+                                x: 4; y: 2
+                                spacing: 8
+                                Kirigami.Icon {
+                                    width: 16; height: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    source: Qt.resolvedUrl("../icons/" + (root.icons[floor.name] || "navegar") + ".svg")
+                                    isMask: true
+                                    color: root.text
+                                }
+                                Text { text: floor.name; color: root.text; font { family: "Bricolage Grotesque"; pixelSize: 15; weight: Font.Bold } }
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: floorTasks.count === 0 ? "vacío" : floorTasks.count === 1 ? "1 ventana" : floorTasks.count + " ventanas"
+                                    color: root.muted
+                                    font { family: "Bricolage Grotesque"; pixelSize: 12 }
+                                }
+                            }
+                            Rectangle { // la pantalla en pequeño, con el tono de su fondo
+                                id: mini
+                                x: 4; y: 28
+                                width: 240; height: 135
+                                radius: 10
+                                clip: true
+                                gradient: Gradient {
+                                    GradientStop { position: 0; color: Qt.lighter(root.tints[floor.name] || "#4a2c4f", 1.25) }
+                                    GradientStop { position: 1; color: "#120d14" }
+                                }
+                                border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
+                                Repeater {
+                                    model: parent.parent.here
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        x: Math.max(0, modelData.x) * mini.width
+                                        y: Math.max(0, modelData.y) * mini.height
+                                        width: Math.max(18, Math.min(1, modelData.w) * mini.width)
+                                        height: Math.max(14, Math.min(1, modelData.h) * mini.height)
+                                        radius: 5
+                                        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.94)
+                                        border.color: modelData.activa ? root.accent : Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.14)
+                                        Kirigami.Icon {
+                                            anchors.centerIn: parent
+                                            width: Math.min(22, parent.height - 4); height: width
+                                            source: modelData.app || (modelData.clase || "").toLowerCase() || "application-x-executable"
+                                            fallback: "application-x-executable"
+                                        }
+                                    }
+                                }
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: parent.parent.here.length === 0
+                                    text: "Sin ventanas"
+                                    color: root.muted
+                                    font { family: "Bricolage Grotesque"; pixelSize: 12 }
+                                }
+                            }
+                            Text {
+                                x: 4; y: 167
+                                text: floor.current ? "Estás aquí" : "Clic para ir · suelta una ventana aquí para llevarla"
+                                color: root.muted
+                                font { family: "Bricolage Grotesque"; pixelSize: 11 }
+                            }
+                        }
+                    }
                 }
             }
         }

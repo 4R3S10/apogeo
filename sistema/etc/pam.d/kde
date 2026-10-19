@@ -1,0 +1,15 @@
+#%PAM-1.0
+# Pantalla de bloqueo (Apogeo): primero «Tu símbolo» (apogeo-simbolo), luego la contraseña de siempre.
+#  - Si lo que llega es tu símbolo dibujado, se entra.
+#  - Si es un dibujo que no es tu símbolo, se para ahí: no llega a la contraseña (no cuenta como contraseña equivocada
+#    y nunca bloquea la cuenta).
+#  - Si es una contraseña, sigue igual que siempre (lo de abajo es lo de /usr/lib/pam.d/kde).
+auth       [success=done default=ignore]  pam_exec.so quiet expose_authtok /usr/lib/apogeo/apogeo-simbolo pam-comprobar
+auth       [success=die default=ignore]   pam_exec.so quiet expose_authtok /usr/lib/apogeo/apogeo-simbolo pam-es-simbolo
+auth       include                        system-local-login
+
+account    include                        system-local-login
+
+password   include                        system-local-login
+
+session    include                        system-local-login
