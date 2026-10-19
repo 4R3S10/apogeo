@@ -1,20 +1,24 @@
 import QtQuick
 
 // Pantalla de carga al entrar en la sesión: la misma que al encender (el tema de Plymouth «A2 · Brillo y barra», con sus
-// imágenes y medidas): el diamante de Apogeo sobre el brillo berenjena y la barra fina rosa, que avanza con cada etapa
-// del arranque de Plasma. Así no se nota el paso de una a otra.
+// imágenes y medidas): el búho de Apogeo batiendo las alas sobre el brillo berenjena y la barra fina rosa, que avanza con
+// cada etapa del arranque de Plasma. Así no se nota el paso de una a otra.
 Rectangle {
     id: root
     color: "#120d14"
     property int stage
 
     Image { anchors.fill: parent; source: "fondo.png"; fillMode: Image.Stretch; smooth: true }
+    // El aleteo, igual que en Plymouth: 24 fotogramas a unos 16 por segundo, subiendo y bajando un poco
+    property int frame: 0
+    Timer { interval: 62; running: true; repeat: true; onTriggered: root.frame = (root.frame + 1) % 24 }
     Image {
         id: logo
         x: (root.width - 150) / 2
-        y: (root.height - 150) / 2 - 20
+        y: (root.height - 150) / 2 - 20 + Math.cos(2 * Math.PI * root.frame / 24) * 5
         width: 150; height: 150
-        source: "logo.png"
+        source: "aleteo-" + String(root.frame).padStart(2, "0") + ".png"
+        cache: true
     }
     Rectangle {
         x: (root.width - 240) / 2

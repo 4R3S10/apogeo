@@ -27,10 +27,10 @@ guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo e
 
 ## Logo
 
-La silueta de un angelito volando, como los putti de los museos, del arte y de las esculturas: rizos, mofletes, un brazo
-hacia delante, las piernas dobladas y alas de plumas en abanico. Va en el rosa de Ágape sobre un disco berenjena
-(«V1 · Silueta rosa»).
-- Se dibuja al construir el paquete con `herramientas/logo.py`, juntando formas sencillas del mismo color.
+Un búho de frente batiendo las alas, realista pero sencillo («R4 · Batiendo»): plumas por capas (primarias, secundarias y
+coberteras) separadas por líneas finas, la cara en corazón, el pecho con sus uves y la cola en abanico. Va en el rosa de
+Ágape sobre un disco berenjena. Es un diseño propio.
+- Se dibuja al construir el paquete con `herramientas/logo.py` (también los fotogramas del aleteo para el arranque).
 - De ahí salen las copias del arranque, el inicio de sesión, el bloqueo, la bienvenida, el menú y la terminal.
 
 ## Aspecto
@@ -73,7 +73,7 @@ Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
 Ghostty con el estilo «T1 · Cristal con píldoras»: el cristal de Ágape (berenjena translúcido con desenfoque), la letra
 JetBrains Mono y los colores de Apogeo.
 - **Prompt:** Starship, con la carpeta en una píldora rosa y la rama de git en otra.
-- **Al abrir:** fastfetch con el angelito (en Ghostty, la imagen de verdad; en otras terminales, en letras).
+- **Al abrir:** fastfetch con el búho (en Ghostty, la imagen de verdad; en otras terminales, en letras).
 - **Dónde está:** la configuración, en `/usr/share/apogeo/terminal/`. Cada usuario la carga desde
   `~/.config/ghostty/config`, donde puede añadir lo suyo.
 - **Por defecto:** es la terminal de siempre (Dolphin, Ctrl+Alt+T).

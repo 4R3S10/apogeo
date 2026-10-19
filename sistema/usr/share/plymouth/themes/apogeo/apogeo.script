@@ -1,5 +1,5 @@
-# Arranque de Apogeo: el diamante sobre un brillo berenjena y, debajo, una barra finita de progreso.
-# Si el disco está cifrado, la contraseña se pide debajo del logo (con puntos).
+# Arranque (y apagado) de Apogeo: el búho batiendo las alas sobre un brillo berenjena, flotando un poco, y debajo una
+# barra finita de progreso. Si el disco está cifrado, la contraseña se pide debajo del logo (con puntos).
 
 Window.SetBackgroundTopColor(0.07, 0.05, 0.08);
 Window.SetBackgroundBottomColor(0.07, 0.05, 0.08);
@@ -14,7 +14,26 @@ fondo.SetPosition(X, Y, -10);
 
 logo_img = Image("logo.png");
 logo = Sprite(logo_img);
-logo.SetPosition(X + W / 2 - logo_img.GetWidth() / 2, Y + H / 2 - logo_img.GetHeight() / 2 - 20, 1);
+logo_x = X + W / 2 - logo_img.GetWidth() / 2;
+logo_y = Y + H / 2 - logo_img.GetHeight() / 2 - 20;
+logo.SetPosition(logo_x, logo_y, 1);
+
+# El aleteo: 24 fotogramas (aleteo-00.png … aleteo-23.png, del logo), uno cada 3 refrescos (unos 16 por segundo)
+aleteo = [];
+for (i = 0; i < 24; i++) {
+  if (i < 10) aleteo[i] = Image("aleteo-0" + i + ".png");
+  else aleteo[i] = Image("aleteo-" + i + ".png");
+}
+tic = 0;
+fun refrescar() {
+  tic++;
+  f = Math.Int(tic / 3);
+  f = f - Math.Int(f / 24) * 24;
+  if (aleteo[f]) logo.SetImage(aleteo[f]);
+  # sube un poco al bajar las alas y cae al subirlas, como al volar de verdad
+  logo.SetY(logo_y + Math.Cos(2 * 3.14159 * f / 24) * 5);
+}
+Plymouth.SetRefreshFunction(refrescar);
 
 barra_fondo_img = Image("barra-fondo.png");
 barra_img = Image("barra.png");

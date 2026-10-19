@@ -41,7 +41,7 @@ package_apogeo() {
   python "$h/kvantum.py" "$pkgdir/usr/share/Kvantum"
   python "$h/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
   python "$h/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
-  # El logo (el angelito volando) y sus copias para el arranque, el inicio de sesión, el menú y la terminal
+  # El logo (el búho batiendo las alas) y sus copias para el arranque, el inicio de sesión, el menú y la terminal
   local logo="$srcdir/logo"
   install -d "$logo"
   python "$h/logo.py" "$logo"
@@ -52,6 +52,12 @@ package_apogeo() {
   rsvg-convert -w 150 -h 150 "$logo/logo.svg" -o "$logo/150.png"
   install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plymouth/themes/apogeo/logo.png"
   install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/logo.png"
+  # El aleteo del búho para el arranque y el apagado (Plymouth) y la entrada en la sesión (splash de Plasma)
+  for f in "$logo"/aleteo-*.svg; do
+    rsvg-convert -w 150 -h 150 "$f" -o "${f%.svg}.png"
+    install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plymouth/themes/apogeo/$(basename "${f%.svg}.png")"
+    install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/$(basename "${f%.svg}.png")"
+  done
   rsvg-convert -w 360 -h 360 "$logo/logo.svg" -o "$logo/360.png"
   install -Dm644 "$logo/360.png" "$pkgdir/usr/share/apogeo/logo.png"
   # Lo que va al Windows escondido: el logo y la letra de Apogeo para su pantalla de carga
