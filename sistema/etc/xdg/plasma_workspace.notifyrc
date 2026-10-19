@@ -1,0 +1,4 @@
+# Apogeo: al entrar en la sesión suena el «uu-uu» del búho (sonido desktop-login del tema de sonidos «apogeo»)
+[Event/startkde]
+Action=Sound
+Sound=desktop-login
