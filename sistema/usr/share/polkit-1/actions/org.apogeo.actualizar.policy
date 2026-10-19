@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- «Actualizar al apagar»: marcarlo o quitarlo. Sin contraseña para quien está delante del equipo (como apagar); la
+     instalación la hace luego el servicio al apagar, nunca este permiso. -->
+<policyconfig>
+  <vendor>Apogeo</vendor>
+  <action id="org.apogeo.actualizar">
+    <description>Instalar las actualizaciones al apagar</description>
+    <message>Apogeo quiere instalar las actualizaciones al apagar</message>
+    <icon_name>apogeo</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/apogeo/apogeo-actualizar-al-apagar</annotate>
+  </action>
+</policyconfig>

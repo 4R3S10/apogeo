@@ -8,6 +8,7 @@ abren Ajustes → Actualizaciones. No vuelve a avisar de lo mismo.
   apogeo-actualizaciones avisar   lo lanza apogeo-actualizaciones.timer
 """
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -22,8 +23,14 @@ def main():
         return 2
     r = subprocess.run(['checkupdates'], capture_output=True, text=True, timeout=300)
     names = sorted(ln.split()[0] for ln in r.stdout.splitlines() if ln.strip())
-    if r.returncode not in (0, 2) or not names:
-        return 0  # sin internet o todo al día
+    if r.returncode not in (0, 2):
+        return 0  # sin internet: se deja lo que había
+    # Lo que hay pendiente, para la pantalla de apagar («Actualizar al apagar»)
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(os.path.join(os.path.dirname(STATE), 'actualizaciones.json'), 'w') as f:
+        json.dump({'lista': names, 'apogeo': any(n.startswith('apogeo') for n in names)}, f)
+    if not names:
+        return 0  # todo al día
     stamp = hashlib.sha1(r.stdout.encode()).hexdigest()
     try:
         if open(STATE).read().strip() == stamp:
@@ -35,7 +42,7 @@ def main():
         f.write(stamp)
     apogeo = any(n.startswith('apogeo') for n in names)
     title = 'Hay una actualización' if len(names) == 1 else f'Hay {len(names)} actualizaciones'
-    body = ('Incluye Apogeo. ' if apogeo else '') + 'Instálalas cuando quieras desde Ajustes → Actualizaciones.'
+    body = ('Incluye Apogeo. ' if apogeo else '') + 'Instálalas desde Ajustes → Actualizaciones o al apagar.'
     # Espera a que se pulse (o se cierre) el aviso; el servicio tiene un límite de tiempo
     a = subprocess.run(['notify-send', '-a', 'Apogeo', '-i', 'apogeo', '-A', 'ver=Ver', '--wait', title, body],
                        capture_output=True, text=True)

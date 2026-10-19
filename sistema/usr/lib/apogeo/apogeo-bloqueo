@@ -1,16 +1,25 @@
 #!/bin/sh
-# Pantalla de bloqueo de Apogeo: pone la tarjeta (/usr/share/apogeo/bloqueo/LockScreen.qml) en lugar de la de Plasma.
-# La original se guarda al lado (LockScreen.qml.kde) y vuelve con «apogeo-bloqueo quitar» (al desinstalar Apogeo).
-# Lo llama un gancho de pacman cada vez que una actualización de Plasma reescribe el archivo.
+# Pantallas de bloqueo y de apagar de Apogeo: pone las nuestras (/usr/share/apogeo/bloqueo/LockScreen.qml y
+# /usr/share/apogeo/apagar/Logout.qml) en lugar de las de Plasma (las dos viven en el escritorio de Plasma desde 6.8).
+# Las originales se guardan al lado (*.qml.kde) y vuelven con «apogeo-bloqueo quitar» (al desinstalar Apogeo).
+# Lo llama un gancho de pacman cada vez que una actualización de Plasma reescribe los archivos.
 set -eu
-d=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen
-[ -d "$d" ] || exit 0
-if [ "${1:-}" = quitar ]; then
-  [ -f "$d/LockScreen.qml.kde" ] && mv -f "$d/LockScreen.qml.kde" "$d/LockScreen.qml"
-  exit 0
-fi
-# Si el archivo es de Plasma (no el nuestro), se guarda antes de cambiarlo
-if ! cmp -s /usr/share/apogeo/bloqueo/LockScreen.qml "$d/LockScreen.qml"; then
-  cp -f "$d/LockScreen.qml" "$d/LockScreen.qml.kde"
-fi
-install -m644 /usr/share/apogeo/bloqueo/LockScreen.qml "$d/LockScreen.qml"
+shell=/usr/share/plasma/shells/org.kde.plasma.desktop/contents
+
+poner() { # poner <nuestro> <carpeta de Plasma> <archivo>
+  d="$shell/$2"
+  [ -d "$d" ] || return 0
+  if [ "${accion:-}" = quitar ]; then
+    [ -f "$d/$3.kde" ] && mv -f "$d/$3.kde" "$d/$3"
+    return 0
+  fi
+  # Si el archivo es de Plasma (no el nuestro), se guarda antes de cambiarlo
+  if [ -f "$d/$3" ] && ! cmp -s "$1" "$d/$3"; then
+    cp -f "$d/$3" "$d/$3.kde"
+  fi
+  install -m644 "$1" "$d/$3"
+}
+
+accion="${1:-}"
+poner /usr/share/apogeo/bloqueo/LockScreen.qml lockscreen LockScreen.qml
+poner /usr/share/apogeo/apagar/Logout.qml logout Logout.qml

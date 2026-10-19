@@ -1,0 +1,15 @@
+[Unit]
+Description=Apogeo: instalar las actualizaciones al apagar (si se ha marcado en la pantalla de apagar)
+# Al apagar se para en orden inverso: esto se para (e instala) antes que la red y que los discos
+Wants=network-online.target
+After=network-online.target NetworkManager.service systemd-resolved.service local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/lib/apogeo/apogeo-actualizar-al-apagar hacer
+TimeoutStopSec=45min
+
+[Install]
+WantedBy=multi-user.target

@@ -5,6 +5,8 @@ After=plasma-workspace.target apogeo-pisos.service
 [Service]
 Type=oneshot
 ExecStart=/usr/lib/apogeo/apogeo-revision usuario
+# y cómo fue «Actualizar al apagar», si se marcó
+ExecStartPost=-/usr/lib/apogeo/apogeo-actualizar-al-apagar resultado
 TimeoutStartSec=5min
 Nice=10
 

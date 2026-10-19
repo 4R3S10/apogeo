@@ -1,0 +1,117 @@
+#!/usr/bin/python3
+"""
+«Actualizar al apagar» (en la pantalla de apagar): si lo marcas, al apagar o reiniciar se instalan las actualizaciones
+antes de que se apague el equipo (como en Windows), con su aviso en la pantalla del búho. Si algo sale mal no se toca
+nada (pacman no deja el sistema a medias por un conflicto: simplemente no instala) y al volver a entrar se avisa.
+
+  apogeo-actualizar-al-apagar estado         (tú) {"cuantas": N, "marcado": bool, "lista": […]}
+  pkexec apogeo-actualizar-al-apagar marcar  (sin contraseña para quien está delante, como apagar)
+  pkexec apogeo-actualizar-al-apagar quitar
+  apogeo-actualizar-al-apagar hacer          (solo el servicio apogeo-actualizar-al-apagar, al apagar)
+  apogeo-actualizar-al-apagar resultado      (tú, al entrar) avisa una vez de cómo fue
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+
+FLAG = '/var/lib/apogeo/actualizar-al-apagar'
+RESULT = '/var/lib/apogeo/actualizar-al-apagar.json'
+LOG = '/var/log/apogeo-actualizar.log'
+STATE = os.path.join(os.environ.get('XDG_STATE_HOME', os.path.expanduser('~/.local/state')), 'apogeo')
+
+
+def pending():
+    """Lo que encontró la última búsqueda de actualizaciones (apogeo-actualizaciones, una vez al día)."""
+    path = os.path.join(STATE, 'actualizaciones.json')
+    try:
+        # si se ha instalado algo después de mirar (a mano o al apagar), ya no vale
+        if os.path.getmtime('/var/lib/pacman/local') > os.path.getmtime(path):
+            return []
+        with open(path) as f:
+            d = json.load(f)
+        return d.get('lista', [])
+    except (OSError, ValueError):
+        return []
+
+
+def plymouth(text):
+    subprocess.run(['plymouth', 'display-message', f'--text={text}'], stderr=subprocess.DEVNULL)
+
+
+def run_update():
+    os.remove(FLAG)
+    plymouth('Instalando las actualizaciones… no apagues el equipo')
+    start = time.time()
+    with open(LOG, 'a') as log:
+        log.write(f'\n===== {time.strftime("%Y-%m-%d %H:%M:%S")} actualizar al apagar =====\n')
+        log.flush()
+        # Con la base de datos al día y sin preguntas; si hay algo que preguntar (un conflicto), pacman no instala nada
+        r = subprocess.run(['pacman', '-Syu', '--noconfirm', '--noprogressbar'], stdout=log, stderr=subprocess.STDOUT,
+                           stdin=subprocess.DEVNULL, env=dict(os.environ, LC_ALL='C'))
+    ok = r.returncode == 0
+    with open(RESULT, 'w') as f:
+        json.dump({'ok': ok, 'cuando': int(time.time()), 'segundos': int(time.time() - start)}, f)
+    os.chmod(RESULT, 0o644)
+    plymouth('Actualizado' if ok else 'No se ha podido actualizar: lo verás al volver')
+    time.sleep(1)
+
+
+def tell_result():
+    try:
+        with open(RESULT) as f:
+            r = json.load(f)
+    except (OSError, ValueError):
+        return
+    seen = os.path.join(STATE, 'actualizar-al-apagar-visto')
+    try:
+        if int(open(seen).read().strip() or 0) >= r.get('cuando', 0):
+            return
+    except (OSError, ValueError):
+        pass
+    os.makedirs(STATE, exist_ok=True)
+    with open(seen, 'w') as f:
+        f.write(str(r.get('cuando', 0)))
+    if r.get('ok'):
+        # todo bien: nada que contar más que esto, y sin insistir
+        subprocess.run(['notify-send', '-a', 'Apogeo', '-i', 'apogeo', 'Apogeo está al día',
+                        'Se instalaron las actualizaciones al apagar.'])
+    else:
+        subprocess.run(['notify-send', '-a', 'Apogeo', '-i', 'apogeo', 'No se pudo actualizar al apagar',
+                        'No se ha tocado nada. Puedes hacerlo desde Ajustes → Actualizaciones.'])
+
+
+def main():
+    a = sys.argv[1:]
+    if a == ['estado']:
+        lista = pending()
+        print(json.dumps({'cuantas': len(lista), 'lista': lista[:8], 'marcado': os.path.exists(FLAG)}))
+        return 0
+    if a == ['resultado']:
+        tell_result()
+        return 0
+    if os.geteuid() != 0:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    if a == ['marcar']:
+        os.makedirs(os.path.dirname(FLAG), exist_ok=True)
+        open(FLAG, 'w').close()
+        return 0
+    if a == ['quitar']:
+        if os.path.exists(FLAG):
+            os.remove(FLAG)
+        return 0
+    if a == ['hacer']:
+        # Solo desde el servicio (al apagar): nunca a mano ni con pkexec
+        if 'PKEXEC_UID' in os.environ or 'INVOCATION_ID' not in os.environ:
+            return 2
+        if os.path.exists(FLAG):
+            run_update()
+        return 0
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())

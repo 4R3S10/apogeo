@@ -3,7 +3,7 @@
     "KPlugin": {
         "Authors": [{ "Name": "Ares" }],
         "Category": "",
-        "Description": "Apogeo: la pantalla de carga y la de apagar con la estética de Ágape",
+        "Description": "Apogeo: la pantalla de carga con la estética de Ágape (la de apagar va en el escritorio de Plasma)",
         "Id": "org.apogeo.desktop",
         "License": "MIT",
         "Name": "Apogeo",

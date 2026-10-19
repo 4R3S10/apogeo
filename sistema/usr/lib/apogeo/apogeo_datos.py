@@ -17,6 +17,8 @@ Lo sirve apogeo-pisos, que ya está siempre en marcha. Todo se devuelve como tex
   Fondos()            tu biblioteca de fondos (animados, tuyos, carpeta), el de cada piso y «que cambie solo»
   PonerFondo(p, v)    el fondo del piso p (un animado o la ruta de una imagen o un vídeo); se ve al momento
   CambiarSolo(p, on)  «que cambie solo» en el piso p
+  Ventanas()          tus ventanas: [{titulo, clase, app, pisos, x, y, w, h (de 0 a 1 en la pantalla), min, activa}]
+  PonerVentanas(j)    (lo llama el script de KWin apogeo-ventanas cada vez que cambian)
 """
 import datetime
 import glob
@@ -74,6 +76,7 @@ class Datos(dbus.service.Object):
         self.phase, self.cycle, self.subject = 'estudio', 1, st.get('asignatura', '')
         self.left, self.running, self.ends = WORK, False, 0
         self.tick_id = None
+        self.windows = '[]'
 
     # ---------- El tiempo ----------
 
@@ -106,6 +109,17 @@ class Datos(dbus.service.Object):
             if best is None or rank > best[0]:
                 best = (rank, n, props, status)
         return best
+
+    # ---------- Tus ventanas (las cuenta KWin) ----------
+
+    @dbus.service.method(IFACE, in_signature='s')
+    def PonerVentanas(self, j):
+        if len(j) < 200000:
+            self.windows = j
+
+    @dbus.service.method(IFACE, out_signature='s')
+    def Ventanas(self):
+        return self.windows
 
     @dbus.service.method(IFACE, out_signature='s')
     def Musica(self):
