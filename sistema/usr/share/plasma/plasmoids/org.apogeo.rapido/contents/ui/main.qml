@@ -24,6 +24,9 @@ PlasmoidItem {
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
 
     // ---------- Lo que se ve en la isla: red, sonido, avisos y hora (en vivo, sin preguntar a nadie) ----------
+    // Los avisos en pantalla, con el estilo de Apogeo (abajo a la derecha)
+    Avisos {}
+
     // La red: lo que diga NetworkManager (cada 20 s; es muy rápido)
     property string netIcon: "wifi"
     readonly property string netCmd: "nmcli -t -f TYPE,STATE device"
@@ -49,8 +52,7 @@ PlasmoidItem {
         const s = Qt.locale("es_ES").toString(d, "dddd d 'de' MMMM");
         date = s.charAt(0).toUpperCase() + s.slice(1);
     }
-    Timer { interval: 1000 * (60 - new Date().getSeconds()); running: true; repeat: true; triggeredOnStart: true
-            onTriggered: { root.tick(); interval = 60000 } }
+    Timer { interval: 2000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.tick() }
 
     TaskManager.VirtualDesktopInfo { id: desktops }
     readonly property int floorIndex: Math.max(0, desktops.desktopIds.indexOf(desktops.currentDesktop))
@@ -227,7 +229,7 @@ PlasmoidItem {
                 spacing: 8
                 Tile {
                     text: "Red"
-                    icono: "wifi"
+                    icono: root.netIcon
                     on: !!root.st.red.on
                     sub: root.st.red.texto || "…"
                     onClicked: { root.act("red"); root.expanded = false; }
