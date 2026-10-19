@@ -1,0 +1,20 @@
+#!/bin/sh
+# El planificador de CachyOS para escritorio y juegos (sched_ext): scx_loader arranca el de /etc/scx_loader.toml
+# (scx_lavd). Si en este equipo no arranca (pasa en algunas máquinas virtuales y procesadores), se prueban los otros
+# por orden y se apunta el que va; si ninguno, se queda el planificador normal del núcleo (sin ningún problema).
+# Lo lanza apogeo-planificador.timer poco después de encender.
+set -u
+state() { cat /sys/kernel/sched_ext/state 2>/dev/null; }
+[ -e /sys/kernel/sched_ext/state ] || exit 0
+[ "$(state)" = enabled ] && exit 0
+for s in lavd cosmos bpfland; do
+  scxctl start --sched "$s" --mode auto >/dev/null 2>&1 || scxctl switch --sched "$s" --mode auto >/dev/null 2>&1
+  sleep 4
+  if [ "$(state)" = enabled ]; then
+    # que la próxima vez arranque ya este
+    sed -i -E "s/^default_sched = .*/default_sched = \"scx_$s\"/" /etc/scx_loader.toml
+    echo "planificador: scx_$s"
+    exit 0
+  fi
+done
+echo "planificador: ninguno arranca aquí; se queda el del núcleo"

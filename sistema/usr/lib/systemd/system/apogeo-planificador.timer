@@ -1,0 +1,8 @@
+[Unit]
+Description=Apogeo: mirar el planificador poco después de encender
+
+[Timer]
+OnBootSec=45s
+
+[Install]
+WantedBy=timers.target

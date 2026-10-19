@@ -62,6 +62,7 @@ Lo de arriba es lo de serie. En Ajustes → Aspecto hay estilos completos de un 
 Papel) y cada detalle a mano: el color, claro u oscuro (o según la hora: claro de 8:00 a 20:00), la letra, las esquinas
 (rectas, suaves o redondas), el cristal, el tamaño (letra e isla), las animaciones y dónde van la isla y la columna
 (abajo y a la derecha, abajo y a la izquierda, o arriba y a la derecha), con una vista en pequeño de cómo queda.
+- Las carpetas van del color de tu estilo (un tema de iconos por color, `ApogeoCarpetas-<color>`, que hereda de Papirus).
 - Con lo de serie se usan los temas del paquete. Con otra cosa, `apogeo_aspecto` genera tus temas (colores de KDE,
   Kvantum, Plasma y barra de ventana, con los mismos generadores de `herramientas/`, instalados en
   `/usr/lib/apogeo/temas`) y los pone; «Volver a lo de Apogeo» los quita.
@@ -230,7 +231,7 @@ delante (que enseña la suya) ni con algo a pantalla completa.
   el instalador de paquetes, el gestor de núcleos, scx-manager, el actualizador y Shelly; Konsole y Alacritty (se queda
   Ghostty), Spectacle (Flameshot), Haruna y mpv (VLC), Firefox (Ágape), btop, el Monitor del sistema y Filelight
   (Stacer y Mission Center), vim, micro y la zsh de CachyOS (Kate y fish; zsh se queda si alguna cuenta entra con ella).
-  Si luego instalas alguno a mano, se queda. Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
+  Si luego instalas alguno a mano, se queda. En una segunda tanda, KDE Connect (gastaba memoria y red sin usarse). Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
   En lugar del actualizador, un aviso de Apogeo cuando hay actualizaciones (uno al día como mucho; en Jugar y Estudiar
   se guarda para luego).
 
@@ -250,7 +251,7 @@ igual y siempre sirve: al encender y al iniciar sesión se pide ella.
   antes y ahorra energía en reposo; si falla, vuelve solo al de siempre.
 - **Caché de paquetes** limpia cada semana (`paccache`: las 2 últimas versiones).
 - **El índice de los manuales** (man-db) con la prioridad más baja: ya no compite con el escritorio al arrancar.
-- **Fuera de en medio** el menú global y el ayudante de accesibilidad (no se usan).
+- **Fuera de en medio** el menú global y el ayudante de accesibilidad (no se usan) y KDE Connect (se quita).
 - **La consola de Jugar duerme** sin estar delante: deja de mirar tus juegos cada 20 segundos y suelta las imágenes; el
   arte se carga al tamaño de la pantalla.
 - Sin gráfica de verdad (máquina virtual), sin desenfoque; los fondos animados solo se mueven a la vista.

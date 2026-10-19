@@ -68,7 +68,7 @@ def system():
     # Las apps que no pintan nada, fuera del menú
     sh(os.path.join(LIB, 'apogeo-esconder'))
     # Una vez: fuera los programas repetidos (espera a que pacman acabe; lo cuenta apogeo-limpieza.json)
-    if not os.path.exists(os.path.join(VAR, 'limpieza-1')):
+    if not os.path.exists(os.path.join(VAR, 'limpieza-2')):
         sh('systemctl', 'start', '--no-block', 'apogeo-limpieza.service')
     os.makedirs(VAR, exist_ok=True)
     version = sh('pacman', '-Q', 'apogeo')[1].split()[-1:] or ['']
@@ -238,7 +238,9 @@ def user():
     body = []
     if fixed:
         body.append('Arreglado: ' + join(fixed) + '.')
-    if removed:
+    if len(removed) == 1:
+        body.append(f'Quitado {removed[0]} (no se usaba).')
+    elif removed:
         body.append(f'Quitados {len(removed)} programas repetidos o de CachyOS (' + join(removed[:4]) +
                     ('…' if len(removed) > 4 else '') + ').')
     if failed:

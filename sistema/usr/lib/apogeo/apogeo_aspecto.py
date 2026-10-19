@@ -8,6 +8,7 @@ Lo que lee todo lo de Apogeo hecho en QML (Tema): ~/.config/apogeo/aspecto.json 
   ajustes['aspecto'] = {estilo, acento, modo, letra, esquinas, cristal, tamano, animaciones, posicion}
 """
 import datetime
+import glob
 import json
 import os
 import shutil
@@ -138,8 +139,23 @@ def _generate(t):
         gen('kvantum', os.path.join(CONFIG, 'Kvantum'))
         gen('plasma', os.path.join(DATA, 'plasma', 'desktoptheme'))
         gen('ventanas', os.path.join(DATA, 'aurorae', 'themes'))
+        # Las carpetas de tu color: un tema de iconos por color (si se llamara siempre igual, las apps no lo vuelven
+        # a leer); se borran los de antes
+        icons = icon_theme(t)
+        for old in glob.glob(os.path.join(DATA, 'icons', ICONS_PREFIX + '*')):
+            if os.path.basename(old) != icons:
+                shutil.rmtree(old, ignore_errors=True)
+        if not os.path.isdir(os.path.join(DATA, 'icons', icons)):
+            gen('iconos', os.path.join(DATA, 'icons', icons))
     finally:
         os.remove(path)
+
+
+ICONS_PREFIX = 'ApogeoCarpetas-'
+
+
+def icon_theme(t):
+    return ICONS_PREFIX + t['acento'].lstrip('#') + ('-claro' if t['claro'] else '')
 
 
 def apply(st, log=print):
@@ -158,11 +174,15 @@ def apply(st, log=print):
         _run('plasma-apply-desktoptheme', 'breeze-dark')
         _run('plasma-apply-desktoptheme', MINE)
         _kw('kwinrc', 'org.kde.kdecoration2', 'theme', '__aurorae__svg__' + MINE)
+        _run('/usr/lib/plasma-changeicons', icon_theme(t))
     else:
         _run('plasma-apply-colorscheme', 'Apogeo')
         _kw('Kvantum/kvantum.kvconfig', 'General', 'theme', 'Apogeo')
         _run('plasma-apply-desktoptheme', 'apogeo')
         _kw('kwinrc', 'org.kde.kdecoration2', 'theme', '__aurorae__svg__apogeo')
+        _run('/usr/lib/plasma-changeicons', 'Apogeo')
+        for old in glob.glob(os.path.join(DATA, 'icons', ICONS_PREFIX + '*')):
+            shutil.rmtree(old, ignore_errors=True)
         for p in (os.path.join(DATA, 'color-schemes', MINE + '.colors'), os.path.join(CONFIG, 'Kvantum', MINE),
                   os.path.join(DATA, 'plasma', 'desktoptheme', MINE), os.path.join(DATA, 'aurorae', 'themes', MINE)):
             shutil.rmtree(p, ignore_errors=True) if os.path.isdir(p) else (os.path.exists(p) and os.remove(p))

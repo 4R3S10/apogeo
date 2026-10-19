@@ -29,6 +29,8 @@ _copia_revision() {
   systemctl enable apogeo-windows.service 2>/dev/null || true       # los juegos del Windows escondido, al encender
   systemctl enable --now apogeo-actualizar-al-apagar.service 2>/dev/null || true  # «Actualizar al apagar»
   systemctl enable --now scx_loader.service 2>/dev/null || true     # el planificador de escritorio y juegos (scx_lavd)
+  systemctl enable apogeo-planificador.timer 2>/dev/null || true    # (si ese no va en este equipo, otro)
+  systemctl start --no-block apogeo-planificador.service 2>/dev/null || true
   systemctl enable --now paccache.timer 2>/dev/null || true         # la caché de paquetes, limpia cada semana
   /usr/lib/apogeo/apogeo-windows sync 2>/dev/null || true           # (y Apogeo el primero al arrancar, ya)
 }
@@ -61,5 +63,5 @@ pre_remove() {
   systemctl --global disable apogeo-pisos.service
   systemctl --global disable apogeo-actualizaciones.timer
   systemctl --global disable apogeo-copia.timer apogeo-revision.service apogeo-revision.path apogeo-al-dia.timer
-  systemctl disable apogeo-al-dia.timer apogeo-windows.service apogeo-actualizar-al-apagar.service 2>/dev/null || true
+  systemctl disable apogeo-al-dia.timer apogeo-windows.service apogeo-actualizar-al-apagar.service apogeo-planificador.timer 2>/dev/null || true
 }

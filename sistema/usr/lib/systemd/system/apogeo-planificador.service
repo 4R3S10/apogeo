@@ -1,0 +1,8 @@
+[Unit]
+Description=Apogeo: el planificador de escritorio y juegos que va en este equipo (scx_lavd, scx_cosmos o scx_bpfland)
+After=scx_loader.service
+Wants=scx_loader.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-planificador

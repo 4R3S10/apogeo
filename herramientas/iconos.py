@@ -10,20 +10,38 @@ import configparser
 import os
 import sys
 
+from fichas import ACCENT, BG, TEXT, NOMBRE, CLARO
+
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/icons/Apogeo'
 ICONS = '/usr/share/icons'
 THEMES = ['Papirus', 'Papirus-Dark']  # el oscuro manda cuando tiene el suyo
 BLUE_APPS = ['system-file-manager', 'org.kde.dolphin', 'dolphin', 'file-manager', 'org.gnome.Nautilus']
 
 
-# Colores de las carpetas rosa de Papirus → los de Ágape (Berenjena: rosa #e0a9b4, texto #f1e6ea)
-COLORS = {
-    '#f06292': '#e0a9b4',  # la carpeta
-    '#ec407a': '#b97a8c',  # la solapa de detrás
-    '#542233': '#5b3445',  # el dibujo de encima
-    '#e4e4e4': '#f1e6ea',  # el papel
-    '#ffffff': '#faf4f6',
-}
+def mix(a, b, t):
+    ca = [int(a[i:i + 2], 16) for i in (1, 3, 5)]
+    cb = [int(b[i:i + 2], 16) for i in (1, 3, 5)]
+    return '#' + ''.join(f'{round(x + (y - x) * t):02x}' for x, y in zip(ca, cb))
+
+
+# Colores de las carpetas rosa de Papirus → los de Ágape (Berenjena: rosa #e0a9b4, texto #f1e6ea). Con tu aspecto
+# (Ajustes → Aspecto), las carpetas van del color de tu estilo
+if ACCENT == '#e0a9b4':
+    COLORS = {
+        '#f06292': '#e0a9b4',  # la carpeta
+        '#ec407a': '#b97a8c',  # la solapa de detrás
+        '#542233': '#5b3445',  # el dibujo de encima
+        '#e4e4e4': '#f1e6ea',  # el papel
+        '#ffffff': '#faf4f6',
+    }
+else:
+    COLORS = {
+        '#f06292': ACCENT,
+        '#ec407a': mix(ACCENT, '#000000', 0.2),
+        '#542233': mix(ACCENT, '#000000', 0.62),
+        '#e4e4e4': mix(ACCENT, '#ffffff', 0.85),
+        '#ffffff': mix(ACCENT, '#ffffff', 0.94),
+    }
 
 
 def recolor(svg):
@@ -76,9 +94,9 @@ def main():
     idx.optionxform = str
     idx.read(os.path.join(ICONS, 'Papirus-Dark', 'index.theme'))
     head = idx['Icon Theme']
-    head['Name'] = 'Apogeo'
-    head['Comment'] = 'Papirus oscuro con las carpetas rosa'
-    head['Inherits'] = 'Papirus-Dark,breeze-dark,hicolor'
+    head['Name'] = os.path.basename(DST.rstrip('/')) if NOMBRE else 'Apogeo'
+    head['Comment'] = 'Papirus con las carpetas de tu color' if NOMBRE else 'Papirus oscuro con las carpetas rosa'
+    head['Inherits'] = 'Papirus,breeze,hicolor' if CLARO else 'Papirus-Dark,breeze-dark,hicolor'
     with open(os.path.join(DST, 'index.theme'), 'w') as f:
         idx.write(f, space_around_delimiters=False)
     print(f'Iconos: {len(links)} carpetas en rosa')
