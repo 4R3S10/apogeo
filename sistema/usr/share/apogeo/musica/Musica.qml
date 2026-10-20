@@ -149,7 +149,7 @@ Window {
         width: 340
         height: (win.idle ? idleCol.implicitHeight : col.implicitHeight) + 28
         radius: 20
-        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.96)
+        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.96)
         border.color: Tema.borde
         visible: opacity > 0
         opacity: win.open ? 1 : 0

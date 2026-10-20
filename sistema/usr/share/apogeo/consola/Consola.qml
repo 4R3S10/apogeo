@@ -11,7 +11,7 @@ import Apogeo
 Window {
     id: win
     title: "Jugar"
-    color: "#0f0a10"
+    color: Tema.fondo
     visible: true
     Component.onCompleted: showFullScreen()
 
@@ -417,7 +417,7 @@ Window {
                 width: parent.width; height: width * 1.5
                 radius: 16
                 // (detrás de las cajas de los emuladores, que no llenan la carta, un oscuro neutro)
-                color: d.modelData.store === "emu" && portada.status === Image.Ready ? "#1a131c" : win.tint(d.modelData.name)
+                color: d.modelData.store === "emu" && portada.status === Image.Ready ? Tema.fondo : win.tint(d.modelData.name)
                 clip: true
                 opacity: d.modelData.installed || d.on ? 1 : 0.55
                 Image {
@@ -531,9 +531,9 @@ Window {
                             const g = getContext("2d");
                             g.reset();
                             g.lineWidth = 8; g.lineCap = "round";
-                            g.strokeStyle = Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1);
+                            g.strokeStyle = Tema.tinte(0.1);
                             g.beginPath(); g.arc(60, 60, 52, 0, 2 * Math.PI); g.stroke();
-                            g.strokeStyle = "#e0a9b4";
+                            g.strokeStyle = Tema.rosa;
                             g.beginPath(); g.arc(60, 60, 52, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * parte); g.stroke();
                         }
                     }
@@ -566,7 +566,7 @@ Window {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 96
         width: tt.implicitWidth + 40; height: 44; radius: 22
-        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.95); border.color: Tema.borde
+        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.95); border.color: Tema.borde
         Texto { id: tt; anchors.centerIn: parent; text: win.toast; font.pixelSize: 15 }
     }
     Rectangle {

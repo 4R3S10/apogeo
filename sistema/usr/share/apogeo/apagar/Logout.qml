@@ -139,9 +139,10 @@ Item {
         width: open ? fullWidth : 420
         height: open ? fullHeight : 54
         x: (root.width - width) / 2
-        y: root.height - height - 14
+        // (desde la isla: abajo o, si va arriba, arriba)
+        y: Tema.posicion === "arriba-dcha" ? 14 : root.height - height - 14
         radius: open ? 26 : 22
-        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.97)
+        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.97)
         border.color: Tema.borde
         clip: true
         Behavior on width { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }

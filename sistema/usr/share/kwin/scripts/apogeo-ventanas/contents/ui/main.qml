@@ -1,5 +1,6 @@
 import QtQuick
 import org.kde.kwin
+import Apogeo
 
 // Ventanas de Apogeo:
 //  - La consola (se pone ella sola a pantalla completa) vive en el piso Jugar y no se mueve de ahí: al ir a otro piso,
@@ -131,7 +132,9 @@ Item {
         const put = () => {
             const area = Workspace.clientArea(KWin.FullScreenArea, w);
             const g = w.frameGeometry;
-            const x = Math.round(area.x + (area.width - g.width) / 2), y = area.y + area.height - g.height - 74;
+            // justo encima de la isla (o debajo, si la isla va arriba: Ajustes → Aspecto)
+            const x = Math.round(area.x + (area.width - g.width) / 2);
+            const y = Tema.posicion === "arriba-dcha" ? area.y + 74 : area.y + area.height - g.height - 74;
             if (g.x !== x || g.y !== y) w.frameGeometry = Qt.rect(x, y, g.width, g.height);
         };
         put();

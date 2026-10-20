@@ -226,6 +226,12 @@ def apply(st, log=print):
     a = settings_of(st)
     t = tokens(a)
     write_tokens(t)
+    # (y una copia de los colores para la pantalla de inicio de sesión, que no puede leer tus ajustes)
+    try:
+        subprocess.run(['pkexec', '/usr/lib/apogeo/apogeo-aspecto-login'], input=json.dumps(t), text=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        pass
     mine = t['nombre'] is not None
     # Los colores y las formas: los de serie o los tuyos
     if mine:

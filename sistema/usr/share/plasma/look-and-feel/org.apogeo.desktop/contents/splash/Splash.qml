@@ -1,14 +1,24 @@
 import QtQuick
+import QtQuick.Effects
+import Apogeo
 
 // Pantalla de carga al entrar en la sesión: la misma que al encender (el tema de Plymouth «A2 · Brillo y barra», con sus
 // imágenes y medidas): el búho de Apogeo batiendo las alas sobre el brillo berenjena y la barra fina rosa, que avanza con
 // cada etapa del arranque de Plasma. Así no se nota el paso de una a otra.
 Rectangle {
     id: root
-    color: "#120d14"
+    color: Tema.fondo
     property int stage
 
-    Image { anchors.fill: parent; source: "fondo.png"; fillMode: Image.Stretch; smooth: true }
+    // El brillo de detrás (el de Plymouth); con tu aspecto, del color de tu estilo
+    Image { id: glow; anchors.fill: parent; source: "fondo.png"; fillMode: Image.Stretch; smooth: true; visible: !Tema.f.nombre }
+    MultiEffect {
+        anchors.fill: glow
+        source: glow
+        visible: !!Tema.f.nombre
+        colorization: 0.9
+        colorizationColor: Tema.wp[1]
+    }
     // El aleteo, igual que en Plymouth: 24 fotogramas a unos 16 por segundo, subiendo y bajando un poco
     property int frame: 0
     Timer { interval: 62; running: true; repeat: true; onTriggered: root.frame = (root.frame + 1) % 24 }
@@ -24,10 +34,10 @@ Rectangle {
         x: (root.width - 240) / 2
         y: root.height / 2 + 75 + 30
         width: 240; height: 4; radius: 2
-        color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.14)
+        color: Tema.tinte(0.14)
         Rectangle {
             height: parent.height; radius: 2
-            color: "#e0a9b4"
+            color: Tema.rosa
             width: parent.width * Math.min(1, Math.max(0.1, root.stage / 6))
             Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
         }

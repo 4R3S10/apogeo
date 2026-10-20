@@ -57,12 +57,12 @@ Window {
     Rectangle {
         id: card
         x: 18
-        y: 10 + (1 - win.entrada) * 24
+        y: 10 + (1 - win.entrada) * (Tema.posicion === "arriba-dcha" ? -24 : 24)   // (entra desde la isla)
         opacity: win.entrada
         width: win.width - 36
         height: col.implicitHeight + 44
         radius: Tema.r(22)
-        color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.96)
+        color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.96)
         border.color: Tema.borde
         HoverHandler { id: zona }
 

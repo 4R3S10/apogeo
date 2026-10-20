@@ -16,17 +16,17 @@ ApplicationWindow {
     color: bg
 
     // Colores y letra de Ágape (tema Berenjena oscuro)
-    readonly property color bg: "#120d14"
-    readonly property color text: "#f1e6ea"
-    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
-    readonly property color faint: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.38)
-    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
-    readonly property color press: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.13)
-    readonly property color border: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
-    readonly property color accent: "#e0a9b4"
-    readonly property color accentSoft: Qt.rgba(224 / 255, 169 / 255, 180 / 255, 0.2)
-    readonly property color accentText: "#2a1c26"
-    readonly property color chrome: "#211924"
+    readonly property color bg: Tema.fondo
+    readonly property color text: Tema.texto
+    readonly property color muted: Tema.apagado
+    readonly property color faint: Tema.tenue
+    readonly property color hover: Tema.encima
+    readonly property color press: Tema.pulsado
+    readonly property color border: Tema.borde
+    readonly property color accent: Tema.rosa
+    readonly property color accentSoft: Tema.rosaSuave
+    readonly property color accentText: Tema.sobreRosa
+    readonly property color chrome: Tema.cromo
     readonly property string fontName: "Bricolage Grotesque"
     font.family: fontName
 
@@ -191,7 +191,7 @@ ApplicationWindow {
         width: 620
         height: page.implicitHeight + 56
         radius: 24
-        color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.74)
+        color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.74)
         border.color: win.border
         Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         Rectangle { // el brillo de 1 px de arriba
@@ -349,7 +349,7 @@ ApplicationWindow {
                         radius: 20
                         color: pick.containsMouse ? win.press : win.hover
                         border.width: 1.5
-                        border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.2)
+                        border.color: Tema.tinte(0.2)
                         Icono { anchors.centerIn: parent; nombre: "foto"; color: win.muted }
                     }
                     MouseArea {
@@ -490,7 +490,7 @@ ApplicationWindow {
                 radius: 16
                 color: dropArea.containsMouse && !win.copy.name ? win.hover : "transparent"
                 border.width: 1.5
-                border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.22)
+                border.color: Tema.tinte(0.22)
                 Rectangle {
                     x: 14; anchors.verticalCenter: parent.verticalCenter
                     width: 42; height: 42; radius: 12
@@ -559,7 +559,7 @@ ApplicationWindow {
                         required property var modelData
                         width: 178; height: 190
                         radius: 16
-                        color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.04)
+                        color: Tema.tinte(0.04)
                         border.color: win.border
                         clip: true
                         // El fondo de verdad de ese piso, en pequeño
@@ -570,10 +570,10 @@ ApplicationWindow {
                             property real kind: fl.modelData.kind
                             property real light: 0
                             property size res: Qt.size(356, 168)
-                            property color base: "#120d14"
-                            property color c1: "#4a2c4f"
-                            property color c2: "#7a4458"
-                            property color c3: "#e0a9b4"
+                            property color base: Tema.fondo
+                            property color c1: Tema.wp[0]
+                            property color c2: Tema.wp[1]
+                            property color c3: Tema.wp[2]
                             fragmentShader: "file:///usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders/fondo.frag.qsb"
                             layer.enabled: true
                             layer.effect: MultiEffect { maskEnabled: true; maskSource: miniMask }
@@ -624,7 +624,7 @@ ApplicationWindow {
                 width: islandRow.implicitWidth + 16
                 height: 46
                 radius: 20
-                color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.7)
+                color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.7)
                 border.color: win.border
                 Row {
                     id: islandRow

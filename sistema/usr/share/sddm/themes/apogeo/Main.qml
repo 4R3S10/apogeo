@@ -9,16 +9,29 @@ Rectangle {
     id: root
     width: 1920
     height: 1080
-    color: "#120d14"
+    color: c("fondo", "#120d14")
 
-    // Colores y letra de Ágape (tema Berenjena oscuro)
-    readonly property color text: "#f1e6ea"
-    readonly property color muted: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.62)
-    readonly property color hover: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.07)
-    readonly property color border: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
-    readonly property color accent: "#e0a9b4"
-    readonly property color accentText: "#2a1c26"
-    readonly property string font: "Bricolage Grotesque"
+    // Colores y letra: los de Ágape (Berenjena oscuro) o tu aspecto, si lo has cambiado (Ajustes → Aspecto, o «Como
+    // Ágape»): Apogeo deja una copia de tus colores en /var/lib/apogeo/aspecto-login.json, que esta pantalla sí puede leer
+    property var f: ({})
+    function c(k, d) { return f[k] !== undefined ? f[k] : d }
+    Component.onCompleted: {
+        const x = new XMLHttpRequest();
+        x.onreadystatechange = () => {
+            if (x.readyState !== XMLHttpRequest.DONE) return;
+            try { root.f = x.responseText ? JSON.parse(x.responseText) : {}; } catch (e) { root.f = {}; }
+        };
+        x.open("GET", "file:///var/lib/apogeo/aspecto-login.json");
+        try { x.send(); } catch (e) {}
+    }
+    readonly property color text: c("texto", "#f1e6ea")
+    readonly property color muted: Qt.rgba(text.r, text.g, text.b, 0.62)
+    readonly property color hover: Qt.rgba(text.r, text.g, text.b, 0.07)
+    readonly property color border: Qt.rgba(text.r, text.g, text.b, 0.1)
+    readonly property color accent: c("acento", "#e0a9b4")
+    readonly property color accentText: c("sobreAcento", "#2a1c26")
+    readonly property string font: c("letra", "Bricolage Grotesque")
+    readonly property var wp: c("wp", ["#4a2c4f", "#7a4458", "#e0a9b4"])
     readonly property var floors: [
         { key: "jugar", name: "Jugar", kind: 7 },      // Luces
         { key: "navegar", name: "Navegar", kind: 0 },  // Tinta
@@ -71,10 +84,10 @@ Rectangle {
         property real kind: root.floors[root.floor].kind
         property real light: 0
         property size res: Qt.size(root.width, root.height)
-        property color base: "#120d14"
-        property color c1: "#4a2c4f"
-        property color c2: "#7a4458"
-        property color c3: "#e0a9b4"
+        property color base: root.color
+        property color c1: root.wp[0]
+        property color c2: root.wp[1]
+        property color c3: root.wp[2]
         fragmentShader: "file:///usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders/fondo.frag.qsb"
     }
     ShaderEffectSource {
@@ -99,7 +112,8 @@ Rectangle {
         width: 440
         height: parent.height - 80
         radius: 20
-        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.92)
+        readonly property color sup: Qt.tint(root.c("superficie", "#1e1621"), Qt.rgba(root.text.r, root.text.g, root.text.b, 0.03))
+        color: Qt.rgba(sup.r, sup.g, sup.b, 0.92)
         border.color: root.border
         Rectangle { // el brillo de 1 px de arriba
             x: parent.radius; y: 1

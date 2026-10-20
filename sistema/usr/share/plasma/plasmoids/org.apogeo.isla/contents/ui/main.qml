@@ -111,7 +111,7 @@ PlasmoidItem {
     property var menuTask: null
     PlasmaExtras.Menu {
         id: taskMenu
-        placement: PlasmaExtras.Menu.TopPosedLeftAlignedPopup
+        placement: Tema.posicion === "arriba-dcha" ? PlasmaExtras.Menu.BottomPosedLeftAlignedPopup : PlasmaExtras.Menu.TopPosedLeftAlignedPopup
         PlasmaExtras.MenuItem {
             visible: !!root.menuTask && !root.menuTask.pinned
             text: "Fijar en " + root.floor
@@ -359,7 +359,7 @@ PlasmoidItem {
                 PlasmaCore.ToolTipArea {
                     anchors.fill: parent
                     interactive: !task.launcher
-                    location: PlasmaCore.Types.BottomEdge
+                    location: Tema.posicion === "arriba-dcha" ? PlasmaCore.Types.TopEdge : PlasmaCore.Types.BottomEdge
                     mainText: task.launcher ? (task.model.display || "") : ""
                     subText: task.launcher ? "Abrir" : ""
                     mainItem: task.launcher ? null : preview

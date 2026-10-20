@@ -134,7 +134,7 @@ PlasmoidItem {
                         width: Math.max(16, count.implicitWidth + 8); height: 16; radius: Tema.r(8)
                         color: floor.current ? root.accentText : root.accent
                         border.width: 2
-                        border.color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.9)
+                        border.color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.9)
                         Text {
                             id: count
                             anchors.centerIn: parent
@@ -154,7 +154,7 @@ PlasmoidItem {
                     // La vista del piso: sus ventanas en su sitio, con el icono de cada app
                     PlasmaCore.ToolTipArea {
                         anchors.fill: parent
-                        location: PlasmaCore.Types.LeftEdge
+                        location: Tema.posicion === "abajo-izq" ? PlasmaCore.Types.RightEdge : PlasmaCore.Types.LeftEdge
                         mainItem: Item {
                             width: 248
                             height: 182
@@ -197,7 +197,7 @@ PlasmoidItem {
                                         width: Math.max(18, Math.min(1, modelData.w) * mini.width)
                                         height: Math.max(14, Math.min(1, modelData.h) * mini.height)
                                         radius: 5
-                                        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.94)
+                                        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.94)
                                         border.color: modelData.activa ? root.accent : Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.14)
                                         Kirigami.Icon {
                                             anchors.centerIn: parent

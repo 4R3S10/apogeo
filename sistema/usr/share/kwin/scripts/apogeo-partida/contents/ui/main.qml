@@ -1,4 +1,5 @@
 import QtQuick
+import Apogeo
 import QtQuick.Window
 import org.kde.kwin
 import org.kde.plasma.core as PlasmaCore
@@ -149,7 +150,7 @@ Item {
                     anchors.margins: -2
                     radius: 16
                     color: "transparent"
-                    border.color: "#e0a9b4"
+                    border.color: Tema.rosa
                     border.width: 2
                 }
                 WindowThumbnail {
@@ -163,7 +164,7 @@ Item {
                 Text {
                     anchors.top: thumb.bottom; anchors.topMargin: 8; anchors.left: thumb.left
                     text: "Pulsa el juego o Meta+Tab para volver"
-                    color: "#9ef1e6ea"; font.family: "Bricolage Grotesque"; font.pixelSize: 13
+                    color: "#9ef1e6ea"; font.family: Tema.letra; font.pixelSize: 13
                 }
             }
 
@@ -188,8 +189,8 @@ Item {
                     Column {
                         width: parent.width - 64 - 14 - botones.width - 14
                         anchors.verticalCenter: parent.verticalCenter
-                        Text { width: parent.width; text: musica.p ? musica.p.titulo : ""; color: "#f1e6ea"; font.family: "Bricolage Grotesque"; font.pixelSize: 17; font.bold: true; elide: Text.ElideRight }
-                        Text { width: parent.width; text: musica.p ? (musica.p.artista || musica.p.app) : ""; color: "#9ef1e6ea"; font.family: "Bricolage Grotesque"; font.pixelSize: 13; elide: Text.ElideRight }
+                        Text { width: parent.width; text: musica.p ? musica.p.titulo : ""; color: Tema.texto; font.family: Tema.letra; font.pixelSize: 17; font.bold: true; elide: Text.ElideRight }
+                        Text { width: parent.width; text: musica.p ? (musica.p.artista || musica.p.app) : ""; color: "#9ef1e6ea"; font.family: Tema.letra; font.pixelSize: 13; elide: Text.ElideRight }
                     }
                     Row {
                         id: botones
@@ -200,8 +201,8 @@ Item {
                             delegate: Rectangle {
                                 required property var modelData
                                 width: 40; height: 40; radius: 13
-                                color: modelData.main ? "#e0a9b4" : (ma.containsMouse ? "#1ff1e6ea" : "transparent")
-                                Text { anchors.centerIn: parent; text: parent.modelData.t; color: parent.modelData.main ? "#2a1c26" : "#f1e6ea"; font.pixelSize: 16 }
+                                color: modelData.main ? Tema.rosa : (ma.containsMouse ? Tema.pulsado : "transparent")
+                                Text { anchors.centerIn: parent; text: parent.modelData.t; color: parent.modelData.main ? Tema.sobreRosa : Tema.texto; font.pixelSize: 16 }
                                 MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; onClicked: root.musicaAccion(parent.modelData.a) }
                             }
                         }
@@ -211,10 +212,10 @@ Item {
                     anchors.centerIn: parent
                     spacing: 12
                     visible: !musica.p
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: "No suena nada"; color: "#9ef1e6ea"; font.family: "Bricolage Grotesque"; font.pixelSize: 15 }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "No suena nada"; color: "#9ef1e6ea"; font.family: Tema.letra; font.pixelSize: 15 }
                     Rectangle {
-                        width: abrirT.width + 28; height: 38; radius: 13; color: "#e0a9b4"
-                        Text { id: abrirT; anchors.centerIn: parent; text: "Abrir Spotify"; color: "#2a1c26"; font.family: "Bricolage Grotesque"; font.pixelSize: 14; font.bold: true }
+                        width: abrirT.width + 28; height: 38; radius: 13; color: Tema.rosa
+                        Text { id: abrirT; anchors.centerIn: parent; text: "Abrir Spotify"; color: Tema.sobreRosa; font.family: Tema.letra; font.pixelSize: 14; font.bold: true }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.open("spotify") }
                     }
                 }

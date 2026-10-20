@@ -1,0 +1,7 @@
+// Apogeo: el aspecto lo aplica apogeo-pisos (un servicio de tu sesión, que polkit no ve «delante del equipo»): para
+// esto, que solo copia colores comprobados a la pantalla de inicio de sesión, vale cualquier cuenta de persona.
+polkit.addRule(function (action, subject) {
+    if (action.id == "org.apogeo.aspectologin" && subject.user != "root") {
+        return polkit.Result.YES;
+    }
+});

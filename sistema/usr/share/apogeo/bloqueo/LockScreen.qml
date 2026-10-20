@@ -256,7 +256,7 @@ Item {
         width: Math.min(440, parent.width - 80)
         height: parent.height - 80
         radius: Tema.r(20)
-        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.92)
+        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.92)
         border.color: root.border
         Rectangle { // el brillo de 1 px de arriba
             x: parent.radius; y: 1

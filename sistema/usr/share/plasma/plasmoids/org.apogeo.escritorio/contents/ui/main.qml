@@ -143,8 +143,10 @@ PlasmoidItem {
         // ======================= Navegar =======================
         Item {
             anchors.fill: parent
-            anchors.leftMargin: 80
+            // (con la columna a la izquierda, o la isla arriba, se deja su hueco)
+            anchors.leftMargin: 80 + (Tema.posicion === "abajo-izq" ? 48 : 0)
             anchors.rightMargin: 80
+            anchors.topMargin: Tema.posicion === "arriba-dcha" ? 60 : 0
             visible: root.floor === "navegar"
 
             Column {
@@ -308,9 +310,9 @@ PlasmoidItem {
         // ======================= Estudiar =======================
         Item {
             anchors.fill: parent
-            anchors.leftMargin: 64
+            anchors.leftMargin: 64 + (Tema.posicion === "abajo-izq" ? 56 : 0)
             anchors.rightMargin: 64
-            anchors.topMargin: 48
+            anchors.topMargin: 48 + (Tema.posicion === "arriba-dcha" ? 56 : 0)
             anchors.bottomMargin: lienzo.abajo - 4
             visible: root.floor === "estudiar"
 
@@ -686,7 +688,7 @@ PlasmoidItem {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 40
                 width: aviso.implicitWidth + 36; height: 40; radius: Tema.r(14)
-                color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.88)
+                color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.88)
                 border.color: Tema.borde
                 Texto {
                     id: aviso
@@ -703,7 +705,7 @@ PlasmoidItem {
                 width: Math.min(parent.width - 80, filaFondos.implicitWidth + botones.width + 48)
                 height: 150
                 radius: Tema.r(24)
-                color: Qt.rgba(30 / 255, 22 / 255, 33 / 255, 0.9)
+                color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.9)
                 border.color: Tema.borde
                 MouseArea { anchors.fill: parent } // (que pulsar dentro no cierre)
                 Flickable {

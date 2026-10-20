@@ -74,10 +74,11 @@ Window {
         id: card
         width: Math.min(760, win.width - 40)
         x: Math.round((win.width - width) / 2)
-        y: win.height - height - 84   // encima de la isla
+        // encima de la isla (o debajo, si la isla va arriba: Ajustes → Aspecto)
+        y: Tema.posicion === "arriba-dcha" ? 84 : win.height - height - 84
         height: Math.min(col.height, win.height - 120)
         radius: Tema.r(24)
-        color: Qt.rgba(33 / 255, 25 / 255, 36 / 255, 0.96)
+        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.96)
         border.color: Tema.borde
         clip: true
         Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }

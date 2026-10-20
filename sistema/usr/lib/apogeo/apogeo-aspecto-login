@@ -1,0 +1,50 @@
+#!/usr/bin/python3
+"""
+Tu aspecto también en la pantalla de inicio de sesión (SDDM): esa pantalla sale antes de entrar y no puede leer tus
+ajustes, así que Apogeo le deja una copia de tus colores en /var/lib/apogeo/aspecto-login.json (solo colores, la letra y
+las esquinas, comprobados; nada más). Lo llama apogeo_aspecto al aplicar tu aspecto.
+
+  pkexec apogeo-aspecto-login     (lee de la entrada las fichas de tu aspecto)
+"""
+import json
+import os
+import re
+import sys
+
+OUT = '/var/lib/apogeo/aspecto-login.json'
+HEX = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def main():
+    if os.geteuid() != 0:
+        return 2
+    try:
+        t = json.loads(sys.stdin.read(20000))
+    except ValueError:
+        return 1
+    out = {}
+    for k in ('fondo', 'superficie', 'texto', 'acento', 'sobreAcento', 'vivo'):
+        if HEX.match(str(t.get(k, ''))):
+            out[k] = t[k].lower()
+    wp = t.get('wp')
+    if isinstance(wp, list) and len(wp) == 3 and all(HEX.match(str(c)) for c in wp):
+        out['wp'] = [c.lower() for c in wp]
+    font = str(t.get('letra', ''))
+    if re.fullmatch(r"[\w .'-]{1,40}", font):
+        out['letra'] = font
+    try:
+        out['radio'] = max(0.2, min(2.0, float(t.get('radio', 1))))
+    except (TypeError, ValueError):
+        pass
+    out['claro'] = bool(t.get('claro'))
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    tmp = OUT + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump(out, f)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, OUT)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
