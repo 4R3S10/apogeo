@@ -560,6 +560,21 @@ def window(section):
             drawing = drawing.toVariant() if hasattr(drawing, 'toVariant') else drawing
             self._symbol_job('probar', 'probar', stdin=json.dumps([[float(p['x']), float(p['y'])] for p in drawing]))
 
+        # ----- Deshacer una actualización (apogeo-volver) -----
+        undoDone = pyqtSignal(bool, str, arguments=['ok', 'message'])
+
+        @pyqtSlot()
+        def undoUpdate(self):
+            """El próximo arranque enseña el menú (para elegir la instantánea de antes) y se reinicia."""
+            def work():
+                r = subprocess.run(['pkexec', os.path.join(comun.LIB, 'apogeo-volver'), 'menu'], capture_output=True, text=True)
+                if r.returncode == 0:
+                    self.undoDone.emit(True, '')
+                    subprocess.Popen(['systemctl', 'reboot'], start_new_session=True)
+                else:
+                    self.undoDone.emit(False, '' if r.returncode in (126, 127) else 'No se ha podido preparar el menú.')
+            threading.Thread(target=work, daemon=True).start()
+
         # Actualizaciones
         @pyqtProperty(str, constant=True)
         def version(self):

@@ -1,0 +1,11 @@
+[Unit]
+Description=Apogeo: volver a esconder el menú de arranque si se enseñó una vez (para elegir una instantánea)
+ConditionPathExists=/var/lib/apogeo/menu-una-vez
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-menu-arranque
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Deshacer una actualización: que el próximo arranque enseñe el menú (para elegir la instantánea de antes). Sin
+     contraseña para quien está delante (solo enseña el menú una vez); quedarse en una instantánea sí la pide (es la
+     herramienta de CachyOS, con su propio permiso). -->
+<policyconfig>
+  <vendor>Apogeo</vendor>
+  <action id="org.apogeo.volver">
+    <description>Enseñar el menú de arranque la próxima vez</description>
+    <message>Apogeo quiere enseñar el menú de arranque la próxima vez para elegir una instantánea</message>
+    <icon_name>apogeo</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/apogeo/apogeo-volver</annotate>
+  </action>
+</policyconfig>

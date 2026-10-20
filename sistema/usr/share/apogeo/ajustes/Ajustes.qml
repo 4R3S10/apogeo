@@ -575,7 +575,7 @@ ApplicationWindow {
             // ----- Actualizaciones -----
             Seccion {
                 id: actualizaciones
-                property string palabras: "version actualizar sistema paquetes pacman"
+                property string palabras: "version actualizar sistema paquetes pacman deshacer volver atras instantanea snapshot"
                 width: parent.width
                 visible: win.shown(actualizaciones)
                 titulo: "Actualizaciones"
@@ -599,6 +599,26 @@ ApplicationWindow {
                             tipo: "principal"
                             text: "Actualizar ahora"
                             onClicked: apogeo.runUpdate()
+                        }
+                    }
+                }
+                Fila {
+                    id: deshacer
+                    property bool seguro: false
+                    property string mensaje: ""
+                    titulo: "Deshacer una actualización"
+                    detalle: mensaje !== "" ? mensaje
+                        : seguro ? "Se reinicia y sale el menú de arranque: entra en «Snapshots» y elige la de antes de actualizar. Al entrar, Apogeo te pregunta si te quedas así."
+                        : "Antes de cada actualización se guarda cómo estaba el sistema (tus archivos no se tocan). Si algo va mal, vuelves a como estaba."
+                    Connections { target: apogeo; function onUndoDone(ok, message) { deshacer.mensaje = ok ? "Reiniciando…" : message; deshacer.seguro = false; } }
+                    Row {
+                        spacing: 8
+                        Boton { visible: deshacer.seguro; text: "Cancelar"; onClicked: deshacer.seguro = false }
+                        Boton {
+                            tipo: deshacer.seguro ? "principal" : "normal"
+                            text: deshacer.seguro ? "Reiniciar ahora" : "Reiniciar y elegir…"
+                            icono: "actualizar"
+                            onClicked: deshacer.seguro ? apogeo.undoUpdate() : (deshacer.seguro = true)
                         }
                     }
                 }

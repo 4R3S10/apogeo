@@ -5,6 +5,11 @@ tecla, sale el menú de Limine (para el núcleo de reserva o las copias del sist
 
 Solo toca las opciones generales de limine.conf (las de arriba, antes de las entradas, que las herramientas de CachyOS
 no reescriben). La primera vez guarda el original al lado (limine.conf.cachyos). Lo llama un gancho de pacman.
+
+  apogeo-menu-arranque            sin menú (lo de siempre)
+  apogeo-menu-arranque una-vez    el próximo arranque enseña el menú (para elegir una instantánea: «Deshacer una
+                                  actualización», en Ajustes); al encender, apogeo-menu-arranque.service lo vuelve a
+                                  esconder
 """
 import os
 import re
@@ -26,6 +31,8 @@ OPTIONS = {
     'backdrop': '120d14',
 }
 DROP = ('wallpaper', 'wallpaper_style')  # el fondo de CachyOS (se queda comentado)
+ONCE = '/var/lib/apogeo/menu-una-vez'
+ONCE_OPTIONS = {'timeout': '20', 'quiet': 'no'}   # con el menú a la vista y tiempo para elegir
 
 
 def esp():
@@ -47,6 +54,13 @@ def find():
 
 
 def main():
+    once = sys.argv[1:] == ['una-vez']
+    if once:
+        OPTIONS.update(ONCE_OPTIONS)
+        os.makedirs(os.path.dirname(ONCE), exist_ok=True)
+        open(ONCE, 'w').close()
+    elif os.path.exists(ONCE):
+        os.remove(ONCE)
     path = find()
     if not path:
         print('Apogeo: no hay limine.conf (¿otro cargador?); el menú se queda como está')
@@ -86,7 +100,8 @@ def main():
             subprocess.run(['limine-enroll-config'], check=False)
     except OSError:
         pass
-    print('Apogeo: menú de arranque escondido (mantén pulsada una tecla al encender para verlo)')
+    print('Apogeo: el menú de arranque sale la próxima vez' if once else
+          'Apogeo: menú de arranque escondido (mantén pulsada una tecla al encender para verlo)')
     return 0
 
 

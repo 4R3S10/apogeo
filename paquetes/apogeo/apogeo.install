@@ -30,19 +30,20 @@ _copia_revision() {
   systemctl enable --now apogeo-actualizar-al-apagar.service 2>/dev/null || true  # «Actualizar al apagar»
   systemctl enable --now scx_loader.service 2>/dev/null || true     # el planificador de escritorio y juegos (scx_lavd)
   systemctl enable apogeo-planificador.timer 2>/dev/null || true    # (si ese no va en este equipo, otro)
+  systemctl enable apogeo-menu-arranque.service 2>/dev/null || true # (esconde otra vez el menú si se enseñó una vez)
   systemctl start --no-block apogeo-planificador.service 2>/dev/null || true
   systemctl enable --now paccache.timer 2>/dev/null || true         # la caché de paquetes, limpia cada semana
   /usr/lib/apogeo/apogeo-windows sync 2>/dev/null || true           # (y Apogeo el primero al arrancar, ya)
 }
 
-# Los programas de serie (apogeo-programas): ONLYOFFICE y Stremio de Flathub (en segundo plano, con internet) y
-# VirtualBox para las cuentas que ya existen (hay que estar en su grupo)
+# Los programas de serie (apogeo-programas): ONLYOFFICE y Stremio de Flathub (en segundo plano, con internet) y los
+# grupos que necesitan las cuentas que ya existen
 _programas() {
   systemctl enable --now --no-block apogeo-flatpaks.service 2>/dev/null || true
   systemctl enable apogeo-limpieza.service 2>/dev/null || true  # (se pone en marcha al acabar: zz-apogeo-revision)
-  # VirtualBox (vboxusers) y los juegos de PS5 con AnyPS5 (kvm: /dev/udmabuf)
+  # Los juegos de PS5 con AnyPS5 (kvm: /dev/udmabuf)
   awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' /etc/passwd | while read -r u; do
-    for g in vboxusers kvm; do
+    for g in kvm; do
       getent group "$g" >/dev/null && gpasswd -a "$u" "$g" >/dev/null 2>&1 || true
     done
   done

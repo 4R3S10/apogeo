@@ -7,6 +7,8 @@ Type=oneshot
 ExecStart=/usr/lib/apogeo/apogeo-revision usuario
 # y cómo fue «Actualizar al apagar», si se marcó
 ExecStartPost=-/usr/lib/apogeo/apogeo-actualizar-al-apagar resultado
+# y si has entrado en una instantánea (de antes de una actualización), si te quedas así
+ExecStartPost=-/bin/sh -c 'setsid /usr/lib/apogeo/apogeo-volver aviso >/dev/null 2>&1 &' 
 TimeoutStartSec=5min
 Nice=10
 

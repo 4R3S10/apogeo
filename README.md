@@ -89,9 +89,7 @@ tus apps (Discord, Steam…).
 ## Programas de serie
 
 Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
-- **Diario:** Flameshot (Impr Pant), Stacer, Spotify (`spotify-launcher`, que baja el oficial) y Discord.
-- **Máquinas virtuales:** VirtualBox con sus módulos para el núcleo de CachyOS. Las cuentas que ya existen entran en
-  `vboxusers`.
+- **Diario:** Flameshot (Impr Pant), Spotify (`spotify-launcher`, que baja el oficial) y Discord.
 - **Juegos:** MangoHud, GameMode, ProtonPlus y Lutris.
 - **Multimedia:** OBS Studio, VLC, EasyEffects y qBittorrent.
 - **Utilidades:** LocalSend, KeePassXC, Obsidian y CoolerControl.
@@ -233,10 +231,20 @@ delante (que enseña la suya) ni con algo a pantalla completa.
 - **Programas repetidos y apps de CachyOS, fuera** (una vez, después de actualizar: `apogeo-limpieza`): la bienvenida,
   el instalador de paquetes, el gestor de núcleos, scx-manager, el actualizador y Shelly; Konsole y Alacritty (se queda
   Ghostty), Spectacle (Flameshot), Haruna y mpv (VLC), Firefox (Ágape), btop, el Monitor del sistema y Filelight
-  (Stacer y Mission Center), vim, micro y la zsh de CachyOS (Kate y fish; zsh se queda si alguna cuenta entra con ella).
-  Si luego instalas alguno a mano, se queda. En una segunda tanda, KDE Connect (gastaba memoria y red sin usarse). Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
+  (Mission Center), vim, micro y la zsh de CachyOS (Kate y fish; zsh se queda si alguna cuenta entra con ella).
+  Si luego instalas alguno a mano, se queda. En una segunda tanda, KDE Connect (gastaba memoria y red sin usarse); en una tercera, Stacer (lo hace
+  Mission Center) y VirtualBox (no hace falta en el PC y su módulo frenaba las actualizaciones del núcleo). Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
   En lugar del actualizador, un aviso de Apogeo cuando hay actualizaciones (uno al día como mucho; en Jugar y Estudiar
   se guarda para luego).
+
+## Deshacer una actualización
+
+Antes de cada actualización CachyOS guarda cómo estaba el sistema (snap-pac + Snapper en Btrfs; `/home` no se toca) y
+lo pone en el menú de arranque (limine-snapper-sync). En Ajustes → Actualizaciones, «Reiniciar y elegir…» hace que el
+próximo arranque enseñe el menú una vez (`apogeo-volver menu` → `apogeo-menu-arranque una-vez`; al encender se vuelve a
+esconder) para entrar en «Snapshots» y elegir la de antes. Dentro de una instantánea, Apogeo pregunta: «Quedarme así»
+(la herramienta de CachyOS, `limine-snapper-restore`, en una terminal) o «Volver a lo de ahora» (reinicia). Los avisos
+de Limine y Snapper de CachyOS al arrancar, fuera (los sustituye este).
 
 ## Bloqueo: tu símbolo
 

@@ -1,18 +1,19 @@
 #!/bin/bash
 # Fuera los programas repetidos y los restos de CachyOS (una sola vez: si luego instalas alguno a mano, se queda).
 # Con cada uno se queda el de Apogeo: Ghostty (no Konsole ni Alacritty), Flameshot (no Spectacle), VLC (no Haruna ni
-# mpv), Ágape (no Firefox), Stacer y Mission Center (no btop, el Monitor del sistema ni Filelight), Kate y fish (no vim,
+# mpv), Ágape (no Firefox), Mission Center (no btop, el Monitor del sistema ni Filelight), Kate y fish (no vim,
 # micro ni la zsh de CachyOS). Y lo de CachyOS que Apogeo ya hace a su manera: la bienvenida, el instalador de paquetes,
 # el gestor de núcleos, el actualizador y Shelly.
-# Segunda tanda (2026-10-19): KDE Connect (gastaba memoria y red sin usarse). Si ya se hizo la primera, solo se quita lo
-# nuevo: lo que reinstalaste a mano después se queda.
+# Segunda tanda (2026-10-19): KDE Connect (gastaba memoria y red sin usarse). Tercera (2026-10-20): Stacer (lo hace
+# Mission Center) y VirtualBox (no hace falta en el PC y su módulo frenaba las actualizaciones del núcleo). De cada tanda
+# solo se quita lo suyo: lo que reinstalaste a mano después de una tanda se queda.
 #
 # Lo lanza la revisión de Apogeo después de una actualización y, si no llegó a acabar (por ejemplo, porque se reinició
 # justo después), al encender (apogeo-limpieza.service). pacman está ocupado hasta que acaba la actualización, así que
 # primero espera a que termine; mientras quita, retrasa el apagado. Lo que quita lo apunta en
 # /var/lib/apogeo/limpieza.json para que la revisión te lo cuente.
 set -u
-MARCA=/var/lib/apogeo/limpieza-2
+MARCA=/var/lib/apogeo/limpieza-3
 INFORME=/var/lib/apogeo/limpieza.json
 [ -e "$MARCA" ] && exit 0
 
@@ -33,7 +34,9 @@ if ! getent passwd | awk -F: '$3 == 0 || ($3 >= 1000 && $3 < 60000)' | cut -d: -
 fi
 fi
 # Segunda tanda
-QUITAR+=(kdeconnect)
+[ -e /var/lib/apogeo/limpieza-2 ] || QUITAR+=(kdeconnect)
+# Tercera tanda
+QUITAR+=(stacer virtualbox virtualbox-host-dkms virtualbox-ext-oracle)
 
 # Un candado de pacman de antes de encender el PC no es de nadie (se cortó un pacman al apagar): fuera
 LCK=/var/lib/pacman/db.lck
@@ -73,4 +76,4 @@ python3 - "$INFORME" "${quitados[@]}" <<'PY'
 import json, sys, time
 json.dump({'fecha': int(time.time()), 'quitados': sys.argv[2:]}, open(sys.argv[1], 'w'))
 PY
-touch /var/lib/apogeo/limpieza-1 "$MARCA"
+touch /var/lib/apogeo/limpieza-1 /var/lib/apogeo/limpieza-2 "$MARCA"

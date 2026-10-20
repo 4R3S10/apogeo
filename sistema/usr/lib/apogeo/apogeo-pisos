@@ -304,9 +304,10 @@ def setup(bus):
             'PopupPosition', 'BottomRight')
         st['isla2'] = ISLAND2
     if st.get('ligero', 0) < LIGHTER:
-        # Menos cosas en marcha: el menú global (Apogeo no tiene barra de menús arriba) y el ayudante de accesibilidad
-        # (teclas especiales; se puede volver a encender en Ajustes del sistema → Accesibilidad)
-        for name in ('gmenudbusmenuproxy', 'kaccess'):
+        # Menos cosas en marcha: el menú global (Apogeo no tiene barra de menús arriba), el ayudante de accesibilidad
+        # (teclas especiales; se puede volver a encender en Ajustes del sistema → Accesibilidad) y los avisos de Limine y
+        # Snapper de CachyOS al arrancar (lo de volver a una instantánea lo cuenta Apogeo: Ajustes → Actualizaciones)
+        for name in ('gmenudbusmenuproxy', 'kaccess', 'limine-snapper-notify', 'limine-restore-notify'):
             path = os.path.join(HOME, '.config/autostart', name + '.desktop')
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w') as f:
@@ -339,7 +340,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
 DESKTOP = 2  # igual, para el escritorio (sin iconos y con el widget de Apogeo a pantalla completa)
-LIGHTER = 1  # igual, para quitar de en medio lo que no se usa al entrar (menú global, accesibilidad)
+LIGHTER = 2  # igual, para quitar de en medio lo que no se usa al entrar (menú global, accesibilidad)
 ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
 AESTHETICS = 13  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen

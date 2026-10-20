@@ -80,8 +80,7 @@ package_apogeo() {
 package_apogeo-programas() {
   pkgdesc='Apogeo: los programas de serie'
   depends=(
-    flameshot stacer spotify-launcher discord                       # capturas, limpiar el PC, música y chat
-    virtualbox virtualbox-host-dkms linux-cachyos-headers           # máquinas virtuales (módulos para el núcleo de CachyOS)
+    flameshot spotify-launcher discord                              # capturas, música y chat
     ghostty starship fastfetch ttf-jetbrains-mono-nerd flatpak      # la terminal de Apogeo y Flathub
     mangohud lib32-mangohud gamemode lib32-gamemode protonplus lutris  # juegos
     obs-studio vlc easyeffects qbittorrent                          # grabar, vídeos, sonido y descargas

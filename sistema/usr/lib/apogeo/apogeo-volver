@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+"""
+Deshacer una actualización. Antes de cada actualización CachyOS guarda una instantánea del sistema (snap-pac + Snapper;
+tus archivos de /home no se tocan) y la pone en el menú de arranque (limine-snapper-sync).
+
+  pkexec apogeo-volver menu    el próximo arranque enseña el menú, para elegir «Snapshots» → la de antes de actualizar
+                               (lo llama Ajustes → Actualizaciones → «Reiniciar y elegir», que luego reinicia)
+  apogeo-volver estado         (tú) {"instantanea": N o null}: si has entrado en una instantánea
+  apogeo-volver aviso          (tú, al entrar) si estás en una instantánea, te pregunta si te quedas así: «Quedarme
+                               así» la hace la de siempre con la herramienta de CachyOS (limine-snapper-restore, en una
+                               terminal: pide tu contraseña y te enseña lo que hace); «Volver a lo de ahora» reinicia en
+                               el sistema de siempre
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+
+
+def snapshot():
+    try:
+        m = re.search(r'\.snapshots/(\d+)/snapshot', open('/proc/cmdline').read())
+        return int(m.group(1)) if m else None
+    except OSError:
+        return None
+
+
+def warn():
+    n = snapshot()
+    if n is None:
+        return
+    a = subprocess.run(['notify-send', '-a', 'Apogeo', '-i', 'apogeo', '-u', 'critical', '-A', 'quedar=Quedarme así',
+                        '-A', 'volver=Volver a lo de ahora', '--wait',
+                        'Estás en Apogeo como estaba antes',
+                        f'Has entrado en la instantánea {n}, de antes de una actualización. Si todo va bien, quédate '
+                        'así; si no, vuelve al sistema de ahora.'], capture_output=True, text=True)
+    choice = a.stdout.strip()
+    if choice == 'quedar':
+        subprocess.Popen(['ghostty', '-e', 'pkexec', 'limine-snapper-restore'], start_new_session=True)
+    elif choice == 'volver':
+        subprocess.Popen(['systemctl', 'reboot'], start_new_session=True)
+
+
+def main():
+    a = sys.argv[1:]
+    if a == ['estado']:
+        print(json.dumps({'instantanea': snapshot()}))
+        return 0
+    if a == ['aviso']:
+        warn()
+        return 0
+    if a == ['menu']:
+        if os.geteuid() != 0:
+            return 2
+        r = subprocess.run(['/usr/lib/apogeo/apogeo-menu-arranque', 'una-vez'])
+        return r.returncode
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())
