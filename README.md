@@ -290,7 +290,12 @@ el estilo y la música. Solo avisa si ha arreglado algo o si algo no ha podido a
 
 ## Instalador (ISO) — decidido para cuando se haga
 
-- **Disco cifrado** (LUKS) de serie: la contraseña del disco se pide al encender.
+- **Disco cifrado** (LUKS) de serie, que se abre solo con el chip de seguridad del PC (TPM 2.0, `systemd-cryptenroll`):
+  al encender no hay que escribir dos contraseñas, solo la de tu cuenta. La contraseña del disco se guarda de reserva
+  (por si cambias de placa o el TPM no la da) y se pide solo entonces.
+- **Windows 11 Home** en el Windows escondido (la clave ya viene en el PC y se activa sola).
+- **Sin acceso remoto:** SSH apagado (en la máquina virtual se encendió solo para probar).
+- Particiones, Apogeo y Windows (descargado de Microsoft e instalado sin preguntas, con el puente) en un solo paso.
 
 ## Ágape
 
