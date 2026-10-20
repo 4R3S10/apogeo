@@ -264,7 +264,12 @@ igual y siempre sirve: al encender y al iniciar sesión se pide ella.
 - **El índice de los manuales** (man-db) con la prioridad más baja: ya no compite con el escritorio al arrancar.
 - **Fuera de en medio** el menú global y el ayudante de accesibilidad (no se usan) y KDE Connect (se quita).
 - **La consola de Jugar duerme** sin estar delante: deja de mirar tus juegos cada 20 segundos y suelta las imágenes; el
-  arte se carga al tamaño de la pantalla.
+  arte se carga al tamaño de la pantalla. Tras media hora dormida fuera de Jugar se cierra (devuelve su memoria) y
+  `apogeo-pisos` la abre al volver a Jugar.
+- **MangoHud en los juegos** (Vulkan, también Proton), escondido y con los colores de Apogeo: el botón «HUD» de la isla
+  en Jugar y del modo partida (Meta+Tab) lo enseña o esconde (`mangohudctl`; también Mayús derecha+F12). El límite de
+  FPS de Salud del PC va con MangoHud (vale en todos los juegos) y cada juego de Steam o Epic puede tener el suyo (30,
+  45 o 60) desde la consola. Ágape, Discord, Steam y Spotify quedan fuera.
 - Sin gráfica de verdad (máquina virtual), sin desenfoque; los fondos animados solo se mueven a la vista.
 
 ## Copia de Apogeo

@@ -164,7 +164,7 @@ Item {
                 Text {
                     anchors.top: thumb.bottom; anchors.topMargin: 8; anchors.left: thumb.left
                     text: "Pulsa el juego o Meta+Tab para volver"
-                    color: "#9ef1e6ea"; font.family: Tema.letra; font.pixelSize: 13
+                    color: Tema.apagado; font.family: Tema.letra; font.pixelSize: 13
                 }
             }
 
@@ -205,6 +205,14 @@ Item {
                                 Text { anchors.centerIn: parent; text: parent.modelData.t; color: parent.modelData.main ? Tema.sobreRosa : Tema.texto; font.pixelSize: 16 }
                                 MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; onClicked: root.musicaAccion(parent.modelData.a) }
                             }
+                        }
+                        // MangoHud en el juego: enseñarlo o esconderlo (FPS, temperaturas…)
+                        Rectangle {
+                            width: hudT.implicitWidth + 24; height: 40; radius: 13
+                            color: hudA.containsMouse ? Tema.pulsado : "transparent"
+                            border.color: Tema.borde
+                            Text { id: hudT; anchors.centerIn: parent; text: "HUD"; color: Tema.texto; font.family: Tema.letra; font.pixelSize: 14; font.bold: true }
+                            MouseArea { id: hudA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.open("hud") }
                         }
                     }
                 }

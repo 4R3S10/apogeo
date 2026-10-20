@@ -168,6 +168,36 @@ def main():
             elif not on:
                 self.timer.stop()
 
+        # ----- Los FPS de cada juego (MangoHud) -----
+        fpsChanged = pyqtSignal()
+
+        @pyqtProperty('QVariantMap', notify=fpsChanged)
+        def juegosFps(self):
+            return comun.load().get('juegos_fps', {})
+
+        @pyqtProperty(int, notify=fpsChanged)
+        def fpsTodos(self):
+            return comun.load().get('fps', 60)
+
+        @pyqtSlot(str, int)
+        def setFps(self, key, fps):
+            st = comun.load()
+            per = dict(st.get('juegos_fps') or {})
+            if fps in comun.FPS_CHOICES:
+                per[key] = fps
+            else:
+                per.pop(key, None)
+            st['juegos_fps'] = per
+            comun.save(st)
+            self.fpsChanged.emit()
+
+        @pyqtSlot(result=bool)
+        def fueraDeJugar(self):
+            """¿Estás en otro piso? (Jugar es el primero)"""
+            r = subprocess.run(['qdbus6', 'org.kde.KWin', '/KWin', 'org.kde.KWin.currentDesktop'],
+                               capture_output=True, text=True)
+            return r.stdout.strip() not in ('', '1')
+
         @pyqtSlot()
         def dormir(self):
             engine.trimComponentCache()

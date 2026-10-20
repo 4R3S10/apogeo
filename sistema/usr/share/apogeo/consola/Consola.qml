@@ -19,6 +19,13 @@ Window {
     // juegos cada 20 segundos; al volver a ella se despierta al momento
     readonly property bool despierta: win.active || awake.running
     Timer { id: awake; interval: 120000; running: true }
+    // Media hora dormida y fuera de Jugar: se cierra (devuelve toda su memoria); apogeo-pisos la abre al volver a Jugar
+    Timer {
+        interval: 30 * 60000
+        running: !win.despierta
+        repeat: true
+        onTriggered: if (consola.fueraDeJugar()) Qt.quit()
+    }
     onActiveChanged: { if (!active) awake.restart(); }
     onDespiertaChanged: {
         consola.activa(despierta);
@@ -261,7 +268,7 @@ Window {
                 required property var modelData
                 readonly property bool on: win.sys === modelData.clave
                 width: sl.implicitWidth + 24; height: 30; radius: 15
-                color: on ? Tema.rosaSuave : Qt.rgba(18 / 255, 13 / 255, 20 / 255, 0.55)
+                color: on ? Tema.rosaSuave : Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.55)
                 border.color: Tema.borde
                 Texto { id: sl; anchors.centerIn: parent; text: parent.modelData.texto; font.pixelSize: 13; color: parent.on ? Tema.texto : Tema.apagado }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.sys = parent.modelData.clave }
@@ -302,7 +309,7 @@ Window {
                 readonly property bool busy: !!win.dl
                 width: busy ? 280 : bl.implicitWidth + 64
                 height: 54; radius: 27
-                color: busy ? Qt.rgba(18 / 255, 13 / 255, 20 / 255, 0.7) : Tema.rosa
+                color: busy ? Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.7) : Tema.rosa
                 border.color: busy ? Tema.borde : "transparent"
                 RectangularShadow { anchors.fill: parent; z: -1; visible: !boton.busy; offset.y: 6; blur: 26; spread: -4; radius: parent.radius; color: Tema.rosa; opacity: 0.8 }
                 Rectangle {
@@ -324,10 +331,31 @@ Window {
             Rectangle {
                 visible: !!win.game && win.game.installed && !win.dl && win.game.store !== "windows"
                 width: ql.implicitWidth + 40; height: 54; radius: 27
-                color: qm.containsMouse ? Tema.pulsado : Qt.rgba(18 / 255, 13 / 255, 20 / 255, 0.55)
+                color: qm.containsMouse ? Tema.pulsado : Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.55)
                 border.color: Tema.borde
                 Texto { id: ql; anchors.centerIn: parent; text: win.game && win.game.store === "ps5" ? "Quitar lo convertido" : "Quitar del PC"; font.pixelSize: 15 }
                 MouseArea { id: qm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.secondary() }
+            }
+            // Los FPS de este juego (con MangoHud): como todos (Salud del PC) o 30, 45 o 60; un clic pasa al siguiente
+            Rectangle {
+                id: fpsPill
+                readonly property string key: win.game ? win.game.store + ":" + win.game.id : ""
+                readonly property int mine: consola.juegosFps[key] || 0
+                visible: !!win.game && win.game.installed && !win.dl && (win.game.store === "steam" || win.game.store === "epic")
+                width: fl.implicitWidth + 40; height: 54; radius: 27
+                color: fm.containsMouse ? Tema.pulsado : Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.55)
+                border.color: mine ? Tema.rosa : Tema.borde
+                Texto {
+                    id: fl
+                    anchors.centerIn: parent
+                    font.pixelSize: 15
+                    text: fpsPill.mine ? fpsPill.mine + " FPS en este juego" : "FPS como todos (" + consola.fpsTodos + ")"
+                }
+                MouseArea {
+                    id: fm
+                    anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: { const seq = [0, 30, 45, 60]; consola.setFps(fpsPill.key, seq[(seq.indexOf(fpsPill.mine) + 1) % seq.length]); }
+                }
             }
             Repeater {
                 model: win.game ? [win.gb(win.game.size), win.dl && win.dl.mensaje && win.dl.estado !== "error" ? win.dl.mensaje : ""].filter(x => x) : []
@@ -335,7 +363,7 @@ Window {
                     required property string modelData
                     anchors.verticalCenter: parent.verticalCenter
                     width: cl.implicitWidth + 24; height: 32; radius: 16
-                    color: Qt.rgba(18 / 255, 13 / 255, 20 / 255, 0.55); border.color: Tema.borde
+                    color: Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.55); border.color: Tema.borde
                     Texto { id: cl; anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 13 }
                 }
             }

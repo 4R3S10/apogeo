@@ -303,6 +303,11 @@ def setup(bus):
         run('kwriteconfig6', '--notify', '--file', 'plasmanotifyrc', '--group', 'Notifications', '--key',
             'PopupPosition', 'BottomRight')
         st['isla2'] = ISLAND2
+    if st.get('mangohud', 0) < MANGOHUD:
+        # MangoHud en los juegos (escondido) con el límite de FPS: su configuración y el entorno de la sesión
+        cfg = ajustes.load()
+        ajustes.write_fps(cfg['fps'], cfg.get('juegos_fps'))
+        st['mangohud'] = MANGOHUD
     if st.get('ligero', 0) < LIGHTER:
         # Menos cosas en marcha: el menú global (Apogeo no tiene barra de menús arriba), el ayudante de accesibilidad
         # (teclas especiales; se puede volver a encender en Ajustes del sistema → Accesibilidad) y los avisos de Limine y
@@ -340,6 +345,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
 DESKTOP = 2  # igual, para el escritorio (sin iconos y con el widget de Apogeo a pantalla completa)
+MANGOHUD = 1  # igual, para MangoHud en los juegos
 LIGHTER = 2  # igual, para quitar de en medio lo que no se usa al entrar (menú global, accesibilidad)
 ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
@@ -619,6 +625,19 @@ class Floors:
             # Solo si se queda en el piso: pasar de largo con la rueda no abre nada (y la ventana, al aparecer tarde,
             # le devolvería a este piso)
             GLib.timeout_add(1500, self.first_visit, index)
+        elif FLOORS[index]['key'] == 'jugar':
+            GLib.timeout_add(800, self.wake_console, index)
+
+    def wake_console(self, index):
+        """La consola se cierra sola tras media hora sin usarla fuera de Jugar (devuelve su memoria): al volver a Jugar,
+        se abre otra vez."""
+        try:
+            running = self.bus.name_has_owner('org.apogeo.Consola')
+        except dbus.DBusException:
+            running = True
+        if self.last == index and not running and 'apogeo-consola.desktop' in ajustes.load()['pisos']['jugar']['apps']:
+            self.open_apps(['apogeo-consola.desktop'])
+        return False
 
     def first_visit(self, index):
         if self.last == index and welcome_open():

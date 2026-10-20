@@ -695,3 +695,104 @@ Lo que algunos emuladores necesitan de tu consola (Apogeo no lo trae: sácalo de
 
 Solo tus copias de tus juegos: Apogeo no trae ni busca juegos.
 """
+
+
+# ---------- MangoHud: escondido en tus juegos, el límite de FPS de todos y el de cada juego ----------
+
+MANGOHUD = os.path.join(HOME, '.config', 'MangoHud')
+MANAGED = '# Apogeo:'
+# Lo que no es un juego y usa Vulkan: que MangoHud no lo toque (Ágape, navegadores, chats, Steam por dentro…)
+NOT_GAME_PROCS = 'ares,chrome,chromium,electron,steamwebhelper,steam,discord,spotify,obs,kwin_wayland,plasmashell,Xwayland'
+
+
+def game_exes(g):
+    """Los ejecutables de un juego descargado (para su límite de FPS): Steam (su carpeta) o Epic (la de legendary)."""
+    folder = ''
+    if g.get('store') == 'steam':
+        for lib in steam_libraries():
+            acf = os.path.join(lib, f'appmanifest_{g["id"]}.acf')
+            if os.path.exists(acf):
+                with open(acf, encoding='utf-8', errors='replace') as f:
+                    d = (vdf_values(f.read(), 'installdir') or [''])[0]
+                folder = os.path.join(lib, 'common', d) if d else ''
+                break
+    elif g.get('store') == 'epic':
+        folder = (read_json(os.path.join(HEROIC, 'legendaryConfig/legendary/installed.json'), {})
+                  .get(g['id'], {}).get('install_path', ''))
+    names = set()
+    if folder and os.path.isdir(folder):
+        base = folder.rstrip('/').count('/')
+        for root, dirs, files in os.walk(folder):
+            if root.count('/') - base >= 3:
+                dirs[:] = []
+            for n in files:
+                low = n.lower()
+                if re.search(r'setup|install|unins|crash|report|redist|vc_|dxsetup|helper|launcher|easyanticheat', low):
+                    continue
+                if low.endswith('.exe') or (os.access(os.path.join(root, n), os.X_OK) and '.' not in n):
+                    names.add(n)
+            if len(names) > 12:
+                break
+    return sorted(names)
+
+
+def mangohud_conf(fps, extra=''):
+    return (f"""{MANAGED} MangoHud en tus juegos, escondido (el botón «HUD» de la isla en Jugar lo enseña; también
+# Mayús derecha+F12). Lo escribe Apogeo: si cambias algo aquí, borra la primera línea y lo dejará en paz.
+no_display
+fps_limit={fps}
+control=mangohud
+toggle_hud=Shift_R+F12
+blacklist={NOT_GAME_PROCS}
+position=top-left
+round_corners=12
+background_alpha=0.55
+background_color=1E1621
+text_color=F1E6EA
+gpu_color=E0A9B4
+cpu_color=E0A9B4
+frametime_color=E0A9B4
+font_size=20
+fps
+frametime=0
+gpu_stats
+gpu_temp
+cpu_stats
+cpu_temp
+ram
+{extra}""")
+
+
+def write_mangohud(global_fps, per_game):
+    """La configuración de MangoHud: la de todos (MangoHud.conf) y, por cada juego con su propio límite, un archivo
+    por cada ejecutable suyo (los de Proton se llaman «wine-<nombre>»). Solo toca lo que escribió Apogeo."""
+    os.makedirs(MANGOHUD, exist_ok=True)
+    main = os.path.join(MANGOHUD, 'MangoHud.conf')
+    def ours(path):
+        try:
+            with open(path) as f:
+                return f.readline().startswith(MANAGED)
+        except OSError:
+            return True   # (no existe: se puede escribir)
+    if ours(main):
+        with open(main, 'w') as f:
+            f.write(mangohud_conf(global_fps))
+    keep = set()
+    for key, fps in (per_game or {}).items():
+        store, _, gid = key.partition(':')
+        for exe in game_exes({'store': store, 'id': gid}):
+            stem = re.sub(r'\.exe$', '', exe, flags=re.I)
+            for name in ((f'wine-{stem}', stem) if exe.lower().endswith('.exe') else (stem,)):
+                path = os.path.join(MANGOHUD, name + '.conf')
+                if ours(path):
+                    with open(path, 'w') as f:
+                        f.write(mangohud_conf(fps, f'# (el límite de {key})\n'))
+                    keep.add(path)
+    for path in glob.glob(os.path.join(MANGOHUD, '*.conf')):
+        if path != main and path not in keep and ours(path):
+            os.remove(path)
+    # Los juegos abiertos lo leen ya (si MangoHud está en ellos)
+    try:
+        subprocess.run(['mangohudctl', 'reload-cfg'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        pass

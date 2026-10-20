@@ -268,6 +268,12 @@ PlasmoidItem {
         }
         AgapeButton {
             visible: root.floor === "Jugar"
+            iconName: "hud"
+            tip: "MangoHud en el juego: enseñar o esconder (también Mayús derecha+F12)"
+            onClicked: root.run("mangohudctl toggle no_display")
+        }
+        AgapeButton {
+            visible: root.floor === "Jugar"
             iconName: "consola"
             tip: "Consola de juegos"
             onClicked: root.run("/usr/lib/apogeo/apogeo-juegos consola")

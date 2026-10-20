@@ -85,6 +85,10 @@ class Datos(dbus.service.Object):
 
     @dbus.service.method(IFACE, in_signature='s')
     def Abrir(self, app):
+        if app == 'hud':  # MangoHud en el juego: enseñarlo o esconderlo (el botón «HUD» del modo partida y de la isla)
+            subprocess.Popen(['mangohudctl', 'toggle', 'no_display'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+            return
         if app == 'fondos':  # «Más…» del carrusel de fondos: Ajustes → Fondos
             subprocess.Popen(['/usr/lib/apogeo/apogeo-ajustes', 'fondos'], stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)

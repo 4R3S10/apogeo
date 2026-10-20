@@ -59,7 +59,8 @@ DEFAULTS = {
     'animar': True,      # fondos animados (solo con gráfica de verdad)
     'silencio': False,   # «No molestar» en todos los pisos
     'isla': {'esconder': True, 'esconderPisos': True, 'jugar': True, 'navegar': True, 'estudiar': True},  # lo de cada piso: temperatura/FPS,
-    'fps': 60,                                                                    # música, temporizador
+    'fps': 60,
+    'juegos_fps': {},    # el límite de FPS de cada juego («steam:123»: 45), si no es el de todos (la consola)                                                                    # música, temporizador
     # Ajustes → Aspecto (apogeo_aspecto): lo de serie es la estética de Ágape
     'aspecto': dict(_aspecto.DEFAULT),
     'version': VERSION,
@@ -112,6 +113,7 @@ def valid(st):
         f['apps'] = [a for a in f.get('apps', []) if isinstance(a, str) and a.endswith('.desktop')]
     if st.get('fps') not in FPS_CHOICES:
         st['fps'] = 60
+    st['juegos_fps'] = {k: v for k, v in (st.get('juegos_fps') or {}).items() if v in FPS_CHOICES}
     fondos = st['fondos']
     fondos['tuyos'] = list(dict.fromkeys(x for x in fondos.get('tuyos', []) if is_wallpaper_file(x)))
     if not isinstance(fondos.get('carpeta'), str):
@@ -195,7 +197,7 @@ def save(st):
     with open(tmp, 'w') as f:
         json.dump(st, f, ensure_ascii=False, indent=1)
     os.replace(tmp, SETTINGS)  # de golpe: quien lo vigila nunca lee un archivo a medias
-    write_fps(st['fps'])
+    write_fps(st['fps'], st.get('juegos_fps'))
     return st
 
 
@@ -211,12 +213,19 @@ def set_path(st, path, value):
     return st
 
 
-def write_fps(fps):
-    """Los juegos de Windows (Proton) a esos FPS como mucho. Es del entorno de la sesión: vale al volver a entrar."""
+def write_fps(fps, per_game=None):
+    """Los juegos a esos FPS como mucho (y los que tienen el suyo, al suyo), con MangoHud (escondido) en todos los juegos
+    Vulkan, también los de Windows con Proton. MANGOHUD=1 es del entorno de la sesión: vale al volver a entrar; los
+    límites, al momento."""
     os.makedirs(os.path.dirname(FPS_FILE), exist_ok=True)
     with open(FPS_FILE, 'w') as f:
-        f.write('# Apogeo (Ajustes → Salud del PC): FPS máximos de los juegos de Windows (Proton)\n'
-                f'DXVK_FRAME_RATE={fps}\nVKD3D_FRAME_RATE={fps}\n')
+        f.write('# Apogeo (Ajustes → Salud del PC): MangoHud en los juegos (escondido), con su límite de FPS\n'
+                'MANGOHUD=1\n')
+    try:
+        import apogeo_juegos
+        apogeo_juegos.write_mangohud(fps, per_game or {})
+    except Exception as e:  # (que un juego raro no impida guardar los ajustes)
+        print('MangoHud:', e)
 
 
 def health():
