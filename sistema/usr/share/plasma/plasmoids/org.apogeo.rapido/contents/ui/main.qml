@@ -12,7 +12,7 @@ import org.kde.plasma.private.volume as PulseAudio
 import Apogeo
 
 // Panel rápido de Apogeo, al final de la isla («I1 · Una sola isla»): en la isla se ve la red, el sonido, los avisos
-// sin leer y la hora; al pulsar se abre el panel: la hora y el día, lo de todos los días en mosaicos con la forma de
+// sin leer y la hora; al pulsar la hora sale la tarjeta del mes, el tiempo y lo de hoy (Agenda.qml); al pulsar lo demás, el panel: la hora y el día, lo de todos los días en mosaicos con la forma de
 // Ágape (red, bluetooth, fondo animado, no molestar, ahorro de energía del piso, luz nocturna), el volumen y el brillo,
 // tus avisos (los últimos, para abrirlos o quitarlos) y abajo tú, «Todos los ajustes» y apagar. Lo de los mosaicos lo
 // lee y lo cambia «apogeo-ajustes rapido», solo mientras está abierto. (Sustituye al reloj y a la bandeja de KDE: en la
@@ -123,14 +123,25 @@ PlasmoidItem {
                     Texto { id: n; anchors.centerIn: parent; text: compact.unread > 9 ? "9+" : compact.unread; font.pixelSize: 9; font.weight: Font.Black; color: Tema.sobreRosa }
                 }
             }
-            Texto { anchors.verticalCenter: parent.verticalCenter; text: root.clock; font.pixelSize: 15; font.weight: Font.Bold }
+            Texto { id: clockText; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font.pixelSize: 15; font.weight: Font.Bold; color: agenda.visible ? Tema.rosa : Tema.texto }
         }
         MouseArea {
             id: area
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: root.expanded = !root.expanded
+            onClicked: { agenda.visible = false; root.expanded = !root.expanded; }
         }
+        // La hora abre su tarjeta
+        MouseArea {
+            x: clockText.x + chip.x - 6
+            width: clockText.width + 12 + chip.rightPadding
+            height: parent.height
+            onClicked: {
+                root.expanded = false;
+                if (agenda.visible) agenda.visible = false; else agenda.open();
+            }
+        }
+        Agenda { id: agenda; ancla: compact }
     }
     // Al abrir el panel, los avisos cuentan como vistos
     onExpandedChanged: if (expanded) Plasmoid.configuration.leidos = new Date().toISOString()

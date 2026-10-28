@@ -2,8 +2,14 @@
 Datos para los widgets del escritorio y de la isla, por D-Bus (org.apogeo.Datos, /Datos, interfaz org.apogeo.Datos).
 Lo sirve apogeo-pisos, que ya está siempre en marcha. Todo se devuelve como texto JSON (fácil de leer en QML).
 
-  Tiempo()            el tiempo de tu ciudad (la de Ágape), con las próximas horas; se pide cada 20 minutos
+  Tiempo()            el tiempo de tu ciudad (la de Apogeo o, si no, la de Ágape), con las próximas horas y los próximos
+                      3 días; se pide cada 20 minutos
+  BuscarCiudad(t)     ciudades que se llaman así (para elegir la tuya) · PonerCiudad(json) la guarda
   Proximo()           lo próximo del calendario de Ágape (hasta 3 planes de los siguientes 30 días)
+  Agenda(fecha)       lo de ese día (AAAA-MM-DD): tus planes de Ágape y tus recordatorios, y los temporizadores en marcha
+  Marcas(mes)         los días de ese mes (AAAA-MM) que tienen algo
+  Recordar(json)      un recordatorio {texto, fecha, hora} · Temporizador(json) {minutos, texto} · Quitar(id)
+                      (cuando llega la hora: un aviso que suena, con «Posponer 10 min»; sale aunque estés en Jugar)
   Pc()                temperatura, uso del procesador y de la memoria
   Estudio()           el temporizador de estudio (25 min / 5 de descanso; cada 4, uno largo de 15), lo de hoy y la semana
   EstudioAccion(a, v) alternar · saltar · reiniciar · asignatura (v = el nombre)
@@ -28,7 +34,9 @@ import re
 import subprocess
 import threading
 import time
+import urllib.parse
 import urllib.request
+import uuid
 
 import dbus
 import dbus.service
@@ -37,6 +45,8 @@ from gi.repository import GLib
 HOME = os.path.expanduser('~')
 CONFIG = os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
 AGAPE = os.path.join(CONFIG, 'ARES')
+CITY_FILE = os.path.join(CONFIG, 'apogeo', 'ciudad.json')
+REMINDERS_FILE = os.path.join(CONFIG, 'apogeo', 'recordatorios.json')
 STUDY_FILE = os.path.join(CONFIG, 'apogeo', 'estudio.json')
 STUDY_DIR = os.path.join(HOME, 'Estudios')
 SUBFOLDERS = ('Temas', 'Trabajos', 'Ejercicios')
@@ -77,6 +87,13 @@ class Datos(dbus.service.Object):
         self.left, self.running, self.ends = WORK, False, 0
         self.tick_id = None
         self.windows = '[]'
+        # Recordatorios y temporizadores: se mira cada 10 s si toca alguno (los que pasaron con el PC apagado, al entrar)
+        self.reminders = read_json(REMINDERS_FILE, [])
+        self.ringing = {}  # id del aviso → recordatorio
+        self.bus = bus
+        bus.add_signal_receiver(self._reminder_action, 'ActionInvoked', 'org.freedesktop.Notifications',
+                                path='/org/freedesktop/Notifications')
+        GLib.timeout_add_seconds(10, self._check_reminders)
 
     # ---------- El tiempo ----------
 
@@ -192,13 +209,13 @@ class Datos(dbus.service.Object):
         return json.dumps(self.weather or {})
 
     def _load_weather(self):
-        city = (read_json(os.path.join(AGAPE, 'settings.json'), {}) or {}).get('weatherCity') or {}
+        city = read_json(CITY_FILE, {}) or (read_json(os.path.join(AGAPE, 'settings.json'), {}) or {}).get('weatherCity') or {}
         if not city.get('lat'):
             self.weather = {'sinCiudad': True}
             return
         url = (f"https://api.open-meteo.com/v1/forecast?latitude={float(city['lat'])}&longitude={float(city['lon'])}"
-               '&current=temperature_2m,weather_code,is_day&hourly=temperature_2m&daily=temperature_2m_max,'
-               'temperature_2m_min&forecast_days=2&timezone=auto')
+               '&current=temperature_2m,weather_code,is_day&hourly=temperature_2m&daily=weather_code,temperature_2m_max,'
+               'temperature_2m_min&forecast_days=4&timezone=auto')
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'Apogeo'}), timeout=12) as r:
                 d = json.load(r)
@@ -215,7 +232,32 @@ class Datos(dbus.service.Object):
             'dia': bool(d['current']['is_day']),
             'max': round(d['daily']['temperature_2m_max'][0]), 'min': round(d['daily']['temperature_2m_min'][0]),
             'horas': [{'h': times[i][11:13], 't': round(temps[i])} for i in range(start, min(start + 6, len(times)))],
+            'dias': [{'dia': 'LMXJVSD'[datetime.date.fromisoformat(day).weekday()],
+                      'codigo': int(d['daily']['weather_code'][i]), 'max': round(d['daily']['temperature_2m_max'][i]),
+                      'min': round(d['daily']['temperature_2m_min'][i])}
+                     for i, day in enumerate(d['daily'].get('time', [])[1:4], start=1)],
         }
+
+    @dbus.service.method(IFACE, in_signature='s', out_signature='s')
+    def BuscarCiudad(self, text):
+        """Las ciudades que se llaman así (Open-Meteo, en español), para elegir la tuya."""
+        url = ('https://geocoding-api.open-meteo.com/v1/search?count=6&language=es&format=json&name='
+               + urllib.parse.quote(text.strip()[:60]))
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'Apogeo'}), timeout=10) as r:
+                found = json.load(r).get('results') or []
+        except (OSError, ValueError):
+            return json.dumps(None)
+        return json.dumps([{'name': c.get('name', ''), 'zona': ', '.join(x for x in (c.get('admin1'), c.get('country')) if x),
+                            'lat': c['latitude'], 'lon': c['longitude']} for c in found if 'latitude' in c],
+                          ensure_ascii=False)
+
+    @dbus.service.method(IFACE, in_signature='s')
+    def PonerCiudad(self, data):
+        c = json.loads(data)
+        write_json(CITY_FILE, {'name': str(c['name']), 'lat': float(c['lat']), 'lon': float(c['lon'])})
+        self.weather, self.weather_at = {}, 0
+        self.Tiempo()
 
     # ---------- Calendario de Ágape ----------
 
@@ -235,6 +277,96 @@ class Datos(dbus.service.Object):
             if len(out) == 3:
                 break
         return json.dumps(out, ensure_ascii=False)
+
+    # ---------- La agenda: tus planes de Ágape y tus recordatorios ----------
+
+    def _agape_events(self):
+        return [e for e in read_json(os.path.join(AGAPE, 'calendar.json'), [])
+                if isinstance(e, dict) and re.match(r'^\d{4}-\d{2}-\d{2}$', str(e.get('date', '')))]
+
+    @dbus.service.method(IFACE, in_signature='s', out_signature='s')
+    def Agenda(self, day):
+        things = [{'tipo': 'agape', 'texto': str(e.get('text', '')), 'hora': str(e.get('time') or ''), 'id': ''}
+                  for e in self._agape_events() if e['date'] == day]
+        for r in self.reminders:
+            when = datetime.datetime.fromtimestamp(r['cuando'])
+            if r['tipo'] == 'recordatorio' and when.date().isoformat() == day:
+                things.append({'tipo': 'recordatorio', 'texto': r['texto'], 'hora': when.strftime('%H:%M'), 'id': r['id']})
+        things.sort(key=lambda t: t['hora'] or '99')
+        timers = [{'id': r['id'], 'texto': r['texto'], 'termina': r['cuando']} for r in self.reminders
+                  if r['tipo'] == 'temporizador']
+        return json.dumps({'cosas': things, 'temporizadores': timers}, ensure_ascii=False)
+
+    @dbus.service.method(IFACE, in_signature='s', out_signature='s')
+    def Marcas(self, month):
+        days = {int(e['date'][8:10]) for e in self._agape_events() if e['date'].startswith(month)}
+        for r in self.reminders:
+            when = datetime.date.fromtimestamp(r['cuando'])
+            if r['tipo'] == 'recordatorio' and when.isoformat().startswith(month):
+                days.add(when.day)
+        return json.dumps(sorted(days))
+
+    def _save_reminders(self):
+        write_json(REMINDERS_FILE, self.reminders)
+
+    @dbus.service.method(IFACE, in_signature='s', out_signature='s')
+    def Recordar(self, data):
+        d = json.loads(data)
+        when = datetime.datetime.fromisoformat(f"{d['fecha']}T{d['hora']}")
+        r = {'id': uuid.uuid4().hex[:10], 'tipo': 'recordatorio', 'texto': str(d.get('texto') or 'Recordatorio')[:120],
+             'cuando': when.timestamp()}
+        self.reminders.append(r)
+        self._save_reminders()
+        return r['id']
+
+    @dbus.service.method(IFACE, in_signature='s', out_signature='s')
+    def Temporizador(self, data):
+        d = json.loads(data)
+        minutes = max(1, min(24 * 60, int(d['minutos'])))
+        r = {'id': uuid.uuid4().hex[:10], 'tipo': 'temporizador', 'minutos': minutes,
+             'texto': str(d.get('texto') or f'Temporizador de {minutes} min')[:120], 'cuando': time.time() + minutes * 60}
+        self.reminders.append(r)
+        self._save_reminders()
+        return r['id']
+
+    @dbus.service.method(IFACE, in_signature='s')
+    def Quitar(self, rid):
+        self.reminders = [r for r in self.reminders if r['id'] != rid]
+        self._save_reminders()
+
+    def _check_reminders(self):
+        now = time.time()
+        due = [r for r in self.reminders if r['cuando'] <= now]
+        if due:
+            self.reminders = [r for r in self.reminders if r['cuando'] > now]
+            self._save_reminders()
+            for r in due:
+                self._ring(r, late=now - r['cuando'] > 120)
+        return True
+
+    def _ring(self, r, late=False):
+        """El aviso que suena: urgente (sale aunque estés en Jugar o en Estudiar, y se queda hasta que lo cierras)."""
+        when = datetime.datetime.fromtimestamp(r['cuando']).strftime('%H:%M')
+        title = '¡Se acabó el tiempo!' if r['tipo'] == 'temporizador' else r['texto']
+        body = (r['texto'] if r['tipo'] == 'temporizador' else
+                (f'Era a las {when} (el equipo estaba apagado)' if late else f'Son las {when}'))
+        try:  # (se busca cada vez: si Plasma se reinicia, el de antes ya no está)
+            notify = dbus.Interface(self.bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications'),
+                                    'org.freedesktop.Notifications')
+            nid = notify.Notify('Apogeo', dbus.UInt32(0), 'alarm-symbolic', title, body,
+                                ['posponer', 'Posponer 10 min', 'hecho', 'Hecho'],
+                                dbus.Dictionary({'urgency': dbus.Byte(2), 'sound-name': 'alarm-clock-elapsed',
+                                                 'x-kde-display-appname': 'Recordatorio'}, signature='sv'),
+                                dbus.Int32(0))
+            self.ringing[int(nid)] = r
+        except dbus.DBusException:
+            pass
+
+    def _reminder_action(self, nid, action):
+        r = self.ringing.pop(int(nid), None)
+        if r and action == 'posponer':
+            self.reminders.append({**r, 'cuando': time.time() + 600})
+            self._save_reminders()
 
     # ---------- Tu PC ----------
 

@@ -138,6 +138,12 @@ def sounds():
     s['trash-empty'] = room(at(mallet('A4', 0.4, 0.7, 0.1), mallet('E4', 0.5, 0.6, 0.1), 0.06), 0.15)
     s['screen-capture'] = room(at(tick(0.8), tick(0.6), 0.05), 0.12)
     s['bell'] = room(mallet('A5', 0.9))
+    # Recordatorios y temporizadores: un motivo de cuatro notas, tres veces (que se oiga, sin asustar)
+    alarm = silence(0)
+    for r in range(3):
+        for k, n in enumerate(('E5', 'G#5', 'B5', 'E6')):
+            alarm = at(alarm, mallet(n, 0.55, 0.85 - 0.1 * (k == 3)), r * 0.95 + k * 0.12)
+    s['alarm-clock-elapsed'] = room(alarm, 0.2)
     # Entrar: el «uu-uu» del búho sobre un acorde cálido; salir: el acorde que baja
     login = pad(('A3', 'E4', 'C#5'), 2.0, 0.35)
     login = at(login, hoot('E5', 0.28, 0.55), 0.25)
@@ -157,7 +163,7 @@ if __name__ == '__main__':
              'dialog-warning-auth': 'dialog-warning', 'message-new-email': 'message-new-instant',
              'message': 'message-new-instant', 'service-login': 'desktop-login', 'service-logout': 'desktop-logout',
              'power-plug': 'device-added', 'power-unplug': 'device-removed', 'completion-success': 'complete',
-             'outcome-success': 'complete'}
+             'outcome-success': 'complete', 'timer-elapsed': 'alarm-clock-elapsed'}
     for a, b in links.items():
         p = os.path.join(out, a + '.wav')
         if os.path.lexists(p):

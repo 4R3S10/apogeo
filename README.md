@@ -78,10 +78,13 @@ abiertas; clic derecho para fijar o dejar de fijar, en cada piso las suyas), lo 
 Navegar: la música; Estudiar: el temporizador) y, al final, la red, el sonido, la campana con los avisos sin leer y la
 hora. Al pasar por una app abierta, su vista en vivo (y ✕ para cerrarla). En la bandeja de KDE solo quedan los iconos de
 tus apps (Discord, Steam…).
-- **Panel rápido** (al pulsar la hora): la hora y el día, red, bluetooth, fondo animado, no molestar, ahorro, luz
+- **La tarjeta de la hora** (al pulsar la hora): el mes (puntos en los días con algo), el tiempo de tu ciudad (ahora,
+  las próximas horas y 3 días; la ciudad se elige ahí) y lo del día elegido: tus planes de Ágape, **recordatorios** y
+  **temporizadores**. Al llegar la hora suena y sale un aviso con «Posponer 10 min» (también en Jugar y Estudiar).
+- **Panel rápido** (al pulsar los iconos de al lado): la hora y el día, red, bluetooth, fondo animado, no molestar, ahorro, luz
   nocturna, volumen, brillo, **tus avisos** (abrirlos o quitarlos), tú, «Todos los ajustes» y apagar.
 - **Avisos en pantalla:** los de Apogeo, abajo a la derecha, apilados, con sus botones y una rayita rosa con el tiempo
-  que les queda (se paran con el ratón encima). Respetan No molestar y los pisos sin avisos.
+  que les queda (se paran con el ratón encima). Respetan No molestar y los pisos sin avisos (salvo los urgentes).
 - **Columna de pisos:** cada piso con cuántas ventanas tiene; al pasar, la vista del piso (sus ventanas en su sitio).
   Una ventana soltada encima de un piso se va a ese piso (script de KWin `apogeo-ventanas`, que también cuenta las
   ventanas a `apogeo-pisos`).

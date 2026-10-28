@@ -11,7 +11,8 @@ import Apogeo
 // bandeja): abajo a la derecha, uno encima de otro (3 como mucho), con el icono y el nombre de la app, el título, el
 // texto y sus botones (y, si la app deja, contestar ahí mismo). Se van solos a los pocos segundos (no mientras el
 // ratón está encima ni mientras contestas; los urgentes se quedan) y pasan al historial del panel rápido. Con «No
-// molestar» o en Jugar y Estudiar no salen (Plasma los guarda igual: el resumen de al volver los enseña).
+// molestar» o en Jugar y Estudiar no salen (pasan directos al historial: el resumen de al volver los enseña), salvo los
+// urgentes, como los recordatorios y los temporizadores.
 Item {
     id: avisos
 
@@ -21,7 +22,7 @@ Item {
         showExpired: false
         showDismissed: false
         showJobs: false
-        showAddedDuringInhibition: false
+        showAddedDuringInhibition: true  // (para los urgentes; los demás se esconden abajo)
         groupMode: NotificationManager.Notifications.GroupDisabled
         sortMode: NotificationManager.Notifications.SortByDate
         sortOrder: Qt.DescendingOrder
@@ -36,14 +37,14 @@ Item {
         let y = screen.y + screen.height - 18;
         for (let k = 0; k < i; k++) {
             const o = list.objectAt(k);
-            y -= (o ? o.height : 0) + 10;
+            if (o && o.shown) y -= o.height + 10;
         }
         return y;
     }
 
     Instantiator {
         id: list
-        model: avisos.inhibited ? null : popups
+        model: popups
         onObjectAdded: avisos.layoutRev++
         onObjectRemoved: avisos.layoutRev++
         delegate: PlasmaCore.Dialog {
@@ -52,11 +53,17 @@ Item {
             required property int index
             readonly property bool urgent: model.urgency === NotificationManager.Notifications.CriticalUrgency
             readonly property int timeout: urgent || model.resident ? 0 : (model.timeout > 0 ? model.timeout : 6000)
+            // En silencio solo salen los urgentes; los demás se van directos al historial
+            readonly property bool shown: urgent || (!avisos.inhibited && !model.wasAddedDuringInhibition)
+            onShownChanged: avisos.layoutRev++
+            // Su sonido, si lo trae (como hace Plasma; en silencio no suena)
+            Component.onCompleted: if (shown) popups.playSoundHint(popups.index(index, 0))
             location: PlasmaCore.Types.Floating
-            type: PlasmaCore.Dialog.Notification
+            // (los urgentes, por encima de todo: también de un juego a pantalla completa)
+            type: urgent ? PlasmaCore.Dialog.CriticalNotification : PlasmaCore.Dialog.Notification
             // (no se lleva el teclado, salvo al contestar)
             flags: replying ? 0 : Qt.WindowDoesNotAcceptFocus
-            visible: true
+            visible: shown
             x: avisos.screen.x + avisos.screen.width - width - 18
             y: avisos.bottomOf(index, avisos.layoutRev) - height
             onHeightChanged: avisos.layoutRev++
@@ -80,8 +87,8 @@ Item {
                 HoverHandler { id: hover }
                 Timer { // se va solo (no mientras lo miras)
                     id: life
-                    interval: pop.timeout
-                    running: pop.timeout > 0 && !hover.hovered && !pop.replying
+                    interval: pop.shown ? pop.timeout : 1
+                    running: !pop.shown || (pop.timeout > 0 && !hover.hovered && !pop.replying)
                     onTriggered: popups.expire(pop.idx())
                 }
                 TapHandler {
