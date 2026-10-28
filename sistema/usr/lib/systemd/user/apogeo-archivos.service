@@ -1,0 +1,8 @@
+[Unit]
+Description=Apogeo: los nombres de tus archivos para el buscador
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-archivos
+Nice=19
+IOSchedulingClass=idle

@@ -4,8 +4,10 @@ import org.kde.kirigami as Kirigami
 import Apogeo
 
 // Apps y buscador de Apogeo («A1»): el cajón de cristal encima de la isla. Sin escribir, todas tus apps por tipo; al
-// escribir, lo que encuentran los buscadores de KDE (Milou) agrupado, y al final «Buscar en la web con Ágape».
-// Flechas (o Tab) elegir · Intro abrir · Esc o un clic fuera cerrar. La parte de dentro es apogeo-buscador («buscador»).
+// escribir: arriba la cuenta, si es una (Intro la copia), lo que encuentran los buscadores de KDE (Milou) agrupado, tus
+// archivos por su nombre y al final «Buscar en la web con Ágape».
+// Flechas (o Tab) elegir · Intro abrir (Mayús+Intro: la carpeta de un archivo) · Esc o un clic fuera cerrar. La parte de
+// dentro es apogeo-buscador («buscador»).
 Window {
     id: win
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
@@ -15,7 +17,14 @@ Window {
 
     readonly property string query: field.text.trim()
     property int sel: 0
-    readonly property int total: query === "" ? flat.length : list.count + 1 // + la de la web
+    // Al escribir, en orden: la cuenta (0 o 1), lo de KDE, tus archivos y la web
+    readonly property var answer: query === "" ? ({}) : buscador.answer(query)
+    readonly property int base: answer.valor ? 1 : 0
+    property var files: []
+    readonly property int filesAt: base + list.count
+    readonly property int webAt: filesAt + files.length
+    readonly property int total: query === "" ? flat.length : webAt + 1
+    property bool copied: false
     // Las apps del cajón, en una lista (para moverse con las flechas) y cuántas caben por fila
     readonly property var flat: { const o = []; for (const g of buscador.apps) for (const a of g.apps) o.push(a); return o; }
     readonly property int cols: Math.max(1, Math.floor((card.width - 36) / 92))
@@ -33,11 +42,18 @@ Window {
         hide();
         field.text = "";
     }
-    function activate(i) {
+    function activate(i, folder) {
         if (query === "") {
             if (flat[i]) { buscador.launch(flat[i].id); close(); }
-        } else if (i < list.count) {
-            if (results.run(results.index(i, 0))) close();
+        } else if (i < base) {
+            buscador.copy(answer.valor.replace(/ [^\d]+$/, ""));   // (el número, sin la unidad)
+            copied = true;
+            copiedTimer.restart();
+        } else if (i < filesAt) {
+            if (results.run(results.index(i - base, 0))) close();
+        } else if (i < webAt) {
+            buscador.openFile(files[i - filesAt].path, !!folder);
+            close();
         } else if (query !== "") {
             buscador.web(query);
             close();
@@ -46,12 +62,17 @@ Window {
     function move(d) {
         if (total === 0) return;
         sel = (sel + d + total) % total;
-        if (query !== "" && sel < list.count) list.positionViewAtIndex(sel, ListView.Contain);
+        if (query !== "" && sel >= base && sel < filesAt) list.positionViewAtIndex(sel - base, ListView.Contain);
     }
+    Timer { id: copiedTimer; interval: 700; onTriggered: { win.copied = false; win.close(); } }
+    // Tus archivos: se buscan un momento después de dejar de escribir
+    Timer { id: filesTimer; interval: 140; onTriggered: buscador.searchFiles(win.query) }
+    onQueryChanged: { files = []; if (query.length >= 2) filesTimer.restart(); }
 
     Connections {
         target: buscador
         function onToggled() { win.visible ? win.close() : win.open() }
+        function onFilesFound(q, found) { if (q === win.query) win.files = found; }
     }
     Component.onCompleted: if (showAtStart) open()
     onActiveChanged: if (!active && visible) close()
@@ -118,12 +139,12 @@ Window {
                     Keys.onLeftPressed: event => { if (win.query === "") win.move(-1); else event.accepted = false; }
                     Keys.onTabPressed: win.move(1)
                     Keys.onBacktabPressed: win.move(-1)
-                    Keys.onReturnPressed: win.activate(win.sel)
-                    Keys.onEnterPressed: win.activate(win.sel)
+                    Keys.onReturnPressed: event => win.activate(win.sel, event.modifiers & Qt.ShiftModifier)
+                    Keys.onEnterPressed: event => win.activate(win.sel, event.modifiers & Qt.ShiftModifier)
                     Texto {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: field.text === ""
-                        text: "Escribe para buscar apps, archivos, ajustes o en la web"
+                        text: "Busca apps, archivos, ajustes, haz cuentas o busca en la web"
                         color: Tema.tenue
                         font.pixelSize: 19
                     }
@@ -213,6 +234,57 @@ Window {
                 }
             }
 
+            // La cuenta, bien grande (Intro la copia)
+            Rectangle {
+                id: answerCard
+                visible: win.base > 0
+                x: 8
+                width: parent.width - 16
+                height: visible ? 76 : 0
+                radius: Tema.r(16)
+                color: win.sel === 0 ? Tema.rosaSuave : Tema.encima
+                Rectangle {
+                    id: eq
+                    x: 14; anchors.verticalCenter: parent.verticalCenter
+                    width: 40; height: 40; radius: Tema.r(12)
+                    color: Tema.rosaSuave
+                    Texto { anchors.centerIn: parent; text: "="; color: Tema.rosa; font.pixelSize: 24; font.weight: Font.Bold }
+                }
+                Column {
+                    x: eq.x + eq.width + 14
+                    width: parent.width - x - copyHint.width - 30
+                    anchors.verticalCenter: parent.verticalCenter
+                    Texto {
+                        width: parent.width
+                        text: win.answer.valor || ""
+                        color: Tema.texto
+                        font.pixelSize: 26; font.weight: Font.ExtraBold
+                        elide: Text.ElideRight; wrapMode: Text.NoWrap
+                    }
+                    Texto {
+                        width: parent.width
+                        text: win.answer.detalle || ""
+                        color: Tema.apagado; font.pixelSize: 12
+                        elide: Text.ElideRight; wrapMode: Text.NoWrap
+                    }
+                }
+                Texto {
+                    id: copyHint
+                    anchors.right: parent.right; anchors.rightMargin: 18
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: win.copied ? "Copiado ✓" : win.sel === 0 ? "Intro para copiar" : ""
+                    color: Tema.rosa; font.pixelSize: 12; font.weight: Font.DemiBold
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: win.sel = 0
+                    onClicked: win.activate(0)
+                }
+            }
+            Item { width: 1; height: answerCard.visible ? 6 : 0 }
+
             // Lo que encuentran los buscadores de KDE
             ListView {
                 id: list
@@ -224,7 +296,7 @@ Window {
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 model: results
-                currentIndex: win.sel < count ? win.sel : -1
+                currentIndex: win.sel >= win.base && win.sel < win.filesAt ? win.sel - win.base : -1
                 highlightFollowsCurrentItem: false
                 section.property: "category"
                 section.delegate: Texto {
@@ -242,10 +314,46 @@ Window {
                 }
                 delegate: Row_ {
                     required property var model
-                    index: model.index
+                    index: win.base + model.index
                     display: model.display || ""
                     subtext: model.subtext || ""
                     decoration: model.decoration
+                }
+            }
+
+            // Tus archivos (por su nombre)
+            Item {
+                width: parent.width
+                height: visible ? filesTitle.height + filesCol.height : 0
+                visible: win.query !== "" && win.files.length > 0
+                Texto {
+                    id: filesTitle
+                    x: 20
+                    topPadding: 10
+                    bottomPadding: 4
+                    text: "Tus archivos"
+                    color: Tema.tenue
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    font.letterSpacing: 0.8
+                    font.capitalization: Font.AllUppercase
+                }
+                Column {
+                    id: filesCol
+                    y: filesTitle.height
+                    x: 8
+                    width: parent.width - 16
+                    Repeater {
+                        model: win.files
+                        delegate: Row_ {
+                            required property var model   // (la fila ya tiene su «index»: el de toda la lista)
+                            width: filesCol.width
+                            index: win.filesAt + model.index
+                            display: model.modelData.nombre
+                            subtext: model.modelData.ruta + (on && !model.modelData.carpeta ? "  ·  Mayús+Intro: abrir su carpeta" : "")
+                            decoration: model.modelData.icono
+                        }
+                    }
                 }
             }
 
@@ -271,7 +379,7 @@ Window {
                     y: webTitle.height
                     x: 8
                     width: parent.width - 16
-                    index: list.count
+                    index: win.webAt
                     display: "Buscar «" + win.query + "» en la web"
                     subtext: "Con Ágape"
                     iconName: "web"

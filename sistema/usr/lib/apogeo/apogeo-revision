@@ -55,7 +55,8 @@ def system():
     # Los de cada sesión (para todas las cuentas)
     for unit, what in (('apogeo-pisos.service', 'los pisos'), ('apogeo-actualizaciones.timer', 'los avisos de actualización'),
                        ('apogeo-copia.timer', 'la copia sola'), ('apogeo-revision.service', 'esta revisión'),
-                       ('apogeo-revision.path', 'esta revisión'), ('apogeo-al-dia.timer', 'lo de Jugar al día')):
+                       ('apogeo-revision.path', 'esta revisión'), ('apogeo-al-dia.timer', 'lo de Jugar al día'),
+                       ('apogeo-archivos.timer', 'buscar tus archivos')):
         if sh('systemctl', '--global', 'is-enabled', unit)[1] != 'enabled':
             if sh('systemctl', '--global', 'enable', unit)[0] == 0:
                 if what not in fixed:

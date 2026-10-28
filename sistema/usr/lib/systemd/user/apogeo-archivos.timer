@@ -1,0 +1,9 @@
+[Unit]
+Description=Apogeo: los nombres de tus archivos para el buscador, al día
+
+[Timer]
+OnStartupSec=90s
+OnUnitActiveSec=30min
+
+[Install]
+WantedBy=timers.target

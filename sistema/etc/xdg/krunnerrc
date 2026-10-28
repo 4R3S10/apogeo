@@ -1,0 +1,9 @@
+# El buscador de Apogeo usa los buscadores de KDE: sin el de «instalar apps» (Apogeo no trae Discover: no llevaría a
+# ningún sitio) ni el de buscar en la web (ya está su fila «Buscar en la web con Ágape»). Y escribir en el escritorio no
+# abre KRunner (el buscador de Apogeo sale con la tecla Meta)
+[General]
+ActivateWhenTypingOnDesktop=false
+
+[Plugins]
+krunner_appstreamEnabled=false
+krunner_webshortcutsEnabled=false

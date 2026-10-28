@@ -22,9 +22,11 @@ post_upgrade() {
   _copia_revision
 }
 
-# La copia sola (cada día mira si toca; también al conectar el USB) y la revisión de cada sesión después de actualizar
+# La copia sola (cada día mira si toca; también al conectar el USB), la revisión de cada sesión después de actualizar y
+# los nombres de tus archivos para el buscador
 _copia_revision() {
-  systemctl --global enable apogeo-copia.timer apogeo-revision.service apogeo-revision.path apogeo-al-dia.timer
+  systemctl --global enable apogeo-copia.timer apogeo-revision.service apogeo-revision.path apogeo-al-dia.timer \
+    apogeo-archivos.timer
   systemctl enable --now apogeo-al-dia.timer 2>/dev/null || true   # lo de Jugar al día, sin jugar
   systemctl enable apogeo-windows.service 2>/dev/null || true       # los juegos del Windows escondido, al encender
   systemctl enable --now apogeo-actualizar-al-apagar.service 2>/dev/null || true  # «Actualizar al apagar»

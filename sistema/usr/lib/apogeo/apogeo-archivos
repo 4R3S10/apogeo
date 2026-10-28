@@ -1,0 +1,9 @@
+#!/bin/sh
+# Los nombres de tus archivos para el buscador de Apogeo (sin el indexador de KDE, que gasta mucho): un índice de plocate
+# solo de tu carpeta personal, sin las carpetas ocultas (configuración, cachés, Steam…). Lo rehace
+# apogeo-archivos.timer cada media hora, con la prioridad más baja; tarda menos de un segundo.
+db="${XDG_CACHE_HOME:-$HOME/.cache}/apogeo/archivos.db"
+mkdir -p "$(dirname "$db")"
+ocultas=$(find "$HOME" -mindepth 1 -maxdepth 1 -name '.*' -type d -printf '%p ')
+exec updatedb --config-file /dev/null --require-visibility 0 --database-root "$HOME" --output "$db" \
+  --prunepaths "$ocultas" --prunenames ".git node_modules __pycache__ .Trash-1000"

@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """
 Apps y buscador de Apogeo («A1»): el cajón encima de la isla con todas tus apps por tipo (Jugar, Estudiar, Internet y
-chat, Ver y crear, Sistema) y, en cuanto escribes, lo que encuentran los buscadores de KDE (apps, archivos, ajustes,
-calculadora…) agrupado, y al final «Buscar en la web con Ágape». Todo con el teclado: flechas elegir, Intro abrir, Esc
+chat, Ver y crear, Sistema) y, en cuanto escribes: arriba la cuenta si es una («15% de 80», «10 € en dólares»:
+apogeo_calculo), lo que encuentran los buscadores de KDE (apps, ajustes…) agrupado, tus archivos por su nombre (el
+índice ligero de apogeo-archivos) y al final «Buscar en la web con Ágape». Todo con el teclado: flechas elegir, Intro abrir, Esc
 cerrar. Se queda preparado en segundo plano (lo arranca apogeo-pisos al entrar, o D-Bus la primera vez) para salir al
 momento.
 
@@ -48,6 +49,46 @@ def grouped_apps():
     return [{'grupo': g, 'apps': sorted(a, key=lambda x: x['nombre'].lower())} for g, a in out.items() if a]
 
 
+ARCHIVOS = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'apogeo', 'archivos.db')
+
+
+def find_files(text, limit=8):
+    """Tus archivos y carpetas cuyo nombre lleva todas las palabras, los que empiezan así y los más recientes primero."""
+    import subprocess
+    words = text.lower().split()
+    if not words or len(text) < 2 or not os.path.exists(ARCHIVOS):
+        return []
+    try:
+        out = subprocess.run(['plocate', '-d', ARCHIVOS, '-i', '-l', '400', '--', max(words, key=len)],
+                             capture_output=True, text=True, timeout=3).stdout.splitlines()
+    except (OSError, subprocess.SubprocessError):
+        return []
+    home = os.path.expanduser('~')
+    found = []
+    for path in out:
+        name = os.path.basename(path)
+        low = name.lower()
+        if path == home or not all(w in low for w in words) or '/.' in path[len(home):]:
+            continue
+        try:
+            st = os.stat(path)
+        except OSError:
+            continue  # (ya no está)
+        found.append((not low.startswith(words[0]), -st.st_mtime, path, name))
+    found.sort()
+    import gi
+    gi.require_version('Gio', '2.0')
+    from gi.repository import Gio
+    result = []
+    for _a, _b, path, name in found[:limit]:
+        folder = os.path.isdir(path)
+        kind = 'inode/directory' if folder else Gio.content_type_guess(name, None)[0]
+        result.append({'nombre': name, 'ruta': '~' + os.path.dirname(path)[len(home):] if path.startswith(home) else path,
+                       'path': path, 'icono': Gio.content_type_get_generic_icon_name(kind) or 'text-x-generic',
+                       'carpeta': folder})
+    return result
+
+
 def already_running():
     """Si ya está en marcha, se le pide que se enseñe (sin cargar Qt: así es instantáneo)."""
     import dbus
@@ -71,9 +112,13 @@ def main():
     from PyQt6.QtGui import QDesktopServices, QGuiApplication, QIcon
     from PyQt6.QtQml import QQmlApplicationEngine
 
+    import threading
+    import apogeo_calculo
+
     class Buscador(QObject):
         toggled = pyqtSignal()
         appsChanged = pyqtSignal()
+        filesFound = pyqtSignal(str, 'QVariantList')
 
         def __init__(self):
             super().__init__()
@@ -101,6 +146,33 @@ def main():
                 return
             import subprocess
             subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice', 'gio', 'launch', path],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+        @pyqtSlot(str, result='QVariantMap')
+        def answer(self, text):
+            """La cuenta, si lo que escribes es una ({} si no)."""
+            return apogeo_calculo.answer(text) or {}
+
+        @pyqtSlot(str)
+        def copy(self, text):
+            QGuiApplication.clipboard().setText(text)
+
+        @pyqtSlot(str)
+        def searchFiles(self, text):
+            """Busca en segundo plano; contesta con filesFound (con lo que se buscó, por si ya escribiste otra cosa)."""
+            threading.Thread(target=lambda: self.filesFound.emit(text, find_files(text)), daemon=True).start()
+
+        @pyqtSlot(str, bool)
+        def openFile(self, path, folder):
+            """Abre el archivo con su app (o, con «folder», la carpeta donde está, con él elegido)."""
+            import subprocess
+            if folder:
+                cmd = ['dbus-send', '--session', '--dest=org.freedesktop.FileManager1', '--type=method_call',
+                       '/org/freedesktop/FileManager1', 'org.freedesktop.FileManager1.ShowItems',
+                       f'array:string:{QUrl.fromLocalFile(path).toString()}', 'string:']
+            else:
+                cmd = ['gio', 'open', path]
+            subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice', *cmd],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
         @pyqtSlot(str)
