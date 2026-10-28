@@ -20,7 +20,7 @@ sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 # Los grupos del cajón, en orden. Una app va al primero que encaje: primero por su nombre (las de Apogeo), luego por sus
 # categorías (las del .desktop)
 GROUPS = [
-    ('Jugar', {'steam.desktop', 'com.heroicgameslauncher.hgl.desktop', 'net.lutris.Lutris.desktop', 'discord.desktop',
+    ('Jugar', {'steam.desktop', 'com.heroicgameslauncher.hgl.desktop', 'discord.desktop',
                'apogeo-consola.desktop', 'hydralauncher.desktop', 'com.vysp3r.ProtonPlus.desktop'}, {'Game'}),
     ('Estudiar', {'obsidian.desktop', 'org.kde.okular.desktop', 'com.github.xournalpp.xournalpp.desktop', 'anki.desktop'},
      {'Education', 'Office', 'Science', 'Dictionary'}),

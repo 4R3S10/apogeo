@@ -82,7 +82,7 @@ package_apogeo-programas() {
   depends=(
     flameshot spotify-launcher discord                              # capturas, música y chat
     ghostty starship fastfetch ttf-jetbrains-mono-nerd flatpak      # la terminal de Apogeo y Flathub
-    mangohud lib32-mangohud gamemode lib32-gamemode protonplus lutris  # juegos
+    mangohud lib32-mangohud gamemode lib32-gamemode protonplus  # juegos
     obs-studio vlc easyeffects qbittorrent                          # grabar, vídeos, sonido y descargas
     localsend keepassxc obsidian coolercontrol                      # archivos al móvil, contraseñas, notas y ventiladores
     okular anki xournalpp                                           # estudiar: PDFs, tarjetas de memoria y escribir a mano

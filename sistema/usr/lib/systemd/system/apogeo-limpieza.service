@@ -1,6 +1,6 @@
 [Unit]
 Description=Apogeo: fuera los programas repetidos y los restos de CachyOS (una vez)
-ConditionPathExists=!/var/lib/apogeo/limpieza-3
+ConditionPathExists=!/var/lib/apogeo/limpieza-4
 
 [Service]
 Type=oneshot

@@ -2,4 +2,19 @@
 # Sesión de Apogeo: apunta en qué piso empezar (lo lee apogeo-pisos) y arranca Plasma como la sesión normal
 mkdir -p "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 printf '%s\n' "${1:-navegar}" > "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/apogeo-piso"
+# Plasma vuelve a abrir al entrar lo que estaba abierto al salir: las ventanas de Apogeo no (la consola de Jugar la abre
+# el piso al entrar en Jugar, y el buscador y la música se abren solos)
+python3 - "${XDG_STATE_HOME:-$HOME/.local/state}/plasmasessionrestorestaterc" <<'PY' 2>/dev/null
+import re, sys
+path = sys.argv[1]
+try:
+    groups = re.split(r'(?m)^(?=\[)', open(path).read())
+except OSError:
+    sys.exit()
+keep = [g for g in groups if g.strip() and not re.search(r'(?m)^appId=apogeo-', g)]
+if len(keep) < len([g for g in groups if g.strip()]):
+    with open(path, 'w') as f:
+        for n, g in enumerate(keep):
+            f.write(re.sub(r'^\[\d+\]', f'[{n}]', g.strip()) + '\n\n')
+PY
 exec /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland

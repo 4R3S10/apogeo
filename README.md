@@ -90,7 +90,7 @@ tus apps (Discord, Steam…).
 
 Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
 - **Diario:** Flameshot (Impr Pant), Spotify (`spotify-launcher`, que baja el oficial) y Discord.
-- **Juegos:** MangoHud, GameMode, ProtonPlus y Lutris.
+- **Juegos:** MangoHud, GameMode y ProtonPlus.
 - **Multimedia:** OBS Studio, VLC, EasyEffects y qBittorrent.
 - **Utilidades:** LocalSend, KeePassXC, Obsidian y CoolerControl.
 - **Estudiar:** Okular (leer y subrayar PDFs), Anki (tarjetas de memoria) y Xournal++ (escribir a mano sobre apuntes).
