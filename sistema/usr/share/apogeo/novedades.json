@@ -5,6 +5,7 @@
     "cosas": [
       {"icono": "calendario", "titulo": "El mes, el tiempo y lo de hoy", "como": "Pulsa la hora de la isla: el calendario, el tiempo de tu ciudad (pulsa su nombre para cambiarla) y lo que tienes ese día."},
       {"icono": "reloj", "titulo": "Recordatorios y temporizadores", "como": "En esa misma tarjeta, «Recordatorio» o «Temporizador». Cuando llega la hora suena y sale un aviso con «Posponer 10 min», aunque estés jugando."},
+      {"icono": "jugar", "titulo": "Tiempo jugado", "como": "En la consola, junto a cada juego, las horas que llevas (de Steam, de Epic y, en emuladores y PS5, las que cuenta Apogeo)."},
       {"icono": "buscar", "titulo": "Cuentas y archivos en el buscador", "como": "Pulsa Meta y escribe «15% de 80», «5 km en millas», «10 € en dólares» o el nombre de un archivo. Intro copia el resultado; Mayús+Intro abre la carpeta de un archivo."},
       {"icono": "campana", "titulo": "Contestar desde el aviso", "como": "Si una app lo deja (Discord, mensajes), pulsa «Responder» en el aviso, escribe y pulsa Intro."},
       {"icono": "llave", "titulo": "Bloqueo más vivo", "como": "La hora bien grande a la derecha y, si suena algo, la canción con sus botones."},

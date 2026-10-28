@@ -156,6 +156,13 @@ Window {
         if (s < 2592000) return "hace " + Math.round(s / 604800) + " semanas";
         return "hace " + Math.round(s / 2592000) + " meses";
     }
+    // Lo que has jugado: «35 min», «2,5 h», «120 h» (de Steam, de Heroic o del cronómetro de la consola)
+    function hours(m) {
+        if (!m || m < 1) return "";
+        if (m < 60) return Math.round(m) + " min jugados";
+        const h = m / 60;
+        return (h < 10 ? (Math.round(h * 10) / 10).toString().replace(".", ",") : Math.round(h)) + " h jugadas";
+    }
     function gb(b) { return b > 0 ? (b / 1073741824 >= 1 ? (b / 1073741824).toFixed(1).replace(".", ",") + " GB" : Math.max(1, Math.round(b / 1048576)) + " MB") : "" }
     readonly property var storeNames: ({ steam: "Steam", epic: "Epic", emu: "", ps5: "PS5 · AnyPS5", windows: "Windows" })
     function where(g) { return g.store === "emu" ? g.systemName : storeNames[g.store] || "" }
@@ -358,7 +365,7 @@ Window {
                 }
             }
             Repeater {
-                model: win.game ? [win.gb(win.game.size), win.dl && win.dl.mensaje && win.dl.estado !== "error" ? win.dl.mensaje : ""].filter(x => x) : []
+                model: win.game ? [win.hours(win.game.minutes), win.gb(win.game.size), win.dl && win.dl.mensaje && win.dl.estado !== "error" ? win.dl.mensaje : ""].filter(x => x) : []
                 delegate: Rectangle {
                     required property string modelData
                     anchors.verticalCenter: parent.verticalCenter

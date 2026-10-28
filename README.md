@@ -115,7 +115,8 @@ JetBrains Mono y los colores de Apogeo.
 ## Jugar
 
 - **Consola («C8 · Cinta panorámica»):** al entrar en el piso Jugar se abre a pantalla completa. Abajo, una cinta con las
-  portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte.
+  portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte,
+  con cuándo jugaste y **cuántas horas llevas** (las de Steam y Heroic; en emuladores y PS5 las cuenta Apogeo).
   Arriba, **Inicio** y una pestaña por tienda o plataforma con toda tu biblioteca para **descargar y quitar**:
   - **Steam:** los descargados y el resto de tu biblioteca (descargar y quitar los hace Steam).
   - **Epic:** tu biblioteca de Heroic; descargar (con su progreso) y quitar con legendary, el de Heroic.

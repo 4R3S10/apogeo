@@ -32,6 +32,7 @@ HEROIC = next((d for d in (os.path.join(HOME, '.config/heroic'),
 LEGENDARY = '/usr/lib/heroic-games-launcher/app.asar.unpacked/build/bin/x64/linux/legendary'
 WINDOWS_LIST = os.path.join(HOME, '.config/apogeo/juegos-windows.json')
 PLAYED = os.path.join(DATA, 'jugado.json')        # cuándo jugaste por última vez (lo que no apunta su tienda)
+MINUTES = os.path.join(DATA, 'tiempo-jugado.json')  # cuánto has jugado a lo que no apunta su tienda (emuladores, PS5)
 JUEGOS = os.path.join(HOME, 'Juegos')               # tus juegos de los emuladores y de PS5
 ANYPS5 = os.path.join(DATA, 'anyps5')               # AnyPS5 (lo pone al día apogeo-al-dia)
 PS5_OUT = os.path.join(DATA, 'ps5')                 # tus juegos de PS5 ya convertidos
@@ -100,6 +101,56 @@ def game(store, gid, name, installed, cover='', hero='', last=0, **extra):
 
 def vdf_values(text, key):
     return re.findall(r'"%s"\s+"([^"]*)"' % re.escape(key), text, re.I)
+
+
+def vdf_parse(text):
+    """Un .vdf de Steam entero, como diccionarios (las claves tal cual, sin pasar a minúsculas)."""
+    root, stack, key = {}, [], None
+    node = root
+    for m in re.finditer(r'"((?:[^"\\]|\\.)*)"|([{}])', text):
+        if m.group(2) == '{':
+            child = {}
+            node[key] = child
+            stack.append(node)
+            node, key = child, None
+        elif m.group(2) == '}':
+            node, key = (stack.pop() if stack else root), None
+        elif key is None:
+            key = m.group(1)
+        else:
+            node[key] = m.group(1)
+            key = None
+    return root
+
+
+def _get(d, *path):
+    for k in path:
+        d = next((v for kk, v in d.items() if kk.lower() == k.lower()), None) if isinstance(d, dict) else None
+    return d
+
+
+def steam_playtime():
+    """Los minutos jugados de cada juego de Steam (los apunta Steam en la configuración de cada cuenta)."""
+    out = {}
+    for f in glob.glob(os.path.join(STEAM, 'userdata/*/config/localconfig.vdf')):
+        try:
+            with open(f, encoding='utf-8', errors='replace') as fh:
+                apps = _get(vdf_parse(fh.read()), 'UserLocalConfigStore', 'Software', 'Valve', 'Steam', 'apps') or {}
+        except OSError:
+            continue
+        for appid, v in apps.items():
+            try:
+                out[appid] = max(out.get(appid, 0), int(_get(v, 'Playtime') or 0))
+            except (TypeError, ValueError):
+                pass
+    return out
+
+
+def add_minutes(gid, minutes):
+    """Suma lo que has jugado a un juego que abre la consola sin tienda (emuladores, PS5)."""
+    data = read_json(MINUTES, {})
+    data[gid] = round(data.get(gid, 0) + minutes, 1)
+    write_json(MINUTES, data)
 
 
 def steam_libraries():
@@ -213,6 +264,7 @@ def _kv_common(data, pos, end, strings):
 def steam_games():
     """Los de Steam: los descargados y los demás de tu biblioteca (los que Steam tiene en su caché de la biblioteca)."""
     games, seen = [], set()
+    minutes = steam_playtime()
     for lib in steam_libraries():
         for acf in glob.glob(os.path.join(lib, 'appmanifest_*.acf')):
             try:
@@ -228,7 +280,7 @@ def steam_games():
             size = int((vdf_values(text, 'SizeOnDisk') or ['0'])[0] or 0)
             cover, hero = steam_art(appid)
             games.append(game('steam', appid, name, True, cover, hero, (vdf_values(text, 'LastPlayed') or ['0'])[0],
-                              size=size))
+                              size=size, minutes=minutes.get(appid, 0)))
     # El resto de tu biblioteca: Steam guarda el arte de cada juego que tienes
     cache = os.path.join(STEAM, 'appcache/librarycache')
     owned = set()
@@ -245,7 +297,7 @@ def steam_games():
             if not info or info[1] != 'game' or NOT_GAMES.search(info[0]):
                 continue
             cover, hero = steam_art(appid)
-            games.append(game('steam', appid, info[0], False, cover, hero))
+            games.append(game('steam', appid, info[0], False, cover, hero, minutes=minutes.get(appid, 0)))
     return games
 
 
@@ -262,7 +314,12 @@ def epic_games():
     stamps = read_json(os.path.join(HEROIC, 'store/timestamp.json'), {})
     mine = read_json(PLAYED, {})
     played = {}
+    minutes = {}
     for app, v in (stamps.items() if isinstance(stamps, dict) else []):
+        try:
+            minutes[app] = int((v or {}).get('totalPlayed') or 0)
+        except (ValueError, TypeError, AttributeError):
+            pass
         try:
             played[app] = int(time.mktime(time.strptime((v or {}).get('lastPlayed', '')[:19], '%Y-%m-%dT%H:%M:%S')))
         except (ValueError, TypeError, AttributeError):
@@ -279,7 +336,7 @@ def epic_games():
         size = (installed.get(app) or {}).get('install_size', 0) if isinstance(installed, dict) else 0
         out.append(game('epic', app, g.get('title') or app, inst,
                         g.get('art_cover') or g.get('art_square') or '', g.get('art_background') or g.get('art_cover') or '',
-                        played.get(app, 0), size=size))
+                        played.get(app, 0), size=size, minutes=minutes.get(app, 0)))
     return out
 
 
@@ -327,7 +384,7 @@ def cache_boxarts(games):
 
 def emu_games():
     out = []
-    played = read_json(PLAYED, {})
+    played, minutes = read_json(PLAYED, {}), read_json(MINUTES, {})
     for key, name, folder, exts, emu, thumbs in SYSTEMS:
         base = os.path.join(JUEGOS, folder)
         if not os.path.isdir(base):
@@ -348,7 +405,7 @@ def emu_games():
             gid = f'{key}:{os.path.relpath(path, JUEGOS)}'
             clean = re.sub(r'\s*[\(\[][^)\]]*[\)\]]', '', title).strip() or title
             out.append(game('emu', gid, clean, True, boxart(thumbs, title), '', played.get(gid, 0),
-                            system=key, systemName=name, path=path, size=_size(path)))
+                            system=key, systemName=name, path=path, size=_size(path), minutes=minutes.get(gid, 0)))
     return out
 
 
@@ -382,7 +439,7 @@ def ps5_games():
     base = os.path.join(JUEGOS, 'PS5')
     if not os.path.isdir(base):
         return out
-    played = read_json(PLAYED, {})
+    played, minutes = read_json(PLAYED, {}), read_json(MINUTES, {})
     for folder in sorted(glob.glob(os.path.join(base, '*', ''))):
         folder = folder.rstrip('/')
         if not os.path.exists(os.path.join(folder, 'eboot.bin')):
@@ -393,7 +450,7 @@ def ps5_games():
         icon = os.path.join(folder, 'sce_sys', 'icon0.png')
         pic = next((p for p in (os.path.join(folder, 'sce_sys', n) for n in ('pic0.png', 'pic1.png')) if os.path.exists(p)), '')
         out.append(game('ps5', gid, name, ready, file_url(icon) if os.path.exists(icon) else '', file_url(pic),
-                        played.get(gid, 0), titleId=tid, path=folder, converted=ready))
+                        played.get(gid, 0), titleId=tid, path=folder, converted=ready, minutes=minutes.get(gid, 0)))
     return out
 
 
@@ -475,6 +532,11 @@ def detach(cmd, cwd=None, env=None):
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, cwd=cwd, env=env)
 
 
+def timed(gid, cmd):
+    """El juego, cronometrado (apogeo-juegos cronometro: suma lo jugado al cerrarlo)."""
+    return ['/usr/lib/apogeo/apogeo-juegos', 'cronometro', gid, '--', *cmd]
+
+
 def play(g):
     """Abre el juego. Devuelve '' o lo que falta para poder jugar."""
     store, gid = g['store'], g['id']
@@ -498,9 +560,9 @@ def play(g):
             core = os.path.join(RA_CORES, how + '.so')
             if not os.path.exists(core):
                 return 'Falta el núcleo de RetroArch: se baja solo con internet'
-            detach(['flatpak', 'run', RA, '-f', '-L', core, g['path']])
+            detach(timed(gid, ['flatpak', 'run', RA, '-f', '-L', core, g['path']]))
         else:
-            detach(['flatpak', 'run', flatpak, *how, g['path']])
+            detach(timed(gid, ['flatpak', 'run', flatpak, *how, g['path']]))
         mark_played(gid)
     elif store == 'ps5':
         name = os.path.basename(g['path'])
@@ -508,7 +570,7 @@ def play(g):
         if not os.path.exists(os.path.join(out, 'app.elf')):
             return 'Todavía no está convertido'
         env = {**os.environ, 'ANYPS5_LANGUAGE': os.environ.get('ANYPS5_LANGUAGE', 'es-ES')}
-        detach(['sh', '-c', 'exec ./app.elf > anyps5.log 2>&1'], cwd=out, env=env)
+        detach(timed(gid, ['sh', '-c', 'exec ./app.elf > anyps5.log 2>&1']), cwd=out, env=env)
         mark_played(gid)
     else:
         return 'No se sabe abrir'
