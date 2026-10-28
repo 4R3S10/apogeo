@@ -34,7 +34,7 @@ ApplicationWindow {
     function plain(t) { return (t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") }
     function shown(sec) { return query === "" || plain(sec.titulo + " " + sec.palabras).indexOf(plain(query)) >= 0 }
 
-    readonly property var sections: [aspecto, pisos, fondos, isla, bloqueo, salud, agape, perfil, copia, actualizaciones]
+    readonly property var sections: [aspecto, pisos, fondos, isla, bloqueo, salud, agape, perfil, copia, actualizaciones, novedades]
     property Item current: aspecto
     property Item wanted: null       // la tocada a la izquierda (aunque no pueda subir del todo, por ser de las últimas)
     function go(sec) {
@@ -45,7 +45,7 @@ ApplicationWindow {
     }
     NumberAnimation { id: scroll; target: flick; property: "contentY"; duration: 280; easing.type: Easing.OutCubic }
     Component.onCompleted: {
-        const first = { aspecto: aspecto, pisos: pisos, fondos: fondos, isla: isla, bloqueo: bloqueo, salud: salud, agape: agape, perfil: perfil, copia: copia, actualizaciones: actualizaciones }[apogeo.section];
+        const first = { aspecto: aspecto, pisos: pisos, fondos: fondos, isla: isla, bloqueo: bloqueo, salud: salud, agape: agape, perfil: perfil, copia: copia, actualizaciones: actualizaciones, novedades: novedades }[apogeo.section];
         if (first && first !== aspecto) Qt.callLater(() => go(first));
     }
 
@@ -70,7 +70,7 @@ ApplicationWindow {
             model: [
                 { sec: aspecto, icono: "aspecto" }, { sec: pisos, icono: "pisos" }, { sec: fondos, icono: "imagen" }, { sec: isla, icono: "isla" }, { sec: bloqueo, icono: "llave" }, { sec: salud, icono: "salud" },
                 { sec: agape, icono: "navegar" }, { sec: perfil, icono: "usuario" }, { sec: copia, icono: "copia" },
-                { sec: actualizaciones, icono: "actualizar" }
+                { sec: actualizaciones, icono: "actualizar" }, { sec: novedades, icono: "novedades" }
             ]
             delegate: NavItem {
                 required property var modelData
@@ -640,6 +640,13 @@ ApplicationWindow {
                              : apogeo.updates.estado === "error" ? "¿Hay conexión a internet?" : ""
                     Icono { visible: apogeo.updates.estado === "al-dia"; nombre: "hecho"; color: Tema.rosa }
                 }
+            }
+
+            // ----- Novedades -----
+            NovedadesSeccion {
+                id: novedades
+                width: parent.width
+                visible: win.shown(novedades)
             }
         }
     }

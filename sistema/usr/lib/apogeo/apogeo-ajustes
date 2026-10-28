@@ -24,7 +24,8 @@ import apogeo_comun as comun  # noqa: E402
 import apogeo_aspecto as aspecto  # noqa: E402
 
 QML = os.environ.get('APOGEO_AJUSTES_QML', '/usr/share/apogeo/ajustes/Ajustes.qml')
-SECTIONS = ('aspecto', 'pisos', 'fondos', 'isla', 'bloqueo', 'salud', 'agape', 'perfil', 'copia', 'actualizaciones')
+SECTIONS = ('aspecto', 'pisos', 'fondos', 'isla', 'bloqueo', 'salud', 'agape', 'perfil', 'copia', 'actualizaciones',
+            'novedades')
 
 
 def run(*cmd, timeout=5):
@@ -232,6 +233,15 @@ def window(section):
         @pyqtProperty(str, constant=True)
         def section(self):
             return section
+
+        # ----- Novedades: lo de cada actualización (lo más nuevo primero) -----
+        @pyqtProperty('QVariantList', constant=True)
+        def news(self):
+            try:
+                with open(os.environ.get('APOGEO_NOVEDADES', '/usr/share/apogeo/novedades.json')) as f:
+                    return json.load(f)
+            except (OSError, ValueError):
+                return []
 
         # ----- Salud del PC: «Pantalla fluida», solo si alguna pantalla tiene FreeSync/VRR -----
         @pyqtProperty(bool, constant=True)

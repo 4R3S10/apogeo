@@ -224,6 +224,7 @@ def user():
 
     # Lo del sistema y la limpieza, si no te lo había contado ya
     seen = read_json(SEEN, {})
+    news_aviso(seen)
     report = read_json(REPORT, {})
     if report.get('fecha', 0) > seen.get('revision', 0):
         fixed = report.get('arreglado', []) + fixed
@@ -232,7 +233,8 @@ def user():
     removed = cleanup.get('quitados', []) if cleanup.get('fecha', 0) > seen.get('limpieza', 0) else []
     os.makedirs(os.path.dirname(SEEN), exist_ok=True)
     with open(SEEN, 'w') as f:
-        json.dump({'revision': report.get('fecha', 0), 'limpieza': cleanup.get('fecha', 0)}, f)
+        json.dump({'revision': report.get('fecha', 0), 'limpieza': cleanup.get('fecha', 0),
+                   'novedades': newest_news()}, f)
 
     if not (fixed or failed or removed):
         return 0
@@ -250,6 +252,30 @@ def user():
                     'Apogeo revisado tras la actualización', ' '.join(body)],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return 0
+
+
+NEWS = '/usr/share/apogeo/novedades.json'
+
+
+def newest_news():
+    news = read_json(NEWS, [])
+    return news[0]['fecha'] if news else ''
+
+
+def news_aviso(seen):
+    """Si esta versión trae algo nuevo que no te hemos contado: un aviso «Apogeo se ha actualizado» con «Ver novedades»,
+    que abre Ajustes → Novedades («N3»). Se queda esperando a que lo pulses (en segundo plano)."""
+    news = read_json(NEWS, [])
+    if not news or news[0]['fecha'] <= seen.get('novedades', ''):
+        return
+    things = [c['titulo'] for c in news[0].get('cosas', [])]
+    body = join(things[:3]) + ('…' if len(things) > 3 else '.')
+    script = ('r=$(notify-send -a Apogeo -i apogeo -A ver="Ver novedades" "$1" "$2"); '
+              '[ "$r" = ver ] && exec /usr/lib/apogeo/apogeo-ajustes novedades')
+    subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
+                      f'--unit=app-apogeo-novedades-{os.getpid()}', 'sh', '-c', script, 'novedades',
+                      'Apogeo se ha actualizado', 'Lo nuevo: ' + body[0].lower() + body[1:]],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
 
 def join(items):

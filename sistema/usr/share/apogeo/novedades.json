@@ -1,0 +1,46 @@
+[
+  {
+    "fecha": "2026-10-29",
+    "titulo": "29 de octubre",
+    "cosas": [
+      {"icono": "buscar", "titulo": "Cuentas y archivos en el buscador", "como": "Pulsa Meta y escribe «15% de 80», «5 km en millas», «10 € en dólares» o el nombre de un archivo. Intro copia el resultado; Mayús+Intro abre la carpeta de un archivo."},
+      {"icono": "campana", "titulo": "Contestar desde el aviso", "como": "Si una app lo deja (Discord, mensajes), pulsa «Responder» en el aviso, escribe y pulsa Intro."},
+      {"icono": "llave", "titulo": "Bloqueo más vivo", "como": "La hora bien grande a la derecha y, si suena algo, la canción con sus botones."},
+      {"icono": "aspecto", "titulo": "Ventanas redondeadas", "como": "Todas las ventanas con las esquinas redondeadas y una sombra suave. Siguen tus esquinas de Ajustes → Aspecto."},
+      {"icono": "pisos", "titulo": "Cambiar de piso como un ascensor", "como": "Las ventanas suben o bajan y el fondo se queda quieto detrás."},
+      {"icono": "isla", "titulo": "Iconos de la isla iguales", "como": "Cada app en su baldosa redondeada, con un toque del color de tu estilo."},
+      {"icono": "jugar", "titulo": "Pantalla fluida (FreeSync)", "como": "Si tu monitor lo tiene, en los juegos a pantalla completa la pantalla va a su ritmo. Ajustes → Salud del PC."},
+      {"icono": "novedades", "titulo": "Esta página", "como": "Después de cada actualización te avisamos de lo nuevo; aquí está todo."}
+    ]
+  },
+  {
+    "fecha": "2026-10-28",
+    "titulo": "28 de octubre",
+    "cosas": [
+      {"icono": "energia", "titulo": "Más ligero al encender", "como": "La consola de Jugar ya no se abre sola en Navegar: se abre al entrar en Jugar."},
+      {"icono": "hecho", "titulo": "Fuera programas repetidos", "como": "Lutris, Pavucontrol y el gestor de KWallet (lo hacen Steam, Heroic, el panel rápido y Apogeo)."}
+    ]
+  },
+  {
+    "fecha": "2026-10-20",
+    "titulo": "20 de octubre",
+    "cosas": [
+      {"icono": "actualizar", "titulo": "Deshacer una actualización", "como": "Ajustes → Actualizaciones → «Reiniciar y elegir…»: vuelves a como estaba antes, sin tocar tus archivos."},
+      {"icono": "aspecto", "titulo": "Todo sigue tu estilo", "como": "La bienvenida, la consola, el buscador, la música, el apagado y el inicio de sesión llevan tus colores."},
+      {"icono": "isla", "titulo": "Isla arriba o columna a la izquierda", "como": "Ajustes → Aspecto → «Isla y columna»."},
+      {"icono": "jugar", "titulo": "MangoHud y FPS por juego", "como": "El botón «HUD» de la isla en Jugar enseña los FPS; en la consola, cada juego puede tener su límite."},
+      {"icono": "navegar", "titulo": "Ágape sigue a Apogeo", "como": "Si eliges un estilo propio en Apogeo, Ágape coge sus colores."}
+    ]
+  },
+  {
+    "fecha": "2026-10-19",
+    "titulo": "19 de octubre",
+    "cosas": [
+      {"icono": "apagar", "titulo": "El búho nuevo y el menú de apagar", "como": "La isla se abre en el menú de apagar, con «Actualizar al apagar»."},
+      {"icono": "llave", "titulo": "Tu símbolo para desbloquear", "como": "Ajustes → Bloqueo: dibújalo tres veces y luego desbloquea dibujándolo."},
+      {"icono": "aspecto", "titulo": "Ajustes → Aspecto", "como": "Estilos de un clic y cada detalle: color, claro u oscuro, letra, esquinas, cristal y tamaño."},
+      {"icono": "campana", "titulo": "Una sola isla", "como": "La hora, la red, el sonido y los avisos dentro de la isla; apps fijadas por piso y su vista en vivo."},
+      {"icono": "musica", "titulo": "Sonidos de Apogeo", "como": "Suaves, de madera, y el «uu-uu» del búho al entrar."}
+    ]
+  }
+]
