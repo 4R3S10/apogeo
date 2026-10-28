@@ -2,7 +2,7 @@
     "KPackageStructure": "KWin/Script",
     "KPlugin": {
         "Authors": [{ "Name": "Ares" }],
-        "Description": "La consola del piso Jugar se abre a pantalla completa",
+        "Description": "La consola del piso Jugar, la música, el resumen de avisos, soltar ventanas en un piso y la rejilla",
         "EnabledByDefault": true,
         "Icon": "window",
         "Id": "apogeo-ventanas",

@@ -15,6 +15,10 @@ El escritorio son tres pisos, uno encima de otro: **Jugar**, **Navegar** y **Est
 sobre la columna de la derecha (o con un clic en su círculo) y las ventanas se deslizan como en un ascensor. Cada piso
 guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo en Jugar y más apagado en Estudiar).
 
+**Rejilla de ventanas** («V2 · Huecos en toda la pantalla»): lleva una ventana hasta arriba y la pantalla enseña sus
+huecos en rosa; arriba, una pastilla para cambiar de esquema (mitades, tercios, ⅔ + ⅓, cuartos o «Suelta»). Al soltar,
+la ventana va al hueco iluminado; si la sueltas luego fuera, vuelve a su tamaño (`apogeo-ventanas`, `Rejilla.qml`).
+
 - **Avisos:** solo en Navegar; en Jugar y Estudiar no sale ninguno (se quedan en el historial). Al volver a un piso
   con avisos sale el **resumen** («H3»): una tarjeta encima de la isla con lo que llegó («Has jugado 1 h 20 min»), lo
   importante delante, «Ver todos» y un clic en un aviso abre su app. Se va sola al medio minuto

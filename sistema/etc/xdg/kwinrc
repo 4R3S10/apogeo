@@ -1,6 +1,8 @@
-# Apogeo: si una ventana de otro piso se pone delante sola, se viene al piso donde estás (nunca cambias de piso sin querer)
+# Apogeo: si una ventana de otro piso se pone delante sola, se viene al piso donde estás (nunca cambias de piso sin querer).
+# Llevar una ventana arriba ya no la maximiza: enseña la rejilla de Apogeo (los lados siguen poniéndola a media pantalla)
 [Windows]
 ActivationDesktopPolicy=BringToCurrentDesktop
+ElectricBorderMaximize=false
 
 # La consola del piso Jugar, a pantalla completa; y todas las ventanas con las esquinas redondeadas (como Ágape)
 [Plugins]

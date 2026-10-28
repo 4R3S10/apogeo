@@ -16,10 +16,13 @@ import Apogeo
 //  - Le cuenta a apogeo-pisos (org.apogeo.Datos → PonerVentanas) tus ventanas de cada piso, con su sitio en la pantalla:
 //    la columna de pisos enseña cuántas hay y la vista de cada piso, y la pantalla de apagar cuántas apps se cierran.
 //  - Si sueltas una ventana encima de un piso de la columna, se va a ese piso (y vuelve a donde estaba en la pantalla).
+//  - La rejilla: al llevar una ventana arriba, sus huecos (Rejilla.qml).
 Item {
     id: root
     property var music: null
     property var consoleWin: null
+
+    Rejilla { id: rejilla }
 
     // ---------- Tus ventanas, para la columna de pisos y la pantalla de apagar ----------
     function isTask(w) { return w.normalWindow && !w.skipTaskbar && !w.deleted }
@@ -57,8 +60,9 @@ Item {
         w.desktopsChanged.connect(report);
         w.minimizedChanged.connect(report);
         w.captionChanged.connect(report);
-        w.interactiveMoveResizeStarted.connect(() => dragStart(w));
-        w.interactiveMoveResizeFinished.connect(() => { dragEnd(w); report(); });
+        w.interactiveMoveResizeStarted.connect(() => { dragStart(w); rejilla.start(w); });
+        w.interactiveMoveResizeStepped.connect(() => rejilla.step());
+        w.interactiveMoveResizeFinished.connect(() => { dragEnd(w); rejilla.finish(w); report(); });
         report();
     }
 
