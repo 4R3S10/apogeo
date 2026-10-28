@@ -18,6 +18,7 @@ import Apogeo
 //  - Estudiar: tu carpeta ~/Estudios (asignaturas con Temas, Trabajos y Ejercicios) a la izquierda, el temporizador
 //    grande en el centro y, a la derecha, los exámenes con lo que falta y las tareas de hoy.
 //  - Jugar: nada (está la consola).
+// Y en cada piso, tus notas (Notas.qml).
 // Los datos los da apogeo-pisos (Datos, por D-Bus); solo se piden con el escritorio a la vista.
 PlasmoidItem {
     id: root
@@ -648,6 +649,9 @@ PlasmoidItem {
                 }
             }
         }
+
+        // ======================= Notas (post-its) =======================
+        Notas { anchors.fill: parent; piso: root.floor }
 
         // ======================= Carrusel de fondos (botón derecho) =======================
         // Elige y se ve al momento; «Cancelar» deja el de antes. «Más fondos…» abre Ajustes → Fondos.

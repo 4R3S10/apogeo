@@ -210,6 +210,9 @@ oscuro arriba y abajo para que se lea.
   próximo del calendario de Ágape y tu PC.
 - **Estudiar:** tu carpeta `~/Estudios` a la izquierda (cada asignatura con Temas, Trabajos y Ejercicios), el temporizador
   25/5 en el centro (el mismo que el de la isla) y, a la derecha, los exámenes con lo que falta y las tareas de hoy.
+- **Notas** («R1 · Post-its de colores»), en cada piso: el «+» de arriba a la derecha pone una (en un hueco libre y de
+  un color que no esté); un clic la escribe, se arrastran, las líneas con ☐ son una lista (Intro la sigue) y arriba de
+  cada una, lista, color y quitar. Se guardan en `~/.config/apogeo/notas.json` (`Notas.qml`).
 
 Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). El widget es `org.apogeo.escritorio`:
 - Se dibuja siempre del tamaño de la pantalla, aunque Plasma lo estreche al quedarse fijas la isla o los pisos.

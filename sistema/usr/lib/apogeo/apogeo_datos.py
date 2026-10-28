@@ -10,6 +10,7 @@ Lo sirve apogeo-pisos, que ya está siempre en marcha. Todo se devuelve como tex
   Marcas(mes)         los días de ese mes (AAAA-MM) que tienen algo
   Recordar(json)      un recordatorio {texto, fecha, hora} · Temporizador(json) {minutos, texto} · Quitar(id)
                       (cuando llega la hora: un aviso que suena, con «Posponer 10 min»; sale aunque estés en Jugar)
+  Notas() · PonerNotas(json)   las notas del escritorio (post-its): su piso, sitio, color y texto
   Pc()                temperatura, uso del procesador y de la memoria
   Estudio()           el temporizador de estudio (25 min / 5 de descanso; cada 4, uno largo de 15), lo de hoy y la semana
   EstudioAccion(a, v) alternar · saltar · reiniciar · asignatura (v = el nombre)
@@ -47,6 +48,7 @@ CONFIG = os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
 AGAPE = os.path.join(CONFIG, 'ARES')
 CITY_FILE = os.path.join(CONFIG, 'apogeo', 'ciudad.json')
 REMINDERS_FILE = os.path.join(CONFIG, 'apogeo', 'recordatorios.json')
+NOTES_FILE = os.path.join(CONFIG, 'apogeo', 'notas.json')
 STUDY_FILE = os.path.join(CONFIG, 'apogeo', 'estudio.json')
 STUDY_DIR = os.path.join(HOME, 'Estudios')
 SUBFOLDERS = ('Temas', 'Trabajos', 'Ejercicios')
@@ -367,6 +369,23 @@ class Datos(dbus.service.Object):
         if r and action == 'posponer':
             self.reminders.append({**r, 'cuando': time.time() + 600})
             self._save_reminders()
+
+    # ---------- Las notas del escritorio ----------
+
+    @dbus.service.method(IFACE, out_signature='s')
+    def Notas(self):
+        return json.dumps(read_json(NOTES_FILE, []), ensure_ascii=False)
+
+    @dbus.service.method(IFACE, in_signature='s')
+    def PonerNotas(self, data):
+        notes = []
+        for n in json.loads(data):
+            if not isinstance(n, dict):
+                continue
+            notes.append({'id': str(n.get('id', ''))[:20], 'piso': str(n.get('piso', 'navegar'))[:12],
+                          'x': float(n.get('x', 0)), 'y': float(n.get('y', 0)), 'color': int(n.get('color', 0)) % 5,
+                          'giro': max(-3.0, min(3.0, float(n.get('giro', 0)))), 'texto': str(n.get('texto', ''))[:2000]})
+        write_json(NOTES_FILE, notes[:40])
 
     # ---------- Tu PC ----------
 
