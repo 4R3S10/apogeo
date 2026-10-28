@@ -320,13 +320,26 @@ PlasmoidItem {
                     color: hoverTask.pressed ? root.press : hoverTask.containsMouse || task.model.IsActive ? root.hover : "transparent"
                     Behavior on color { ColorAnimation { duration: 180 } }
                 }
-                Kirigami.Icon {
+                // Todas iguales: cada icono en su baldosa redondeada, con un toque del color de tu estilo
+                Rectangle {
+                    id: tile
                     anchors.centerIn: parent
-                    width: 26; height: 26
-                    source: task.model.decoration
+                    width: 32; height: 32
+                    radius: Tema.r(10)
+                    color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.16)
+                    border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.22)
+                    border.width: 1
                     opacity: task.launcher ? 0.82 : task.model.IsMinimized ? 0.5 : 1
                     scale: hoverTask.pressed ? 0.9 : 1
                     Behavior on scale { NumberAnimation { duration: 120 } }
+                    Kirigami.Icon {
+                        id: appIcon
+                        anchors.centerIn: parent
+                        width: 22; height: 22
+                        source: task.model.decoration
+                        layer.enabled: true
+                        layer.effect: MultiEffect { colorization: 0.14; colorizationColor: root.accent }
+                    }
                 }
                 Rectangle { // el puntito rosa de cada ventana abierta (en la activa, una rayita); las fijadas cerradas, sin él
                     visible: !task.launcher

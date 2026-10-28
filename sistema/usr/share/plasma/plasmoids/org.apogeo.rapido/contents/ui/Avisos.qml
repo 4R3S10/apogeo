@@ -9,9 +9,9 @@ import Apogeo
 
 // Los avisos que salen en pantalla, con el estilo de Apogeo (en lugar de la campana de KDE, que ya no está en la
 // bandeja): abajo a la derecha, uno encima de otro (3 como mucho), con el icono y el nombre de la app, el título, el
-// texto y sus botones. Se van solos a los pocos segundos (no mientras el ratón está encima; los urgentes se quedan) y
-// pasan al historial del panel rápido. Con «No molestar» o en Jugar y Estudiar no salen (Plasma los guarda igual:
-// el resumen de al volver los enseña).
+// texto y sus botones (y, si la app deja, contestar ahí mismo). Se van solos a los pocos segundos (no mientras el
+// ratón está encima ni mientras contestas; los urgentes se quedan) y pasan al historial del panel rápido. Con «No
+// molestar» o en Jugar y Estudiar no salen (Plasma los guarda igual: el resumen de al volver los enseña).
 Item {
     id: avisos
 
@@ -54,13 +54,25 @@ Item {
             readonly property int timeout: urgent || model.resident ? 0 : (model.timeout > 0 ? model.timeout : 6000)
             location: PlasmaCore.Types.Floating
             type: PlasmaCore.Dialog.Notification
-            flags: Qt.WindowDoesNotAcceptFocus
+            // (no se lleva el teclado, salvo al contestar)
+            flags: replying ? 0 : Qt.WindowDoesNotAcceptFocus
             visible: true
             x: avisos.screen.x + avisos.screen.width - width - 18
             y: avisos.bottomOf(index, avisos.layoutRev) - height
             onHeightChanged: avisos.layoutRev++
 
             function idx() { return popups.index(pop.index, 0) }
+            property bool replying: false
+            function startReply() {
+                replying = true;
+                pop.requestActivate();
+                replyField.forceActiveFocus();
+            }
+            function sendReply() {
+                const t = replyField.text.trim();
+                if (t === "") return;
+                popups.reply(pop.idx(), t, NotificationManager.Notifications.Close);
+            }
 
             mainItem: Item {
                 width: 360
@@ -69,7 +81,7 @@ Item {
                 Timer { // se va solo (no mientras lo miras)
                     id: life
                     interval: pop.timeout
-                    running: pop.timeout > 0 && !hover.hovered
+                    running: pop.timeout > 0 && !hover.hovered && !pop.replying
                     onTriggered: popups.expire(pop.idx())
                 }
                 TapHandler {
@@ -153,11 +165,17 @@ Item {
                             Kirigami.Icon { anchors.centerIn: parent; width: 34; height: 34; source: pop.model.iconName || ""; visible: !pop.model.image }
                         }
                     }
-                    // Sus botones
+                    // Sus botones (y «Responder», si la app deja contestar desde el aviso: Discord, mensajes…)
                     Row {
-                        visible: (pop.model.actionLabels || []).length > 0
+                        visible: !pop.replying && ((pop.model.actionLabels || []).length > 0 || pop.model.hasReplyAction)
                         spacing: 6
                         topPadding: 4
+                        Boton {
+                            visible: !!pop.model.hasReplyAction
+                            tipo: "principal"
+                            text: pop.model.replyActionLabel || "Responder"
+                            onClicked: pop.startReply()
+                        }
                         Repeater {
                             model: pop.model.actionLabels || []
                             delegate: Boton {
@@ -166,6 +184,40 @@ Item {
                                 text: modelData
                                 onClicked: popups.invokeAction(pop.idx(), pop.model.actionNames[index])
                             }
+                        }
+                    }
+                    // Contestar aquí mismo: Intro lo envía
+                    Row {
+                        visible: pop.replying
+                        width: parent.width
+                        spacing: 6
+                        topPadding: 4
+                        TextField {
+                            id: replyField
+                            width: parent.width - sendReply.width - 6
+                            height: 34
+                            placeholderText: pop.model.replyPlaceholderText || "Escribe una respuesta…"
+                            placeholderTextColor: Tema.tenue
+                            color: Tema.texto
+                            font.family: Tema.letra
+                            font.pixelSize: 13
+                            leftPadding: 10
+                            background: Rectangle {
+                                radius: Tema.r(10)
+                                color: Tema.encima
+                                border.color: replyField.activeFocus ? Tema.rosa : Tema.borde
+                            }
+                            onAccepted: pop.sendReply()
+                            Keys.onEscapePressed: pop.replying = false
+                        }
+                        AbstractButton {
+                            id: sendReply
+                            width: 34; height: 34
+                            enabled: replyField.text.trim() !== ""
+                            opacity: enabled ? 1 : 0.5
+                            onClicked: pop.sendReply()
+                            background: Rectangle { radius: Tema.r(10); color: Tema.rosa }
+                            contentItem: Item { Icono { anchors.centerIn: parent; width: 15; height: 15; nombre: "enviar"; color: Tema.sobreRosa } }
                         }
                     }
                     // Lo que le queda (una rayita rosa que se acaba)
@@ -183,7 +235,7 @@ Item {
                                 from: col.width; to: 0
                                 duration: pop.timeout
                                 running: pop.timeout > 0
-                                paused: hover.hovered
+                                paused: hover.hovered || pop.replying
                             }
                         }
                     }

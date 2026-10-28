@@ -3,9 +3,10 @@ import Apogeo
 import QtQuick.Controls
 import QtQuick.Effects
 import org.kde.coreaddons as KCoreAddons
+import org.kde.plasma.private.mpris as Mpris
 
 // Pantalla de bloqueo de Apogeo («Tarjeta con piso», como la de inicio de sesión): tu nombre, el piso al que vuelves y
-// la contraseña. Sustituye a la de Plasma (la copia apogeo-bloqueo). Si algún día no carga, el bloqueo de KDE pone su
+// la contraseña. A la derecha, la hora bien grande con la fecha y, si suena algo, la canción con sus botones. Sustituye a la de Plasma (la copia apogeo-bloqueo). Si algún día no carga, el bloqueo de KDE pone su
 // pantalla básica y se puede desbloquear igual.
 // «Tu símbolo» (D7): si tienes uno (Ajustes → Bloqueo), lo dibujas con el ratón en cualquier parte de la pantalla y
 // entras. El dibujo va por el mismo camino que la contraseña, con «apogeo-simbolo:» delante: lo comprueba
@@ -286,15 +287,6 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
-            // La hora grande, como en la nueva pestaña de Ágape
-            Text {
-                id: bigClock
-                color: root.text
-                font { family: root.font; pixelSize: 72; weight: Font.ExtraBold; letterSpacing: -1 }
-                function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
-                Component.onCompleted: update()
-                Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
-            }
             Row {
                 width: parent.width
                 spacing: 14
@@ -451,19 +443,137 @@ Item {
             }
         }
 
+    }
+
+    // ---------- A la derecha: la hora y lo que suena ----------
+    Column {
+        id: side
+        anchors.left: card.right
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: player.visible ? -60 : 0
+        visible: width > 360
+        spacing: 2
+        Text {
+            id: bigClock
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: root.text
+            font { family: root.font; pixelSize: Math.min(176, side.width / 3.6); weight: Font.ExtraBold; letterSpacing: -4 }
+            layer.enabled: true
+            layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.5); shadowBlur: 0.8; shadowVerticalOffset: 6 }
+            function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
+            Component.onCompleted: update()
+            Timer { interval: 2000; running: true; repeat: true; onTriggered: bigClock.update() }
+        }
         Text {
             id: clock
-            x: 40
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 36
-            color: root.muted
-            font { family: root.font; pixelSize: 14 }
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: root.text
+            opacity: 0.85
+            font { family: root.font; pixelSize: 22; weight: Font.DemiBold }
+            layer.enabled: true
+            layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.5); shadowBlur: 0.6; shadowVerticalOffset: 3 }
             function update() {
-                const d = Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
+                const d = Qt.locale("es_ES").toString(new Date(), "dddd, d 'de' MMMM");
                 text = d.charAt(0).toUpperCase() + d.slice(1);
             }
             Component.onCompleted: update()
             Timer { interval: 60000; running: true; repeat: true; onTriggered: clock.update() }
+        }
+    }
+
+    // La canción que suena (Spotify, Ágape, VLC…): carátula, título y sus botones
+    Mpris.Mpris2Model { id: mpris }
+    readonly property var playing: mpris.currentPlayer
+    RectangularShadow {
+        anchors.fill: player
+        visible: player.visible
+        offset.y: 12; blur: 36
+        radius: player.radius
+        color: Qt.rgba(0, 0, 0, 0.4)
+    }
+    Rectangle {
+        id: player
+        visible: side.visible && !!root.playing && root.playing.track !== ""
+        anchors.horizontalCenter: side.horizontalCenter
+        anchors.top: side.bottom
+        anchors.topMargin: 28
+        width: Math.min(420, side.width - 80)
+        height: 92
+        radius: Tema.r(20)
+        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.86)
+        border.color: root.border
+        Rectangle {
+            id: art
+            x: 14; anchors.verticalCenter: parent.verticalCenter
+            width: 64; height: 64
+            radius: Tema.r(12)
+            color: root.hover
+            clip: true
+            Icono { anchors.centerIn: parent; width: 24; height: 24; nombre: "musica"; color: root.muted; visible: cover.status !== Image.Ready }
+            Image {
+                id: cover
+                anchors.fill: parent
+                source: root.playing ? root.playing.artUrl : ""
+                sourceSize: Qt.size(128, 128)
+                fillMode: Image.PreserveAspectCrop
+            }
+        }
+        Column {
+            anchors.left: art.right; anchors.leftMargin: 14
+            anchors.right: buttons.left; anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+            Text {
+                width: parent.width
+                text: root.playing ? root.playing.track : ""
+                color: root.text
+                elide: Text.ElideRight
+                font { family: root.font; pixelSize: 15; weight: Font.Bold }
+            }
+            Text {
+                width: parent.width
+                text: root.playing ? root.playing.artist : ""
+                color: root.muted
+                elide: Text.ElideRight
+                font { family: root.font; pixelSize: 13 }
+            }
+        }
+        Row {
+            id: buttons
+            anchors.right: parent.right; anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
+            Repeater {
+                model: [
+                    { icon: "anterior", go: () => root.playing.Previous(), on: root.playing && root.playing.canGoPrevious },
+                    { icon: root.playing && root.playing.playbackStatus === Mpris.PlaybackStatus.Playing ? "pausa" : "reproducir",
+                      go: () => root.playing.PlayPause(), on: true, main: true },
+                    { icon: "siguiente", go: () => root.playing.Next(), on: root.playing && root.playing.canGoNext }
+                ]
+                delegate: AbstractButton {
+                    id: mb
+                    required property var modelData
+                    width: modelData.main ? 44 : 36; height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    enabled: !!modelData.on
+                    opacity: enabled ? 1 : 0.4
+                    hoverEnabled: true
+                    onClicked: modelData.go()
+                    background: Rectangle {
+                        radius: width / 2
+                        color: mb.modelData.main ? root.accent : (mb.hovered ? root.hover : "transparent")
+                    }
+                    contentItem: Item {
+                        Icono {
+                            anchors.centerIn: parent
+                            width: mb.modelData.main ? 18 : 15; height: width
+                            nombre: mb.modelData.icon
+                            color: mb.modelData.main ? root.accentText : root.text
+                        }
+                    }
+                }
+            }
         }
     }
 

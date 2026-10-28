@@ -11,6 +11,7 @@ import importlib.machinery
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -58,9 +59,11 @@ DEFAULTS = {
     },
     'animar': True,      # fondos animados (solo con gráfica de verdad)
     'silencio': False,   # «No molestar» en todos los pisos
-    'isla': {'esconder': True, 'esconderPisos': True, 'jugar': True, 'navegar': True, 'estudiar': True},  # lo de cada piso: temperatura/FPS,
+    # La isla: esconderse sola y lo de cada piso (temperatura/FPS, música, temporizador)
+    'isla': {'esconder': True, 'esconderPisos': True, 'jugar': True, 'navegar': True, 'estudiar': True},
     'fps': 60,
-    'juegos_fps': {},    # el límite de FPS de cada juego («steam:123»: 45), si no es el de todos (la consola)                                                                    # música, temporizador
+    'pantallaFluida': True,  # FreeSync/VRR: la pantalla va al ritmo del juego (si el monitor lo tiene)
+    'juegos_fps': {},    # el límite de FPS de cada juego («steam:123»: 45), si no es el de todos (la consola)
     # Ajustes → Aspecto (apogeo_aspecto): lo de serie es la estética de Ágape
     'aspecto': dict(_aspecto.DEFAULT),
     'version': VERSION,
@@ -382,3 +385,22 @@ def front(app_id, delays=(0,)):
             kwin('for (const w of workspace.windowList()) { if (w.normalWindow && w.desktopFileName === "%s") '
                  '{ w.minimized = false; workspace.activeWindow = w; } }' % app_id)
     threading.Thread(target=work, daemon=True).start()
+
+
+def vrr_outputs():
+    """Las pantallas que pueden ir al ritmo del juego (FreeSync/VRR) y lo que tienen puesto: {nombre: 'never' | 'always' |
+    'automatic'} (automático: solo con un juego a pantalla completa). Lo dice kscreen-doctor (su JSON no lo trae)."""
+    try:
+        text = subprocess.run(['kscreen-doctor', '-o'], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    out, name = {}, None
+    for line in re.sub(r'\x1b\[[0-9;]*m', '', text).splitlines():
+        m = re.match(r'Output: \d+ (\S+)', line)
+        if m:
+            name = m.group(1)
+            continue
+        m = re.match(r'\s+Vrr: (\w+)', line)
+        if m and name and m.group(1).lower() in ('never', 'always', 'automatic'):
+            out[name] = m.group(1).lower()
+    return out

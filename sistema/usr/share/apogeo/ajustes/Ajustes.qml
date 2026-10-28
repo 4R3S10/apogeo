@@ -340,7 +340,7 @@ ApplicationWindow {
             // ----- Salud del PC -----
             Seccion {
                 id: salud
-                property string palabras: "temperatura calor grados fps juegos velocidad ventiladores"
+                property string palabras: "temperatura calor grados fps juegos velocidad ventiladores freesync vrr pantalla fluida tirones"
                 width: parent.width
                 visible: win.shown(salud)
                 titulo: "Salud del PC"
@@ -388,11 +388,20 @@ ApplicationWindow {
                 }
                 Fila {
                     titulo: "FPS máximos en los juegos"
-                    detalle: "Juegos de Windows (Proton): menos calor y menos ruido. Vale al volver a entrar"
+                    detalle: "En todos: menos calor y menos ruido (cada juego puede tener el suyo en la consola). Vale al volver a abrirlo"
                     Segmentos {
                         opciones: [{ texto: "30" }, { texto: "45" }, { texto: "60" }]
                         actual: [30, 45, 60].indexOf(win.s.fps)
                         onElegido: i => apogeo.set("fps", [30, 45, 60][i])
+                    }
+                }
+                Fila {
+                    visible: apogeo.vrrCapable
+                    titulo: "Pantalla fluida (FreeSync)"
+                    detalle: "En los juegos a pantalla completa, la pantalla va a su ritmo: menos tirones y sin cortes de imagen"
+                    Interruptor {
+                        checked: win.s.pantallaFluida !== false
+                        onToggled: apogeo.set("pantallaFluida", checked)
                     }
                 }
             }

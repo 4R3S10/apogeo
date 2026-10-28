@@ -264,6 +264,11 @@ def apply(st, log=print):
     for gtk in ('gtk-3.0', 'gtk-4.0'):
         _run('kwriteconfig6', '--file', os.path.join(CONFIG, gtk, 'settings.ini'), '--group', 'Settings', '--key',
              'gtk-font-name', f"{t['letra']},  {t['letraPt']:g}")
+    # Las esquinas de las ventanas, como las de su barra (el efecto de esquinas redondeadas)
+    corner = max(2, round(12 * float(t.get('radio', 1.0))))
+    for key in ('ActiveCornerRadius', 'InactiveCornerRadius'):
+        _kw('kwinrc', 'Round-Corners', key, corner)
+    _run('qdbus6', 'org.kde.KWin', '/Effects', 'org.kde.kwin.Effects.reconfigureEffect', 'kwin4_effect_shapecorners')
     # Las animaciones (KWin, Plasma y las apps)
     _kw('kdeglobals', 'KDE', 'AnimationDurationFactor', t['animaciones'])
     _run('qdbus6', 'org.kde.KWin', '/KWin', 'reconfigure')

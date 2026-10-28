@@ -2,9 +2,33 @@
 [Windows]
 ActivationDesktopPolicy=BringToCurrentDesktop
 
-# La consola del piso Jugar, a pantalla completa
+# La consola del piso Jugar, a pantalla completa; y todas las ventanas con las esquinas redondeadas (como Ágape)
 [Plugins]
 apogeo-ventanasEnabled=true
+kwin4_effect_shapecornersEnabled=true
+
+# Las esquinas: el radio de la barra de las ventanas (lo cambia Ajustes → Aspecto → Esquinas), sin rayas alrededor y
+# con la sombra suave de la propia ventana. Maximizada o a pantalla completa, sin redondear
+[Round-Corners]
+ActiveCornerRadius=12
+InactiveCornerRadius=12
+ActiveOutlineThickness=0
+InactiveOutlineThickness=0
+ActiveSecondOutlineThickness=0
+InactiveSecondOutlineThickness=0
+ActiveOuterOutlineThickness=0
+InactiveOuterOutlineThickness=0
+UseNativeDecorationShadows=true
+DisableRoundMaximize=true
+DisableRoundFullScreen=true
+DisableOutlineMaximize=true
+DisableOutlineFullScreen=true
+
+# Cambiar de piso como un ascensor: las ventanas suben o bajan y el fondo se queda quieto detrás (luego cambia al del
+# piso nuevo, fundiéndose)
+[Effect-slide]
+SlideBackground=false
+VerticalGap=64
 
 # Ventanas con la barra de Ágape: título en el centro y sus botones planos a la derecha
 [org.kde.kdecoration2]

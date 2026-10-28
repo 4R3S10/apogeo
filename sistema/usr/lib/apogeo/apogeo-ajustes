@@ -233,6 +233,11 @@ def window(section):
         def section(self):
             return section
 
+        # ----- Salud del PC: «Pantalla fluida», solo si alguna pantalla tiene FreeSync/VRR -----
+        @pyqtProperty(bool, constant=True)
+        def vrrCapable(self):
+            return bool(comun.vrr_outputs())
+
         # ----- Aspecto -----
         @pyqtProperty('QVariantMap', constant=True)
         def lookStyles(self):

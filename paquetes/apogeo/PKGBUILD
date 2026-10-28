@@ -26,6 +26,7 @@ package_apogeo() {
     pacman-contrib polkit gnupg                               # ajustes: actualizaciones; la copia de Apogeo
     kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
     power-profiles-daemon                                     # energía de cada piso
+    kwin-effect-rounded-corners                               # ventanas con las esquinas redondeadas
     qt6-multimedia qt6-multimedia-ffmpeg xdg-user-dirs        # fondos de vídeo y la carpeta de imágenes
     steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
   )

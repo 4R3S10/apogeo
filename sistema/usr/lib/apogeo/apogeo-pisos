@@ -653,6 +653,7 @@ class Floors:
         st = ajustes.load()
         island(self.bus, st)
         apply_look(st)
+        fluid_screen(st)
 
     # ----- «Que cambie solo» -----
 
@@ -884,6 +885,16 @@ def light_effects():
         kwin_reconfigure()
 
 
+def fluid_screen(st):
+    """«Pantalla fluida» (Ajustes → Salud del PC): con ella, la pantalla va al ritmo del juego cuando juegas a pantalla
+    completa (menos tirones y sin cortes de imagen); sin ella, a su ritmo fijo de siempre."""
+    on = st.get('pantallaFluida', True)
+    for name, policy in ajustes.vrr_outputs().items():
+        if on != (policy != 'never'):
+            run('kscreen-doctor', f'output.{name}.vrrpolicy.' + ('automatic' if on else 'never'))
+            log('pantalla fluida:', name, 'sí' if on else 'no')
+
+
 def welcome_open():
     return subprocess.run(['pgrep', '-f', WELCOME], stdout=subprocess.DEVNULL).returncode == 0
 
@@ -933,6 +944,7 @@ def main():
         return
     setup(bus)
     light_effects()
+    fluid_screen(ajustes.load())
     import apogeo_datos
     datos = apogeo_datos.Datos(bus)  # noqa: F841 (los datos de los widgets: el tiempo, el estudio… por D-Bus)
     floors = Floors(bus, dbus.SystemBus())
