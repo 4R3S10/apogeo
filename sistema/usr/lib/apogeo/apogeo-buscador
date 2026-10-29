@@ -7,15 +7,22 @@ apogeo_calculo), lo que encuentran los buscadores de KDE (apps, ajustes…) agru
 cerrar. Se queda preparado en segundo plano (lo arranca apogeo-pisos al entrar, o D-Bus la primera vez) para salir al
 momento.
 
+También la guía de atajos («G1 + G3», Atajos.qml): todos los de Apogeo y, arriba, los del piso en el que estás. Sale
+mientras mantienes Meta (lo avisa apogeo-meta por el bus del sistema; al soltar se va y Meta no abre el buscador) o con
+Meta+/ (entonces Esc o un clic la cierran).
+
   apogeo-buscador           lo enseña (o lo esconde, si ya se ve)
   apogeo-buscador --fondo   lo deja preparado, sin enseñarlo
-D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (el botón rosa de la isla y la tecla Meta)
+  apogeo-buscador --atajos  la guía de atajos
+D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (el botón rosa de la isla y la tecla Meta) y .Atajos
+(Meta+/: apogeo-atajos.desktop)
 """
 import os
 import sys
 
 SERVICE, PATH, IFACE = 'org.apogeo.Buscador', '/Buscador', 'org.apogeo.Buscador'
 QML = os.environ.get('APOGEO_BUSCADOR_QML', '/usr/share/apogeo/buscador/Buscador.qml')
+ATAJOS_QML = os.path.join(os.path.dirname(QML), 'Atajos.qml')
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 
 # Los grupos del cajón, en orden. Una app va al primero que encaje: primero por su nombre (las de Apogeo), luego por sus
@@ -96,7 +103,9 @@ def already_running():
         bus = dbus.SessionBus()
         if not bus.name_has_owner(SERVICE):
             return False
-        if '--fondo' not in sys.argv:
+        if '--atajos' in sys.argv:
+            bus.get_object(SERVICE, PATH).Atajos(dbus_interface=IFACE)
+        elif '--fondo' not in sys.argv:
             bus.get_object(SERVICE, PATH).Toggle(dbus_interface=IFACE)
         return True
     except dbus.DBusException:
@@ -107,7 +116,7 @@ def main():
     if already_running():
         return 0
     os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
-    from PyQt6.QtCore import QObject, QUrl, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
     from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
     from PyQt6.QtGui import QDesktopServices, QGuiApplication, QIcon
     from PyQt6.QtQml import QQmlApplicationEngine
@@ -119,10 +128,45 @@ def main():
         toggled = pyqtSignal()
         appsChanged = pyqtSignal()
         filesFound = pyqtSignal(str, 'QVariantList')
+        atajos = pyqtSignal(bool)   # la guía: mientras mantienes Meta (True) o con Meta+/ (False)
+        soltada = pyqtSignal()
 
         def __init__(self):
             super().__init__()
             self._apps = []
+            # Al soltar Meta después de la guía, KWin abre igualmente el buscador (Meta sola): esa vez no se hace caso
+            self.swallow = False
+            self.forget = QTimer(self, singleShot=True, interval=1500, timeout=lambda: setattr(self, 'swallow', False))
+
+        def toggle(self):
+            if self.swallow:
+                self.swallow = False
+            else:
+                self.toggled.emit()
+
+        @pyqtSlot()
+        def mantenida(self):
+            self.swallow = True
+            self.forget.stop()
+            self.atajos.emit(True)
+
+        @pyqtSlot()
+        def suelta(self):
+            self.forget.start()
+            self.soltada.emit()
+
+        @pyqtSlot(result=str)
+        def piso(self):
+            """El piso en el que estás («Jugar», «Navegar», «Estudiar»; '' si no se sabe)."""
+            import dbus
+            try:
+                props = dbus.Interface(dbus.SessionBus().get_object('org.kde.KWin', '/VirtualDesktopManager'),
+                                       'org.freedesktop.DBus.Properties')
+                current = str(props.Get('org.kde.KWin.VirtualDesktopManager', 'current'))
+                return next((str(d[2]) for d in props.Get('org.kde.KWin.VirtualDesktopManager', 'desktops')
+                             if str(d[1]) == current), '')
+            except dbus.DBusException:
+                return ''
 
         @pyqtProperty('QVariantList', notify=appsChanged)
         def apps(self):
@@ -184,7 +228,11 @@ def main():
     class Adaptor(QDBusAbstractAdaptor):
         @pyqtSlot()
         def Toggle(self):
-            self.parent().toggled.emit()
+            self.parent().toggle()
+
+        @pyqtSlot()
+        def Atajos(self):
+            self.parent().atajos.emit(False)
 
     app = QGuiApplication(sys.argv)
     app.setApplicationName('Buscador de Apogeo')
@@ -197,12 +245,17 @@ def main():
     backend = Buscador()
     Adaptor(backend)
     bus.registerObject(PATH, backend)
+    system = QDBusConnection.systemBus()
+    system.connect('', '/org/apogeo/Meta', 'org.apogeo.Meta', 'Mantenida', backend.mantenida)
+    system.connect('', '/org/apogeo/Meta', 'org.apogeo.Meta', 'Soltada', backend.suelta)
     engine = QQmlApplicationEngine()
     if os.environ.get('APOGEO_QML_DIR'):
         engine.addImportPath(os.environ['APOGEO_QML_DIR'])
     engine.rootContext().setContextProperty('buscador', backend)
-    engine.rootContext().setContextProperty('showAtStart', '--fondo' not in sys.argv)
+    engine.rootContext().setContextProperty('showAtStart', '--fondo' not in sys.argv and '--atajos' not in sys.argv)
+    engine.rootContext().setContextProperty('atajosAtStart', '--atajos' in sys.argv)
     engine.load(QUrl.fromLocalFile(QML))
+    engine.load(QUrl.fromLocalFile(ATAJOS_QML))
     if not engine.rootObjects():
         return 1
     return app.exec()

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Guía de atajos
+Comment=Los atajos de teclado de Apogeo
+Exec=/usr/lib/apogeo/apogeo-buscador --atajos
+Icon=apogeo
+NoDisplay=true
+X-KDE-Shortcuts=Meta+/

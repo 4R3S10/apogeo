@@ -231,6 +231,14 @@ delante (que enseña la suya) ni con algo a pantalla completa.
 
 - **Buscador:** la lupa de la isla, la tecla Meta o Alt+Espacio abren una tarjeta en el centro, como el buscador de
   Ágape, con lo que encuentran los buscadores de KDE (apps, archivos, ajustes…) y «Buscar en la web con Ágape».
+- **Guía de atajos (mantener Meta o Meta+/, «G1 + G3»):** una tarjeta grande en el centro con los atajos de Apogeo
+  (pisos, ventanas, buscar y copiar, pantalla) y, arriba y resaltados, los del piso en el que estás (Jugar: modo
+  partida y HUD; Navegar: los de Ágape; Estudiar: apuntes lado a lado y sacar texto). Manteniendo Meta 0,6 s sale sin
+  quitarle el teclado ni el ratón a nada (capa de encima de todo, layer-shell: también sobre un juego) y al soltar se va
+  sin abrir el buscador; con Meta+/ se cierra con Esc o un clic. La enseña `apogeo-buscador` (`Atajos.qml`); lo de
+  mantener Meta lo avisa `apogeo-meta`, un servicio del sistema sin root (usuario dinámico con el grupo `input`, sin
+  red) que lee los teclados y solo dice «Mantenida» y «Soltada» por el bus del sistema: ni qué otras teclas pulsas ni
+  cuándo.
 - **Portapapeles (Meta+V, «P1 · Junto al cursor»):** una lista pequeña donde está el ratón con lo último que has
   copiado (textos e imágenes); escribir filtra, flechas eligen, Intro lo pega donde estabas (Ctrl+V, o Ctrl+Mayús+V en
   un terminal), Ctrl+P lo fija (📌) y Supr lo quita. Vive en la memoria y en `/run/user` (se borra al apagar, menos lo

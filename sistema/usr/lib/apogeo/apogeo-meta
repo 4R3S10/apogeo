@@ -1,0 +1,133 @@
+#!/usr/bin/python3
+"""
+La tecla Meta mantenida, para la guía de atajos («G1 + G3»): las apps no pueden saber cuánto rato tienes pulsada una
+tecla, así que esto lee los teclados (evdev; va como un usuario del sistema sin nada más que el grupo «input») y solo
+avisa de dos cosas por el bus del sistema (org.apogeo.Meta en /org/apogeo/Meta):
+
+  Mantenida   tienes Meta sola (sin otra tecla) pulsada desde hace 0,6 s: sale la guía (la enseña apogeo-buscador)
+  Soltada     después de eso, la sueltas o pulsas otra tecla con ella (Meta+V…): la guía se va
+
+Nada más. Las otras teclas solo cuentan para saber si Meta va sola: no se dice cuáles ni cuándo, no se guardan, no se
+escriben en ningún sitio y se olvidan al soltarlas. Los teclados que conectas después se ven solos.
+"""
+import os
+import selectors
+import sys
+import time
+
+HOLD = float(os.environ.get('APOGEO_META_HOLD', '0.6'))  # segundos con Meta sola hasta que sale la guía
+RESCAN = 3                                                 # cada cuánto mira si hay teclados nuevos
+PATH, IFACE = '/org/apogeo/Meta', 'org.apogeo.Meta'
+
+
+class Meta:
+    """Lo que pasa con Meta (sin evdev ni D-Bus, para poder probarlo): key(…) con cada tecla, tick() cuando toca y
+    emit(nombre) para avisar."""
+
+    def __init__(self, metas, emit, clock=time.monotonic):
+        self.metas, self.emit, self.clock = metas, emit, clock
+        self.down = {}          # teclado → teclas pulsadas ahora (solo en memoria)
+        self.deadline = None    # cuándo sale la guía, si Meta sigue sola
+        self.shown = False
+
+    def _held(self):
+        return [c for keys in self.down.values() for c in keys]
+
+    def key(self, dev, code, value):
+        if value == 2:  # (la repetición de una tecla que sigue pulsada)
+            return
+        keys = self.down.setdefault(dev, set())
+        if value:
+            alone = not self._held()
+            keys.add(code)
+            if code in self.metas and alone:
+                self.deadline = self.clock() + HOLD
+            elif code not in self.metas:
+                self._stop()
+        else:
+            keys.discard(code)
+            if code in self.metas and not any(c in self.metas for c in self._held()):
+                self._stop()
+
+    def unplugged(self, dev):
+        if self.down.pop(dev, None) and not any(c in self.metas for c in self._held()):
+            self._stop()
+
+    def _stop(self):
+        self.deadline = None
+        if self.shown:
+            self.shown = False
+            self.emit('Soltada')
+
+    def timeout(self):
+        """Cuánto esperar como mucho antes de llamar a tick()."""
+        return RESCAN if self.deadline is None else max(0.0, min(RESCAN, self.deadline - self.clock()))
+
+    def tick(self):
+        if self.deadline is not None and self.clock() >= self.deadline:
+            self.deadline = None
+            self.shown = True
+            self.emit('Mantenida')
+
+
+def main():
+    import dbus
+    import dbus.lowlevel
+    import evdev
+    from evdev import ecodes as e
+
+    bus = dbus.SystemBus()
+
+    def emit(name):
+        bus.send_message(dbus.lowlevel.SignalMessage(PATH, IFACE, name))
+        bus.flush()
+
+    meta = Meta({e.KEY_LEFTMETA, e.KEY_RIGHTMETA}, emit)
+    sel = selectors.DefaultSelector()
+    keyboards, others = {}, set()   # los teclados que se leen y lo demás (ratones, mandos…), que no se abre otra vez
+
+    def scan():
+        paths = set(evdev.list_devices())
+        others.intersection_update(paths)
+        for path in paths - set(keyboards) - others:
+            try:
+                d = evdev.InputDevice(path)
+            except OSError:
+                continue
+            keys = d.capabilities().get(e.EV_KEY, [])
+            if e.KEY_LEFTMETA in keys and e.KEY_A in keys:
+                keyboards[path] = d
+                sel.register(d, selectors.EVENT_READ)
+            else:
+                d.close()
+                others.add(path)
+
+    def drop(d):
+        sel.unregister(d)
+        keyboards.pop(d.path, None)
+        meta.unplugged(d.path)
+        try:
+            d.close()
+        except OSError:
+            pass
+
+    last_scan = 0
+    while True:
+        if time.monotonic() - last_scan >= RESCAN:
+            scan()
+            last_scan = time.monotonic()
+        for k, _ in sel.select(timeout=meta.timeout()):
+            d = k.fileobj
+            try:
+                for ev in d.read():
+                    if ev.type == e.EV_KEY:
+                        meta.key(d.path, ev.code, ev.value)
+            except BlockingIOError:
+                pass
+            except OSError:  # desconectado
+                drop(d)
+        meta.tick()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

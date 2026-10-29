@@ -1,0 +1,27 @@
+[Unit]
+Description=La tecla Meta mantenida (la guía de atajos de Apogeo)
+
+[Service]
+ExecStart=/usr/lib/apogeo/apogeo-meta
+Restart=always
+RestartSec=5
+# Solo lee los teclados (grupo input) y avisa por el bus del sistema: sin ser root, sin red y sin escribir nada
+DynamicUser=yes
+SupplementaryGroups=input
+CapabilityBoundingSet=
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+MemoryMax=64M
+
+[Install]
+WantedBy=multi-user.target

@@ -3,6 +3,7 @@
     "fecha": "2026-10-29",
     "titulo": "29 de octubre",
     "cosas": [
+      {"icono": "apps", "titulo": "Guía de atajos", "como": "Mantén Meta un momento: salen todos los atajos de Apogeo y, arriba, los del piso en el que estás. Al soltar se va. También con Meta+/."},
       {"icono": "foto", "titulo": "Capturas de Apogeo", "como": "Meta+Mayús+S o Impr Pant: elige zona, ventana o pantalla. Debajo, copiar, guardar, dibujar flechas o sacar el texto. Se copia y se guarda sola en Imágenes/Capturas."},
       {"icono": "copia", "titulo": "Lo que has copiado, a mano", "como": "Meta+V junto al ratón: lo último que copiaste (textos e imágenes). Intro lo pega y Ctrl+P lo fija para que no se borre al apagar."},
       {"icono": "emoji", "titulo": "Emojis", "como": "Meta+. mientras escribes: busca en español («corazón», «fuego») o elige por pestañas. Los que más usas salen primero."},

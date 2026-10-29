@@ -21,8 +21,9 @@ package_apogeo() {
     plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
     scx-scheds scx-tools pacman-contrib                       # planificador para escritorio y juegos, caché de paquetes
     papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
-    python python-dbus python-gobject python-evdev            # los pisos y la consola (el mando)
+    python python-dbus python-gobject python-evdev            # los pisos, la consola (el mando) y apogeo-meta
     python-pyqt6 qt6-declarative milou kirigami plocate       # la bienvenida, los ajustes y el buscador (y tus archivos)
+    layer-shell-qt                                            # la guía de atajos (encima de todo, sin quitar el teclado)
     pacman-contrib polkit gnupg                               # ajustes: actualizaciones; la copia de Apogeo
     kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
     power-profiles-daemon                                     # energía de cada piso
