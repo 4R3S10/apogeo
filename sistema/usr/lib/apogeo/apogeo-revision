@@ -53,7 +53,8 @@ def system():
             else:
                 failed.append(what)
     # Los de cada sesión (para todas las cuentas)
-    for unit, what in (('apogeo-pisos.service', 'los pisos'), ('apogeo-actualizaciones.timer', 'los avisos de actualización'),
+    for unit, what in (('apogeo-pisos.service', 'los pisos'), ('apogeo-portapapeles.service', 'el portapapeles y los emojis'),
+                       ('apogeo-actualizaciones.timer', 'los avisos de actualización'),
                        ('apogeo-copia.timer', 'la copia sola'), ('apogeo-revision.service', 'esta revisión'),
                        ('apogeo-revision.path', 'esta revisión'), ('apogeo-al-dia.timer', 'lo de Jugar al día'),
                        ('apogeo-archivos.timer', 'buscar tus archivos')):

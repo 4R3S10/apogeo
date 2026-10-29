@@ -17,6 +17,8 @@ import Apogeo
 //    la columna de pisos enseña cuántas hay y la vista de cada piso, y la pantalla de apagar cuántas apps se cierran.
 //  - Si sueltas una ventana encima de un piso de la columna, se va a ese piso (y vuelve a donde estaba en la pantalla).
 //  - La rejilla: al llevar una ventana arriba, sus huecos (Rejilla.qml).
+//  - El portapapeles y los emojis (apogeo-portapapeles) salen junto al ratón, encima de todo, y se les dice qué app
+//    estaba delante (en un terminal se pega con Ctrl+Mayús+V).
 Item {
     id: root
     property var music: null
@@ -105,8 +107,9 @@ Item {
     }
 
     function added(w) {
-        watch(w);
         const cls = (w.resourceClass || "") + " " + (w.desktopFileName || "");
+        if (cls.indexOf("apogeo-portapapeles") >= 0) { clipboard(w); return; }
+        watch(w);
         if (cls.indexOf("apogeo-resumen") >= 0) summary(w);
         if (cls.indexOf("apogeo-consola") >= 0 && w.normalWindow) {
             consoleWin = w;
@@ -143,6 +146,32 @@ Item {
         };
         put();
         w.frameGeometryChanged.connect(put);
+    }
+
+    function clipboard(w) {
+        const before = Workspace.activeWindow;
+        previousCall.arguments = [before && before !== w ? (before.resourceClass || "") + " " + (before.desktopFileName || "") : ""];
+        previousCall.call();
+        w.onAllDesktops = true;
+        w.keepAbove = true;
+        w.skipTaskbar = true;
+        w.skipSwitcher = true;
+        w.skipPager = true;
+        // abajo a la derecha del ratón (la ventana trae 22 px de margen para la sombra), sin salirse de la pantalla
+        const p = Workspace.cursorPos;
+        const area = Workspace.clientArea(KWin.MaximizeArea, Workspace.screenAt(p), Workspace.currentDesktop);
+        const g = w.frameGeometry;
+        const x = Math.max(area.x, Math.min(area.x + area.width - g.width, p.x - 30));
+        const y = p.y + g.height - 22 <= area.y + area.height ? p.y - 8 : p.y - g.height + 8;
+        w.frameGeometry = Qt.rect(x, Math.max(area.y, Math.min(area.y + area.height - g.height, y)), g.width, g.height);
+        Workspace.activeWindow = w;
+    }
+    DBusCall {
+        id: previousCall
+        service: "org.apogeo.Portapapeles"
+        path: "/Portapapeles"
+        dbusInterface: "org.apogeo.Portapapeles"
+        method: "Previa"
     }
 
     function place() {

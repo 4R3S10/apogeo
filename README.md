@@ -231,6 +231,14 @@ delante (que enseña la suya) ni con algo a pantalla completa.
 
 - **Buscador:** la lupa de la isla, la tecla Meta o Alt+Espacio abren una tarjeta en el centro, como el buscador de
   Ágape, con lo que encuentran los buscadores de KDE (apps, archivos, ajustes…) y «Buscar en la web con Ágape».
+- **Portapapeles (Meta+V, «P1 · Junto al cursor»):** una lista pequeña donde está el ratón con lo último que has
+  copiado (textos e imágenes); escribir filtra, flechas eligen, Intro lo pega donde estabas (Ctrl+V, o Ctrl+Mayús+V en
+  un terminal), Ctrl+P lo fija (📌) y Supr lo quita. Vive en la memoria y en `/run/user` (se borra al apagar, menos lo
+  fijado) y nunca guarda contraseñas de KeePassXC (`x-kde-passwordManagerHint`). Sustituye al de Plasma (Klipper).
+- **Emojis (Meta+., «E1 · Junto al cursor»):** una tarjetita con buscador en español («corazon», «gato») y pestañas por
+  tipo; los que más usas salen primero. Se pega donde escribías y luego vuelve al portapapeles lo que tenías.
+  Los dos son `apogeo-portapapeles` (servicio de cada sesión) y `sistema/usr/share/apogeo/portapapeles/`; hablan con
+  KWin por Wayland sin librerías (`apogeo_wayland.py`: ext-data-control para el portapapeles y fake-input para pegar).
 - **Pantalla de apagar («A1 · La isla se abre»):** la isla de abajo crece y se convierte en el menú: tu foto, desde
   cuándo está encendido, Apagar, Reiniciar, Reposo, Ir a Windows (si hay Windows escondido), Salir y Bloquear; cuántas
   apps se cierran (Ágape guarda sus pestañas) y **«Actualizar al apagar»** si hay actualizaciones (las instala el

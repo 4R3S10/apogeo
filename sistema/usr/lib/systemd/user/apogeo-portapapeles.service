@@ -1,0 +1,12 @@
+[Unit]
+Description=Portapapeles y emojis de Apogeo (Meta+V, Meta+.)
+PartOf=graphical-session.target
+After=plasma-workspace.target
+
+[Service]
+ExecStart=/usr/lib/apogeo/apogeo-portapapeles --fondo
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=plasma-workspace.target

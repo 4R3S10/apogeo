@@ -349,7 +349,7 @@ MANGOHUD = 1  # igual, para MangoHud en los juegos
 LIGHTER = 2  # igual, para quitar de en medio lo que no se usa al entrar (menú global, accesibilidad)
 ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
-AESTHETICS = 13  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
+AESTHETICS = 14  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
 
@@ -474,19 +474,30 @@ def aesthetics():
 
 
 def search_shortcuts():
-    """Los atajos de Apogeo (el buscador, el modo partida, la terminal y las capturas), al momento (por D-Bus a kglobalaccel, que los guarda él; escribir su archivo no vale:
+    """Los atajos de Apogeo (el buscador, el portapapeles y los emojis, el modo partida, la terminal y las capturas), al momento (por D-Bus a kglobalaccel, que los guarda él; escribir su archivo no vale:
     solo lo lee al empezar la sesión)."""
     def keys(*codes):
         return dbus.Array([dbus.Struct([dbus.Array([dbus.Int32(c), 0, 0, 0], signature='i')]) for c in codes],
                           signature='(ai)')
     meta, alt_f1, alt_f2, alt_space, search = 0x01000022, 0x09000030, 0x09000031, 0x08000020, 0x01000092
     alt_tab, meta_tab, ctrl_alt_t, print_key = 0x08000001, 0x11000001, 0x0C000054, 0x01000009
+    meta_v, meta_period = 0x10000056, 0x1000002e
     try:
         g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
         g.setForeignShortcutKeys(['plasmashell', 'activate application launcher', '', ''], keys(alt_f1))
         g.setForeignShortcutKeys(['org.kde.krunner.desktop', '_launch', '', ''], keys(alt_f2))
         g.doRegister(['apogeo-buscador.desktop', '_launch', 'Buscador de Apogeo', 'Buscador de Apogeo'])
         g.setForeignShortcutKeys(['apogeo-buscador.desktop', '_launch', '', ''], keys(meta, alt_space, search))
+        # Meta+V y Meta+.: el portapapeles y los emojis de Apogeo (los de Plasma, sin atajo)
+        for old in (['plasmashell', 'show-on-mouse-pos', '', ''], ['org.kde.plasma.emojier.desktop', '_launch', '', '']):
+            try:
+                g.setForeignShortcutKeys(old, keys())
+            except dbus.DBusException:
+                pass
+        g.doRegister(['apogeo-portapapeles.desktop', '_launch', 'Portapapeles de Apogeo', 'Portapapeles de Apogeo'])
+        g.setForeignShortcutKeys(['apogeo-portapapeles.desktop', '_launch', '', ''], keys(meta_v))
+        g.doRegister(['apogeo-portapapeles.desktop', 'emojis', 'Portapapeles de Apogeo', 'Emojis'])
+        g.setForeignShortcutKeys(['apogeo-portapapeles.desktop', 'emojis', '', ''], keys(meta_period))
         # Meta+Tab: el modo partida (apogeo-partida, en KWin); el cambiador de ventanas se queda con Alt+Tab
         g.setForeignShortcutKeys(['kwin', 'Walk Through Windows', '', ''], keys(alt_tab))
         g.doRegister(['kwin', 'Apogeo partida', 'KWin', 'Apogeo: el juego con Discord y lo que suena al lado'])

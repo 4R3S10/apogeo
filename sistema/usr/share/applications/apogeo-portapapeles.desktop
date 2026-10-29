@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Portapapeles de Apogeo
+Comment=Lo último que has copiado, junto al ratón
+Exec=/usr/lib/apogeo/apogeo-portapapeles
+Icon=apogeo
+NoDisplay=true
+X-KDE-Shortcuts=Meta+V
+Actions=emojis;
+
+[Desktop Action emojis]
+Name=Emojis
+Exec=/usr/lib/apogeo/apogeo-portapapeles --emojis
+X-KDE-Shortcuts=Meta+.

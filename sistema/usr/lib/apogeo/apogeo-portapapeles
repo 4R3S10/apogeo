@@ -1,0 +1,381 @@
+#!/usr/bin/python3
+"""
+El portapapeles y los emojis de Apogeo, junto al ratón.
+
+  Meta+V  («P1»): lo último que has copiado (textos e imágenes); flechas elegir, Intro pegar, 📌 fijar. Se borra al
+          apagar, menos lo fijado. Las contraseñas de KeePassXC no se guardan nunca (las marca como tales).
+  Meta+.  («E1»): los emojis, con buscador en español y pestañas por tipo; los que más usas salen primero.
+Lo elegido se pega donde estabas escribiendo: se deja en el portapapeles y se pulsa Ctrl+V (Ctrl+Mayús+V en un
+terminal). Con un emoji, después vuelve al portapapeles lo que tenías. Vigila el portapapeles por su cuenta
+(apogeo_wayland: KWin se lo deja ver a las apps de fuera de la caja de arena) y se queda en segundo plano para salir al
+momento.
+
+  apogeo-portapapeles            enseña lo copiado (o lo esconde, si ya se ve)
+  apogeo-portapapeles --emojis   enseña los emojis
+  apogeo-portapapeles --fondo    en segundo plano, sin enseñar nada (apogeo-portapapeles.service)
+D-Bus: org.apogeo.Portapapeles /Portapapeles org.apogeo.Portapapeles.{Abrir,Emojis}; Previa(clase) se lo dice la
+ventana de KWin (apogeo-ventanas): la app que estaba delante (para saber si es un terminal).
+"""
+import json
+import os
+import sys
+import time
+import unicodedata
+import uuid
+
+SERVICE, PATH, IFACE = 'org.apogeo.Portapapeles', '/Portapapeles', 'org.apogeo.Portapapeles'
+QML = os.environ.get('APOGEO_PORTAPAPELES_QML', '/usr/share/apogeo/portapapeles/Portapapeles.qml')
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+
+DATA = os.path.join(os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share')), 'apogeo')
+PINNED = os.path.join(DATA, 'portapapeles.json')          # lo fijado (lo único que se queda al apagar)
+PINNED_IMAGES = os.path.join(DATA, 'portapapeles')
+RECENT_EMOJIS = os.path.join(DATA, 'emojis-recientes.json')
+# Lo demás vive en la memoria y en /run/user (que se vacía al apagar)
+IMAGES = os.path.join(os.environ.get('XDG_RUNTIME_DIR', '/tmp'), 'apogeo-portapapeles')
+KEEP = 30
+TEXT_TYPES = ['text/plain;charset=utf-8', 'UTF8_STRING', 'text/plain', 'TEXT', 'STRING']
+IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/bmp', 'image/gif']
+TERMINALS = ('ghostty', 'konsole', 'kitty', 'alacritty', 'foot', 'wezterm', 'terminal', 'xterm', 'yakuake', 'tilix',
+             'terminator', 'rio')
+
+EMOJI_DICTS = ['/usr/share/plasma/emoji/es.dict', '/usr/share/plasma/emoji/en.dict']
+# Las categorías de los diccionarios de Plasma (la 3, los tonos de piel sueltos, no se enseña)
+CATEGORIES = [(1, 'Caras', '😀'), (2, 'Personas', '👋'), (4, 'Animales y plantas', '🐱'), (5, 'Comida', '🍕'),
+              (6, 'Viajes y sitios', '✈️'), (7, 'Actividades', '⚽'), (8, 'Objetos', '💡'), (9, 'Símbolos', '💖'),
+              (10, 'Banderas', '🏳️')]
+SKIN_TONES = {chr(c) for c in range(0x1F3FB, 0x1F400)}
+
+
+def plain(text):
+    """En minúsculas y sin tildes (para buscar «corazon» y encontrar «corazón»)."""
+    return ''.join(c for c in unicodedata.normalize('NFD', text.lower()) if unicodedata.category(c) != 'Mn')
+
+
+def load_emojis():
+    """[{e, d, c, k}] (emoji, descripción, categoría, palabras para buscar) del diccionario de Plasma en español."""
+    import struct
+    import zlib
+    for path in EMOJI_DICTS:
+        try:
+            with open(path, 'rb') as f:
+                data = zlib.decompress(f.read()[4:])  # (qCompress: 4 bytes con el tamaño y luego zlib)
+        except (OSError, zlib.error):
+            continue
+        pos = 0
+
+        def u32():
+            nonlocal pos
+            pos += 4
+            return struct.unpack_from('<I', data, pos - 4)[0]
+
+        def text():
+            nonlocal pos
+            n = u32()
+            pos += n
+            return data[pos - n:pos].decode('utf-8', 'replace')
+        out = []
+        try:
+            for _ in range(u32()):
+                emoji, desc, cat = text(), text(), u32()
+                words = [text() for _ in range(u32())]
+                if cat in (0, 3) or SKIN_TONES & set(emoji):
+                    continue
+                out.append({'e': emoji, 'd': desc, 'c': cat, 'k': plain(' '.join([desc] + words))})
+        except struct.error:
+            pass
+        if out:
+            return out
+    return []
+
+
+def read_json(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(value, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def already_running():
+    """Si ya está en marcha, se le pide lo que toca (sin cargar Qt: así es instantáneo)."""
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        if not bus.name_has_owner(SERVICE):
+            return False
+        if '--fondo' not in sys.argv:
+            obj = bus.get_object(SERVICE, PATH)
+            (obj.Emojis if '--emojis' in sys.argv else obj.Abrir)(dbus_interface=IFACE)
+        return True
+    except dbus.DBusException:
+        return False
+
+
+def main():
+    if already_running():
+        return 0
+    os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
+    from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
+    from PyQt6.QtGui import QGuiApplication, QIcon, QImage
+    from PyQt6.QtQml import QQmlApplicationEngine
+    from apogeo_wayland import KEY_LEFTCTRL, KEY_LEFTSHIFT, KEY_V, Wayland
+
+    class Portapapeles(QObject):
+        abrir = pyqtSignal(str)   # «copiado» o «emojis»
+        itemsChanged = pyqtSignal()
+        found = pyqtSignal(dict)  # (lo copiado, del hilo de Wayland a este)
+
+        def __init__(self, wl):
+            super().__init__()
+            self.wl = wl
+            self._items = []        # [{id, texto, imagen, hora, fijado}], lo último primero
+            self.previous = ''      # la clase de la app que estaba delante
+            self.foreign = True     # lo que hay ahora en el portapapeles no está en la lista (una contraseña, nada…)
+            self.emojis = load_emojis()
+            self.uses = read_json(RECENT_EMOJIS, {})
+            for p in read_json(PINNED, []):
+                if p.get('imagen') and not os.path.exists(p['imagen']):
+                    continue
+                self._items.append({'id': p.get('id') or uuid.uuid4().hex, 'texto': p.get('texto', ''),
+                                    'imagen': p.get('imagen', ''), 'ancho': p.get('ancho', 0), 'alto': p.get('alto', 0),
+                                    'hora': p.get('hora', 0), 'fijado': True})
+            os.makedirs(IMAGES, mode=0o700, exist_ok=True)
+            self.found.connect(self.add)
+            wl.watch_clipboard(self.copied)
+
+        # ---------- Lo que copias ----------
+
+        def copied(self, types, read):
+            """(En el hilo de Wayland: se lee aquí, sin parar la ventana.)"""
+            if any('passwordManagerHint' in t for t in types):
+                self.foreign = True  # (una contraseña: ni se lee)
+                return
+            item = None
+            mime = next((t for t in TEXT_TYPES if t in types), None)
+            if mime:
+                raw = read(mime)
+                text = raw.decode('utf-8', 'replace') if mime != 'STRING' else raw.decode('latin-1')
+                if text.strip() and len(text) <= 200_000:
+                    item = {'texto': text, 'imagen': ''}
+            else:
+                mime = next((t for t in IMAGE_TYPES if t in types), None)
+                raw = read(mime) if mime else b''
+                image = QImage.fromData(raw) if raw else QImage()
+                if not image.isNull():
+                    iid = uuid.uuid4().hex
+                    path = os.path.join(IMAGES, iid + '.png')
+                    if image.save(path, 'PNG'):
+                        item = {'id': iid, 'texto': '', 'imagen': path, 'ancho': image.width(), 'alto': image.height()}
+            self.foreign = item is None
+            if item:
+                self.found.emit(item)
+
+        @pyqtSlot(dict)
+        def add(self, item):
+            same = next((i for i in self._items if item['texto'] and i['texto'] == item['texto']), None)
+            if same:  # (otra vez lo mismo: sube arriba)
+                self._items.remove(same)
+                same['hora'] = time.time()
+                self._items.insert(0, same)
+            else:
+                item.setdefault('id', uuid.uuid4().hex)
+                item.update(hora=time.time(), fijado=False)
+                self._items.insert(0, item)
+                loose = [i for i in self._items if not i['fijado']]
+                for old in loose[KEEP:]:
+                    self.forget(old)
+            self.itemsChanged.emit()
+
+        def forget(self, item):
+            self._items.remove(item)
+            if item['imagen'] and item['imagen'].startswith(IMAGES + '/'):
+                try:
+                    os.remove(item['imagen'])
+                except OSError:
+                    pass
+
+        def save_pinned(self):
+            write_json(PINNED, [{k: i.get(k, 0) for k in ('id', 'texto', 'imagen', 'ancho', 'alto', 'hora')}
+                                for i in self._items if i['fijado']])
+
+        def offer(self, item):
+            """Lo deja en el portapapeles, listo para pegar."""
+            if item['imagen']:
+                try:
+                    with open(item['imagen'], 'rb') as f:
+                        data = {'image/png': f.read()}
+                except OSError:
+                    return False
+            else:
+                raw = item['texto'].encode('utf-8')
+                data = {t: raw for t in TEXT_TYPES}
+            self.wl.set_clipboard(data)
+            return True
+
+        def paste(self):
+            """Ctrl+V donde estabas (cuando ya se ha ido la ventana y vuelve a estar delante tu app)."""
+            terminal = any(t in self.previous.lower() for t in TERMINALS)
+            QTimer.singleShot(180, lambda: self.wl.keys([KEY_LEFTCTRL, KEY_LEFTSHIFT, KEY_V] if terminal
+                                                        else [KEY_LEFTCTRL, KEY_V]))
+
+        @pyqtProperty('QVariantList', notify=itemsChanged)
+        def items(self):
+            return [{**i, 'imagen': QUrl.fromLocalFile(i['imagen']).toString() if i['imagen'] else ''}
+                    for i in self._items]
+
+        def find(self, iid):
+            return next((i for i in self._items if i['id'] == iid), None)
+
+        @pyqtSlot(str)
+        def pegar(self, iid):
+            item = self.find(iid)
+            if item and self.offer(item):
+                self._items.remove(item)
+                self._items.insert(0, item)
+                self.foreign = False
+                self.itemsChanged.emit()
+                self.paste()
+
+        @pyqtSlot(str)
+        def fijar(self, iid):
+            item = self.find(iid)
+            if not item:
+                return
+            item['fijado'] = not item['fijado']
+            # (una imagen fijada se guarda con lo tuyo; al soltarla vuelve a /run/user)
+            if item['imagen']:
+                import shutil
+                os.makedirs(PINNED_IMAGES, mode=0o700, exist_ok=True)
+                target = os.path.join(PINNED_IMAGES if item['fijado'] else IMAGES, os.path.basename(item['imagen']))
+                try:
+                    shutil.move(item['imagen'], target)
+                    item['imagen'] = target
+                except OSError:
+                    pass
+            self.save_pinned()
+            self.itemsChanged.emit()
+
+        @pyqtSlot(str)
+        def quitar(self, iid):
+            item = self.find(iid)
+            if not item:
+                return
+            pinned = item['fijado']
+            if pinned and item['imagen']:
+                try:
+                    os.remove(item['imagen'])
+                except OSError:
+                    pass
+            self.forget(item)
+            if pinned:
+                self.save_pinned()
+            self.itemsChanged.emit()
+
+        @pyqtSlot()
+        def vaciar(self):
+            """Todo menos lo fijado."""
+            for i in [i for i in self._items if not i['fijado']]:
+                self.forget(i)
+            self.itemsChanged.emit()
+
+        # ---------- Emojis ----------
+
+        @pyqtProperty('QVariantList', constant=True)
+        def categorias(self):
+            return [{'id': c, 'nombre': n, 'icono': e} for c, n, e in CATEGORIES]
+
+        @pyqtSlot(int, result='QVariantList')
+        def emojisDe(self, cat):
+            """Los de una categoría (0: los que más usas)."""
+            if cat == 0:
+                top = sorted(self.uses.items(), key=lambda kv: (-kv[1].get('n', 0), -kv[1].get('t', 0)))[:40]
+                known = {e['e']: e for e in self.emojis}
+                return [{'e': k, 'd': known[k]['d'] if k in known else ''} for k, _ in top]
+            return [{'e': e['e'], 'd': e['d']} for e in self.emojis if e['c'] == cat]
+
+        @pyqtSlot(str, result='QVariantList')
+        def buscarEmojis(self, text):
+            words = plain(text).split()
+            if not words:
+                return []
+            found = [e for e in self.emojis if all(w in e['k'] for w in words)]
+            # (los que usas y los que empiezan así, primero)
+            found.sort(key=lambda e: (-self.uses.get(e['e'], {}).get('n', 0), not plain(e['d']).startswith(words[0])))
+            return [{'e': e['e'], 'd': e['d']} for e in found[:80]]
+
+        @pyqtSlot(str)
+        def pegarEmoji(self, emoji):
+            use = self.uses.setdefault(emoji, {'n': 0, 't': 0})
+            use['n'] += 1
+            use['t'] = time.time()
+            if len(self.uses) > 200:  # (los menos usados se olvidan)
+                for k, _ in sorted(self.uses.items(), key=lambda kv: (kv[1]['n'], kv[1]['t']))[:len(self.uses) - 200]:
+                    del self.uses[k]
+            write_json(RECENT_EMOJIS, self.uses)
+            back = None if self.foreign or not self._items else self._items[0]
+            self.offer({'texto': emoji, 'imagen': ''})
+            self.paste()
+            # Luego, otra vez lo que tenías copiado
+            if back:
+                QTimer.singleShot(900, lambda: self.offer(back))
+
+    @pyqtClassInfo('D-Bus Interface', IFACE)
+    class Adaptor(QDBusAbstractAdaptor):
+        @pyqtSlot()
+        def Abrir(self):
+            self.parent().abrir.emit('copiado')
+
+        @pyqtSlot()
+        def Emojis(self):
+            self.parent().abrir.emit('emojis')
+
+        @pyqtSlot(str)
+        def Previa(self, cls):
+            self.parent().previous = cls
+
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Portapapeles de Apogeo')
+    app.setDesktopFileName('apogeo-portapapeles')
+    app.setWindowIcon(QIcon.fromTheme('apogeo'))
+    app.setQuitOnLastWindowClosed(False)
+    bus = QDBusConnection.sessionBus()
+    if not bus.registerService(SERVICE):
+        return 0  # otro se ha adelantado
+    wl = Wayland()
+    backend = Portapapeles(wl)
+    Adaptor(backend)
+    bus.registerObject(PATH, backend)
+
+    def listen():
+        try:
+            wl.run()
+        except Exception as e:  # (KWin se ha ido: systemd lo vuelve a arrancar)
+            print('Wayland:', e, file=sys.stderr)
+            os._exit(1)
+    import threading
+    threading.Thread(target=listen, daemon=True).start()
+
+    engine = QQmlApplicationEngine()
+    if os.environ.get('APOGEO_QML_DIR'):
+        engine.addImportPath(os.environ['APOGEO_QML_DIR'])
+    engine.rootContext().setContextProperty('portapapeles', backend)
+    engine.rootContext().setContextProperty('showAtStart',
+                                            '' if '--fondo' in sys.argv else 'emojis' if '--emojis' in sys.argv else 'copiado')
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

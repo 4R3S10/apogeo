@@ -3,6 +3,8 @@
     "fecha": "2026-10-29",
     "titulo": "29 de octubre",
     "cosas": [
+      {"icono": "copia", "titulo": "Lo que has copiado, a mano", "como": "Meta+V junto al ratón: lo último que copiaste (textos e imágenes). Intro lo pega y Ctrl+P lo fija para que no se borre al apagar."},
+      {"icono": "emoji", "titulo": "Emojis", "como": "Meta+. mientras escribes: busca en español («corazón», «fuego») o elige por pestañas. Los que más usas salen primero."},
       {"icono": "calendario", "titulo": "El mes, el tiempo y lo de hoy", "como": "Pulsa la hora de la isla: el calendario, el tiempo de tu ciudad (pulsa su nombre para cambiarla) y lo que tienes ese día."},
       {"icono": "reloj", "titulo": "Recordatorios y temporizadores", "como": "En esa misma tarjeta, «Recordatorio» o «Temporizador». Cuando llega la hora suena y sale un aviso con «Posponer 10 min», aunque estés jugando."},
       {"icono": "jugar", "titulo": "Tiempo jugado", "como": "En la consola, junto a cada juego, las horas que llevas (de Steam, de Epic y, en emuladores y PS5, las que cuenta Apogeo)."},
