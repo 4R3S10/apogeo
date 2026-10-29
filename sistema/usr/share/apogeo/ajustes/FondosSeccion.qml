@@ -122,6 +122,34 @@ Seccion {
     }
 
     Fila {
+        visible: (apogeo.settings.aspecto || {}).estilo === "fondo"
+        titulo: "Color de los animados"
+        detalle: "Los animados de este piso van de este color, y con ellos todo Apogeo mientras estás en él"
+        Row {
+            spacing: 8
+            Repeater {
+                model: apogeo.animatedColors
+                delegate: AbstractButton {
+                    id: sw
+                    required property var modelData
+                    readonly property bool on: (apogeo.settings.pisos[sec.fk].color || "") === modelData.valor
+                    width: 24; height: 24
+                    hoverEnabled: true
+                    onClicked: apogeo.set("pisos." + sec.fk + ".color", modelData.valor)
+                    ToolTip.visible: hovered
+                    ToolTip.text: modelData.nombre
+                    background: Rectangle {
+                        radius: 12
+                        color: modelData.valor || "#e0a9b4"
+                        border.width: sw.on ? 2 : 0
+                        border.color: Tema.texto
+                    }
+                }
+            }
+        }
+    }
+
+    Fila {
         titulo: "Con Aura"
         detalle: "Lo que pones en Aura va solo al piso en el que estás. Los vídeos van en bucle y sin sonido, y se paran si una ventana los tapa"
         ancha: true

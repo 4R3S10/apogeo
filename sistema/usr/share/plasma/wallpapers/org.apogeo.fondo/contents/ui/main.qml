@@ -23,6 +23,9 @@ WallpaperItem {
         return ["Jugar", "Navegar", "Estudiar"].indexOf(n) >= 0 ? n : "";
     }
     readonly property bool porPiso: root.configuration.PorPiso && floorName !== ""
+    // Los colores de este piso (Aspecto «Del fondo»: cada piso con los suyos), al momento: en Plasma, para todo
+    readonly property string floorKey: (porPiso ? floorName : String(root.configuration.Piso || "")).toLowerCase()
+    onFloorKeyChanged: Tema.piso = floorKey
     readonly property string estilo: porPiso ? root.configuration["Estilo" + floorName] : root.configuration.Estilo
     readonly property int kind: Math.max(0, styles.indexOf(estilo))
     readonly property string file: (porPiso ? root.configuration["Archivo" + floorName] : root.configuration.Archivo) || ""
@@ -151,5 +154,5 @@ WallpaperItem {
     }
     onFileChanged: show()
     onSeenChanged: if (videoFile(root.file)) { if (root.seen) video.play(); else video.pause(); }
-    Component.onCompleted: show()
+    Component.onCompleted: { Tema.piso = floorKey; show() }
 }

@@ -62,11 +62,23 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 
 ### Tu aspecto (Ajustes → Aspecto, «K2 con vista previa»)
 
-Lo de arriba es lo de serie. **De serie, Apogeo sigue a Ágape («Como Ágape»)**: lo que elijas en Ágape → Personalizar (sus
-colores, claro u oscuro, los colores del fondo, la letra, las esquinas, el cristal y la velocidad de las animaciones)
-cambia también Apogeo, al momento (`apogeo-pisos` vigila los ajustes de Ágape y solo los lee). Con Ágape como viene, es
-exactamente lo de arriba. En Ajustes → Aspecto también hay estilos propios de un clic (Apogeo, Medianoche, Bosque, Arena y
-Papel) y cada detalle a mano: el color, claro u oscuro (o según la hora: claro de 8:00 a 20:00), la letra, las esquinas
+**De serie, los colores salen del fondo («Del fondo»)**: cada piso coge los de su foto o su vídeo (`apogeo_paleta`: el
+tono que más se ve, con su viveza, y con él el acento, el fondo y la superficie oscuros, el texto y los colores de los
+animados, como Material You pero con la forma de Ágape). A los fondos animados de Apogeo les das tú el color (Ajustes →
+Fondos → «Color de los animados»; sin elegir, el rosa de siempre). Al cambiar de piso o de fondo cambia todo: lo de
+Apogeo en QML al momento y los temas de KDE un momento después (al acabar la animación). La ventana activa lleva un
+borde del color del piso (el efecto de esquinas redondeadas). Las apps de KDE ya abiertas se quedan con el color con el
+que se abrieron (Kvantum no cambia en vivo); las que abras cogen el del piso.
+- Los temas de KDE de cada piso se hacen una vez por colores (`ApogeoTuAspecto-<huella>`, en segundo plano) y al cambiar
+  de piso solo se ponen. Las carpetas usan el más parecido de los colores de los animados (hacer un tema de iconos
+  tarda).
+- `aspecto.json` lleva las fichas del piso en el que estás y, en `pisos`, las de los tres: el fondo de Plasma dice a
+  Tema en qué piso estás y todo lo de Plasma cambia sin esperar.
+
+Con «Como Ágape», lo que elijas en Ágape → Personalizar (sus colores, claro u oscuro, los colores del fondo, la letra, las
+esquinas, el cristal y la velocidad de las animaciones) cambia también Apogeo, al momento (`apogeo-pisos` vigila los
+ajustes de Ágape y solo los lee). En Ajustes → Aspecto también hay estilos propios de un clic (Apogeo, Medianoche, Bosque,
+Arena y Papel) y cada detalle a mano: el color, claro u oscuro (o según la hora: claro de 8:00 a 20:00), la letra, las esquinas
 (rectas, suaves o redondas), el cristal, el tamaño (letra e isla), las animaciones y dónde van la isla y la columna
 (abajo y a la derecha, abajo y a la izquierda, o arriba y a la derecha), con una vista en pequeño de cómo queda.
 - Las carpetas van del color de tu estilo (un tema de iconos por color, `ApogeoCarpetas-<color>`, que hereda de Papirus).

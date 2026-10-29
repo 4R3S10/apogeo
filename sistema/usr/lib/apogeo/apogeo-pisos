@@ -696,6 +696,7 @@ class Floors:
         self.wall_written = {}     # piso → lo último que se escribió de su fondo (para no reescribirlo)
         self.lock_written = None   # lo último que se escribió para la pantalla de bloqueo
         self.chosen = {}           # piso → el que elegiste a mano (si cambia, se ve ese aunque cambie solo)
+        self.colours_timer = None  # los colores del piso (Aspecto «Del fondo»): al acabar el cambio de piso
 
     def apply(self, index, force=False):
         if index == self.last and not force:
@@ -710,6 +711,7 @@ class Floors:
         self.quiet(st['silencio'] or not mine['avisos'], f['key'])
         self.light(st, f['key'])
         self.power(mine['energia'])
+        self.colours_later()
         if force:
             return
         if index not in self.visited:
@@ -743,9 +745,30 @@ class Floors:
         self.apply(self.last if self.last is not None else current_index(self.bus), force=True)
         st = ajustes.load()
         island(self.bus, st)
-        apply_look(st)
+        self.look(st)
         fluid_screen(st)
         carousel(st)
+
+    # ----- Los colores (Ajustes → Aspecto) -----
+
+    def floor_key(self):
+        return FLOORS[min(self.last or 0, len(FLOORS) - 1)]['key'] if self.last is not None else 'navegar'
+
+    def look(self, st=None, force=False):
+        """Tu aspecto en todo el sistema (si ha cambiado), con los colores del piso en el que estás."""
+        apply_look(st or ajustes.load(), self.floor_key(), dict(self.shown), force=force)
+
+    def colours_later(self):
+        """Con «Del fondo», los colores del piso al que llegas (o del fondo nuevo): un momento después, cuando ya ha
+        acabado la animación del cambio (y si pasas de largo con la rueda, solo los del piso en el que te quedas)."""
+        if self.colours_timer:
+            GLib.source_remove(self.colours_timer)
+        self.colours_timer = GLib.timeout_add(900, self._colours)
+
+    def _colours(self):
+        self.colours_timer = None
+        switch_look(ajustes.load(), self.floor_key(), dict(self.shown))
+        return False
 
     # ----- «Que cambie solo» -----
 
@@ -790,6 +813,7 @@ class Floors:
             self.rotate_timer = None
             return False
         self.wallpaper(self.pick_wallpaper(st, floor, advance=True), st['animar'], floor)
+        self.colours_later()
         return True
 
     def wallpaper(self, style, animate, floor):
@@ -949,17 +973,30 @@ def island(bus, st):
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 
 
-_look = {'ultimo': None}
+_look = {'ultimo': None, 'cerrojo': threading.Lock()}
 
 
-def apply_look(st, force=False):
+def apply_look(st, floor, shown, force=False):
     """Ajustes → Aspecto: solo si ha cambiado (genera temas y los pone: tarda un poco) y en segundo plano. Con «según la
-    hora», también al pasar de día a noche (lo mira el reloj de cada minuto)."""
-    want = json.dumps(aspecto.tokens(aspecto.settings_of(st)), sort_keys=True)
-    if not force and want == _look['ultimo']:
-        return
-    _look['ultimo'] = want
-    threading.Thread(target=lambda: aspecto.apply(st, log=log), daemon=True).start()
+    hora», también al pasar de día a noche (lo mira el reloj cada 10 minutos). Con «Del fondo», cuentan los colores de
+    los tres pisos (sacarlos de un fondo nuevo también tarda: por eso todo va en segundo plano y de uno en uno)."""
+    def work():
+        with _look['cerrojo']:
+            _t, per = aspecto.all_tokens(st, floor, shown)
+            want = json.dumps(per, sort_keys=True)
+            if not force and want == _look['ultimo']:
+                return
+            _look['ultimo'] = want
+            aspecto.apply(st, floor, shown, log=log)
+    threading.Thread(target=work, daemon=True).start()
+
+
+def switch_look(st, floor, shown):
+    """Los colores del piso en el que estás (cambio de piso o de fondo), en segundo plano."""
+    def work():
+        with _look['cerrojo']:
+            aspecto.switch(st, floor, shown, log=log)
+    threading.Thread(target=work, daemon=True).start()
 
 
 def light_effects():
@@ -1052,9 +1089,9 @@ def main():
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     welcome()
     # Tu aspecto (Ajustes → Aspecto) y, con «según la hora», el cambio de claro a oscuro (se mira cada 10 minutos)
-    apply_look(ajustes.load())
-    GLib.timeout_add_seconds(600, lambda: (apply_look(ajustes.load()), True)[-1])
     floors.apply(current_index(bus))
+    floors.look()
+    GLib.timeout_add_seconds(600, lambda: (floors.look(), True)[-1])
     GLib.timeout_add_seconds(3, floors.prepare_wallpapers)
     GLib.timeout_add_seconds(6, lambda: desktop_fill(bus))
     # Los ajustes: al guardarlos (de golpe, con un archivo nuevo) se aplican
@@ -1084,7 +1121,7 @@ def main():
         if agape_pending['id']:
             GLib.source_remove(agape_pending['id'])
         agape_pending['id'] = GLib.timeout_add(1500, lambda: (agape_pending.update(id=None),
-                                                              apply_look(ajustes.load()), False)[-1])
+                                                              floors.look(), False)[-1])
     agape_monitor.connect('changed', agape_changed)
     GLib.MainLoop().run()
 

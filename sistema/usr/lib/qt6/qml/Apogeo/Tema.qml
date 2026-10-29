@@ -4,13 +4,17 @@ import QtCore
 
 // Los colores, la letra y las medidas de Apogeo para todo lo hecho en QML. Lo de serie es Ágape (tema Berenjena
 // oscuro); si cambias el aspecto (Ajustes → Aspecto), apogeo-pisos deja tus fichas en ~/.config/apogeo/aspecto.json y
-// aquí se leen (y se vuelven a mirar cada pocos segundos: el cambio se ve solo, sin reiniciar nada).
+// aquí se leen (y se vuelven a mirar cada segundo: el cambio se ve solo, sin reiniciar nada).
+// Con «Del fondo» cada piso tiene sus colores: las fichas son las del piso en el que estás y en «pisos» van las de los
+// tres. Quien sabe en qué piso estás (el fondo de Plasma) pone «piso» y así sus colores cambian al momento.
 QtObject {
     id: tema
 
     // ---------- Tus fichas (o las de serie) ----------
     property var f: ({})
-    function c(k, d) { return f[k] !== undefined ? f[k] : d }
+    property string piso: ""
+    readonly property var _p: piso !== "" && f.pisos && f.pisos[piso] ? f.pisos[piso] : null
+    function c(k, d) { return _p && _p[k] !== undefined ? _p[k] : (f[k] !== undefined ? f[k] : d) }
     readonly property bool claro: !!c("claro", false)
     readonly property color _texto: c("texto", "#f1e6ea")
     function tinte(a) { return Qt.rgba(_texto.r, _texto.g, _texto.b, a) }
@@ -58,7 +62,7 @@ QtObject {
         try { x.send(); } catch (e) {}
     }
     Component.onCompleted: leer()
-    property Timer vigila: Timer { interval: 3000; running: true; repeat: true; onTriggered: tema.leer() }
+    property Timer vigila: Timer { interval: 1000; running: true; repeat: true; onTriggered: tema.leer() }
 
     // El tiempo de los fondos animados (a 30 imágenes por segundo como mucho, como Ágape). Quien lo usa pone «animar».
     property bool animar: false

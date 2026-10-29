@@ -24,8 +24,8 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
-VERSION = 4  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado); 3: Navegar ya no abre Ágape solo;
-# 4: el aspecto pasa a «Como Ágape» (si no lo habías cambiado)
+VERSION = 5  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado); 3: Navegar ya no abre Ágape solo;
+# 4: el aspecto pasa a «Como Ágape» (si no lo habías cambiado); 5: y luego a «Del fondo» (igual)
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
 STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
 # Fondos tuyos (los de Aura): imágenes y vídeos en alta calidad
@@ -38,15 +38,19 @@ WIDTHS = {'mitad': '50%', 'dostercios': '66.667%', 'entera': '100%'}  # (en este
 EVERY = {'15min': 15 * 60, 'hora': 3600, 'dia': 86400, 'piso': 0}  # «que cambie solo»; «piso»: al entrar en el piso
 FOLDER_DEFAULT = '~/Imágenes/Fondos'
 import apogeo_aspecto as _aspecto  # noqa: E402
+import apogeo_paleta as _paleta  # noqa: E402
 
 DEFAULTS = {
     'pisos': {
         # Un solo rosa (el de Ágape) en todo; cada piso con su fondo animado. Energía: nunca «rendimiento».
-        # «carrusel»: las ventanas en columnas que se deslizan, como en niri (Karousel)
+        # «carrusel»: las ventanas en columnas que se deslizan, como en niri (Karousel). «color»: el de su fondo animado
+        # (con el aspecto «Del fondo»; '' = el rosa de Apogeo; los de apogeo_paleta.COLORS)
         'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop'],
-                  'carrusel': False},
-        'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False},
-        'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': [], 'carrusel': False},
+                  'carrusel': False, 'color': ''},
+        'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False,
+                    'color': ''},
+        'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': [], 'carrusel': False,
+                     'color': ''},
     },
     # El carrusel, igual en todos los pisos que lo tienen: los huecos entre ventanas (px) y los anchos que recorre
     # Meta+Alt+R
@@ -111,6 +115,8 @@ def load():
     old = dict(_aspecto.DEFAULT, estilo='apogeo')
     if raw.get('version', 1) < 4 and all(st['aspecto'].get(k) == v for k, v in old.items()):
         st['aspecto']['estilo'] = 'agape'  # (si no lo habías cambiado)
+    if raw.get('version', 1) < 5 and all(st['aspecto'].get(k) == v for k, v in dict(old, estilo='agape').items()):
+        st['aspecto']['estilo'] = 'fondo'
     return st
 
 
@@ -124,6 +130,8 @@ def valid(st):
             f['energia'] = 'balanced'
         f['avisos'] = bool(f.get('avisos'))
         f['carrusel'] = bool(f.get('carrusel'))
+        if f.get('color') not in _paleta.COLORS:
+            f['color'] = ''
         f['apps'] = [a for a in f.get('apps', []) if isinstance(a, str) and a.endswith('.desktop')]
     if st.get('fps') not in FPS_CHOICES:
         st['fps'] = 60

@@ -5,19 +5,21 @@ import Apogeo
 
 // Ajustes → Aspecto («K2 con vista previa»): arriba, los estilos completos de un clic (Apogeo es el de siempre y viene
 // puesto); en medio, cómo queda (en pequeño, al momento); debajo, cada detalle a mano. Todo se aplica solo en todo el
-// sistema (lo hace apogeo-pisos con apogeo_aspecto) y «Volver a lo de serie» lo deja como venía. De serie, «Como Ágape»:
-// los colores y las formas los manda Ágape (Personalizar) y aquí solo quedan el tamaño y dónde van la isla y la columna.
+// sistema (lo hace apogeo-pisos con apogeo_aspecto) y «Volver a lo de serie» lo deja como venía. De serie, «Del fondo»:
+// cada piso con los colores de su fondo (el color de un fondo animado se elige en Fondos). Con «Como Ágape», los colores
+// y las formas los manda Ágape (Personalizar) y aquí solo quedan el tamaño y dónde van la isla y la columna.
 Seccion {
     id: sec
     property string palabras: "aspecto tema estilo color colores acento claro oscuro letra fuente esquinas redondas cristal transparencia tamaño animaciones isla columna posicion personalizar"
     titulo: "Aspecto"
-    intro: "Los colores, la letra y las formas de todo Apogeo. De serie, Apogeo sigue el aspecto de Ágape: lo que cambies en Ágape → Personalizar cambia aquí solo."
+    intro: "Los colores, la letra y las formas de todo Apogeo. De serie, los colores salen del fondo: cada piso con los de su fondo, y al cambiar de fondo cambian solos."
 
     readonly property var a: apogeo.settings.aspecto || ({})
     readonly property var t: apogeo.lookTokens(a)          // las fichas de cómo queda (las mismas que se aplican)
     readonly property var estilos: apogeo.lookStyles
-    readonly property var orden: ["agape", "apogeo", "medianoche", "bosque", "arena", "papel"]
+    readonly property var orden: ["fondo", "agape", "apogeo", "medianoche", "bosque", "arena", "papel"]
     readonly property bool sigueAgape: a.estilo === "agape"
+    readonly property bool sigueFondo: a.estilo === "fondo"
     function put(k, v) { apogeo.set("aspecto." + k, v) }
 
     // ---------- Los estilos ----------
@@ -151,7 +153,12 @@ Seccion {
         Boton { text: "Abrir Ágape"; icono: "navegar"; onClicked: apogeo.open("agape") }
     }
     Fila {
-        enabled: !sec.sigueAgape
+        visible: sec.sigueFondo
+        titulo: "Del fondo"
+        detalle: "Cada piso coge los colores de su foto o su vídeo. A los fondos animados les das tú el color, en Fondos"
+    }
+    Fila {
+        enabled: !sec.sigueAgape && !sec.sigueFondo
         opacity: enabled ? 1 : 0.45
         titulo: "Color"
         detalle: sec.a.acento ? "El tuyo" : "El del estilo"

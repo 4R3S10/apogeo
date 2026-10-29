@@ -3,6 +3,7 @@
     "fecha": "2026-10-29",
     "titulo": "29 de octubre",
     "cosas": [
+      {"icono": "aspecto", "titulo": "Colores del fondo", "como": "Cada piso coge los colores de su fondo: la isla, Ajustes, la consola, las ventanas y las carpetas. La ventana activa lleva un borde de ese color. A los fondos animados les das tú el color en Ajustes → Fondos."},
       {"icono": "apps", "titulo": "Tienda de Apogeo", "como": "Busca «Tienda» en el menú: destacados, lo más usado y cada grupo (Jugar, Estudiar, Internet, Crear). Instala del sistema (con tu contraseña) o de Flathub. Sustituye a Warehouse."},
       {"icono": "imagen", "titulo": "Fondos con Aura", "como": "Ajustes → Fondos → «Elegir con Aura»: fondos de Wallhaven, vídeos de MotionBGS y la imagen del día de Bing. Lo que eliges va solo al piso en el que estás. También con el botón derecho en el escritorio → «Aura…»."},
       {"icono": "ventana", "titulo": "Ventanas en carrusel", "como": "Ajustes → Pisos → «Ventanas en carrusel (como niri)»: en ese piso las ventanas van en columnas que se deslizan. Meta+Alt+← → para ir de una a otra y Meta+Alt+R para cambiar el ancho."},
