@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Capturas de Apogeo
+Comment=Captura una zona, una ventana o la pantalla
+Exec=/usr/lib/apogeo/apogeo-captura
+Icon=apogeo
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Shift+S,Print

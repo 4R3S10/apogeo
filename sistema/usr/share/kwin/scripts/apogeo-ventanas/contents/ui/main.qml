@@ -19,6 +19,7 @@ import Apogeo
 //  - La rejilla: al llevar una ventana arriba, sus huecos (Rejilla.qml).
 //  - El portapapeles y los emojis (apogeo-portapapeles) salen junto al ratón, encima de todo, y se les dice qué app
 //    estaba delante (en un terminal se pega con Ctrl+Mayús+V).
+//  - La miniatura de una captura (apogeo-captura) va abajo a la derecha, encima de todo.
 Item {
     id: root
     property var music: null
@@ -109,6 +110,7 @@ Item {
     function added(w) {
         const cls = (w.resourceClass || "") + " " + (w.desktopFileName || "");
         if (cls.indexOf("apogeo-portapapeles") >= 0) { clipboard(w); return; }
+        if (cls.indexOf("apogeo-captura") >= 0 && w.caption === "Miniatura de la captura") { thumbnail(w); return; }
         watch(w);
         if (cls.indexOf("apogeo-resumen") >= 0) summary(w);
         if (cls.indexOf("apogeo-consola") >= 0 && w.normalWindow) {
@@ -165,6 +167,19 @@ Item {
         const y = p.y + g.height - 22 <= area.y + area.height ? p.y - 8 : p.y - g.height + 8;
         w.frameGeometry = Qt.rect(x, Math.max(area.y, Math.min(area.y + area.height - g.height, y)), g.width, g.height);
         Workspace.activeWindow = w;
+    }
+    function thumbnail(w) {
+        w.onAllDesktops = true;
+        w.keepAbove = true;
+        w.skipTaskbar = true;
+        w.skipSwitcher = true;
+        w.skipPager = true;
+        // abajo a la derecha, encima de la isla (o arriba, si la isla va arriba: Ajustes → Aspecto)
+        const area = Workspace.clientArea(KWin.MaximizeArea, Workspace.activeScreen, Workspace.currentDesktop);
+        const g = w.frameGeometry;
+        const x = area.x + area.width - g.width - 4;
+        const y = Tema.posicion === "arriba-dcha" ? area.y + 60 : area.y + area.height - g.height - 60;
+        w.frameGeometry = Qt.rect(x, y, g.width, g.height);
     }
     DBusCall {
         id: previousCall

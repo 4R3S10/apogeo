@@ -1,0 +1,357 @@
+#!/usr/bin/python3
+"""
+Las capturas de Apogeo («C1 + C3»), con Meta+Mayús+S o Impr Pant.
+
+La pantalla se congela y se oscurece; arriba eliges cómo: Zona (arrastrar), Ventana (pasar el ratón y clic), Pantalla o
+⏱ 3 s (la vuelve a congelar a los 3 segundos). Debajo de lo elegido salen sus botones: Copiar (Intro), Guardar como…,
+✎ Dibujar (flechas, recuadros, a mano y tapar) y Sacar texto (tesseract, en español e inglés). Al acabar se copia sola
+(en el portapapeles de Apogeo, que la guarda en lo copiado) y se guarda en Imágenes/Capturas; abajo a la derecha sale
+la miniatura unos segundos: Editar, la carpeta o arrastrarla a un chat.
+
+La foto la saca KWin (org.kde.KWin.ScreenShot2, sin preguntar a las apps de fuera de la caja de arena) antes de
+cargar nada más, para que salga justo lo que había al pulsar.
+
+  apogeo-captura                 una captura nueva
+  apogeo-captura --editar RUTA   dibujar encima de una imagen
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+
+SERVICE, PATH, IFACE = 'org.apogeo.Captura', '/Captura', 'org.apogeo.Captura'
+QML = os.environ.get('APOGEO_CAPTURA_QML', '/usr/share/apogeo/captura/Captura.qml')
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+FORMAT_RGB32 = 4  # (QImage::Format_RGB32, por si KWin no dice cuál)
+
+
+def grab():
+    """(píxeles, ancho, alto, bytes por fila, formato, escala) de la pantalla donde está el ratón, o None."""
+    import dbus
+    r, w = os.pipe2(os.O_CLOEXEC)
+    try:
+        kwin = dbus.SessionBus().get_object('org.kde.KWin', '/org/kde/KWin/ScreenShot2')
+        res = kwin.CaptureActiveScreen({'native-resolution': True, 'include-cursor': False}, dbus.types.UnixFd(w),
+                                       dbus_interface='org.kde.KWin.ScreenShot2', timeout=15)
+    except dbus.DBusException as e:
+        print('captura:', e.get_dbus_message(), file=sys.stderr)
+        os.close(r)
+        return None
+    finally:
+        os.close(w)
+    chunks = []
+    with os.fdopen(r, 'rb') as f:
+        while chunk := f.read(1 << 20):
+            chunks.append(chunk)
+    data = b''.join(chunks)
+    width, height, stride = int(res.get('width', 0)), int(res.get('height', 0)), int(res.get('stride', 0))
+    if not width or len(data) < stride * height:
+        return None
+    return data, width, height, stride, int(res.get('format', FORMAT_RGB32)), float(res.get('scale', 1.0))
+
+
+def current_windows():
+    """Las ventanas que se ven en este piso, en fracciones de la pantalla ([{x, y, w, h, titulo, activa}])."""
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        props = dbus.Interface(bus.get_object('org.kde.KWin', '/VirtualDesktopManager'), 'org.freedesktop.DBus.Properties')
+        current = str(props.Get('org.kde.KWin.VirtualDesktopManager', 'current'))
+        floor = next((str(d[2]) for d in props.Get('org.kde.KWin.VirtualDesktopManager', 'desktops') if str(d[1]) == current), '')
+        wins = json.loads(str(bus.get_object('org.apogeo.Datos', '/Datos').Ventanas(dbus_interface='org.apogeo.Datos')) or '[]')
+    except (dbus.DBusException, ValueError):
+        return []
+    return [{'x': w['x'], 'y': w['y'], 'w': w['w'], 'h': w['h'], 'titulo': w.get('titulo', ''), 'activa': w.get('activa', False)}
+            for w in wins if not w.get('min') and ('*' in w.get('pisos', []) or floor in w.get('pisos', []))]
+
+
+def pictures_dir():
+    try:
+        out = subprocess.run(['xdg-user-dir', 'PICTURES'], capture_output=True, text=True, timeout=3).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        out = ''
+    return os.path.join(out or os.path.expanduser('~/Imágenes'), 'Capturas')
+
+
+def ocr_languages():
+    have = set()
+    for d in ('/usr/share/tessdata', '/usr/share/tesseract-ocr/5/tessdata'):
+        try:
+            have |= {f[:-12] for f in os.listdir(d) if f.endswith('.traineddata')}
+        except OSError:
+            pass
+    return '+'.join(l for l in ('spa', 'eng') if l in have) or 'eng'
+
+
+def already_running():
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        if not bus.name_has_owner(SERVICE):
+            return False
+        obj = bus.get_object(SERVICE, PATH)
+        if '--editar' in sys.argv:
+            obj.Editar(sys.argv[sys.argv.index('--editar') + 1], dbus_interface=IFACE)
+        else:
+            obj.Nueva(dbus_interface=IFACE)
+        return True
+    except (dbus.DBusException, IndexError):
+        return False
+
+
+def main():
+    if already_running():
+        return 0
+    editing = sys.argv[sys.argv.index('--editar') + 1] if '--editar' in sys.argv[:-1] else ''
+    shot = None if editing else grab()  # (lo primero: lo que había al pulsar)
+    if not editing and not shot:
+        subprocess.run(['notify-send', '-a', 'Capturas', '-i', 'apogeo', 'No se ha podido hacer la captura',
+                        'KWin no ha dado la imagen de la pantalla.'], check=False)
+        return 1
+
+    os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
+    import threading
+    import dbus
+    from PyQt6.QtCore import QObject, QRect, Qt, QUrl, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
+    from PyQt6.QtGui import QGuiApplication, QIcon, QImage
+    from PyQt6.QtQml import QQmlApplicationEngine
+    from PyQt6.QtQuick import QQuickImageProvider
+
+    class Frozen(QQuickImageProvider):
+        """image://captura/<n>: la pantalla congelada (o la imagen que se edita)."""
+
+        def __init__(self):
+            super().__init__(QQuickImageProvider.ImageType.Image)
+            self.image = QImage()
+
+        def requestImage(self, _id, _requested):
+            return self.image, self.image.size()
+
+    class Captura(QObject):
+        nueva = pyqtSignal()                  # otra captura (la pantalla ya congelada)
+        pedida = pyqtSignal()                 # Meta+Mayús+S otra vez, con esto ya abierto
+        sinGuardar = pyqtSignal()             # «Guardar como…» cancelado
+        editar = pyqtSignal()                 # dibujar encima de la imagen de «editada»
+        hecha = pyqtSignal(str)               # guardada (ruta): la miniatura
+        texto = pyqtSignal(str)               # el texto que se ha sacado
+        changed = pyqtSignal()
+
+        def __init__(self, provider):
+            super().__init__()
+            self.provider = provider
+            self._serial = 0
+            self._scale = 1.0
+            self._windows = []
+            self._edited = ''
+            self._langs = ocr_languages()
+            self.chosen.connect(self.save_chosen)
+
+        def freeze(self, shot):
+            data, width, height, stride, fmt, scale = shot
+            self.provider.image = QImage(data, width, height, stride, QImage.Format(fmt)).copy()
+            self._scale = scale or 1.0
+            self._windows = current_windows()
+            self._serial += 1
+            self.changed.emit()
+
+        def load(self, path):
+            image = QImage(path)
+            if image.isNull():
+                return False
+            self.provider.image = image
+            self._scale = 1.0
+            self._edited = path
+            self._serial += 1
+            self.changed.emit()
+            return True
+
+        @pyqtProperty(int, notify=changed)
+        def serial(self):
+            return self._serial
+
+        @pyqtProperty(float, notify=changed)
+        def escala(self):
+            return self._scale
+
+        @pyqtProperty(int, notify=changed)
+        def ancho(self):
+            return self.provider.image.width()
+
+        @pyqtProperty(int, notify=changed)
+        def alto(self):
+            return self.provider.image.height()
+
+        @pyqtProperty('QVariantList', notify=changed)
+        def ventanas(self):
+            return self._windows
+
+        @pyqtProperty(str, notify=changed)
+        def editada(self):
+            return self._edited
+
+        def crop(self, x, y, w, h):
+            """(en píxeles de la imagen)"""
+            return self.provider.image.copy(QRect(round(x), round(y), max(1, round(w)), max(1, round(h))))
+
+        @pyqtSlot(result=str)
+        def ruta(self):
+            """Dónde se guarda la siguiente: Imágenes/Capturas/Captura 2026-10-29 18.40.12.png"""
+            folder = pictures_dir()
+            os.makedirs(folder, exist_ok=True)
+            base = os.path.join(folder, time.strftime('Captura %Y-%m-%d %H.%M.%S'))
+            path, n = base + '.png', 2
+            while os.path.exists(path):
+                path, n = f'{base} ({n}).png', n + 1
+            return path
+
+        @pyqtSlot(float, float, float, float, str, result=str)
+        def guardar(self, x, y, w, h, path):
+            """Lo elegido, a un archivo (y al portapapeles). Devuelve la ruta ('' si no se pudo)."""
+            path = path or self.ruta()
+            if not self.crop(x, y, w, h).save(path, 'PNG'):
+                return ''
+            self.lista(path)
+            return path
+
+        @pyqtSlot(float, float, float, float)
+        def guardarComo(self, x, y, w, h):
+            """El diálogo de guardar de KDE (kdialog); al elegir, como guardar()."""
+            suggested = self.ruta()
+
+            def ask():
+                try:
+                    out = subprocess.run(['kdialog', '--title', 'Guardar la captura', '--getsavefilename', suggested,
+                                          'Imagen PNG (*.png)'], capture_output=True, text=True).stdout.strip()
+                except OSError:
+                    out = ''
+                self.chosen.emit(out, [x, y, w, h])
+            threading.Thread(target=ask, daemon=True).start()
+
+        chosen = pyqtSignal(str, list)
+
+        @pyqtSlot(str, list)
+        def save_chosen(self, path, rect):
+            if not path:
+                self.sinGuardar.emit()
+                return
+            if not path.lower().endswith('.png'):
+                path += '.png'
+            if not self.guardar(*rect, path):
+                self.sinGuardar.emit()
+
+        @pyqtSlot(str)
+        def lista(self, path):
+            """Ya está en el archivo (también al acabar de dibujar): al portapapeles y la miniatura."""
+            self.copy_image(path)
+            self._edited = ''
+            self.hecha.emit(path)
+
+        def copy_image(self, path):
+            try:
+                dbus.SessionBus().get_object('org.apogeo.Portapapeles', '/Portapapeles').CopiarImagen(
+                    path, dbus_interface='org.apogeo.Portapapeles')
+            except dbus.DBusException:  # (sin el portapapeles de Apogeo, el de Qt: vale mientras esto siga abierto)
+                QGuiApplication.clipboard().setImage(QImage(path))
+
+        @pyqtSlot(float, float, float, float)
+        def sacarTexto(self, x, y, w, h):
+            """El texto de lo elegido (en segundo plano): contesta con «texto» y lo copia."""
+            image = self.crop(x, y, w, h)
+            # (más grande se lee mejor)
+            if image.width() < 1600:
+                image = image.scaledToWidth(image.width() * 2, Qt.TransformationMode.SmoothTransformation)
+            tmp = os.path.join(os.environ.get('XDG_RUNTIME_DIR', '/tmp'), f'apogeo-captura-{os.getpid()}.png')
+            image.save(tmp, 'PNG')
+
+            def run():
+                try:
+                    out = subprocess.run(['tesseract', tmp, '-', '-l', self._langs, '--psm', '3'],
+                                         capture_output=True, text=True, timeout=60).stdout
+                except (OSError, subprocess.SubprocessError):
+                    out = ''
+                finally:
+                    try:
+                        os.remove(tmp)
+                    except OSError:
+                        pass
+                text = '\n'.join(l.rstrip() for l in out.strip().splitlines())
+                while '\n\n\n' in text:
+                    text = text.replace('\n\n\n', '\n\n')
+                self.texto.emit(text)
+            threading.Thread(target=run, daemon=True).start()
+
+        @pyqtSlot(str)
+        def copiarTexto(self, text):
+            try:
+                dbus.SessionBus().get_object('org.apogeo.Portapapeles', '/Portapapeles').CopiarTexto(
+                    text, dbus_interface='org.apogeo.Portapapeles')
+            except dbus.DBusException:
+                QGuiApplication.clipboard().setText(text)
+
+        @pyqtSlot()
+        def otraVez(self):
+            """⏱ 3 s: la pantalla otra vez (la ventana ya se ha escondido)."""
+            shot = grab()
+            if shot:
+                self.freeze(shot)
+            self.nueva.emit()
+
+        @pyqtSlot(str)
+        def carpeta(self, path):
+            subprocess.Popen(['dbus-send', '--session', '--dest=org.freedesktop.FileManager1', '--type=method_call',
+                              '/org/freedesktop/FileManager1', 'org.freedesktop.FileManager1.ShowItems',
+                              f'array:string:{QUrl.fromLocalFile(path).toString()}', 'string:'],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        @pyqtSlot(str)
+        def editarArchivo(self, path):
+            if self.load(path):
+                self.editar.emit()
+
+        @pyqtSlot()
+        def salir(self):
+            QGuiApplication.quit()
+
+    @pyqtClassInfo('D-Bus Interface', IFACE)
+    class Adaptor(QDBusAbstractAdaptor):
+        @pyqtSlot()
+        def Nueva(self):
+            self.parent().pedida.emit()  # (la ventana decide: si ya está eligiendo, nada; si no, otra foto)
+
+        @pyqtSlot(str)
+        def Editar(self, path):
+            self.parent().editarArchivo(path)
+
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Capturas de Apogeo')
+    app.setDesktopFileName('apogeo-captura')
+    app.setWindowIcon(QIcon.fromTheme('apogeo'))
+    app.setQuitOnLastWindowClosed(False)
+    provider = Frozen()
+    backend = Captura(provider)
+    if editing:
+        if not backend.load(editing):
+            return 1
+    else:
+        backend.freeze(shot)
+    bus = QDBusConnection.sessionBus()
+    if bus.registerService(SERVICE):
+        Adaptor(backend)
+        bus.registerObject(PATH, backend)
+
+    engine = QQmlApplicationEngine()
+    if os.environ.get('APOGEO_QML_DIR'):
+        engine.addImportPath(os.environ['APOGEO_QML_DIR'])
+    engine.addImageProvider('captura', provider)
+    engine.rootContext().setContextProperty('captura', backend)
+    engine.rootContext().setContextProperty('editarAlEmpezar', bool(editing))
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

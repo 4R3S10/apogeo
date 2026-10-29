@@ -29,6 +29,7 @@ package_apogeo() {
     kwin-effect-rounded-corners                               # ventanas con las esquinas redondeadas
     qt6-multimedia qt6-multimedia-ffmpeg xdg-user-dirs        # fondos de vídeo y la carpeta de imágenes
     steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
+    tesseract tesseract-data-spa tesseract-data-eng           # capturas: sacar el texto de una imagen
   )
   install=apogeo.install
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"
@@ -81,7 +82,7 @@ package_apogeo() {
 package_apogeo-programas() {
   pkgdesc='Apogeo: los programas de serie'
   depends=(
-    flameshot spotify-launcher discord                              # capturas, música y chat
+    spotify-launcher discord                                        # música y chat
     ghostty starship fastfetch ttf-jetbrains-mono-nerd flatpak      # la terminal de Apogeo y Flathub
     mangohud lib32-mangohud gamemode lib32-gamemode protonplus  # juegos
     obs-studio vlc easyeffects qbittorrent                          # grabar, vídeos, sonido y descargas

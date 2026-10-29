@@ -14,7 +14,8 @@ momento.
   apogeo-portapapeles --emojis   enseña los emojis
   apogeo-portapapeles --fondo    en segundo plano, sin enseñar nada (apogeo-portapapeles.service)
 D-Bus: org.apogeo.Portapapeles /Portapapeles org.apogeo.Portapapeles.{Abrir,Emojis}; Previa(clase) se lo dice la
-ventana de KWin (apogeo-ventanas): la app que estaba delante (para saber si es un terminal).
+ventana de KWin (apogeo-ventanas): la app que estaba delante (para saber si es un terminal). CopiarImagen(ruta) y
+CopiarTexto(texto): lo que copian las capturas.
 """
 import json
 import os
@@ -236,6 +237,12 @@ def main():
         def find(self, iid):
             return next((i for i in self._items if i['id'] == iid), None)
 
+        def copy_from(self, item):
+            """Lo que otra parte de Apogeo copia (las capturas): a lo copiado y al portapapeles."""
+            if self.offer(item):
+                self.foreign = False
+                self.add(item)
+
         @pyqtSlot(str)
         def pegar(self, iid):
             item = self.find(iid)
@@ -342,6 +349,21 @@ def main():
         @pyqtSlot(str)
         def Previa(self, cls):
             self.parent().previous = cls
+
+        @pyqtSlot(str)
+        def CopiarImagen(self, path):
+            image = QImage(path)
+            if image.isNull():
+                return
+            iid = uuid.uuid4().hex
+            copy = os.path.join(IMAGES, iid + '.png')
+            if image.save(copy, 'PNG'):
+                self.parent().copy_from({'id': iid, 'texto': '', 'imagen': copy, 'ancho': image.width(), 'alto': image.height()})
+
+        @pyqtSlot(str)
+        def CopiarTexto(self, text):
+            if text.strip():
+                self.parent().copy_from({'texto': text, 'imagen': ''})
 
     app = QGuiApplication(sys.argv)
     app.setApplicationName('Portapapeles de Apogeo')

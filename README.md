@@ -96,7 +96,7 @@ tus apps (Discord, Steam…).
 ## Programas de serie
 
 Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
-- **Diario:** Flameshot (Impr Pant), Spotify (`spotify-launcher`, que baja el oficial) y Discord.
+- **Diario:** Spotify (`spotify-launcher`, que baja el oficial) y Discord (las capturas son de Apogeo: Impr Pant).
 - **Juegos:** MangoHud, GameMode y ProtonPlus.
 - **Multimedia:** OBS Studio, VLC, EasyEffects y qBittorrent.
 - **Utilidades:** LocalSend, KeePassXC, Obsidian y CoolerControl.
@@ -239,6 +239,13 @@ delante (que enseña la suya) ni con algo a pantalla completa.
   tipo; los que más usas salen primero. Se pega donde escribías y luego vuelve al portapapeles lo que tenías.
   Los dos son `apogeo-portapapeles` (servicio de cada sesión) y `sistema/usr/share/apogeo/portapapeles/`; hablan con
   KWin por Wayland sin librerías (`apogeo_wayland.py`: ext-data-control para el portapapeles y fake-input para pegar).
+- **Capturas (Meta+Mayús+S o Impr Pant, «C1 + C3»):** la pantalla se congela y se oscurece; arriba eliges Zona
+  (arrastrar), Ventana (pulsar una), Pantalla o ⏱ 3 s (←/→ también cambian; Intro sin elegir nada: toda la pantalla, o
+  la ventana de delante). Debajo de lo elegido salen sus botones: Copiar (Intro), Guardar como…, Dibujar (flecha,
+  recuadro, a mano y tapar, en cuatro colores, Ctrl+Z deshace) y Sacar texto (tesseract, español e inglés: lo copia).
+  Al acabar se copia sola (y queda en lo copiado de Meta+V), se guarda en Imágenes/Capturas y sale una miniatura abajo
+  a la derecha unos segundos: Editar, la carpeta o arrastrarla a un chat. La foto la da KWin
+  (`org.kde.KWin.ScreenShot2`) al pulsar, antes de cargar nada. `apogeo-captura` y `sistema/usr/share/apogeo/captura/`.
 - **Pantalla de apagar («A1 · La isla se abre»):** la isla de abajo crece y se convierte en el menú: tu foto, desde
   cuándo está encendido, Apagar, Reiniciar, Reposo, Ir a Windows (si hay Windows escondido), Salir y Bloquear; cuántas
   apps se cierran (Ágape guarda sus pestañas) y **«Actualizar al apagar»** si hay actualizaciones (las instala el
@@ -249,10 +256,11 @@ delante (que enseña la suya) ni con algo a pantalla completa.
 - **Menú de arranque:** no sale; mantén pulsada una tecla al encender para verlo (con los colores de Apogeo).
 - **Programas repetidos y apps de CachyOS, fuera** (una vez, después de actualizar: `apogeo-limpieza`): la bienvenida,
   el instalador de paquetes, el gestor de núcleos, scx-manager, el actualizador y Shelly; Konsole y Alacritty (se queda
-  Ghostty), Spectacle (Flameshot), Haruna y mpv (VLC), Firefox (Ágape), btop, el Monitor del sistema y Filelight
+  Ghostty), Spectacle y Flameshot (las capturas de Apogeo), Haruna y mpv (VLC), Firefox (Ágape), btop, el Monitor del sistema y Filelight
   (Mission Center), vim, micro y la zsh de CachyOS (Kate y fish; zsh se queda si alguna cuenta entra con ella).
   Si luego instalas alguno a mano, se queda. En una segunda tanda, KDE Connect (gastaba memoria y red sin usarse); en una tercera, Stacer (lo hace
-  Mission Center) y VirtualBox (no hace falta en el PC y su módulo frenaba las actualizaciones del núcleo). Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
+  Mission Center) y VirtualBox (no hace falta en el PC y su módulo frenaba las actualizaciones del núcleo); en una
+  quinta, Flameshot. Lo que no son apps (herramientas de Qt, Avahi, cámaras…) va fuera del menú.
   En lugar del actualizador, un aviso de Apogeo cuando hay actualizaciones (uno al día como mucho; en Jugar y Estudiar
   se guarda para luego).
 
