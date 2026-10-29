@@ -115,6 +115,8 @@ def settings_of(st):
     a.update({k: v for k, v in (st.get('aspecto') or {}).items() if k in DEFAULT})
     if a['estilo'] not in STYLES and a['estilo'] not in ('agape', 'fondo'):
         a['estilo'] = 'apogeo'
+    if a['posicion'] not in ('abajo-dcha', 'arriba-dcha'):  # (ya no hay columna de pisos que poner a la izquierda)
+        a['posicion'] = 'abajo-dcha'
     return a
 
 

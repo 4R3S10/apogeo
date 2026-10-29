@@ -363,11 +363,6 @@ ApplicationWindow {
                     Interruptor { checked: win.s.isla.esconder; onToggled: apogeo.set("isla.esconder", checked) }
                 }
                 Fila {
-                    titulo: "Barra de pisos: esconderse sola"
-                    detalle: win.s.isla.esconderPisos ? "Sale al acercar el ratón al borde derecho" : "Siempre a la vista"
-                    Interruptor { checked: win.s.isla.esconderPisos; onToggled: apogeo.set("isla.esconderPisos", checked) }
-                }
-                Fila {
                     titulo: "En Jugar: temperatura y FPS"
                     detalle: "Lo caliente que está el equipo y a cuántos FPS como mucho van los juegos"
                     Interruptor { checked: win.s.isla.jugar; onToggled: apogeo.set("isla.jugar", checked) }

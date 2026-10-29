@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 """
-Estilo de Plasma «Apogeo»: la isla, la columna de pisos, los menús, los avisos y las ventanitas emergentes con el
+Estilo de Plasma «Apogeo»: la isla, los paneles de los lados, los menús, los avisos y las ventanitas emergentes con el
 cristal y las tarjetas de Ágape. Con efectos (lo normal) se usa la versión translúcida (cristal desenfocado); sin ellos,
 la opaca.
 
-  - Paneles (isla y pisos): cristal de Ágape, rgba(superficie, .55) con desenfoque, radio 20, borde del 10 % y el brillo
+  - Paneles (la isla y los de los lados): cristal de Ágape, rgba(superficie, .55) con desenfoque, radio 20, borde del 10 % y el brillo
     de 1 px arriba.
   - Menús, avisos y ventanitas: tarjeta de Ágape (el cromo casi opaco), radio 16, sombra grande y suave.
   - Bocadillos: cromo, radio 10.
+  - La raya del foco en un panel: en la isla, la del acento en su borde de dentro; en los paneles de los lados, ninguna.
 
   plasma.py [destino]    por defecto /usr/share/plasma/desktoptheme
 """
@@ -202,6 +203,26 @@ def svg_doc(parts, w, h):
             + '\n'.join(parts) + '\n</svg>\n')
 
 
+def tabbar():
+    """La raya que pinta Plasma en un panel junto a lo que tiene el foco (widgets/tabbar, «<borde>-active-tab»). Sin las
+    de «west» y «east» no pinta nada en los paneles de los lados (allí la raya cruzaba el panel de arriba abajo al lado de
+    lo que escribías). La de la isla (abajo: «south»; arriba: «north»), 3 px del acento en su borde de dentro."""
+    p = []
+    for k, (prefix, line) in enumerate((('south-active-tab', 'top'), ('north-active-tab', 'bottom'))):
+        x0 = k * 40
+        cells = {'topleft': (0, 0, 6, 3), 'top': (6, 0, 20, 3), 'topright': (26, 0, 6, 3),
+                 'left': (0, 3, 6, 20), 'center': (6, 3, 20, 20), 'right': (26, 3, 6, 20),
+                 'bottomleft': (0, 23, 6, 3), 'bottom': (6, 23, 20, 3), 'bottomright': (26, 23, 6, 3)}
+        for name, (x, y, w, h) in cells.items():
+            on = name.startswith(line)
+            p.append(f'<rect id="{prefix}-{name}" x="{x0 + x}" y="{y}" width="{w}" height="{h}" fill="{ACCENT}" '
+                     f'fill-opacity="{1 if on else 0}"/>')
+        for side, (x, y, w, h) in {'left': (0, 30, 6, 2), 'right': (26, 30, 6, 2), 'top': (12, 34, 2, 3),
+                                   'bottom': (16, 34, 2, 3)}.items():
+            p.append(f'<rect id="{prefix}-hint-{side}-margin" x="{x0 + x}" y="{y}" width="{w}" height="{h}" fill="none"/>')
+    return svg_doc(p, 80, 40)
+
+
 def widgets():
     """Las piezas de los menús y ventanitas de Plasma con las formas de Ágape: la fila de una lista (al pasar, la
     elegida), los botones, los campos de texto, los deslizadores (como el del volumen) y las barras de progreso."""
@@ -253,6 +274,7 @@ def main():
         'translucent/widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.94, 16, 0.35, highlight=False),
         'widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.98, 16, 0.35, highlight=False),
     }
+    files['widgets/tabbar.svg'] = tabbar()
     files.update(widgets())
     for rel, text in files.items():
         path = os.path.join(root, rel)

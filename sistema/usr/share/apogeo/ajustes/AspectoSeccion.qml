@@ -84,7 +84,6 @@ Seccion {
         radius: Tema.r(16)
         clip: true
         readonly property bool arriba: sec.t.posicion === "arriba-dcha"
-        readonly property bool izquierda: sec.t.posicion === "abajo-izq"
         readonly property real rr: sec.t.radio || 1
         function r(n) { return Math.max(2, Math.round(n * rr)) }
         gradient: Gradient {
@@ -94,7 +93,7 @@ Seccion {
         }
         // una ventana
         Rectangle {
-            x: preview.izquierda ? 70 : 28; y: preview.arriba ? 52 : 22
+            x: 52; y: preview.arriba ? 52 : 22
             width: parent.width * 0.5; height: 112
             radius: preview.r(12)
             color: sec.t.superficie || Tema.superficie
@@ -112,16 +111,16 @@ Seccion {
                 font.pixelSize: Math.round((sec.t.letraPt || 10) * 1.3)
             }
         }
-        // la columna de pisos
+        // el panel de widgets, asomando por la izquierda (Meta+A)
         Rectangle {
-            x: preview.izquierda ? 10 : parent.width - width - 10
-            y: (parent.height - height) / 2
-            width: 26; height: 82; radius: preview.r(13)
-            color: Qt.rgba(0, 0, 0, 0); border.color: Qt.rgba(0.5, 0.5, 0.5, 0.2)
-            Rectangle { anchors.fill: parent; radius: parent.radius; color: sec.t.superficie || Tema.superficie; opacity: sec.t.cristal || 0.55 }
+            x: 8; y: 10
+            width: 34; height: parent.height - 20; radius: preview.r(12)
+            color: sec.t.fondo || Tema.fondo
+            border.color: Qt.rgba(0.5, 0.5, 0.5, 0.2)
             Column {
-                anchors.centerIn: parent; spacing: 6
-                Repeater { model: 3; delegate: Rectangle { required property int index; width: 16; height: 16; radius: preview.r(6); color: index === 1 ? (sec.t.acento || Tema.rosa) : Qt.rgba(0.5, 0.5, 0.5, 0.25) } }
+                x: 6; y: 8; spacing: 6
+                Rectangle { width: 22; height: 22; radius: 11; color: sec.t.acento || Tema.rosa }
+                Repeater { model: 4; delegate: Rectangle { width: 22; height: 18; radius: preview.r(6); color: Qt.rgba(0.5, 0.5, 0.5, 0.2) } }
             }
         }
         // la isla
@@ -275,18 +274,18 @@ Seccion {
         }
     }
     Fila {
-        titulo: "Isla y columna"
+        titulo: "Isla"
         Segmentos {
-            readonly property var valores: ["abajo-dcha", "abajo-izq", "arriba-dcha"]
-            opciones: [{ texto: "Abajo · dcha" }, { texto: "Abajo · izq" }, { texto: "Arriba · dcha" }]
-            actual: Math.max(0, valores.indexOf(sec.a.posicion))
+            readonly property var valores: ["abajo-dcha", "arriba-dcha"]
+            opciones: [{ texto: "Abajo" }, { texto: "Arriba" }]
+            actual: sec.a.posicion === "arriba-dcha" ? 1 : 0
             onElegido: i => sec.put("posicion", valores[i])
         }
     }
     Fila {
         linea: false
         titulo: "Volver a lo de serie"
-        detalle: "Seguir a Ágape, con la isla y la columna como venían"
+        detalle: "Los colores del fondo, con la isla como venía"
         Boton {
             text: "Volver"
             icono: "actualizar"

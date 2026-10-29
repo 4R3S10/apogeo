@@ -7,7 +7,7 @@ ha arreglado algo o si algo no ha podido arreglarlo (si todo está bien, no dice
                             Apogeo, el inicio de sesión, que no falten archivos, las apps escondidas y, una vez, la
                             limpieza de programas repetidos (apogeo-limpieza). Lo apunta en /var/lib/apogeo/revision.json
   apogeo-revision usuario   en tu sesión, al entrar y en cuanto cambia ese archivo (apogeo-revision.path): los pisos,
-                            la isla y la columna de pisos, el fondo, los scripts de KWin, el estilo y la música. Y te
+                            la isla y los paneles de los lados, el fondo, los scripts de KWin, el estilo y la música. Y te
                             avisa de lo arreglado (también de lo que arregló la parte del sistema y de la limpieza)
 """
 import json
@@ -136,11 +136,12 @@ def user():
 
     def layout():
         out = plasma("""
-            var o = {isla: false, pisos: false, fondo: true};
+            var o = {isla: false, paneles: 0, fondo: true};
             panels().forEach(function (p) { p.widgets().forEach(function (w) {
                 if (w.type == 'org.apogeo.isla') o.isla = true;
-                if (w.type == 'org.apogeo.pisos') o.pisos = true;
+                if (w.type == 'org.apogeo.izquierdo' || w.type == 'org.apogeo.derecho') o.paneles++;
             }); });
+            o.paneles = o.paneles == 2;
             desktops().forEach(function (d) { if (d.wallpaperPlugin != 'org.apogeo.fondo') o.fondo = false; });
             print(JSON.stringify(o));
         """)
@@ -158,7 +159,7 @@ def user():
         time.sleep(10)
         (fixed if pisos_running() else failed).append('los pisos')
 
-    # 2. Los scripts de KWin (la isla y los pisos desde el borde, las ventanas y la música, el modo partida)
+    # 2. Los scripts de KWin (la isla y los paneles desde el borde, las ventanas y la música, el modo partida)
     missing = [s for s in KWIN_SCRIPTS if not kwin_loaded(s)]
     if missing:
         for s in missing:
@@ -172,25 +173,25 @@ def user():
         still = [s for s in missing if not kwin_loaded(s)]
         (failed if still else fixed).append('los efectos de las ventanas')
 
-    # 3. La isla, la columna de pisos y el fondo de Apogeo
+    # 3. La isla, los paneles de los lados y el fondo de Apogeo
     lay = layout()
-    if lay is not None and not (lay['isla'] and lay['pisos'] and lay['fondo']):
+    if lay is not None and not (lay['isla'] and lay['paneles'] and lay['fondo']):
         time.sleep(15)  # (otra mirada, por si estaba a medias)
         lay = layout() or lay
-    if lay is not None and not (lay['isla'] and lay['pisos'] and lay['fondo']):
+    if lay is not None and not (lay['isla'] and lay['paneles'] and lay['fondo']):
         state_path = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'pisos.json')
         state = read_json(state_path, {})
         if not lay['isla']:  # los pisos la vuelven a poner (y su bandeja, su hora, el panel rápido y su tamaño)
             for k in ('isla', 'bandeja', 'reloj', 'rapido', 'cristal'):
                 state.pop(k, None)
-        if not lay['pisos']:
-            state.pop('panel', None)
+        if not lay['paneles']:
+            state.pop('paneles', None)
         with open(state_path, 'w') as f:
             json.dump(state, f)
         sh('systemctl', '--user', 'restart', 'apogeo-pisos.service')
         time.sleep(12)
         lay2 = layout() or {}
-        names = {'isla': 'la isla', 'pisos': 'la columna de pisos', 'fondo': 'el fondo'}
+        names = {'isla': 'la isla', 'paneles': 'los paneles de los lados', 'fondo': 'el fondo'}
         for k, name in names.items():
             if not lay[k]:
                 (fixed if lay2.get(k) else failed).append(name)

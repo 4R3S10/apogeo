@@ -419,7 +419,42 @@ class Datos(dbus.service.Object):
             used = round(100 * (1 - mem['MemAvailable'] / mem['MemTotal']))
         except (OSError, KeyError, ValueError):
             used = 0
-        return json.dumps({'temp': round(temp), 'cpu': cpu, 'mem': used})
+        # La gráfica (las de AMD dicen lo ocupadas que están; si no, -1) y cuánto lleva encendido
+        gpu = -1
+        for p in glob.glob('/sys/class/drm/card*/device/gpu_busy_percent'):
+            try:
+                gpu = max(gpu, int(open(p).read()))
+            except (OSError, ValueError):
+                pass
+        try:
+            up = int(float(open('/proc/uptime').read().split()[0]))
+        except (OSError, ValueError, IndexError):
+            up = 0
+        return json.dumps({'temp': round(temp), 'cpu': cpu, 'mem': used, 'gpu': gpu, 'encendido': up})
+
+    @dbus.service.method(IFACE, out_signature='s')
+    def Relojes(self):
+        """Los relojes del mundo del panel de widgets: el de aquí y los tuyos (ajustes «relojes»)."""
+        import zoneinfo
+        import apogeo_comun as comun
+        days, months = 'LMXJVSD', ('ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic')
+        here = datetime.datetime.now().astimezone()
+        try:  # (el de aquí, con el nombre de tu zona: «Madrid»)
+            local = os.readlink('/etc/localtime').split('zoneinfo/', 1)[1]
+        except (OSError, IndexError):
+            local = ''
+        out = []
+        for zone in [''] + comun.load()['relojes']:
+            try:
+                t = here if not zone else here.astimezone(zoneinfo.ZoneInfo(zone))
+            except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+                continue
+            diff = round((t.utcoffset() - here.utcoffset()).total_seconds() / 3600, 1)
+            name = comun.CLOCK_NAMES.get(zone or local) or (zone or local).split('/')[-1].replace('_', ' ') or 'Aquí'
+            out.append({'nombre': name, 'zona': zone, 'hora': t.strftime('%H:%M'), 'aqui': not zone,
+                        'dia': f'{days[t.weekday()]} {t.day} {months[t.month - 1]}',
+                        'dif': '' if not zone else ('igual' if diff == 0 else f'{diff:+g} h'.replace('.', ','))})
+        return json.dumps(out, ensure_ascii=False)
 
     # ---------- Estudio ----------
 

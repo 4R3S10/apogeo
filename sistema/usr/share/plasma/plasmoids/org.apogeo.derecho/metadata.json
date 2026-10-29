@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Ares"
+            }
+        ],
+        "Category": "Windows and Tasks",
+        "Description": "El panel de la derecha de Apogeo: los pisos, lo de todos los días, tus avisos y el tiempo de los próximos días",
+        "Icon": "apogeo",
+        "Id": "org.apogeo.derecho",
+        "License": "MIT",
+        "Name": "Panel rápido",
+        "Version": "0.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

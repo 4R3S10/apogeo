@@ -4,7 +4,7 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
-    <!-- Hasta cuándo has visto los avisos (al abrir el panel): los de después salen como «sin leer» en la campana -->
+    <!-- Hasta cuándo has visto los avisos (al abrir el panel rápido lo pone el script de KWin apogeo-bordes): los de después salen como «sin leer» en la campana -->
     <entry name="leidos" type="String"><default></default></entry>
   </group>
 </kcfg>

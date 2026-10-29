@@ -53,8 +53,10 @@ Window {
             [["Meta", "V"], "Lo que has copiado"]] }
     })
     readonly property var grupos: [
-        { titulo: "Pisos", atajos: [
+        { titulo: "Pisos y paneles", atajos: [
             [["Meta", "F1 · F2 · F3"], "Jugar · Navegar · Estudiar"],
+            [["Meta", "A"], "Panel de widgets (izquierda)"],
+            [["Meta", "N"], "Panel rápido y avisos (derecha)"],
             [["Meta", "Ctrl", "↑ ↓"], "El piso de arriba o de abajo"],
             [["Meta", "Ctrl", "⇧", "↑ ↓"], "Llevar la ventana a otro piso"]] },
         { titulo: "Ventanas", atajos: [

@@ -3,6 +3,7 @@
     "fecha": "2026-10-29",
     "titulo": "29 de octubre",
     "cosas": [
+      {"icono": "apps", "titulo": "Dos paneles a los lados", "como": "Meta+A (o el ratón contra el borde izquierdo): tu panel de widgets, con la música, la semana y la agenda, el tiempo, tu PC, relojes del mundo, fondos y tus notas (y Estudios en Estudiar). Meta+N (o la hora de la isla): los pisos, lo de todos los días, tus avisos y el tiempo. Al abrirlos las ventanas se estrechan; el escritorio queda limpio."},
       {"icono": "aspecto", "titulo": "Colores del fondo", "como": "Cada piso coge los colores de su fondo: la isla, Ajustes, la consola, las ventanas y las carpetas. La ventana activa lleva un borde de ese color. A los fondos animados les das tú el color en Ajustes → Fondos."},
       {"icono": "apps", "titulo": "Tienda de Apogeo", "como": "Busca «Tienda» en el menú: destacados, lo más usado y cada grupo (Jugar, Estudiar, Internet, Crear). Instala del sistema (con tu contraseña) o de Flathub. Sustituye a Warehouse."},
       {"icono": "imagen", "titulo": "Fondos con Aura", "como": "Ajustes → Fondos → «Elegir con Aura»: fondos de Wallhaven, vídeos de MotionBGS y la imagen del día de Bing. Lo que eliges va solo al piso en el que estás. También con el botón derecho en el escritorio → «Aura…»."},

@@ -3,20 +3,21 @@ import QtQuick.Controls
 import org.kde.plasma.core as PlasmaCore
 import Apogeo
 
-// La tarjeta de la hora («T2 · Tarjeta ancha» + «A1 · Tercera columna»): al pulsar la hora de la isla sale, pegada a
-// ella, con el mes (los días con algo llevan un punto), el tiempo de tu ciudad (ahora, las próximas horas y 3 días) y lo
-// del día elegido: tus planes de Ágape y tus recordatorios, y los temporizadores en marcha. «+ Recordatorio» y
-// «Temporizador» los crean (apogeo_datos.py los guarda y, cuando toca, suena un aviso con «Posponer 10 min»).
+// La agenda («T2 · Tarjeta ancha»): al pulsar la semana o el tiempo del panel de widgets sale, a su lado, con el mes (los
+// días con algo llevan un punto), el tiempo de tu ciudad (ahora, las próximas horas y 3 días) y lo del día elegido: tus
+// planes de Ágape y tus recordatorios, y los temporizadores en marcha. «+ Recordatorio» y «Temporizador» los crean
+// (apogeo_datos.py los guarda y, cuando toca, suena un aviso con «Posponer 10 min»).
 PlasmaCore.Dialog {
     id: agenda
-    // Suelta (con sus cuatro esquinas, como la isla), encima de la pastilla de la isla o debajo si la isla va arriba
+    // Suelta (con sus cuatro esquinas), a la derecha del panel, a la altura de lo que la abrió («ancla»)
     location: PlasmaCore.Types.Floating
     property Item ancla
+    property Item panel
     function place() {
-        if (!ancla) return;
-        const g = ancla.mapToGlobal(0, 0);
-        x = Math.max(8, g.x + ancla.width - width);
-        y = Tema.posicion === "arriba-dcha" ? g.y + ancla.height + 14 : g.y - height - 14;
+        if (!ancla || !panel) return;
+        const p = panel.mapToGlobal(0, 0), a = ancla.mapToGlobal(0, 0);
+        x = p.x + panel.width + 14;
+        y = Math.max(p.y, Math.min(a.y - 12, p.y + panel.height - height));
     }
     onHeightChanged: if (visible) place()
     hideOnWindowDeactivate: true

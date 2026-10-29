@@ -11,8 +11,8 @@ navegador y un escritorio propio organizado por **pisos** (Jugar, Navegar, Estud
 
 ## Pisos
 
-El escritorio son tres pisos, uno encima de otro: **Jugar**, **Navegar** y **Estudiar**. Se cambia con la rueda del ratón
-sobre la columna de la derecha (o con un clic en su círculo) y las ventanas se deslizan como en un ascensor. Cada piso
+El escritorio son tres pisos, uno encima de otro: **Jugar**, **Navegar** y **Estudiar**. Se cambia con Meta+F1/F2/F3 o
+arriba del panel rápido (Meta+N) y las ventanas se deslizan como en un ascensor. Cada piso
 guarda sus ventanas y tiene su fondo y su color (el mismo berenjena, más vivo en Jugar y más apagado en Estudiar).
 
 **Rejilla de ventanas** («V2 · Huecos en toda la pantalla»): lleva una ventana hasta arriba y la pantalla enseña sus
@@ -46,8 +46,7 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
 - **Fondos:** los fondos animados de Ágape, uno por piso (Jugar «Luces», Navegar «Tinta», Estudiar «Seda»). Se
   dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica (máquina virtual) se quedan
   quietos.
-- **Isla y pisos («B1 · Cristal de Ágape»):** una sola isla de cristal (radio 22) y la columna de pisos como una cápsula de
-  cristal. Las apps abiertas llevan un puntito rosa (la activa, una rayita). El buscador y el piso activo son la pastilla
+- **Isla («B1 · Cristal de Ágape»):** una sola isla de cristal (radio 22). Las apps abiertas llevan un puntito rosa (la activa, una rayita). El buscador y el piso activo son la pastilla
   rosa con brillo, y todo usa los iconos de línea de Ágape. El estilo de Plasma «apogeo» se escribe en `~/.config/plasmarc`
   de cada usuario: si solo estaba en `/etc/xdg`, Plasma se quedaba con el gris por defecto.
 - **Ventanas:** la barra de Ágape (título en el centro y sus botones planos; la ✕ se pone roja).
@@ -79,8 +78,8 @@ Con «Como Ágape», lo que elijas en Ágape → Personalizar (sus colores, clar
 esquinas, el cristal y la velocidad de las animaciones) cambia también Apogeo, al momento (`apogeo-pisos` vigila los
 ajustes de Ágape y solo los lee). En Ajustes → Aspecto también hay estilos propios de un clic (Apogeo, Medianoche, Bosque,
 Arena y Papel) y cada detalle a mano: el color, claro u oscuro (o según la hora: claro de 8:00 a 20:00), la letra, las esquinas
-(rectas, suaves o redondas), el cristal, el tamaño (letra e isla), las animaciones y dónde van la isla y la columna
-(abajo y a la derecha, abajo y a la izquierda, o arriba y a la derecha), con una vista en pequeño de cómo queda.
+(rectas, suaves o redondas), el cristal, el tamaño (letra e isla), las animaciones y dónde va la isla (abajo o
+arriba), con una vista en pequeño de cómo queda.
 - Las carpetas van del color de tu estilo (un tema de iconos por color, `ApogeoCarpetas-<color>`, que hereda de Papirus).
 - Con lo de serie se usan los temas del paquete. Con otra cosa, `apogeo_aspecto` genera tus temas (colores de KDE,
   Kvantum, Plasma y barra de ventana, con los mismos generadores de `herramientas/`, instalados en
@@ -94,16 +93,9 @@ abiertas; clic derecho para fijar o dejar de fijar, en cada piso las suyas), lo 
 Navegar: la música; Estudiar: el temporizador) y, al final, la red, el sonido, la campana con los avisos sin leer y la
 hora. Al pasar por una app abierta, su vista en vivo (y ✕ para cerrarla). En la bandeja de KDE solo quedan los iconos de
 tus apps (Discord, Steam…).
-- **La tarjeta de la hora** (al pulsar la hora): el mes (puntos en los días con algo), el tiempo de tu ciudad (ahora,
-  las próximas horas y 3 días; la ciudad se elige ahí) y lo del día elegido: tus planes de Ágape, **recordatorios** y
-  **temporizadores**. Al llegar la hora suena y sale un aviso con «Posponer 10 min» (también en Jugar y Estudiar).
-- **Panel rápido** (al pulsar los iconos de al lado): la hora y el día, red, bluetooth, fondo animado, no molestar, ahorro, luz
-  nocturna, volumen, brillo, **tus avisos** (abrirlos o quitarlos), tú, «Todos los ajustes» y apagar.
+- **La red, el sonido, los avisos y la hora:** al pulsarlos sale el panel rápido de la derecha (ver «Paneles»).
 - **Avisos en pantalla:** los de Apogeo, abajo a la derecha, apilados, con sus botones y una rayita rosa con el tiempo
   que les queda (se paran con el ratón encima). Respetan No molestar y los pisos sin avisos (salvo los urgentes).
-- **Columna de pisos:** cada piso con cuántas ventanas tiene; al pasar, la vista del piso (sus ventanas en su sitio).
-  Una ventana soltada encima de un piso se va a ese piso (script de KWin `apogeo-ventanas`, que también cuenta las
-  ventanas a `apogeo-pisos`).
 
 ## Programas de serie
 
@@ -208,8 +200,8 @@ esconda sola y lo de cada piso), Salud del PC (temperatura máxima de 70 a 85 °
 abren los Ajustes de KDE. Lo que cambias se guarda en `~/.config/apogeo/ajustes.json` y `apogeo-pisos` lo aplica al
 momento.
 
-Al final de la isla está el **panel rápido**: red, bluetooth, fondo animado, no molestar, ahorro de energía del piso,
-luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
+Lo de todos los días (red, bluetooth, fondo animado, no molestar, ahorro de energía del piso, luz nocturna, volumen y
+brillo) está en el **panel rápido** de la derecha (Meta+N).
 
 ## Fondos
 
@@ -253,20 +245,33 @@ publicada tal cual). Apagado de serie.
 Lo pone `apogeo-pisos` (`carousel()`): Karousel solo trabaja en los escritorios con el nombre de esos pisos
 (`tiledDesktops`).
 
-## Escritorios
+## Paneles («nivel pro»: «2 · Dos paneles altos»)
 
-Sin iconos de apps y con el estilo «D2 · Sin cajas»: todo escrito sobre el fondo, separado por rayas finas, con un velo
-oscuro arriba y abajo para que se lea.
-- **Navegar:** la hora muy grande a la izquierda con la fecha y el tiempo, y abajo una fila: lo que suena, los avisos, lo
-  próximo del calendario de Ágape y tu PC.
-- **Estudiar:** tu carpeta `~/Estudios` a la izquierda (cada asignatura con Temas, Trabajos y Ejercicios), el temporizador
-  25/5 en el centro (el mismo que el de la isla) y, a la derecha, los exámenes con lo que falta y las tareas de hoy.
-- **Notas** («R1 · Post-its de colores»), en cada piso: el «+» de arriba a la derecha pone una (en un hueco libre y de
-  un color que no esté); un clic la escribe, se arrastran, las líneas con ☐ son una lista (Intro la sigue) y arriba de
-  cada una, lista, color y quitar. Se guardan en `~/.config/apogeo/notas.json` (`Notas.qml`).
+El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). Lo demás va en dos paneles altos,
+uno a cada lado, con los colores del fondo del piso. Salen con su tecla o empujando el ratón contra su borde, **hacen
+sitio** (las ventanas se estrechan y vuelven al cerrarlos) y se quedan hasta que vuelves a pulsar la tecla.
+- **Panel de widgets** (izquierda, Meta+A; `org.apogeo.izquierdo`): tu foto y «Buenos días/Buenas tardes/Buenas
+  noches», y tres pestañas. Abierto, coge el teclado (para escribir) y al cerrarlo lo devuelve.
+  - **Widgets:** lo que suena (portada y botones), la semana (al pulsarla sale la **agenda** a su lado: el mes, el
+    tiempo de tu ciudad, tus planes de Ágape, **recordatorios** y **temporizadores**, que suenan con «Posponer 10
+    min»), el tiempo, tu PC en anillos (procesador, memoria, temperatura y gráfica si es AMD), los **relojes del mundo**
+    (el de aquí, Nueva York y Tokio; ajuste `relojes`) y tus fondos de Aura y los animados para este piso.
+  - **Estudios** (solo en Estudiar, y se abre sola al llegar): el temporizador 25/5, los exámenes con lo que falta, las
+    tareas de hoy y tus asignaturas de `~/Estudios` (un clic abre su carpeta).
+  - **Notas:** tarjetas con su color; «Nueva» pone una y se escribe ahí mismo, se ordenan arrastrándolas por los
+    puntitos y, al pasar el ratón, otro color o quitar. Se guardan en `~/.config/apogeo/notas.json`.
+- **Panel rápido** (derecha, Meta+N o pulsando la red, el sonido o la hora de la isla; `org.apogeo.derecho`): cuánto
+  lleva encendido el PC con Aspecto, Todos los ajustes y apagar; **los pisos**; la red, el sonido y el micro en
+  pastillas; bluetooth, fondo animado, no molestar, ahorro del piso y luz nocturna en botones redondos; volumen y brillo;
+  **tus avisos** (abrirlos, quitarlos o «Borrar todo») y abajo el tiempo de las próximas horas (en barras) y días.
+  Al abrirlo, los avisos cuentan como vistos.
 
-Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). El widget es `org.apogeo.escritorio`:
-- Se dibuja siempre del tamaño de la pantalla, aunque Plasma lo estreche al quedarse fijas la isla o los pisos.
+Los abre el script de KWin `apogeo-bordes` (cambia el panel de «se esconde» a «siempre visible», que es lo que hace sitio,
+y le dice si está abierto: cerrado no pide nada). Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). En el
+tema de Plasma, la raya del foco no sale en los paneles de los lados (cruzaba el panel junto a lo que escribías).
+
+El widget del escritorio es `org.apogeo.escritorio`:
+- Se dibuja siempre del tamaño de la pantalla, aunque Plasma lo estreche al quedarse fijos la isla o un panel.
 - Ocupar toda la pantalla lo asegura `apogeo-pisos` en cada inicio de sesión. Plasma guarda el sitio de cada widget por
   resolución y lo pisa al cerrarse, así que, cuando hace falta, lo corrige con Plasma parado un instante.
 
@@ -371,7 +376,7 @@ privada, protegida con tu contraseña, va dentro de cada copia. Ágape tiene su 
 ## Revisión después de actualizar
 
 Al acabar cada actualización, Apogeo se revisa y arregla lo que pueda (`apogeo-revision`): los servicios, el inicio de
-sesión, que no falten archivos y, en tu sesión, los pisos, la isla, la columna de pisos, el fondo, los scripts de KWin,
+sesión, que no falten archivos y, en tu sesión, los pisos, la isla, los paneles de los lados, el fondo, los scripts de KWin,
 el estilo y la música. Solo avisa si ha arreglado algo o si algo no ha podido arreglarlo.
 
 ## Instalador (ISO) — decidido para cuando se haga
@@ -416,8 +421,8 @@ entras en Apogeo.
 - `sistema/usr/lib/apogeo/apogeo-pisos`: los pisos (fondo, color, avisos, energía, ventanas y apps de cada uno)
 - `sistema/usr/lib/apogeo/apogeo-termico`: la protección de temperatura
 - `sistema/usr/lib/apogeo/apogeo-bienvenida` y `sistema/usr/share/apogeo/bienvenida/`: la bienvenida
-- `sistema/usr/lib/apogeo/apogeo-ajustes` y `sistema/usr/share/apogeo/ajustes/`: los ajustes (y el panel rápido,
-  `org.apogeo.rapido`)
+- `sistema/usr/lib/apogeo/apogeo-ajustes` y `sistema/usr/share/apogeo/ajustes/`: los ajustes (y lo del panel rápido,
+  `org.apogeo.derecho`)
 - `sistema/usr/lib/apogeo/apogeo_comun.py` y `apogeo_qt.py`: lo que comparten (tus ajustes, tu cuenta, Ágape)
 - `sistema/usr/lib/qt6/qml/Apogeo/`: las piezas de Ágape en QML (botones, campos, interruptores, fondos…)
 - `apogeo.asc`: la clave pública con la que se firman los paquetes

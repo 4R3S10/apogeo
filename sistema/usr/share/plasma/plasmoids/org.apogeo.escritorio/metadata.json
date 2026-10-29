@@ -3,7 +3,7 @@
     "KPlugin": {
         "Authors": [{ "Name": "Ares" }],
         "Category": "Date and Time",
-        "Description": "El escritorio de Apogeo: en Navegar, la hora y tus widgets; en Estudiar, tu carpeta de estudio, el temporizador, los exámenes y las tareas",
+        "Description": "El escritorio de Apogeo: limpio, solo el fondo, y con el botón derecho el carrusel de fondos del piso",
         "Icon": "apogeo",
         "Id": "org.apogeo.escritorio",
         "License": "MIT",

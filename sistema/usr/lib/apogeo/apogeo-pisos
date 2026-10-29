@@ -175,7 +175,7 @@ def desktop_fill(bus):
 
 
 def setup(bus):
-    """La primera vez: tres escritorios en columna con los nombres de los pisos y la columna de pisos a la derecha."""
+    """La primera vez: tres escritorios en columna con los nombres de los pisos, la isla y los dos paneles de los lados."""
     st = load_state()
     ds = desktops(bus)
     m = vdm(bus)
@@ -188,19 +188,6 @@ def setup(bus):
     props = 'org.freedesktop.DBus.Properties'
     m.Set('org.kde.KWin.VirtualDesktopManager', 'rows', dbus.UInt32(len(FLOORS)), dbus_interface=props)
     m.Set('org.kde.KWin.VirtualDesktopManager', 'navigationWrappingAround', False, dbus_interface=props)
-    if not st.get('panel'):
-        # Columna de pisos: panel flotante en el borde derecho, solo con el widget de pisos
-        plasma_script(bus, """
-            var p = new Panel;
-            p.location = 'right';
-            p.floating = true;
-            p.height = 56;
-            p.lengthMode = 'fit';
-            p.alignment = 'center';
-            p.hiding = 'autohide';
-            p.addWidget('org.apogeo.pisos');
-        """)
-        st['panel'] = True
     if st.get('isla', 0) < ISLAND:
         # La isla: fuera la barra de abajo de CachyOS; una isla centrada, flotante, que se esconde sola
         plasma_script(bus, """
@@ -326,6 +313,31 @@ def setup(bus):
             });
         """)
         st['cristal'] = CRYSTAL
+    if st.get('paneles', 0) < PANELS:
+        # «Nivel pro»: fuera la columna de pisos (los pisos van arriba del panel rápido) y, a los lados, los dos paneles
+        # altos: el de widgets a la izquierda y el rápido a la derecha. Escondidos: los saca el script apogeo-bordes
+        # (Meta+A, Meta+N o el ratón contra el borde) y, abiertos, hacen sitio
+        plasma_script(bus, """
+            panels().forEach(function (p) {
+                if (p.widgets().some(function (w) { return w.type == 'org.apogeo.pisos'; })) p.remove();
+            });
+            [['left', 'org.apogeo.izquierdo'], ['right', 'org.apogeo.derecho']].forEach(function (s) {
+                var has = panels().some(function (p) {
+                    return p.widgets().some(function (w) { return w.type == s[1]; });
+                });
+                if (has) return;
+                var p = new Panel;
+                p.location = s[0];
+                p.floating = true;
+                p.height = %d;
+                p.lengthMode = 'fill';
+                p.hiding = 'autohide';
+                p.addWidget(s[1]);
+            });
+        """ % PANEL_WIDTH)
+        panel_shortcuts()
+        kwin_reconfigure()
+        st['paneles'] = PANELS
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
@@ -349,6 +361,8 @@ MANGOHUD = 1  # igual, para MangoHud en los juegos
 LIGHTER = 2  # igual, para quitar de en medio lo que no se usa al entrar (menú global, accesibilidad)
 ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
+PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la columna de pisos)
+PANEL_WIDTH = 376  # su ancho
 AESTHETICS = 16  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
@@ -517,6 +531,25 @@ def search_shortcuts():
         g.setForeignShortcutKeys(['apogeo-captura.desktop', '_launch', '', ''], keys(meta_shift_s, print_key))
     except dbus.DBusException as e:
         log('atajos:', e.get_dbus_message())
+
+
+def panel_shortcuts():
+    """Meta+A y Meta+N: los dos paneles (los registra el script de KWin apogeo-bordes; Meta+A era «siguiente actividad»
+    en Plasma, y con él cogido el script se quedaba sin atajo)."""
+    keys = _keys
+    meta_a, meta_n = 0x10000041, 0x1000004E
+    try:
+        g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
+        try:
+            g.setForeignShortcutKeys(['plasmashell', 'next activity', '', ''], keys())
+        except dbus.DBusException:
+            pass
+        g.doRegister(['kwin', 'apogeo-panel-izquierdo', 'KWin', 'Apogeo: panel de widgets'])
+        g.setForeignShortcutKeys(['kwin', 'apogeo-panel-izquierdo', '', ''], keys(meta_a))
+        g.doRegister(['kwin', 'apogeo-panel-derecho', 'KWin', 'Apogeo: panel rápido'])
+        g.setForeignShortcutKeys(['kwin', 'apogeo-panel-derecho', '', ''], keys(meta_n))
+    except dbus.DBusException as e:
+        log('atajos de los paneles:', e.get_dbus_message())
 
 
 # ---------- El carrusel: las ventanas en columnas que se deslizan, como en niri (Karousel) ----------
@@ -932,24 +965,17 @@ def island(bus, st):
     """La isla como en los ajustes: si se esconde sola, lo de cada piso (temperatura y FPS, música, temporizador) y los
     números de la salud del PC que enseña en Jugar."""
     cfg = st['isla']
-    # Dónde van y su tamaño (Ajustes → Aspecto): la isla abajo o arriba, la columna a la derecha o a la izquierda
+    # Dónde va y su tamaño (Ajustes → Aspecto): la isla abajo o arriba
     t = aspecto.tokens(aspecto.settings_of(st))
-    top, left = t['posicion'] == 'arriba-dcha', t['posicion'] == 'abajo-izq'
-    # Las dos se esconden del todo (o no, si lo quitas en los ajustes); el script de KWin «apogeo-bordes» las saca al
-    # acercar el ratón a una franja ancha del borde, y tiene que saber si lo hace (y en qué borde están)
+    top = t['posicion'] == 'arriba-dcha'
+    # Se esconde del todo (o no, si lo quitas en los ajustes); el script de KWin «apogeo-bordes» la saca al acercar el
+    # ratón a una franja ancha del borde, y tiene que saber si lo hace (y en qué borde está)
     kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if cfg['esconder'] else 'false')
-    kw('kwinrc', 'Script-apogeo-bordes', 'pisos', 'true' if cfg['esconderPisos'] else 'false')
     kw('kwinrc', 'Script-apogeo-bordes', 'islaArriba', 'true' if top else 'false')
-    kw('kwinrc', 'Script-apogeo-bordes', 'pisosIzquierda', 'true' if left else 'false')
     kwin_reconfigure()
     plasma_script(bus, """
         panels().forEach(function (p) {
             var types = p.widgets().map(function (w) { return w.type; });
-            if (types.indexOf('org.apogeo.pisos') >= 0) {
-                if (p.location != %s) p.location = %s;
-                if (p.height != %d) p.height = %d;
-                p.hiding = %s;
-            }
             if (types.indexOf('org.apogeo.isla') < 0) return;
             if (p.location != %s) p.location = %s;
             if (p.height != %d) p.height = %d;
@@ -965,9 +991,7 @@ def island(bus, st):
                 w.reloadConfig();
             });
         });
-    """ % (json.dumps('left' if left else 'right'), json.dumps('left' if left else 'right'), t['isla'], t['isla'],
-           json.dumps('autohide' if cfg['esconderPisos'] else 'none'),
-           json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
+    """ % (json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
            json.dumps('autohide' if cfg['esconder'] else 'none'),
            json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))

@@ -43,7 +43,7 @@ def parse(value):
         return value
 
 
-# ---------- Panel rápido (lo lee y lo toca el plasmoide org.apogeo.rapido) ----------
+# ---------- Panel rápido (lo lee y lo toca el panel de la derecha, org.apogeo.derecho) ----------
 
 def network():
     for line in run('nmcli', '-t', '-f', 'TYPE,STATE,CONNECTION', 'device').splitlines():
