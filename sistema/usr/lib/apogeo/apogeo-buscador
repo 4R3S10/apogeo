@@ -168,6 +168,13 @@ def main():
             except dbus.DBusException:
                 return ''
 
+        @pyqtSlot(str, result=bool)
+        def carrusel(self, piso):
+            """Si ese piso tiene las ventanas en carrusel (para enseñar sus atajos en la guía)."""
+            import apogeo_comun as comun
+            key = piso.strip().lower()
+            return key in comun.FLOOR_KEYS and comun.load()['pisos'][key]['carrusel']
+
         @pyqtProperty('QVariantList', notify=appsChanged)
         def apps(self):
             return self._apps

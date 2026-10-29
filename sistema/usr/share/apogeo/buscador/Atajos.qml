@@ -26,6 +26,13 @@ Window {
     visible: false
 
     property string piso: ""
+    property bool carrusel: false   // (el piso tiene las ventanas en carrusel: sus atajos, con los del piso)
+    readonly property var atajosCarrusel: [
+        [["Meta", "Alt", "← →"], "Carrusel: la columna de al lado"],
+        [["Meta", "Alt", "⇧", "← →"], "Carrusel: mover la ventana"],
+        [["Meta", "Alt", "R"], "Carrusel: cambiar el ancho"],
+        [["Meta", "Alt", "Espacio"], "Carrusel: soltarla o volver"],
+        [["Meta", "Alt", "Intro"], "Carrusel: centrarla"]]
     readonly property var pisos: ({
         "Jugar": { icono: "jugar", atajos: [
             [["Meta", "Tab"], "Modo partida: el juego y Discord"],
@@ -75,6 +82,7 @@ Window {
         if (visible) hide();
         held = mantenida;
         piso = buscador.piso();
+        carrusel = buscador.carrusel(piso);
         show();
         if (!held) requestActivate();
         appear.restart();
@@ -173,7 +181,7 @@ Window {
                         columnSpacing: 18
                         rowSpacing: 6
                         Repeater {
-                            model: floorBox.p ? floorBox.p.atajos : []
+                            model: floorBox.p ? floorBox.p.atajos.concat(win.carrusel ? win.atajosCarrusel : []) : []
                             Atajo { width: (floorCol.width - 18) / 2; ancho: 110; teclas: modelData[0]; que: modelData[1] }
                         }
                     }

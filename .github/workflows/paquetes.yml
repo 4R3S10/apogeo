@@ -1,5 +1,5 @@
 name: paquetes
-# Construye los paquetes de Apogeo (apogeo, apogeo-hydra y apogeo-aura), los firma y los publica como repositorio de pacman en la
+# Construye los paquetes de Apogeo (apogeo, apogeo-hydra, apogeo-aura y apogeo-karousel), los firma y los publica como repositorio de pacman en la
 # versión «repo» de GitHub: https://github.com/4R3S10/apogeo/releases/download/repo
 on:
   schedule:
@@ -66,7 +66,7 @@ jobs:
           fi
       - name: Construir
         run: |
-          for p in apogeo-hydra apogeo; do
+          for p in apogeo-hydra apogeo-karousel apogeo; do
             (cd "paquetes/$p" && runuser -u constructor -- makepkg --nodeps --sign --noconfirm --cleanbuild)
           done
       - name: Repositorio

@@ -1,0 +1,23 @@
+# Karousel (peterfajdiga/karousel), las ventanas en carrusel de KWin: en columnas que se deslizan, como en niri. Tal cual
+# su versión publicada (revisada: solo coloca ventanas, sin red ni programas). Apogeo la enciende en los pisos que eliges
+# (Ajustes → Pisos) y le pone sus atajos (Meta+Alt + flechas) y sus huecos y anchos (apogeo-pisos).
+# Para subir de versión: revisar el código nuevo y cambiar pkgver y las sumas.
+pkgname=apogeo-karousel
+pkgver=0.18
+pkgrel=1
+pkgdesc='Karousel: ventanas en carrusel (como niri) para los pisos de Apogeo'
+arch=('any')
+url='https://github.com/peterfajdiga/karousel'
+license=('GPL-3.0-only')
+depends=(kwin knotifications)
+source=("karousel-${pkgver}.tar.gz::https://github.com/peterfajdiga/karousel/releases/download/v${pkgver}/karousel_${pkgver//./_}.tar.gz"
+        "LICENSE-${pkgver}::https://raw.githubusercontent.com/peterfajdiga/karousel/v${pkgver}/LICENSE")
+sha256sums=('c70270eb09d01723ca10e380a92d28f9fbc5513623c344ce304519d828cd441f'
+            '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986')
+
+package() {
+  install -d "$pkgdir/usr/share/kwin/scripts"
+  cp -r --no-preserve=ownership karousel "$pkgdir/usr/share/kwin/scripts/karousel"
+  chmod -R u+rwX,go+rX,go-w "$pkgdir/usr/share/kwin/scripts/karousel"
+  install -Dm644 "LICENSE-${pkgver}" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -33,6 +33,7 @@ package_apogeo() {
     tesseract tesseract-data-spa tesseract-data-eng           # capturas: sacar el texto de una imagen
     appstream archlinux-appstream-data kimageformats          # la tienda: el catálogo y sus iconos (.jxl)
     apogeo-aura                                               # fondos de internet y tu biblioteca (a cada piso)
+    apogeo-karousel                                           # ventanas en carrusel (como niri), en los pisos que elijas
   )
   install=apogeo.install
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"

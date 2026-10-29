@@ -476,9 +476,7 @@ def aesthetics():
 def search_shortcuts():
     """Los atajos de Apogeo (el buscador y la guía de atajos, el portapapeles y los emojis, el modo partida, la terminal y las capturas), al momento (por D-Bus a kglobalaccel, que los guarda él; escribir su archivo no vale:
     solo lo lee al empezar la sesión)."""
-    def keys(*codes):
-        return dbus.Array([dbus.Struct([dbus.Array([dbus.Int32(c), 0, 0, 0], signature='i')]) for c in codes],
-                          signature='(ai)')
+    keys = _keys
     meta, alt_f1, alt_f2, alt_space, search = 0x01000022, 0x09000030, 0x09000031, 0x08000020, 0x01000092
     alt_tab, meta_tab, ctrl_alt_t, print_key = 0x08000001, 0x11000001, 0x0C000054, 0x01000009
     meta_v, meta_period, meta_shift_s, meta_slash = 0x10000056, 0x1000002e, 0x12000053, 0x1000002f
@@ -519,6 +517,83 @@ def search_shortcuts():
         g.setForeignShortcutKeys(['apogeo-captura.desktop', '_launch', '', ''], keys(meta_shift_s, print_key))
     except dbus.DBusException as e:
         log('atajos:', e.get_dbus_message())
+
+
+# ---------- El carrusel: las ventanas en columnas que se deslizan, como en niri (Karousel) ----------
+
+_KEYS_MA, _KEYS_MAS = 0x18000000, 0x1A000000  # Meta+Alt, Meta+Alt+Mayús
+_LEFT, _UP, _RIGHT, _DOWN = 0x01000012, 0x01000013, 0x01000014, 0x01000015
+CAROUSEL_KEYS = {
+    'focus-left': _KEYS_MA | _LEFT, 'focus-right': _KEYS_MA | _RIGHT,
+    'focus-up': _KEYS_MA | _UP, 'focus-down': _KEYS_MA | _DOWN,
+    'window-move-left': _KEYS_MAS | _LEFT, 'window-move-right': _KEYS_MAS | _RIGHT,
+    'window-move-up': _KEYS_MAS | _UP, 'window-move-down': _KEYS_MAS | _DOWN,
+    'cycle-preset-widths': _KEYS_MA | 0x52,           # R
+    'window-toggle-floating': _KEYS_MA | 0x20,        # Espacio
+    'grid-scroll-focused': _KEYS_MA | 0x01000004,     # Intro: centrarla
+}
+# Los demás atajos de Karousel, sin tecla (sus teclas de serie chocan con las de Apogeo: Meta+W, Meta+D, Meta+1…)
+CAROUSEL_OTHERS = [
+    'focus-next', 'focus-previous', 'focus-start', 'focus-end', 'window-move-next', 'window-move-previous',
+    'window-move-start', 'window-move-end', 'window-height-increase-up', 'window-height-increase-down',
+    'column-toggle-stacked', 'column-move-left', 'column-move-right', 'column-move-start', 'column-move-end',
+    'column-move-to-next-desktop', 'column-move-to-previous-desktop', 'column-width-increase', 'column-width-decrease',
+    'column-width-maximize', 'column-width-minimize', 'cycle-preset-widths-reverse', 'columns-width-equalize',
+    'columns-squeeze-left', 'columns-squeeze-right', 'grid-scroll-left-column', 'grid-scroll-right-column',
+    'grid-scroll-left', 'grid-scroll-right', 'grid-scroll-start', 'grid-scroll-end', 'screen-switch',
+    'tail-move-to-next-desktop', 'tail-move-to-previous-desktop',
+] + [n.format(i) for n in ('focus-{}', 'window-move-to-column-{}', 'column-move-to-column-{}',
+                           'column-move-to-desktop-{}', 'tail-move-to-desktop-{}') for i in range(1, 13)]
+# Las de KWin con las mismas teclas (ir a la ventana de al lado): se las queda el carrusel mientras esté en algún piso
+KWIN_SWITCH = {'Switch Window Left': _KEYS_MA | _LEFT, 'Switch Window Right': _KEYS_MA | _RIGHT,
+               'Switch Window Up': _KEYS_MA | _UP, 'Switch Window Down': _KEYS_MA | _DOWN}
+_carousel_done = None
+
+
+def _keys(*codes):
+    return dbus.Array([dbus.Struct([dbus.Array([dbus.Int32(c), 0, 0, 0], signature='i')]) for c in codes],
+                      signature='(ai)')
+
+
+def carousel(st):
+    """Karousel en los pisos que lo tienen (por el nombre del escritorio), con los huecos y anchos de Ajustes y sus
+    atajos en Meta+Alt. Sin ningún piso, apagado y con los atajos de KWin de siempre."""
+    global _carousel_done
+    names = [f['name'] for f in FLOORS if st['pisos'][f['key']]['carrusel']]
+    car = st['carrusel']
+    want = (tuple(names), car['huecos'], tuple(car['anchos']))
+    if want == _carousel_done:
+        return
+    reload = _carousel_done is not None and bool(_carousel_done[0]) and bool(names)
+    _carousel_done = want
+    on = bool(names)
+    try:
+        g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
+        # (antes de que cargue Karousel: así se queda con estas teclas y no con las suyas de serie)
+        for name in list(CAROUSEL_KEYS) + CAROUSEL_OTHERS:
+            action = ['kwin', 'karousel-' + name, 'KWin', 'Karousel: ' + name]
+            g.doRegister(action)
+            code = CAROUSEL_KEYS.get(name) if on else None
+            g.setForeignShortcutKeys(action[:2] + ['', ''], _keys(code) if code else _keys())
+        for name, code in KWIN_SWITCH.items():
+            g.setForeignShortcutKeys(['kwin', name, '', ''], _keys() if on else _keys(code))
+    except dbus.DBusException as e:
+        log('carrusel:', e.get_dbus_message())
+    gap = str(car['huecos'])
+    for key in ('gapsOuterTop', 'gapsOuterBottom', 'gapsOuterLeft', 'gapsOuterRight', 'gapsInnerHorizontal',
+                'gapsInnerVertical'):
+        kw('kwinrc', 'Script-karousel', key, gap)
+    kw('kwinrc', 'Script-karousel', 'presetWidths', ', '.join(ajustes.WIDTHS[w] for w in car['anchos']))
+    kw('kwinrc', 'Script-karousel', 'tiledDesktops', '^(' + '|'.join(names) + ')$' if on else '^$')
+    kw('kwinrc', 'Plugins', 'karouselEnabled', 'true' if on else 'false')
+    if reload:  # (Karousel lee su configuración al cargar: fuera y dentro otra vez)
+        try:
+            dbus.SessionBus().get_object('org.kde.KWin', '/Scripting').unloadScript(
+                'karousel', dbus_interface='org.kde.kwin.Scripting')
+        except dbus.DBusException as e:
+            log('carrusel:', e.get_dbus_message())
+    kwin_reconfigure()
+    log('carrusel:', ', '.join(names) or 'apagado')
 
 
 def zone_location():
@@ -670,6 +745,7 @@ class Floors:
         island(self.bus, st)
         apply_look(st)
         fluid_screen(st)
+        carousel(st)
 
     # ----- «Que cambie solo» -----
 
@@ -961,6 +1037,7 @@ def main():
     setup(bus)
     light_effects()
     fluid_screen(ajustes.load())
+    carousel(ajustes.load())
     import apogeo_datos
     datos = apogeo_datos.Datos(bus)  # noqa: F841 (los datos de los widgets: el tiempo, el estudio… por D-Bus)
     floors = Floors(bus, dbus.SystemBus())

@@ -1,0 +1,108 @@
+#!/usr/bin/python3
+"""
+ArtCraft Launcher en Apogeo: su AppImage oficial (storytold/craft-launcher), tal cual. La primera vez que se abre, esto
+lo baja de su última versión de GitHub, comprueba que es el archivo publicado (con su SHA256SUMS.txt) y lo deja en
+~/Applications/ArtCraft-Launcher.AppImage, donde se actualiza solo. Desde él se instalan los programas Craft
+(PhotoCraft, FilmCraft, VectorCraft…).
+
+  apogeo-artcraft       lo baja si falta y lo abre
+"""
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import urllib.request
+
+HOME = os.path.expanduser('~')
+REPO = 'storytold/craft-launcher'
+APP = os.path.join(HOME, 'Applications', 'ArtCraft-Launcher.AppImage')
+ICON_ID = 'ai.storyteller.artcraft-launcher'
+TITLE = 'ArtCraft Launcher'
+UA = {'User-Agent': 'Apogeo (https://github.com/4R3S10/apogeo)'}
+
+
+class Fallo(Exception):
+    pass
+
+
+def get(url, timeout=30):
+    return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout)
+
+
+def install():
+    try:
+        with get(f'https://api.github.com/repos/{REPO}/releases/latest') as r:
+            rel = json.load(r)
+    except (OSError, ValueError):
+        raise Fallo('No se puede hablar con GitHub ahora mismo. Mira si hay internet y prueba otra vez.')
+    assets = {a['name']: a['browser_download_url'] for a in rel.get('assets', [])}
+    image = next((n for n in assets if n.endswith('-linux-x86_64.AppImage')), None)
+    if not image or 'SHA256SUMS.txt' not in assets:
+        raise Fallo('La última versión de ArtCraft Launcher no tiene el archivo para Linux.')
+    try:
+        with get(assets['SHA256SUMS.txt']) as r:
+            sums = dict(reversed(line.split(None, 1)) for line in r.read().decode().splitlines() if line.strip())
+    except (OSError, ValueError):
+        raise Fallo('No se pudo comprobar la descarga (SHA256SUMS.txt).')
+    want = (sums.get(image) or sums.get('*' + image) or '').strip().lower()
+    if len(want) != 64:
+        raise Fallo('La versión publicada no trae la suma de su AppImage.')
+    subprocess.run(['notify-send', '-a', TITLE, '-i', 'apogeo', TITLE, 'Bajando ArtCraft Launcher…'])
+    os.makedirs(os.path.dirname(APP), exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix='.artcraft-', dir=os.path.dirname(APP))
+    try:
+        h = hashlib.sha256()
+        with os.fdopen(fd, 'wb') as f, get(assets[image], timeout=120) as r:
+            while chunk := r.read(1 << 16):
+                h.update(chunk)
+                f.write(chunk)
+        if h.hexdigest() != want:
+            raise Fallo('La descarga no coincide con la publicada: no se instala.')
+        os.chmod(tmp, 0o755)
+        os.replace(tmp, APP)
+    except OSError:
+        raise Fallo('No se pudo bajar ArtCraft Launcher. Prueba otra vez.')
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    try:
+        icon()
+    except (OSError, subprocess.SubprocessError):
+        pass  # (sin icono también funciona)
+
+
+def icon():
+    """Su icono (el del AppImage) para el menú y la isla."""
+    with tempfile.TemporaryDirectory() as d:
+        def extract(name):
+            subprocess.run([APP, '--appimage-extract', name], cwd=d, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=30)
+        extract('.DirIcon')
+        link = os.path.join(d, 'squashfs-root', '.DirIcon')
+        if os.path.islink(link):  # (suele ser un enlace al icono: también hay que sacarlo)
+            extract(os.readlink(link))
+        src = os.path.realpath(link)
+        if not (os.path.isfile(src) and src.startswith(os.path.realpath(d) + os.sep)):
+            return
+        ext = '.svg' if open(src, 'rb').read(5).lstrip().startswith(b'<') else '.png'
+        out = os.path.join(HOME, '.local/share/icons/hicolor', 'scalable' if ext == '.svg' else '256x256', 'apps',
+                           ICON_ID + ext)
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with open(src, 'rb') as a, open(out, 'wb') as b:
+            b.write(a.read())
+
+
+def main():
+    if not os.access(APP, os.X_OK):
+        try:
+            install()
+        except Fallo as e:
+            subprocess.run(['kdialog', '--title', TITLE, '--sorry', str(e)])
+            return 1
+    os.execv(APP, [APP, *sys.argv[1:]])
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -105,6 +105,10 @@ Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
 - **ONLYOFFICE y Stremio:** no están en los repositorios de Arch. Los instala `apogeo-flatpaks` de Flathub, donde los dos
   están verificados por sus propias empresas, para todos los usuarios, una vez y en segundo plano cuando hay internet.
 - ChatGPT y Claude no van de serie (no tienen app oficial para Linux).
+- **ArtCraft Launcher:** su AppImage oficial ([storytold/craft-launcher](https://github.com/storytold/craft-launcher)).
+  La primera vez que lo abres, `apogeo-artcraft` lo baja de su última versión, comprueba su SHA-256 publicado y lo deja
+  en `~/Applications/ArtCraft-Launcher.AppImage`, donde se actualiza solo. Desde él se instalan los programas Craft
+  (PhotoCraft, FilmCraft, VectorCraft…).
 
 ## Tienda de Apogeo
 
@@ -221,6 +225,21 @@ para buscar más.
 
 Lo hacen `apogeo_fondos.py` (la biblioteca), `apogeo-pisos` (el de cada piso y que cambie solo) y el fondo de
 Plasma `org.apogeo.fondo`.
+
+## Ventanas en carrusel (como niri)
+
+En Ajustes → Pisos, por piso: las ventanas en columnas que se deslizan de lado, como en niri, con
+[Karousel](https://github.com/peterfajdiga/karousel) (de Peter Fajdiga, GPL-3; paquete `apogeo-karousel`, su versión
+publicada tal cual). Apagado de serie.
+- **Atajos:** Meta+Alt+← → (la columna de al lado), Meta+Alt+⇧+← → (mover la ventana), Meta+Alt+R (cambiar el ancho),
+  Meta+Alt+Espacio (soltarla o volver) y Meta+Alt+Intro (centrarla). Los demás de Karousel, sin tecla, para no chocar
+  con los de Apogeo. Mientras algún piso tiene el carrusel, Meta+Alt+flechas son suyas (en KWin eran «ir a la ventana de
+  al lado»). La guía de atajos los enseña en esos pisos.
+- **Huecos** (sin, 4, 8 o 16 px) y **anchos** que recorre Meta+Alt+R (½, ⅔, entera): iguales en todos los pisos con
+  carrusel.
+
+Lo pone `apogeo-pisos` (`carousel()`): Karousel solo trabaja en los escritorios con el nombre de esos pisos
+(`tiledDesktops`).
 
 ## Escritorios
 

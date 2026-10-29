@@ -5,6 +5,8 @@
     "cosas": [
       {"icono": "apps", "titulo": "Tienda de Apogeo", "como": "Busca «Tienda» en el menú: destacados, lo más usado y cada grupo (Jugar, Estudiar, Internet, Crear). Instala del sistema (con tu contraseña) o de Flathub. Sustituye a Warehouse."},
       {"icono": "imagen", "titulo": "Fondos con Aura", "como": "Ajustes → Fondos → «Elegir con Aura»: fondos de Wallhaven, vídeos de MotionBGS y la imagen del día de Bing. Lo que eliges va solo al piso en el que estás. También con el botón derecho en el escritorio → «Aura…»."},
+      {"icono": "ventana", "titulo": "Ventanas en carrusel", "como": "Ajustes → Pisos → «Ventanas en carrusel (como niri)»: en ese piso las ventanas van en columnas que se deslizan. Meta+Alt+← → para ir de una a otra y Meta+Alt+R para cambiar el ancho."},
+      {"icono": "foto", "titulo": "ArtCraft Launcher", "como": "Búscalo en el menú: la primera vez lo baja (su versión oficial) y desde él instalas PhotoCraft, FilmCraft, VectorCraft y los demás programas Craft. Se pone al día solo."},
       {"icono": "apps", "titulo": "Guía de atajos", "como": "Mantén Meta un momento: salen todos los atajos de Apogeo y, arriba, los del piso en el que estás. Al soltar se va. También con Meta+/."},
       {"icono": "foto", "titulo": "Capturas de Apogeo", "como": "Meta+Mayús+S o Impr Pant: elige zona, ventana o pantalla. Debajo, copiar, guardar, dibujar flechas o sacar el texto. Se copia y se guarda sola en Imágenes/Capturas."},
       {"icono": "copia", "titulo": "Lo que has copiado, a mano", "como": "Meta+V junto al ratón: lo último que copiaste (textos e imágenes). Intro lo pega y Ctrl+P lo fija para que no se borre al apagar."},

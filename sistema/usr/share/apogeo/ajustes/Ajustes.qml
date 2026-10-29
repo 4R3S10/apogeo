@@ -159,7 +159,7 @@ ApplicationWindow {
             // ----- Pisos -----
             Seccion {
                 id: pisos
-                property string palabras: "fondo animado avisos notificaciones energia ahorro apps aplicaciones no molestar jugar navegar estudiar luz calida noche vista nocturna"
+                property string palabras: "fondo animado avisos notificaciones energia ahorro apps aplicaciones no molestar jugar navegar estudiar luz calida noche vista nocturna carrusel niri karousel ventanas columnas mosaico tiling huecos"
                 width: parent.width
                 visible: win.shown(pisos)
                 titulo: "Pisos"
@@ -213,6 +213,60 @@ ApplicationWindow {
                         opciones: [{ texto: "Ahorro" }, { texto: "Equilibrada" }]
                         actual: win.mine.energia === "power-saver" ? 0 : 1
                         onElegido: i => apogeo.set("pisos." + win.fk + ".energia", i === 0 ? "power-saver" : "balanced")
+                    }
+                }
+                // Las ventanas en carrusel (Karousel): se enciende por piso; huecos y anchos, iguales en todos
+                Fila {
+                    titulo: "Ventanas en carrusel (como niri)"
+                    detalle: win.mine.carrusel ? "En columnas que se deslizan: Meta+Alt+← → para ir de una a otra, Meta+Alt+R para cambiar el ancho"
+                                               : "Las ventanas como siempre"
+                    Interruptor {
+                        checked: win.mine.carrusel
+                        onToggled: apogeo.set("pisos." + win.fk + ".carrusel", checked)
+                    }
+                }
+                Fila {
+                    visible: win.mine.carrusel
+                    titulo: "Huecos"
+                    detalle: "Entre las ventanas y en los bordes"
+                    Segmentos {
+                        readonly property var valores: [0, 4, 8, 16]
+                        opciones: [{ texto: "Sin" }, { texto: "4 px" }, { texto: "8 px" }, { texto: "16 px" }]
+                        actual: Math.max(0, valores.indexOf(win.s.carrusel.huecos))
+                        onElegido: i => apogeo.set("carrusel.huecos", valores[i])
+                    }
+                }
+                Fila {
+                    id: anchos
+                    visible: win.mine.carrusel
+                    titulo: "Anchos"
+                    detalle: "Los que recorre Meta+Alt+R · igual en todos los pisos con carrusel"
+                    Row {
+                        spacing: 6
+                        Repeater {
+                            model: [{ clave: "mitad", texto: "½" }, { clave: "dostercios", texto: "⅔" }, { clave: "entera", texto: "Entera" }]
+                            delegate: AbstractButton {
+                                id: ancho
+                                required property var modelData
+                                readonly property bool on: win.s.carrusel.anchos.indexOf(modelData.clave) >= 0
+                                height: 32
+                                width: anchoFila.implicitWidth + 24
+                                leftPadding: 12; rightPadding: 12; topPadding: 0; bottomPadding: 0
+                                hoverEnabled: true
+                                background: Rectangle { radius: Tema.r(16); color: ancho.on ? Tema.rosaSuave : ancho.hovered ? Tema.pulsado : Tema.encima }
+                                contentItem: Row {
+                                    id: anchoFila
+                                    spacing: 6
+                                    Icono { visible: ancho.on; width: 13; height: 13; nombre: "hecho"; color: Tema.rosa; anchors.verticalCenter: parent.verticalCenter }
+                                    Texto { text: ancho.modelData.texto; font.pixelSize: 13; color: ancho.on ? Tema.texto : Tema.apagado; wrapMode: Text.NoWrap; anchors.verticalCenter: parent.verticalCenter }
+                                }
+                                onClicked: {
+                                    const a = win.s.carrusel.anchos.filter(x => x !== modelData.clave);
+                                    if (!on) a.push(modelData.clave);
+                                    if (a.length) apogeo.set("carrusel.anchos", a); // (siempre queda uno)
+                                }
+                            }
+                        }
                     }
                 }
                 Fila {

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ArtCraft Launcher
+GenericName=Programas creativos Craft
+Comment=Instala y pone al día PhotoCraft, FilmCraft, VectorCraft y los demás programas Craft
+Keywords=artcraft;craft;photocraft;filmcraft;vectorcraft;lightcraft;designcraft;soundcraft;dibujo;foto;video;diseño;
+Exec=/usr/lib/apogeo/apogeo-artcraft
+Icon=ai.storyteller.artcraft-launcher
+Categories=Graphics;
+StartupWMClass=artcraft-launcher

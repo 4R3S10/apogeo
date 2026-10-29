@@ -33,6 +33,8 @@ IMAGES = ('.jpg', '.jpeg', '.png', '.webp', '.avif', '.jxl', '.bmp', '.tif', '.t
 VIDEOS = ('.mp4', '.webm', '.mkv', '.mov', '.m4v', '.avi')
 AURA_CONFIG = os.path.join(CONFIG, 'aura', 'config.json')
 ROTATION_FROM = ('aura', 'animados', 'ambos')
+GAPS = (0, 4, 8, 16)
+WIDTHS = {'mitad': '50%', 'dostercios': '66.667%', 'entera': '100%'}  # (en este orden)
 EVERY = {'15min': 15 * 60, 'hora': 3600, 'dia': 86400, 'piso': 0}  # «que cambie solo»; «piso»: al entrar en el piso
 FOLDER_DEFAULT = '~/Imágenes/Fondos'
 import apogeo_aspecto as _aspecto  # noqa: E402
@@ -40,10 +42,15 @@ import apogeo_aspecto as _aspecto  # noqa: E402
 DEFAULTS = {
     'pisos': {
         # Un solo rosa (el de Ágape) en todo; cada piso con su fondo animado. Energía: nunca «rendimiento».
-        'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop']},
-        'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': []},
-        'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': []},
+        # «carrusel»: las ventanas en columnas que se deslizan, como en niri (Karousel)
+        'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop'],
+                  'carrusel': False},
+        'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False},
+        'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': [], 'carrusel': False},
     },
+    # El carrusel, igual en todos los pisos que lo tienen: los huecos entre ventanas (px) y los anchos que recorre
+    # Meta+Alt+R
+    'carrusel': {'huecos': 8, 'anchos': ['mitad', 'dostercios', 'entera']},
     # El fondo de cada piso (pisos.X.fondo) es un fondo animado de Apogeo o la ruta de una imagen o un vídeo tuyo (los
     # eliges con Aura). «cambiar»: que cambie solo, de tu biblioteca de Aura, de los animados o de los dos. «tuyos» y
     # «carpeta» son de antes de Aura (los que añadiste y la carpeta vigilada): siguen en tu biblioteca
@@ -116,6 +123,7 @@ def valid(st):
         if f.get('energia') not in ('power-saver', 'balanced'):
             f['energia'] = 'balanced'
         f['avisos'] = bool(f.get('avisos'))
+        f['carrusel'] = bool(f.get('carrusel'))
         f['apps'] = [a for a in f.get('apps', []) if isinstance(a, str) and a.endswith('.desktop')]
     if st.get('fps') not in FPS_CHOICES:
         st['fps'] = 60
@@ -131,6 +139,10 @@ def valid(st):
             c['cada'] = 'hora'
         if c.get('de') not in ROTATION_FROM:
             c['de'] = 'aura'  # (también los de antes de Aura: tuyos, carpeta, todos)
+    car = st['carrusel']
+    if car.get('huecos') not in GAPS:
+        car['huecos'] = 8
+    car['anchos'] = [w for w in WIDTHS if w in (car.get('anchos') or [])] or ['entera']
     luz = st['luz']
     luz['activa'] = bool(luz.get('activa'))
     if luz.get('calor') not in WARMTH:
