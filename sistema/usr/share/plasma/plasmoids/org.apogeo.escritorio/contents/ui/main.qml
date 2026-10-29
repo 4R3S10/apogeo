@@ -654,7 +654,8 @@ PlasmoidItem {
         Notas { anchors.fill: parent; piso: root.floor }
 
         // ======================= Carrusel de fondos (botón derecho) =======================
-        // Elige y se ve al momento; «Cancelar» deja el de antes. «Más fondos…» abre Ajustes → Fondos.
+        // Tu biblioteca de Aura y los animados: elige y se ve al momento; «Cancelar» deja el de antes. «Aura…» la abre
+        // (lo que elijas en ella va a este piso).
         Item {
             id: carrusel
             anchors.fill: parent
@@ -723,7 +724,7 @@ PlasmoidItem {
                         id: filaFondos
                         spacing: 12
                         Repeater {
-                            model: carrusel.lib ? carrusel.lib.tuyos.concat(carrusel.lib.carpeta, carrusel.lib.animados) : []
+                            model: carrusel.lib ? carrusel.lib.aura.concat(carrusel.lib.animados) : []
                             delegate: Column {
                                 id: mini
                                 required property var modelData
@@ -736,8 +737,14 @@ PlasmoidItem {
                                         anchors.fill: parent
                                         visible: mini.modelData.tipo !== "animado"
                                         radius: Tema.r(12); color: Tema.encima; clip: true
-                                        Image { anchors.fill: parent; visible: !mini.modelData.video; source: mini.modelData.video ? "" : (mini.modelData.url || ""); sourceSize: Qt.size(320, 180); fillMode: Image.PreserveAspectCrop; asynchronous: true }
-                                        Icono { anchors.centerIn: parent; visible: !!mini.modelData.video; nombre: "video"; color: Tema.rosa }
+                                        Image { anchors.fill: parent; source: mini.modelData.mini || ""; sourceSize: Qt.size(320, 180); fillMode: Image.PreserveAspectCrop; asynchronous: true }
+                                        Icono { anchors.centerIn: parent; visible: !!mini.modelData.video && !mini.modelData.mini; nombre: "video"; color: Tema.rosa }
+                                        Rectangle {
+                                            visible: !!mini.modelData.video && !!mini.modelData.mini
+                                            anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 6
+                                            width: 22; height: 22; radius: Tema.r(7); color: "#cc120d14"
+                                            Icono { anchors.centerIn: parent; nombre: "reproducir"; width: 11; height: 11; color: Tema.texto }
+                                        }
                                     }
                                     Rectangle {
                                         anchors.fill: parent; anchors.margins: -4; radius: Tema.r(15); color: "transparent"; border.width: 2
@@ -770,7 +777,7 @@ PlasmoidItem {
                     }
                     Row {
                         spacing: 8
-                        Boton { width: 81; tipo: "plano"; text: "Más…"; onClicked: { carrusel.cerrar(false); datos.hacer("Abrir", ["fondos"]); } }
+                        Boton { width: 81; tipo: "plano"; text: "Aura…"; onClicked: { carrusel.cerrar(false); datos.hacer("Abrir", ["aura"]); } }
                         Boton { width: 81; tipo: "plano"; text: "Cancelar"; onClicked: carrusel.cerrar(true) }
                     }
                 }

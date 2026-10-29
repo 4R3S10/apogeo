@@ -169,7 +169,7 @@ def quick(action, arg=None):
 # ---------- La ventana ----------
 
 def window(section):
-    from PyQt6.QtCore import QSize, QTimer, QUrl, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtCore import QFileSystemWatcher, QSize, QTimer, QUrl, pyqtProperty, pyqtSignal, pyqtSlot
     import apogeo_fondos as fondos
     from PyQt6.QtGui import QIcon
     from PyQt6.QtQuick import QQuickImageProvider
@@ -193,8 +193,7 @@ def window(section):
         tokenSaved = pyqtSignal(bool, str, arguments=['ok', 'message'])
         updatesChanged = pyqtSignal()
         libraryChanged = pyqtSignal()
-        galleryChanged = pyqtSignal()
-        _downloaded = pyqtSignal(str, str)  # (de un hilo al principal: ruta, piso)
+        _library_ready = pyqtSignal()  # (de un hilo al principal: ya están las miniaturas)
         copyChanged = pyqtSignal()
         copyDone = pyqtSignal(str, bool, str, arguments=['what', 'ok', 'message'])  # (clave, hacer, donde, recuperar)
         symbolChanged = pyqtSignal()
@@ -211,8 +210,15 @@ def window(section):
             self._apps = None
             self._updates = {'estado': 'nada', 'lista': [], 'cuantas': 0}
             self._library = fondos.library(self._st)
-            self._gallery = {'estado': 'nada', 'lista': [], 'bajando': ''}
-            self._downloaded.connect(self._on_downloaded)
+            self._library_ready.connect(self._reload_library)
+            self._thumbnails()
+            # Lo que cambia otro (Aura, el carrusel) se ve al momento: se mira la carpeta, porque los ajustes se
+            # guardan de golpe (un archivo nuevo cada vez)
+            os.makedirs(os.path.dirname(comun.SETTINGS), exist_ok=True)
+            self._watch = QFileSystemWatcher([os.path.dirname(comun.SETTINGS)], self)
+            self._watch_timer = QTimer(self, singleShot=True, interval=300)
+            self._watch_timer.timeout.connect(self._settings_file_changed)
+            self._watch.directoryChanged.connect(lambda _d: self._watch_timer.start())
             self._timer = QTimer(self)
             self._timer.timeout.connect(self._read_temps)
             self._timer.start(3000)
@@ -264,7 +270,7 @@ def window(section):
             t = aspecto.tokens(aspecto.settings_of({'aspecto': dict(a or {})}))
             return {k: v for k, v in t.items() if v is not None}
 
-        # ----- Fondos -----
+        # ----- Fondos: los animados de Apogeo y tu biblioteca de Aura -----
         @pyqtProperty('QVariantMap', notify=libraryChanged)
         def library(self):
             return self._library
@@ -273,86 +279,39 @@ def window(section):
             self._library = fondos.library(comun.load())
             self.libraryChanged.emit()
 
-        @pyqtSlot('QVariant')
-        def addWallpapers(self, urls):
-            """Imágenes y vídeos que eliges (en alta calidad): quedan en «Tus fondos»."""
-            urls = urls.toVariant() if hasattr(urls, 'toVariant') else urls
-            paths = [QUrl(u).toLocalFile() if not isinstance(u, QUrl) else u.toLocalFile() for u in urls]
-            tuyos = list(self._st['fondos']['tuyos']) + [p for p in paths if comun.is_wallpaper_file(p)]
-            self.set('fondos.tuyos', list(dict.fromkeys(tuyos)))
-            self._reload_library()
-
-        @pyqtSlot(str)
-        def removeWallpaper(self, path):
-            self.set('fondos.tuyos', [p for p in self._st['fondos']['tuyos'] if p != path])
-            for k in comun.FLOOR_KEYS:  # si era el de algún piso, ese piso vuelve a su animado
-                if self._st['pisos'][k]['fondo'] == path:
-                    self.set(f'pisos.{k}.fondo', comun.DEFAULTS['pisos'][k]['fondo'])
-            self._reload_library()
-
-        @pyqtSlot('QVariant')
-        def setFolder(self, url):
-            url = url.toVariant() if hasattr(url, 'toVariant') else url
-            path = (url if isinstance(url, QUrl) else QUrl(url)).toLocalFile()
-            if os.path.isdir(path):
-                self.set('fondos.carpeta', path)
-                self._reload_library()
-
-        @pyqtSlot()
-        def openFolder(self):
-            folder = comun.wallpaper_folder(self._st)
-            os.makedirs(folder, exist_ok=True)
-            comun.spawn('xdg-open', folder)
-            self._reload_library()
+        def _thumbnails(self):
+            """Las miniaturas de los vídeos que faltan (en segundo plano); al acabar, la biblioteca con ellas."""
+            def work():
+                if fondos.make_thumbnails():
+                    self._library_ready.emit()
+            threading.Thread(target=work, daemon=True).start()
 
         @pyqtSlot()
         def refreshLibrary(self):
             self._reload_library()
+            self._thumbnails()
 
-        @pyqtProperty('QVariantList', constant=True)
-        def suggestions(self):
-            return fondos.SUGGESTIONS
-
-        @pyqtProperty('QVariantMap', notify=galleryChanged)
-        def gallery(self):
-            return self._gallery
+        @pyqtSlot(str, result='QVariantMap')
+        def wallpaperInfo(self, path):
+            """El fondo tuyo que tiene un piso (nombre, vídeo, miniatura) para «Ahora: …»."""
+            return fondos.item(path) if comun.is_wallpaper_file(path) else {}
 
         @pyqtSlot(str)
-        def searchGallery(self, query):
-            self._gallery = {'estado': 'buscando', 'lista': [], 'bajando': ''}
-            self.galleryChanged.emit()
+        def chooseWithAura(self, floor):
+            """Aura, en el piso que estás cambiando (lo que eliges en ella va al piso en el que estás)."""
+            if floor in comun.FLOOR_KEYS:
+                run(os.path.join(comun.LIB, 'apogeo-pisos'), 'ir', str(comun.FLOOR_KEYS.index(floor)))
+            comun.spawn('aura')
 
-            def work():
-                try:
-                    found = fondos.search(query)
-                    self._gallery = {'estado': 'hay' if found else 'nada-encontrado', 'lista': found, 'bajando': ''}
-                except OSError:
-                    self._gallery = {'estado': 'sin-red', 'lista': [], 'bajando': ''}
-                self.galleryChanged.emit()
-            threading.Thread(target=work, daemon=True).start()
-
-        @pyqtSlot('QVariant', str)
-        def downloadGallery(self, item, floor):
-            """Baja la imagen a la carpeta de fondos y, si se dice el piso, la pone de fondo."""
-            item = item.toVariant() if hasattr(item, 'toVariant') else item
-            self._gallery = dict(self._gallery, bajando=item.get('url', ''))
-            self.galleryChanged.emit()
-
-            def work():
-                try:
-                    path = fondos.download(item)
-                except (OSError, ValueError):
-                    path = ''
-                self._gallery = dict(self._gallery, bajando='')
-                self.galleryChanged.emit()
-                if path:
-                    self._downloaded.emit(path, floor)
-            threading.Thread(target=work, daemon=True).start()
-
-        def _on_downloaded(self, path, floor):
-            self._reload_library()
-            if floor:
-                self.set(f'pisos.{floor}.fondo', path)
+        def _settings_file_changed(self):
+            """Otro (Aura, el carrusel del escritorio) cambió tus ajustes: se ven al momento."""
+            st = comun.load()
+            if st != self._st:
+                fondo_antes = [self._st['pisos'][k]['fondo'] for k in comun.FLOOR_KEYS]
+                self._st = st
+                self.settingsChanged.emit()
+                if fondo_antes != [st['pisos'][k]['fondo'] for k in comun.FLOOR_KEYS]:
+                    self.refreshLibrary()  # (lo que se pone con Aura suele ser recién bajado)
 
         # Apps de cada piso
         @pyqtSlot(str, result='QVariantList')

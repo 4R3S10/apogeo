@@ -8,14 +8,14 @@
 # Mission Center) y VirtualBox (no hace falta en el PC y su módulo frenaba las actualizaciones del núcleo). Cuarta
 # (2026-10-28): Lutris (lo hacen Steam, Heroic y la consola), Pavucontrol (el sonido está en el panel rápido y en
 # EasyEffects) y el gestor de KWallet (las contraseñas ya no las guarda KWallet). Quinta (2026-10-29): Flameshot (las
-# capturas son de Apogeo). De cada tanda solo se quita lo suyo: lo que reinstalaste a mano después de una tanda se queda.
+# capturas son de Apogeo). Sexta (2026-10-29): Warehouse (lo hace la tienda de Apogeo). De cada tanda solo se quita lo suyo: lo que reinstalaste a mano después de una tanda se queda.
 #
 # Lo lanza la revisión de Apogeo después de una actualización y, si no llegó a acabar (por ejemplo, porque se reinició
 # justo después), al encender (apogeo-limpieza.service). pacman está ocupado hasta que acaba la actualización, así que
 # primero espera a que termine; mientras quita, retrasa el apagado. Lo que quita lo apunta en
 # /var/lib/apogeo/limpieza.json para que la revisión te lo cuente.
 set -u
-MARCA=/var/lib/apogeo/limpieza-5
+MARCA=/var/lib/apogeo/limpieza-6
 INFORME=/var/lib/apogeo/limpieza.json
 [ -e "$MARCA" ] && exit 0
 
@@ -42,7 +42,9 @@ fi
 # Cuarta tanda
 [ -e /var/lib/apogeo/limpieza-4 ] || QUITAR+=(lutris pavucontrol kwalletmanager)
 # Quinta tanda
-QUITAR+=(flameshot)
+[ -e /var/lib/apogeo/limpieza-5 ] || QUITAR+=(flameshot)
+# Sexta tanda
+QUITAR+=(warehouse)
 
 # Un candado de pacman de antes de encender el PC no es de nadie (se cortó un pacman al apagar): fuera
 LCK=/var/lib/pacman/db.lck
@@ -82,4 +84,4 @@ python3 - "$INFORME" "${quitados[@]}" <<'PY'
 import json, sys, time
 json.dump({'fecha': int(time.time()), 'quitados': sys.argv[2:]}, open(sys.argv[1], 'w'))
 PY
-touch /var/lib/apogeo/limpieza-1 /var/lib/apogeo/limpieza-2 /var/lib/apogeo/limpieza-3 /var/lib/apogeo/limpieza-4 "$MARCA"
+touch /var/lib/apogeo/limpieza-1 /var/lib/apogeo/limpieza-2 /var/lib/apogeo/limpieza-3 /var/lib/apogeo/limpieza-4 /var/lib/apogeo/limpieza-5 "$MARCA"

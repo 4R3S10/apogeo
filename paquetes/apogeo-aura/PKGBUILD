@@ -1,0 +1,44 @@
+# Aura (antwny/aura), el gestor de fondos animados de Antwny: tu biblioteca y fondos de internet (Wallhaven, vídeos de
+# MotionBGS, la foto del día de Bing). Se compila de su código, en la versión que se revisó (commit fijo), con dos
+# retoques para Apogeo (aura-apogeo.patch):
+#  - lo que eliges va al piso en el que estás, con el reproductor de fondos de Apogeo (apogeo-fondo), en lugar de
+#    cambiar el fondo de Plasma entero (y sin el plugin de vídeo de terceros);
+#  - nunca se actualiza sola (se copiaría a ~/.local/bin, saltándose pacman): la pone al día este paquete.
+# Para subir de versión: revisar el código nuevo, cambiar pkgver y el commit, y comprobar que el parche sigue entrando.
+pkgname=apogeo-aura
+pkgver=1.9.1
+pkgrel=1
+_commit=0f02aa4329e0c7abb3298ab52d1b9d8a4cf07407
+pkgdesc='Aura: fondos animados y de internet para los pisos de Apogeo'
+arch=('x86_64')
+url='https://github.com/antwny/aura'
+license=('GPL-3.0-or-later')
+depends=(gcc-libs glibc libxkbcommon wayland vulkan-icd-loader ffmpeg xdg-desktop-portal xdg-user-dirs)
+makedepends=(git cargo)
+options=('!lto' '!debug')
+source=("aura::git+https://github.com/antwny/aura.git#commit=${_commit}" aura-apogeo.patch)
+sha256sums=('SKIP' '93dee1de9e6d0a2863e933f81593bd21477ac6870ac66ce00cc48999b2403ed2')
+
+prepare() {
+  cd aura
+  patch -Np1 -i ../aura-apogeo.patch
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd aura
+  CARGO_TARGET_DIR=target cargo build --frozen --release
+}
+
+package() {
+  cd aura
+  install -Dm755 target/release/aura "$pkgdir/usr/bin/aura"
+  install -Dm644 resources/io.github.antwny.aura.desktop -t "$pkgdir/usr/share/applications/"
+  sed -i 's/^Comment=.*/Comment=Fondos animados y de internet para tus pisos/' \
+    "$pkgdir/usr/share/applications/io.github.antwny.aura.desktop"
+  install -Dm644 resources/io.github.antwny.aura.metainfo.xml -t "$pkgdir/usr/share/metainfo/"
+  install -Dm644 resources/icons/hicolor/scalable/apps/io.github.antwny.aura.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps/"
+  install -Dm644 resources/icons/navbar-open-symbolic.svg resources/icons/navbar-closed-symbolic.svg \
+    -t "$pkgdir/usr/share/icons/hicolor/scalable/actions/"
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

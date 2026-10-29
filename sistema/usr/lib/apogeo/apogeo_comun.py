@@ -28,9 +28,11 @@ VERSION = 4  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado); 3:
 # 4: el aspecto pasa a «Como Ágape» (si no lo habías cambiado)
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
 STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
-# Fondos tuyos: imágenes y vídeos en alta calidad
+# Fondos tuyos (los de Aura): imágenes y vídeos en alta calidad
 IMAGES = ('.jpg', '.jpeg', '.png', '.webp', '.avif', '.jxl', '.bmp', '.tif', '.tiff')
-VIDEOS = ('.mp4', '.webm', '.mkv', '.mov', '.m4v')
+VIDEOS = ('.mp4', '.webm', '.mkv', '.mov', '.m4v', '.avi')
+AURA_CONFIG = os.path.join(CONFIG, 'aura', 'config.json')
+ROTATION_FROM = ('aura', 'animados', 'ambos')
 EVERY = {'15min': 15 * 60, 'hora': 3600, 'dia': 86400, 'piso': 0}  # «que cambie solo»; «piso»: al entrar en el piso
 FOLDER_DEFAULT = '~/Imágenes/Fondos'
 import apogeo_aspecto as _aspecto  # noqa: E402
@@ -42,12 +44,13 @@ DEFAULTS = {
         'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': []},
         'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': []},
     },
-    # El fondo de cada piso (pisos.X.fondo) es un fondo animado de Apogeo o la ruta de una imagen o un vídeo tuyo.
-    # «tuyos»: los que has añadido; «carpeta»: la que se vigila (lo que metas ahí entra solo); «cambiar»: que cambie solo
+    # El fondo de cada piso (pisos.X.fondo) es un fondo animado de Apogeo o la ruta de una imagen o un vídeo tuyo (los
+    # eliges con Aura). «cambiar»: que cambie solo, de tu biblioteca de Aura, de los animados o de los dos. «tuyos» y
+    # «carpeta» son de antes de Aura (los que añadiste y la carpeta vigilada): siguen en tu biblioteca
     'fondos': {
         'tuyos': [],
         'carpeta': FOLDER_DEFAULT,
-        'cambiar': {k: {'activo': False, 'cada': 'hora', 'de': 'todos'} for k in ('jugar', 'navegar', 'estudiar')},
+        'cambiar': {k: {'activo': False, 'cada': 'hora', 'de': 'aura'} for k in ('jugar', 'navegar', 'estudiar')},
     },
     # Luz cálida en Estudiar por la noche (la luz nocturna de KWin): entra poco a poco al anochecer en tu zona
     'luz': {'activa': True, 'calor': 4500},
@@ -126,8 +129,8 @@ def valid(st):
         c['activo'] = bool(c.get('activo'))
         if c.get('cada') not in EVERY:
             c['cada'] = 'hora'
-        if c.get('de') not in ('todos', 'tuyos', 'carpeta', 'animados'):
-            c['de'] = 'todos'
+        if c.get('de') not in ROTATION_FROM:
+            c['de'] = 'aura'  # (también los de antes de Aura: tuyos, carpeta, todos)
     luz = st['luz']
     luz['activa'] = bool(luz.get('activa'))
     if luz.get('calor') not in WARMTH:
@@ -154,41 +157,74 @@ def is_video(path):
     return isinstance(path, str) and path.lower().endswith(VIDEOS)
 
 
+def _user_dir(kind):
+    """Una carpeta tuya (PICTURES, VIDEOS…) con su nombre de verdad; '' si no hay."""
+    try:
+        d = subprocess.run(['xdg-user-dir', kind], capture_output=True, text=True, timeout=3).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        d = ''
+    return d if d and d != HOME else ''
+
+
 def wallpaper_folder(st):
-    """La carpeta vigilada; por defecto, «Fondos» dentro de tu carpeta de imágenes (sea cual sea su nombre)."""
+    """La carpeta de fondos de antes de Aura; por defecto, «Fondos» dentro de tu carpeta de imágenes (sea cual sea su
+    nombre)."""
     folder = st['fondos'].get('carpeta') or FOLDER_DEFAULT
-    if folder == FOLDER_DEFAULT:
-        try:
-            pics = subprocess.run(['xdg-user-dir', 'PICTURES'], capture_output=True, text=True, timeout=3).stdout.strip()
-        except (OSError, subprocess.SubprocessError):
-            pics = ''
-        if pics and pics != HOME:
-            return os.path.join(pics, 'Fondos')
+    pics = _user_dir('PICTURES')
+    if folder == FOLDER_DEFAULT and pics:
+        return os.path.join(pics, 'Fondos')
     return os.path.expanduser(folder)
 
 
-def folder_wallpapers(st):
-    """Las imágenes y vídeos de la carpeta vigilada (y sus subcarpetas), los más nuevos primero."""
-    folder = wallpaper_folder(st)
+def _aura_config():
+    try:
+        with open(AURA_CONFIG) as f:
+            cfg = json.load(f)
+        return cfg if isinstance(cfg, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def aura_dirs(st):
+    """Las carpetas de tu biblioteca de Aura, como las mira ella: la de lo que bajas (Imágenes/Wallpapers/Aura), las
+    que tengas en Aura (o, sin abrirla todavía, las suyas de serie: Wallpapers, Wallpaper y Fondos en Imágenes y en
+    Vídeos) y, de antes de Aura, tu carpeta de fondos de Apogeo."""
+    pics = _user_dir('PICTURES') or os.path.join(HOME, 'Pictures')
+    dirs = [os.path.join(pics, 'Wallpapers', 'Aura')]
+    cfg = _aura_config()
+    if isinstance(cfg.get('dirs'), list):
+        dirs += [os.path.expanduser(d) for d in cfg['dirs'] if isinstance(d, str)]
+    else:
+        vids = _user_dir('VIDEOS') or os.path.join(HOME, 'Videos')
+        dirs += [os.path.join(b, sub) for b in (pics, vids) for sub in ('Wallpapers', 'Wallpaper', 'Fondos')]
+    dirs.append(wallpaper_folder(st))
+    return [d for d in dict.fromkeys(os.path.realpath(d) for d in dirs) if os.path.isdir(d)]
+
+
+def aura_wallpapers(st):
+    """Tu biblioteca de Aura (lo de sus carpetas y un nivel de subcarpetas, como ella, y los vídeos que le
+    añadiste uno a uno) y los fondos que añadiste en Apogeo antes de Aura. Los más nuevos primero."""
     out = []
-    if folder and os.path.isdir(folder):
-        for root, _dirs, files in os.walk(folder):
-            for name in files:
-                if name.lower().endswith(IMAGES + VIDEOS) and not name.startswith('.'):
-                    out.append(os.path.join(root, name))
-    return sorted(out, key=lambda p: os.path.getmtime(p), reverse=True)[:500]
+    for d in aura_dirs(st):
+        for root, dirs, files in os.walk(d):
+            depth = root[len(d):].count(os.sep)
+            if depth >= 1:
+                dirs[:] = []
+            dirs[:] = [x for x in dirs if not x.startswith('.')]
+            out += [os.path.join(root, n) for n in files if n.lower().endswith(IMAGES + VIDEOS) and not n.startswith('.')]
+    extra = _aura_config().get('custom_videos')
+    out += [os.path.expanduser(x) for x in (extra if isinstance(extra, list) else []) if isinstance(x, str)]
+    out += st['fondos']['tuyos']
+    out = [p for p in dict.fromkeys(os.path.realpath(p) for p in out) if is_wallpaper_file(p)]
+    return sorted(out, key=os.path.getmtime, reverse=True)[:500]
 
 
 def rotation_pool(st, floor):
     """Los fondos por los que pasa «que cambie solo» en ese piso."""
     de = st['fondos']['cambiar'][floor]['de']
-    pool = []
-    if de in ('todos', 'tuyos'):
-        pool += st['fondos']['tuyos']
-    if de in ('todos', 'carpeta'):
-        pool += folder_wallpapers(st)
-    if de == 'animados' or not pool:  # (sin fondos tuyos todavía: los animados de Apogeo)
-        pool = list(STYLES)
+    pool = aura_wallpapers(st) if de in ('aura', 'ambos') else []
+    if de in ('animados', 'ambos') or not pool:  # (sin fondos en Aura todavía: los animados de Apogeo)
+        pool += list(STYLES)
     return list(dict.fromkeys(pool))
 
 

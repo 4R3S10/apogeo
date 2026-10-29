@@ -1,0 +1,48 @@
+#!/usr/bin/python3
+"""
+Pone una imagen o un vídeo de fondo en el piso en el que estás. Lo usa Aura (apogeo-aura): lo que eliges en ella va
+solo a ese piso, con el reproductor de fondos de Apogeo, y los demás pisos siguen con el suyo. Como es una elección
+tuya, «que cambie solo» se apaga en ese piso.
+
+  apogeo-fondo RUTA
+"""
+import os
+import sys
+
+sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
+import apogeo_comun as comun  # noqa: E402
+
+
+def current_floor():
+    """La clave del piso en el que estás (navegar si no se sabe)."""
+    import dbus
+    try:
+        props = dbus.Interface(dbus.SessionBus().get_object('org.kde.KWin', '/VirtualDesktopManager'),
+                               'org.freedesktop.DBus.Properties')
+        current = str(props.Get('org.kde.KWin.VirtualDesktopManager', 'current'))
+        name = next((str(d[2]) for d in props.Get('org.kde.KWin.VirtualDesktopManager', 'desktops')
+                     if str(d[1]) == current), '')
+    except dbus.DBusException:
+        name = ''
+    key = name.strip().lower()
+    return key if key in comun.FLOOR_KEYS else 'navegar'
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    path = os.path.realpath(os.path.expanduser(sys.argv[1]))
+    if not comun.is_wallpaper_file(path):
+        print(f'Apogeo no puede poner esto de fondo: {path}', file=sys.stderr)
+        return 1
+    floor = current_floor()
+    st = comun.load()
+    st['pisos'][floor]['fondo'] = path
+    st['fondos']['cambiar'][floor]['activo'] = False
+    comun.save(st)  # apogeo-pisos lo ve y lo pone
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

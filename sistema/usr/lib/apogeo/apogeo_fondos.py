@@ -1,111 +1,85 @@
 """
-Los fondos de Apogeo: tu biblioteca (los animados de Apogeo, los que has añadido y los de la carpeta vigilada) y la
-galería de internet.
+Los fondos de Apogeo: los animados de Apogeo y tu biblioteca de Aura (lo que bajas con ella de Wallhaven, MotionBGS,
+Bing… y tus carpetas de fondos). Lo que eliges en Aura va al piso en el que estás (apogeo-fondo); desde Ajustes → Fondos
+y el carrusel del escritorio se elige también de tu biblioteca.
 
-La galería busca en las «imágenes destacadas» de Wikimedia Commons: fotos de alta calidad elegidas por la comunidad, con
-licencia libre y sin clave ni cuenta. Solo se enseñan las apaisadas de 2560 px de ancho o más. Al bajar una, se guarda en
-la carpeta vigilada (así entra sola en «que cambie solo») y su autor y licencia se apuntan en
-~/.local/share/apogeo/fondos-creditos.json.
+Los vídeos llevan una miniatura (un fotograma, con ffmpeg) en ~/.cache/apogeo/miniaturas.
 """
-import json
+import hashlib
 import os
-import re
+import subprocess
+import threading
 import urllib.parse
-import urllib.request
 
 import apogeo_comun as comun
 
-API = 'https://commons.wikimedia.org/w/api.php'
-UA = {'User-Agent': 'Apogeo/1.0 (https://github.com/4R3S10/apogeo)'}  # Wikimedia pide identificarse
-CREDITS = os.path.join(os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share')), 'apogeo',
-                       'fondos-creditos.json')
 NAMES = {'tinta': 'Tinta', 'humo': 'Humo', 'seda': 'Seda', 'marmol': 'Mármol', 'relieve': 'Relieve',
          'remolino': 'Remolino', 'dunas': 'Dunas', 'luces': 'Luces'}
-# Ideas para buscar (en la galería se busca en inglés, que es como están descritas casi todas)
-SUGGESTIONS = [
-    {'texto': 'Montañas', 'buscar': 'mountains'}, {'texto': 'Espacio', 'buscar': 'nebula galaxy'},
-    {'texto': 'Auroras', 'buscar': 'aurora'}, {'texto': 'Mar', 'buscar': 'sea coast'},
-    {'texto': 'Bosque', 'buscar': 'forest'}, {'texto': 'Ciudad de noche', 'buscar': 'city night'},
-    {'texto': 'Desierto', 'buscar': 'desert dunes'}, {'texto': 'Flores', 'buscar': 'flowers macro'},
-]
+_busy = threading.Lock()  # (una tanda de miniaturas a la vez)
+THUMBS = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(comun.HOME, '.cache')), 'apogeo', 'miniaturas')
 
 
-def _item(path, kind):
-    return {'valor': path, 'nombre': os.path.splitext(os.path.basename(path))[0], 'tipo': kind,
-            'video': comun.is_video(path), 'url': 'file://' + urllib.parse.quote(path)}
+def _url(path):
+    return 'file://' + urllib.parse.quote(path)
+
+
+def thumb_path(path):
+    """Dónde va la miniatura de un vídeo (cambia si el vídeo cambia)."""
+    try:
+        stamp = f'{path}:{os.path.getmtime(path)}'
+    except OSError:
+        stamp = path
+    return os.path.join(THUMBS, hashlib.sha1(stamp.encode()).hexdigest()[:20] + '.jpg')
+
+
+def item(path):
+    """Un fondo de tu biblioteca: {valor, nombre, tipo, video, url, mini} (mini: '' si el vídeo aún no tiene)."""
+    video = comun.is_video(path)
+    mini = thumb_path(path) if video else path
+    return {'valor': path, 'nombre': os.path.splitext(os.path.basename(path))[0], 'tipo': 'aura', 'video': video,
+            'url': _url(path), 'mini': _url(mini) if os.path.isfile(mini) else ''}
 
 
 def library(st=None):
-    """Todo lo que se puede poner de fondo: {animados, tuyos, carpeta, rutaCarpeta}."""
+    """Todo lo que se puede poner de fondo: {animados, aura}."""
     st = st or comun.load()
-    tuyos = [x for x in st['fondos']['tuyos'] if os.path.isfile(x)]
-    carpeta = [x for x in comun.folder_wallpapers(st) if x not in tuyos]
     return {
         'animados': [{'valor': s, 'nombre': NAMES[s], 'tipo': 'animado', 'indice': i} for i, s in enumerate(comun.STYLES)],
-        'tuyos': [_item(x, 'tuyo') for x in tuyos],
-        'carpeta': [_item(x, 'carpeta') for x in carpeta],
-        'rutaCarpeta': comun.wallpaper_folder(st),
+        'aura': [item(p) for p in comun.aura_wallpapers(st)],
     }
 
 
-def search(query):
-    """Busca en las imágenes destacadas de Wikimedia Commons. Devuelve [{titulo, mini, url, ancho, alto, autor, licencia,
-    pagina}]."""
-    q = (query or '').strip() or 'landscape'
-    params = {
-        'action': 'query', 'format': 'json', 'generator': 'search', 'gsrnamespace': '6', 'gsrlimit': '40',
-        'gsrsearch': f'{q} incategory:"Featured_pictures_on_Wikimedia_Commons" filetype:bitmap',
-        'prop': 'imageinfo', 'iiprop': 'url|size|extmetadata', 'iiurlwidth': '480',
-        'iiextmetadatafilter': 'Artist|LicenseShortName',
-    }
-    req = urllib.request.Request(API + '?' + urllib.parse.urlencode(params), headers=UA)
-    with urllib.request.urlopen(req, timeout=20) as r:
-        data = json.load(r)
-    out = []
-    pages = sorted(data.get('query', {}).get('pages', {}).values(), key=lambda p: p.get('index', 0))
-    for p in pages:
-        ii = (p.get('imageinfo') or [{}])[0]
-        w, h = ii.get('width', 0), ii.get('height', 0)
-        if w < 2560 or w < h * 1.2:  # alta calidad y apaisada (para la pantalla)
-            continue
-        meta = ii.get('extmetadata', {})
-        artist = re.sub(r'<[^>]+>', '', meta.get('Artist', {}).get('value', '')).strip()
-        out.append({
-            'titulo': re.sub(r'^File:|\.\w+$', '', p.get('title', '')),
-            'mini': ii.get('thumburl', ''), 'url': ii.get('url', ''), 'ancho': w, 'alto': h,
-            'autor': artist[:80], 'licencia': meta.get('LicenseShortName', {}).get('value', ''),
-            'pagina': ii.get('descriptionurl', ''),
-        })
-    return out
-
-
-def download(item, st=None):
-    """Baja una imagen de la galería a la carpeta vigilada y apunta su autor y licencia. Devuelve la ruta."""
-    url = item.get('url', '')
-    if not url.startswith('https://upload.wikimedia.org/'):
-        raise ValueError('Solo se baja de Wikimedia Commons')
-    st = st or comun.load()
-    folder = comun.wallpaper_folder(st)
-    os.makedirs(folder, exist_ok=True)
-    name = re.sub(r'[^\w .()-]+', '', item.get('titulo') or 'fondo').strip()[:90] or 'fondo'
-    ext = os.path.splitext(urllib.parse.urlparse(url).path)[1].lower() or '.jpg'
-    path = os.path.join(folder, name + ext)
-    if not os.path.exists(path):
-        tmp = path + '.parcial'
-        with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r, open(tmp, 'wb') as f:
-            while True:
-                chunk = r.read(1 << 16)
-                if not chunk:
-                    break
-                f.write(chunk)
-        os.replace(tmp, path)
+def make_thumbnails(st=None, limit=40):
+    """Las miniaturas que faltan de los vídeos de tu biblioteca (y de los que tienen puestos los pisos). Cuántas hizo."""
+    if not _busy.acquire(blocking=False):
+        return 0
     try:
-        with open(CREDITS) as f:
-            credits = json.load(f)
-    except (OSError, ValueError):
-        credits = {}
-    credits[path] = {'autor': item.get('autor', ''), 'licencia': item.get('licencia', ''), 'origen': item.get('pagina', '')}
-    os.makedirs(os.path.dirname(CREDITS), exist_ok=True)
-    with open(CREDITS, 'w') as f:
-        json.dump(credits, f, ensure_ascii=False, indent=1)
-    return path
+        return _make_thumbnails(st or comun.load(), limit)
+    finally:
+        _busy.release()
+
+
+def _make_thumbnails(st, limit):
+    videos = [p for p in comun.aura_wallpapers(st) if comun.is_video(p)]
+    videos += [st['pisos'][k]['fondo'] for k in comun.FLOOR_KEYS if comun.is_video(st['pisos'][k]['fondo'])]
+    made = 0
+    for path in dict.fromkeys(videos):
+        out = thumb_path(path)
+        if os.path.isfile(out) or made >= limit:
+            continue
+        os.makedirs(THUMBS, exist_ok=True)
+        tmp = f'{out}.{os.getpid()}.jpg'  # (Ajustes y el escritorio pueden estar a la vez)
+        for at in ('2', '0'):  # (un vídeo de menos de 2 s: el primer fotograma)
+            try:
+                subprocess.run(['ffmpeg', '-nostdin', '-loglevel', 'error', '-ss', at, '-i', path, '-frames:v', '1',
+                                '-vf', 'scale=480:-2', '-y', tmp], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               timeout=20)
+            except (OSError, subprocess.SubprocessError):
+                break
+            if os.path.isfile(tmp) and os.path.getsize(tmp) > 0:
+                os.replace(tmp, out)
+                made += 1
+                break
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    return made

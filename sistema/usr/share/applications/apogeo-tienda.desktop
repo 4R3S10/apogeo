@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Tienda de Apogeo
+GenericName=Tienda de programas
+Comment=Busca, instala y quita programas del sistema y de Flathub
+Keywords=tienda;programas;aplicaciones;instalar;quitar;flatpak;flathub;juegos;apps;software;
+Exec=/usr/lib/apogeo/apogeo-tienda %u
+Icon=apogeo
+Categories=System;PackageManager;
+StartupWMClass=apogeo-tienda

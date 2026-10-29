@@ -1,14 +1,13 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
 import Apogeo
 
-// Ajustes → Fondos («F1»): el fondo de cada piso. Los animados de Apogeo (el de siempre, por defecto), tus imágenes y
-// vídeos en alta calidad, los de tu carpeta (lo que metas ahí entra solo), la galería de internet (imágenes destacadas de
-// Wikimedia Commons, con licencia libre) y «que cambie solo». Lo que se elige se ve al momento.
+// Ajustes → Fondos: el fondo de cada piso. Los animados de Apogeo (el de siempre, por defecto) y, con Aura, imágenes y
+// vídeos de internet (Wallhaven, MotionBGS, Bing del día) y de tu biblioteca: lo que eliges en Aura va solo al piso en
+// el que estás. Debajo, tu biblioteca de Aura para ponerla en cualquier piso y «que cambie solo». Se ve al momento.
 Seccion {
     id: sec
-    property string palabras: "fondos fondo de pantalla imagen video animado galeria internet carpeta cambie solo wallpaper"
+    property string palabras: "fondos fondo de pantalla imagen video animado aura wallhaven bing internet biblioteca cambie solo wallpaper"
     titulo: "Fondos"
     intro: "Cada piso con el suyo. Lo que elijas se pone al momento; también con el botón derecho en el escritorio."
 
@@ -22,6 +21,10 @@ Seccion {
     readonly property var lib: apogeo.library
     readonly property string current: apogeo.settings.pisos[fk].fondo
     readonly property var rot: apogeo.settings.fondos.cambiar[fk]
+    // El fondo tuyo que tiene el piso ({} si es uno animado)
+    readonly property var ahora: { apogeo.library; return apogeo.wallpaperInfo(current) }
+    readonly property var animado: lib.animados.find(a => a.valor === current) || null
+    property bool todaLaBiblioteca: false
     function pick(valor) { apogeo.set("pisos." + sec.fk + ".fondo", valor) }
 
     // Una miniatura: animada, imagen o vídeo
@@ -29,8 +32,8 @@ Seccion {
         id: tile
         property var item
         property real side: 150
-        property bool removable: false
-        readonly property bool on: item && item.valor === sec.current
+        property bool elegible: true
+        readonly property bool on: elegible && item && item.valor === sec.current
         spacing: 6
         width: side
         Item {
@@ -44,18 +47,22 @@ Seccion {
                 clip: true
                 Image {
                     anchors.fill: parent
-                    visible: !tile.item.video
-                    source: tile.item && !tile.item.video && tile.item.url ? tile.item.url : ""
-                    sourceSize: Qt.size(320, 180)
+                    source: tile.item.mini || ""
+                    sourceSize: Qt.size(Math.round(tile.side * 2), Math.round(tile.side * 1.12))
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                 }
-                Column {
+                Icono {
                     anchors.centerIn: parent
-                    visible: !!tile.item.video
-                    spacing: 4
-                    Icono { anchors.horizontalCenter: parent.horizontalCenter; nombre: "video"; color: Tema.rosa }
-                    Texto { text: "Vídeo"; color: Tema.apagado; font.pixelSize: 11 }
+                    visible: !!tile.item.video && !tile.item.mini
+                    nombre: "video"; color: Tema.rosa
+                }
+                Rectangle {  // (un vídeo: el ▶ en la esquina)
+                    visible: !!tile.item.video && !!tile.item.mini
+                    anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 6
+                    width: 24; height: 24; radius: Tema.r(8)
+                    color: "#cc120d14"
+                    Icono { anchors.centerIn: parent; nombre: "reproducir"; width: 12; height: 12; color: Tema.texto }
                 }
             }
             Rectangle {
@@ -64,30 +71,21 @@ Seccion {
                 radius: Tema.r(15)
                 color: "transparent"
                 border.width: 2
-                border.color: tile.on ? Tema.rosa : area.containsMouse ? Tema.borde : "transparent"
+                border.color: tile.on ? Tema.rosa : area.containsMouse && tile.elegible ? Tema.borde : "transparent"
             }
             MouseArea {
                 id: area
                 anchors.fill: parent
+                enabled: tile.elegible
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: sec.pick(tile.item.valor)
             }
-            AbstractButton {
-                id: quitar
-                visible: tile.removable && (area.containsMouse || hovered)
-                anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 6
-                width: 24; height: 24
-                hoverEnabled: true
-                background: Rectangle { radius: Tema.r(8); color: quitar.hovered ? "#e5484d" : "#cc120d14" }
-                contentItem: Icono { nombre: "cerrar"; width: 12; height: 12; color: Tema.texto }
-                onClicked: apogeo.removeWallpaper(tile.item.valor)
-                ToolTip.visible: hovered; ToolTip.text: "Quitar de tus fondos"
-            }
         }
         Texto {
+            visible: tile.item.nombre !== undefined
             width: parent.width
-            text: tile.item.nombre
+            text: tile.item.nombre || ""
             color: tile.on ? Tema.texto : Tema.apagado
             font.pixelSize: 12
             font.weight: tile.on ? Font.Bold : Font.Normal
@@ -99,14 +97,13 @@ Seccion {
     component Grid_: Flow {
         id: g
         property var items: []
-        property bool removable: false
         readonly property int cols: Math.max(3, Math.floor((width + 12) / 162))
         readonly property real side: Math.floor((width - (cols - 1) * spacing) / cols)
         width: parent.width
         spacing: 12
         Repeater {
             model: g.items
-            delegate: Tile { required property var modelData; item: modelData; side: g.side; removable: g.removable }
+            delegate: Tile { required property var modelData; item: modelData; side: g.side }
         }
     }
 
@@ -125,116 +122,75 @@ Seccion {
     }
 
     Fila {
-        titulo: "Tus fondos"
-        detalle: "Imágenes y vídeos en alta calidad (4K o más). Los vídeos van en bucle y sin sonido, y se paran si una ventana los tapa"
+        titulo: "Con Aura"
+        detalle: "Lo que pones en Aura va solo al piso en el que estás. Los vídeos van en bucle y sin sonido, y se paran si una ventana los tapa"
         ancha: true
-        Column {
+        Row {
             width: parent.width
-            spacing: 12
-            Boton { text: "Añadir imagen o vídeo"; icono: "mas"; onClicked: addDialog.open() }
-            Grid_ { items: sec.lib.tuyos; removable: true; visible: sec.lib.tuyos.length > 0 }
+            spacing: 20
+            Tile {
+                id: previa
+                side: 240
+                elegible: false
+                item: sec.ahora.valor ? { tipo: "aura", video: sec.ahora.video, mini: sec.ahora.mini }
+                                      : { tipo: "animado", indice: sec.animado ? sec.animado.indice : 0 }
+            }
+            Column {
+                width: parent.width - previa.width - parent.spacing
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+                Texto {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    font.weight: Font.DemiBold
+                    text: sec.ahora.valor ? "Ahora: «" + sec.ahora.nombre + "»" + (sec.ahora.video ? " (vídeo)" : "")
+                                          : "Ahora: el animado «" + (sec.animado ? sec.animado.nombre : "") + "»"
+                }
+                Texto {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: Tema.apagado
+                    font.pixelSize: 12
+                    text: "Wallhaven, vídeos MotionBGS, Bing del día y tu biblioteca"
+                }
+                Boton {
+                    tipo: "principal"
+                    icono: "imagen"
+                    text: "Elegir con Aura"
+                    onClicked: apogeo.chooseWithAura(sec.fk)
+                }
+                Texto {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: Tema.tenue
+                    font.pixelSize: 11
+                    text: "Te lleva a " + sec.floors[sec.floor].texto + " y abre Aura"
+                }
+            }
         }
     }
 
     Fila {
-        titulo: "De tu carpeta"
-        detalle: sec.lib.rutaCarpeta + " · lo que metas ahí aparece aquí solo"
+        titulo: "Tu biblioteca"
+        detalle: sec.lib.aura.length ? "Lo que has bajado con Aura y tus carpetas de fondos: ponlo en cualquier piso"
+                                     : "Aún está vacía: lo que bajes con Aura aparece aquí"
         ancha: true
         Column {
             width: parent.width
             spacing: 12
             Row {
                 spacing: 8
-                Boton { text: "Abrir la carpeta"; icono: "carpeta"; onClicked: apogeo.openFolder() }
-                Boton { text: "Usar otra carpeta"; tipo: "plano"; onClicked: folderDialog.open() }
                 Boton { text: "Mirar de nuevo"; tipo: "plano"; icono: "actualizar"; onClicked: apogeo.refreshLibrary() }
-            }
-            Grid_ { items: sec.lib.carpeta; visible: sec.lib.carpeta.length > 0 }
-        }
-    }
-
-    Fila {
-        titulo: "Galería de internet"
-        detalle: "Imágenes destacadas de Wikimedia Commons: fotos de alta calidad con licencia libre. Se guardan en tu carpeta de fondos"
-        ancha: true
-        Column {
-            width: parent.width
-            spacing: 12
-            Row {
-                spacing: 8
-                Campo {
-                    id: buscar
-                    width: 300
-                    implicitHeight: 36
-                    font.pixelSize: 13
-                    leftPadding: 36
-                    placeholderText: "Buscar fondos (montañas, espacio…)"
-                    onAccepted: apogeo.searchGallery(text)
-                    Icono { x: 13; anchors.verticalCenter: parent.verticalCenter; nombre: "buscar"; color: Tema.tenue }
-                }
-                Boton { text: "Buscar"; tipo: "principal"; onClicked: apogeo.searchGallery(buscar.text) }
-            }
-            Flow {
-                width: parent.width
-                spacing: 6
-                Repeater {
-                    model: apogeo.suggestions
-                    delegate: Boton {
-                        required property var modelData
-                        tipo: "plano"
-                        text: modelData.texto
-                        onClicked: { buscar.text = ""; apogeo.searchGallery(modelData.buscar) }
-                    }
+                Boton {
+                    visible: sec.lib.aura.length > 12
+                    tipo: "plano"
+                    text: sec.todaLaBiblioteca ? "Ver menos" : "Ver todos (" + sec.lib.aura.length + ")"
+                    onClicked: sec.todaLaBiblioteca = !sec.todaLaBiblioteca
                 }
             }
-            Texto {
-                visible: text !== ""
-                color: Tema.apagado
-                text: ({ buscando: "Buscando…", "nada-encontrado": "No hay fotos destacadas con eso. Prueba en inglés (por ejemplo «mountains»).", "sin-red": "No hay internet ahora mismo." })[apogeo.gallery.estado] || ""
-            }
-            Flow {
-                id: galeria
-                width: parent.width
-                spacing: 12
-                readonly property int cols: Math.max(3, Math.floor((width + 12) / 200))
-                readonly property real side: Math.floor((width - (cols - 1) * spacing) / cols)
-                Repeater {
-                    model: apogeo.gallery.lista
-                    delegate: Column {
-                        id: foto
-                        required property var modelData
-                        readonly property bool bajando: apogeo.gallery.bajando === modelData.url
-                        width: galeria.side
-                        spacing: 5
-                        Rectangle {
-                            width: parent.width; height: Math.round(width * 0.56)
-                            radius: Tema.r(12)
-                            color: Tema.encima
-                            clip: true
-                            Image { anchors.fill: parent; source: foto.modelData.mini; fillMode: Image.PreserveAspectCrop; asynchronous: true }
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "#99120d14"
-                                visible: fotoArea.containsMouse || foto.bajando
-                                Boton {
-                                    anchors.centerIn: parent
-                                    tipo: "principal"
-                                    icono: foto.bajando ? "" : "descargar"
-                                    text: foto.bajando ? "Bajando…" : "Poner en " + sec.floors[sec.floor].texto
-                                    enabled: !foto.bajando
-                                    onClicked: apogeo.downloadGallery(foto.modelData, sec.fk)
-                                }
-                            }
-                            MouseArea { id: fotoArea; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
-                        }
-                        Texto { width: parent.width; text: foto.modelData.titulo; font.pixelSize: 12; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                        Texto {
-                            width: parent.width
-                            text: foto.modelData.ancho + "×" + foto.modelData.alto + " · " + foto.modelData.licencia + (foto.modelData.autor ? " · " + foto.modelData.autor : "")
-                            color: Tema.tenue; font.pixelSize: 11; elide: Text.ElideRight; wrapMode: Text.NoWrap
-                        }
-                    }
-                }
+            Grid_ {
+                visible: sec.lib.aura.length > 0
+                items: sec.todaLaBiblioteca ? sec.lib.aura : sec.lib.aura.slice(0, 12)
             }
         }
     }
@@ -260,24 +216,12 @@ Seccion {
     Fila {
         visible: sec.rot.activo
         titulo: "De dónde"
+        detalle: sec.lib.aura.length ? "" : "Con la biblioteca vacía, de los animados"
         Segmentos {
-            readonly property var claves: ["todos", "tuyos", "carpeta", "animados"]
-            opciones: [{ texto: "Tuyos y carpeta" }, { texto: "Tus fondos" }, { texto: "Tu carpeta" }, { texto: "Animados" }]
+            readonly property var claves: ["aura", "animados", "ambos"]
+            opciones: [{ texto: "Tu biblioteca" }, { texto: "Animados" }, { texto: "Los dos" }]
             actual: Math.max(0, claves.indexOf(sec.rot.de))
             onElegido: i => apogeo.set("fondos.cambiar." + sec.fk + ".de", claves[i])
         }
-    }
-
-    FileDialog {
-        id: addDialog
-        title: "Elige imágenes o vídeos para tus fondos"
-        fileMode: FileDialog.OpenFiles
-        nameFilters: ["Imágenes y vídeos (*.jpg *.jpeg *.png *.webp *.avif *.jxl *.mp4 *.webm *.mkv *.mov *.m4v)"]
-        onAccepted: apogeo.addWallpapers(selectedFiles)
-    }
-    FolderDialog {
-        id: folderDialog
-        title: "Elige la carpeta de tus fondos"
-        onAccepted: apogeo.setFolder(selectedFolder)
     }
 }

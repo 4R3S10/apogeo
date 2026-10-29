@@ -1,0 +1,41 @@
+#!/usr/bin/python3
+"""
+Lo que la tienda de Apogeo hace como administrador (con pkexec: polkit org.apogeo.tienda pide tu contraseña): instalar
+o quitar programas del sistema con pacman. Solo nombres de paquete válidos; nunca quita lo que Apogeo necesita (pacman
+tampoco deja quitar algo de lo que dependa otro paquete) y nunca actualiza a medias (sin -Sy).
+
+  apogeo-tienda-root instalar PAQUETE...
+  apogeo-tienda-root quitar PAQUETE...
+"""
+import os
+import re
+import subprocess
+import sys
+
+NAME = re.compile(r'^[a-z0-9@_+][a-z0-9@._+-]{0,99}$')
+# Nunca desde la tienda (aunque pacman lo dejara): el sistema, el escritorio y Apogeo
+KEEP = {'apogeo', 'apogeo-programas', 'apogeo-aura', 'apogeo-hydra', 'base', 'base-devel', 'pacman', 'systemd',
+        'glibc', 'sudo', 'polkit', 'filesystem', 'linux-firmware', 'plasma-workspace', 'plasma-desktop', 'kwin',
+        'sddm', 'mesa', 'networkmanager', 'pipewire', 'wireplumber', 'grub', 'limine', 'mkinitcpio', 'dracut'}
+
+
+def main():
+    args = sys.argv[1:]
+    if len(args) < 2 or args[0] not in ('instalar', 'quitar') or not all(NAME.match(a) for a in args[1:]):
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    pkgs = list(dict.fromkeys(args[1:]))
+    if args[0] == 'quitar':
+        bad = [p for p in pkgs if p in KEEP or p.startswith(('linux', 'apogeo'))]
+        if bad:
+            print('Esto no se quita desde la tienda: ' + ', '.join(bad), file=sys.stderr)
+            return 3
+        cmd = ['pacman', '-Rns', '--noconfirm', '--noprogressbar', '--', *pkgs]
+    else:
+        cmd = ['pacman', '-S', '--needed', '--noconfirm', '--noprogressbar', '--', *pkgs]
+    env = dict(os.environ, LC_ALL='C')  # (la tienda lee lo que va haciendo)
+    return subprocess.run(cmd, env=env, stdin=subprocess.DEVNULL).returncode
+
+
+if __name__ == '__main__':
+    sys.exit(main())

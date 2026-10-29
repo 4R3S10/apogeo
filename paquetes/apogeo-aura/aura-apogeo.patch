@@ -1,0 +1,65 @@
+diff --git a/src/engine/kde.rs b/src/engine/kde.rs
+index 0ea8e01..9d96d20 100644
+--- a/src/engine/kde.rs
++++ b/src/engine/kde.rs
+@@ -45,7 +45,25 @@ fn plugin_dirs() -> Vec<PathBuf> {
+         .collect()
+ }
+ 
++/// Apogeo: lo que eliges en Aura va al piso en el que estás, con el reproductor de fondos de Apogeo (imágenes y
++/// vídeos), en lugar de cambiar el fondo de Plasma entero.
++pub const APOGEO_FONDO: &str = "/usr/lib/apogeo/apogeo-fondo";
++
++fn apogeo_apply(path: &Path) -> Option<Result<(), String>> {
++    if !Path::new(APOGEO_FONDO).is_file() {
++        return None;
++    }
++    Some(match Command::new(APOGEO_FONDO).arg(path).stdin(Stdio::null()).output() {
++        Ok(out) if out.status.success() => Ok(()),
++        Ok(out) => Err(String::from_utf8_lossy(&out.stderr).trim().to_string()),
++        Err(error) => Err(format!("Could not run {}: {}", APOGEO_FONDO, error)),
++    })
++}
++
+ pub fn plugin_installed() -> bool {
++    if Path::new(APOGEO_FONDO).is_file() {
++        return true;
++    }
+     plugin_dirs().iter().any(|dir| {
+         dir.join("metadata.json").is_file() || dir.join("contents/ui/main.qml").is_file()
+     })
+@@ -226,6 +244,9 @@ fn plugin_config_group() -> String {
+ /// Applies a still image to a single output when possible. If Plasma's screen
+ /// numbering cannot be matched, all desktops are updated as a safe fallback.
+ pub fn set_image_on_output(output: &str, path: &Path, scaling: &str) -> Result<(), String> {
++    if let Some(result) = apogeo_apply(path) {
++        return result;
++    }
+     wait_for_plasmashell();
+     let uri = js_string(&file_uri(path));
+     let fill_mode = image_fill_mode(scaling);
+@@ -245,6 +266,9 @@ pub fn set_video_on_output(
+     auto_pause: bool,
+     auto_pause_mode: AutoPauseMode,
+ ) -> Result<(), String> {
++    if let Some(result) = apogeo_apply(path) {
++        return result;
++    }
+     if !plugin_installed() {
+         return Err(plugin_install_hint());
+     }
+diff --git a/src/online/updater.rs b/src/online/updater.rs
+index 6f5ffa3..009234a 100644
+--- a/src/online/updater.rs
++++ b/src/online/updater.rs
+@@ -39,6 +39,10 @@ pub fn is_newer_version(latest: &str, current: &str) -> bool {
+ }
+ 
+ pub async fn check_latest_release(client: &reqwest::Client) -> Result<ReleaseInfo, String> {
++    // Apogeo: Aura llega y se pone al día con pacman (apogeo-aura); nunca se baja ni se copia a sí misma
++    if std::path::Path::new(crate::engine::kde::APOGEO_FONDO).is_file() {
++        return Err("Aura se actualiza con Apogeo".into());
++    }
+     let resp = client
+         .get("https://api.github.com/repos/antwny/aura/releases/latest")
+         .header("User-Agent", "Aura-Updater")

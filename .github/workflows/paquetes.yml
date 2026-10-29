@@ -1,5 +1,5 @@
 name: paquetes
-# Construye los paquetes de Apogeo (apogeo y apogeo-hydra), los firma y los publica como repositorio de pacman en la
+# Construye los paquetes de Apogeo (apogeo, apogeo-hydra y apogeo-aura), los firma y los publica como repositorio de pacman en la
 # versión «repo» de GitHub: https://github.com/4R3S10/apogeo/releases/download/repo
 on:
   schedule:
@@ -49,6 +49,21 @@ jobs:
             echo "No se sabe la última de Hydra: se queda $(grep ^pkgver= paquetes/apogeo-hydra/PKGBUILD)"
           fi
           cd paquetes/apogeo-hydra && runuser -u constructor -- updpkgsums
+      - name: Aura
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Compilarla tarda: si el repositorio ya tiene esta versión (pkgver-pkgrel), se reutiliza. Al cambiar el
+          # parche o el PKGBUILD, súbele el pkgrel
+          a=$(cd paquetes/apogeo-aura && . ./PKGBUILD && echo "$pkgname-$pkgver-$pkgrel-x86_64.pkg.tar.zst")
+          if gh release download repo -R "$GITHUB_REPOSITORY" -p "$a" -p "$a.sig" -D paquetes/apogeo-aura 2>/dev/null \
+             && [ -s "paquetes/apogeo-aura/$a" ] && [ -s "paquetes/apogeo-aura/$a.sig" ]; then
+            echo "Se reutiliza $a"
+          else
+            rm -f paquetes/apogeo-aura/*.pkg.tar.zst*
+            pacman -S --noconfirm --needed rust libxkbcommon wayland  # (lo que pide para compilar)
+            (cd paquetes/apogeo-aura && runuser -u constructor -- makepkg --nodeps --sign --noconfirm --cleanbuild)
+          fi
       - name: Construir
         run: |
           for p in apogeo-hydra apogeo; do

@@ -176,7 +176,7 @@ ApplicationWindow {
                 }
                 Fila {
                     titulo: "Fondo"
-                    detalle: "Animados, tus imágenes y vídeos, la galería y que cambie solo"
+                    detalle: "Animados, Aura y tu biblioteca, y que cambie solo"
                     Boton { text: "Elegir fondo"; icono: "imagen"; onClicked: { fondos.floor = win.floor; win.go(fondos); } }
                 }
                 Fila {

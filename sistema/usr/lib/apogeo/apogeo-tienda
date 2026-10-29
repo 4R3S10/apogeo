@@ -1,0 +1,414 @@
+#!/usr/bin/python3
+"""
+La tienda de Apogeo (inspirada en appPoint): buscar, instalar, abrir y quitar programas, con el aspecto de Ágape
+(Tienda.qml). Junta dos orígenes en una sola ficha por programa:
+  Sistema   los repositorios de pacman (el catálogo de Arch, archlinux-appstream-data): se ponen al día con Apogeo.
+            Instalar y quitar pide tu contraseña (apogeo-tienda-root, con pkexec).
+  Flathub   las apps de Flatpak (para todo el equipo, como las de serie).
+Si un programa está en los dos, por defecto se instala del sistema. Lo más instalado lo dice Flathub (se mira una vez al
+día) y sirve para ordenar. Las actualizaciones están en Ajustes → Actualizaciones.
+
+  apogeo-tienda        la abre (o la trae delante)
+  apogeo-tienda ID     abre la ficha de esa app (org.kde.krita…)
+D-Bus: org.apogeo.Tienda /Tienda org.apogeo.Tienda.Mostrar(id)
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
+import urllib.request
+
+SERVICE, PATH, IFACE = 'org.apogeo.Tienda', '/Tienda', 'org.apogeo.Tienda'
+LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
+QML = os.environ.get('APOGEO_TIENDA_QML', '/usr/share/apogeo/tienda/Tienda.qml')
+ROOT = os.path.join(LIB, 'apogeo-tienda-root')
+EXTRA = os.environ.get('APOGEO_TIENDA_CATALOGO')  # (otro catálogo de pacman, para probar)
+CACHE = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'apogeo', 'tienda-popular.json')
+POPULAR = 'https://flathub.org/api/v2/collection/popular?page={}&per_page=250'
+sys.path.insert(0, LIB)
+
+# Los grupos, como en el cajón de apps: un programa va al primero que encaje por sus categorías
+GROUPS = [
+    ('jugar', 'Jugar', {'Game'}),
+    ('estudiar', 'Estudiar', {'Education', 'Office', 'Science', 'Dictionary'}),
+    ('internet', 'Internet y chat', {'Network', 'WebBrowser', 'Email', 'Chat', 'InstantMessaging'}),
+    ('crear', 'Ver y crear', {'AudioVideo', 'Audio', 'Video', 'Graphics', 'Photography', 'Music'}),
+    ('sistema', 'Sistema', set()),  # (lo demás)
+]
+# Los destacados de Inicio (los que no estén en el catálogo no salen)
+FEATURED = ['com.obsproject.Studio', 'org.kde.krita', 'org.kde.kdenlive', 'org.gimp.GIMP', 'org.blender.Blender',
+            'com.spotify.Client', 'org.libreoffice.LibreOffice', 'net.ankiweb.Anki', 'org.prismlauncher.PrismLauncher',
+            'com.usebottles.bottles', 'org.inkscape.Inkscape', 'org.audacityteam.Audacity']
+
+
+def norm(cid):
+    """El id de un programa, igual en todos los orígenes (org.videolan.VLC y org.videolan.vlc son el mismo)."""
+    return re.sub(r'\.desktop$', '', cid or '').lower()
+
+
+def plain(text):
+    import unicodedata
+    return ''.join(c for c in unicodedata.normalize('NFD', (text or '').lower()) if unicodedata.category(c) != 'Mn')
+
+
+def popular():
+    """{app_id: instalaciones del último mes} de Flathub (guardado un día; {} sin internet)."""
+    try:
+        if time.time() - os.path.getmtime(CACHE) < 86400:
+            with open(CACHE) as f:
+                return json.load(f)
+    except (OSError, ValueError):
+        pass
+    out = {}
+    try:
+        for page in range(1, 5):
+            req = urllib.request.Request(POPULAR.format(page), headers={'User-Agent': 'Apogeo'})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                for h in json.load(r).get('hits', []):
+                    out[h['app_id']] = int(h.get('installs_last_month') or 0)
+        os.makedirs(os.path.dirname(CACHE), exist_ok=True)
+        with open(CACHE, 'w') as f:
+            json.dump(out, f)
+    except (OSError, ValueError, KeyError):
+        try:
+            with open(CACHE) as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            pass
+    return out
+
+
+def run_text(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=dict(os.environ, LC_ALL='C')).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+class Catalog:
+    """Todas las apps (una por programa, con sus orígenes) y lo que tienes instalado."""
+
+    def __init__(self):
+        import gi
+        gi.require_version('AppStream', '1.0')
+        from gi.repository import AppStream
+        self.AS = AppStream
+        pool = AppStream.Pool()
+        if EXTRA:
+            pool.add_extra_data_location(EXTRA, AppStream.FormatStyle.CATALOG)
+        pool.load(None)
+        self.comps = {}   # id → componentes (de cada origen)
+        for c in pool.get_components().as_array():
+            if c.get_kind() == AppStream.ComponentKind.DESKTOP_APP and c.get_name():
+                self.comps.setdefault(norm(c.get_id()), []).append(c)
+        self.pop = {norm(k): v for k, v in popular().items()}
+        self.apps = {}
+        for cid, cs in self.comps.items():
+            self.apps[cid] = self._app(cid, cs)
+        # El mismo programa con otro id en cada origen (obsidian y md.obsidian.Obsidian): una sola ficha
+        by_name = {plain(a['nombre']): a for a in self.apps.values() if a['paquete'] and not a['ref']}
+        for cid, a in list(self.apps.items()):
+            twin = by_name.get(plain(a['nombre'])) if a['ref'] and not a['paquete'] else None
+            if twin:
+                twin.update(ref=a['ref'], pop=max(twin['pop'], a['pop']), flatpak=a['flatpak'])
+                self.comps[twin['id']] += self.comps.pop(cid)
+                del self.apps[cid]
+        self.refresh_installed()
+
+    def _icon(self, cs):
+        AS = self.AS
+        best, remote, stock = None, None, None
+        for c in cs:
+            for i in c.get_icons():
+                k = i.get_kind()
+                if k == AS.IconKind.CACHED and i.get_filename() and os.path.exists(i.get_filename()):
+                    if not best or abs(i.get_width() - 128) < abs(best[0] - 128):
+                        best = (i.get_width(), 'file://' + i.get_filename())
+                elif k == AS.IconKind.REMOTE and i.get_url() and not remote:
+                    remote = i.get_url()
+                elif k == AS.IconKind.STOCK and not stock:
+                    stock = i.get_name()
+        return best[1] if best else stock or remote or 'application-x-executable'
+
+    def _app(self, cid, cs):
+        AS = self.AS
+        system = next((c for c in cs if c.get_pkgname()), None)
+        flat = next((c for c in cs if c.get_bundle(AS.BundleKind.FLATPAK)), None)
+        main = system or flat or cs[0]
+        ref = flat.get_bundle(AS.BundleKind.FLATPAK).get_id() if flat else ''
+        cats = set()
+        for c in cs:
+            cats |= set(c.get_categories())
+        group = next(k for k, _t, wanted in GROUPS if cats & wanted or not wanted)
+        desktop = next((e for c in cs for l in c.get_launchables() if l.get_kind() == AS.LaunchableKind.DESKTOP_ID
+                        for e in l.get_entries()), cid + '.desktop')
+        return {
+            'id': cid, 'nombre': main.get_name(), 'resumen': main.get_summary() or '', 'icono': self._icon(cs),
+            'grupo': group, 'paquete': system.get_pkgname() if system else '',
+            'ref': ref, 'flatpak': ref.split('/')[1] if ref.count('/') >= 2 else '',
+            'desktop': desktop, 'pop': self.pop.get(cid, 0), 'instalado': '',
+            'buscar': plain(' '.join([main.get_name(), main.get_summary() or ''] + list(main.get_keywords() or []))),
+        }
+
+    def refresh_installed(self):
+        """Lo instalado: los paquetes de pacman y las apps de Flatpak (y, para las que solo traen su ficha instalada,
+        de qué paquete son)."""
+        pkgs = set(run_text(['pacman', '-Qq']).split())
+        flats = set(run_text(['flatpak', 'list', '--app', '--columns=application']).split())
+        orphans = {}
+        for a in self.apps.values():
+            a['instalado'] = 'flathub' if a['flatpak'] in flats else 'sistema' if a['paquete'] in pkgs else ''
+            if not a['instalado'] and not a['paquete']:
+                orphans['/usr/share/applications/' + a['desktop']] = a
+        if orphans:  # (las del propio equipo, sin ficha en el catálogo: de qué paquete son)
+            for line in run_text(['pacman', '-Qo', *[p for p in orphans if os.path.exists(p)]]).splitlines():
+                m = re.match(r'^(\S+) is owned by (\S+) ', line)
+                if m and m.group(1) in orphans:
+                    orphans[m.group(1)]['paquete'] = m.group(2)
+                    orphans[m.group(1)]['instalado'] = 'sistema'
+
+    def public(self, a):
+        return {k: v for k, v in a.items() if k != 'buscar'}
+
+    def ranked(self, apps):
+        return sorted(apps, key=lambda a: (-a['pop'], a['nombre'].lower()))
+
+    def group(self, key, limit=0):
+        out = self.ranked(a for a in self.apps.values() if a['grupo'] == key)
+        return [self.public(a) for a in (out[:limit] if limit else out)]
+
+    def search(self, text, limit=120):
+        words = plain(text).split()
+        if not words:
+            return []
+        scored = []
+        for a in self.apps.values():
+            if not all(w in a['buscar'] for w in words):
+                continue
+            name = plain(a['nombre'])
+            q = ' '.join(words)
+            score = 0 if name == q else 1 if name.startswith(q) else 2 if (' ' + name).find(' ' + words[0]) >= 0 else 3
+            scored.append((score, -a['pop'], name, a))
+        scored.sort(key=lambda x: x[:3])
+        return [self.public(x[3]) for x in scored[:limit]]
+
+    def detail(self, cid):
+        """La ficha: descripción, capturas, quién la hace, licencia y web."""
+        AS = self.AS
+        cid = norm(cid)
+        cs = self.comps.get(cid) or []
+        a = self.apps.get(cid)
+        if not a:
+            return {}
+        main = next((c for c in cs if c.get_pkgname()), None) or cs[0]
+        shots = []
+        for c in cs:
+            for s in c.get_screenshots_all():
+                imgs = [i for i in s.get_images() if i.get_url()]
+                if not imgs:
+                    continue
+                img = min(imgs, key=lambda i: abs((i.get_width() or 1600) - 1100))
+                if img.get_url() not in shots:
+                    shots.append(img.get_url())
+            if shots:
+                break
+        dev = main.get_developer()
+        return dict(self.public(a), descripcion=main.get_description() or '', capturas=shots[:8],
+                    desarrollador=dev.get_name() if dev else '', licencia=main.get_project_license() or '',
+                    web=main.get_url(AS.UrlKind.HOMEPAGE) or '')
+
+
+def already_running():
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        if not bus.name_has_owner(SERVICE):
+            return False
+        bus.get_object(SERVICE, PATH).Mostrar(sys.argv[1] if len(sys.argv) > 1 else '', dbus_interface=IFACE)
+        return True
+    except dbus.DBusException:
+        return False
+
+
+def main():
+    if already_running():
+        return 0
+    from PyQt6.QtCore import QObject, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
+    import apogeo_qt
+    from apogeo_comun import spawn
+
+    class Tienda(QObject):
+        loadedChanged = pyqtSignal()
+        installedChanged = pyqtSignal()
+        busyChanged = pyqtSignal()
+        mostrar = pyqtSignal(str)
+        progreso = pyqtSignal(str, str)        # app, lo que va haciendo
+        hecho = pyqtSignal(str, bool, str)     # app, bien, mensaje si no
+
+        def __init__(self):
+            super().__init__()
+            self.cat = None
+            self._busy = ''
+            self.lock = threading.Lock()
+            threading.Thread(target=self._load, daemon=True).start()
+
+        def _load(self):
+            self.cat = Catalog()
+            self.loadedChanged.emit()
+
+        @pyqtProperty(bool, notify=loadedChanged)
+        def loaded(self):
+            return self.cat is not None
+
+        @pyqtProperty(str, notify=busyChanged)
+        def busy(self):
+            """La app que se está instalando o quitando ('' si ninguna)."""
+            return self._busy
+
+        @pyqtProperty('QVariantList', constant=True)
+        def grupos(self):
+            return [{'clave': k, 'texto': t} for k, t, _w in GROUPS]
+
+        @pyqtSlot(result='QVariantList')
+        def destacados(self):
+            return [self.cat.public(self.cat.apps[norm(i)]) for i in FEATURED if self.cat and norm(i) in self.cat.apps]
+
+        @pyqtSlot(result='QVariantList')
+        def masUsados(self):
+            if not self.cat:
+                return []
+            featured = {norm(i) for i in FEATURED}
+            top = [a for a in self.cat.ranked(self.cat.apps.values()) if a['pop'] and a['id'] not in featured]
+            return [self.cat.public(a) for a in top[:12]]
+
+        @pyqtSlot(str, int, result='QVariantList')
+        def grupo(self, key, limit):
+            return self.cat.group(key, limit) if self.cat else []
+
+        @pyqtSlot(str, result='QVariantList')
+        def buscar(self, text):
+            return self.cat.search(text) if self.cat else []
+
+        @pyqtSlot(result='QVariantList')
+        def instalados(self):
+            if not self.cat:
+                return []
+            return [self.cat.public(a) for a in sorted(self.cat.apps.values(), key=lambda a: a['nombre'].lower())
+                    if a['instalado']]
+
+        @pyqtSlot(str, result='QVariantMap')
+        def ficha(self, cid):
+            return self.cat.detail(cid) if self.cat else {}
+
+        @pyqtSlot(str, result='QVariantMap')
+        def estado(self, cid):
+            a = self.cat.apps.get(norm(cid)) if self.cat else None
+            return self.cat.public(a) if a else {}
+
+        # ---------- Instalar, quitar, abrir ----------
+
+        def _run(self, cid, cmd, verb):
+            """Lo hace en segundo plano, contando por dónde va; al acabar mira otra vez lo instalado."""
+            def work():
+                lines, ok = [], False
+                try:
+                    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                         env=dict(os.environ, LC_ALL='C'))
+                    for line in p.stdout:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        lines.append(line)
+                        low = line.lower()
+                        if 'download' in low or 'retriev' in low:
+                            self.progreso.emit(cid, 'Descargando…')
+                        elif 'install' in low or 'upgrad' in low:
+                            self.progreso.emit(cid, verb + '…')
+                        elif 'remov' in low or 'uninstall' in low:
+                            self.progreso.emit(cid, 'Quitando…')
+                    code = p.wait()
+                    ok = code == 0
+                    msg = '' if ok else 'Cancelado' if code in (126, 127) and cmd[0] == 'pkexec' else \
+                        (lines[-1] if lines else 'No ha salido bien')
+                except OSError as e:
+                    msg = str(e)
+                self.cat.refresh_installed()
+                self._busy = ''
+                self.busyChanged.emit()
+                self.installedChanged.emit()
+                self.hecho.emit(cid, ok, msg)
+            with self.lock:
+                if self._busy:
+                    return
+                self._busy = cid
+            self.busyChanged.emit()
+            self.progreso.emit(cid, 'Preparando…')
+            threading.Thread(target=work, daemon=True).start()
+
+        @pyqtSlot(str, str)
+        def instalar(self, cid, origen):
+            a = self.cat.apps.get(cid) if self.cat else None
+            if not a:
+                return
+            if origen == 'flathub' and a['ref']:
+                self._run(cid, ['flatpak', 'install', '--system', '-y', '--noninteractive', 'flathub', a['ref']],
+                          'Instalando')
+            elif a['paquete']:
+                self._run(cid, ['pkexec', ROOT, 'instalar', a['paquete']], 'Instalando')
+
+        @pyqtSlot(str)
+        def quitar(self, cid):
+            a = self.cat.apps.get(cid) if self.cat else None
+            if not a or not a['instalado']:
+                return
+            if a['instalado'] == 'flathub':
+                self._run(cid, ['flatpak', 'uninstall', '--system', '-y', '--noninteractive', a['flatpak']], 'Quitando')
+            elif a['paquete']:
+                self._run(cid, ['pkexec', ROOT, 'quitar', a['paquete']], 'Quitando')
+
+        @pyqtSlot(str)
+        def abrir(self, cid):
+            a = self.cat.apps.get(cid) if self.cat else None
+            if not a:
+                return
+            if a['instalado'] == 'flathub':
+                spawn('flatpak', 'run', a['flatpak'])
+            else:
+                spawn('gtk-launch', a['desktop'][:-8] if a['desktop'].endswith('.desktop') else a['desktop'])
+
+        @pyqtSlot()
+        def actualizaciones(self):
+            spawn(os.path.join(LIB, 'apogeo-ajustes'), 'actualizaciones')
+
+        @pyqtSlot(str)
+        def web(self, url):
+            if url.startswith(('https://', 'http://')):
+                spawn('xdg-open', url)
+
+    @pyqtClassInfo('D-Bus Interface', IFACE)
+    class Adaptor(QDBusAbstractAdaptor):
+        @pyqtSlot(str)
+        def Mostrar(self, cid):
+            self.parent().mostrar.emit(cid)
+
+    holder = {}
+
+    class Backend(Tienda):
+        def __init__(self):
+            super().__init__()
+            Adaptor(self)
+            bus = QDBusConnection.sessionBus()
+            bus.registerService(SERVICE)
+            bus.registerObject(PATH, self)
+            holder['b'] = self
+
+    return apogeo_qt.run('Tienda de Apogeo', 'apogeo-tienda', QML, Backend,
+                         context={'abrirFicha': sys.argv[1] if len(sys.argv) > 1 else ''})
+
+
+if __name__ == '__main__':
+    sys.exit(main())

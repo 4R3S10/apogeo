@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- La tienda de Apogeo: instalar o quitar programas del sistema. Siempre con la contraseña de administrador (se
+     recuerda unos minutos, para no pedirla en cada programa). -->
+<policyconfig>
+  <vendor>Apogeo</vendor>
+  <action id="org.apogeo.tienda">
+    <description>Instalar o quitar programas</description>
+    <message>La tienda de Apogeo quiere instalar o quitar un programa</message>
+    <icon_name>apogeo</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/apogeo/apogeo-tienda-root</annotate>
+  </action>
+</policyconfig>

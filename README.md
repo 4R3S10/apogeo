@@ -101,10 +101,24 @@ Los trae el paquete `apogeo-programas` (lo pide `apogeo`):
 - **Multimedia:** OBS Studio, VLC, EasyEffects y qBittorrent.
 - **Utilidades:** LocalSend, KeePassXC, Obsidian y CoolerControl.
 - **Estudiar:** Okular (leer y subrayar PDFs), Anki (tarjetas de memoria) y Xournal++ (escribir a mano sobre apuntes).
-- **Sistema:** Mission Center (qué gasta el PC) y Warehouse (los Flatpak).
+- **Sistema:** Mission Center (qué gasta el PC). Los demás programas, desde la tienda de Apogeo.
 - **ONLYOFFICE y Stremio:** no están en los repositorios de Arch. Los instala `apogeo-flatpaks` de Flathub, donde los dos
   están verificados por sus propias empresas, para todos los usuarios, una vez y en segundo plano cuando hay internet.
 - ChatGPT y Claude no van de serie (no tienen app oficial para Linux).
+
+## Tienda de Apogeo
+
+La tienda de programas (sustituye a Warehouse), con el aspecto de Ágape y la idea de appPoint: a la izquierda Inicio,
+Jugar, Estudiar, Internet, Crear y Sistema, Instalados y Actualizaciones; arriba, el buscador.
+- **Inicio:** destacados, lo más usado (las descargas de Flathub del último mes) y unos cuantos de cada grupo.
+- **De dónde:** del sistema (los repositorios de Arch y CachyOS, con pacman; se pone al día con Apogeo y pide tu
+  contraseña) o de Flathub (sin contraseña). Si un programa está en los dos, se elige en su ficha.
+- **Ficha:** capturas, descripción, licencia, su web, instalar, abrir y quitar.
+- **Lo que no deja:** quitar lo que Apogeo necesita (el sistema, el escritorio, el núcleo y Apogeo) ni actualizar a
+  medias (nunca `pacman -Sy`): las actualizaciones van por Ajustes → Actualizaciones.
+
+Lo hacen `apogeo-tienda` (el catálogo de AppStream: `archlinux-appstream-data` y Flathub), `apogeo-tienda-root` (pacman,
+con pkexec y la regla de polkit `org.apogeo.tienda`) y `/usr/share/apogeo/tienda/Tienda.qml`.
 
 ## Terminal
 
@@ -183,23 +197,29 @@ luz nocturna, volumen y brillo, tú, «Todos los ajustes» y apagar.
 
 ## Fondos
 
-Cada piso con el suyo; el animado de siempre es el de por defecto. Se cambian en Ajustes → Fondos o con el botón derecho
-en el escritorio: sale un carrusel y el fondo se ve al momento, con «Cancelar» para volver al de antes.
+Cada piso con el suyo; el animado de siempre es el de por defecto. Se cambian en Ajustes → Fondos, con Aura o con el botón
+derecho en el escritorio: sale un carrusel y el fondo se ve al momento, con «Cancelar» para volver al de antes y «Aura…»
+para buscar más.
 
 - **Animados de Apogeo:** los ocho de Ágape. Se dibujan a un tercio de la resolución y a 30 imágenes por segundo como
   mucho.
-- **Tus fondos:** imágenes (JPG, PNG, WebP, AVIF, JPEG XL…) y vídeos (MP4, WebM, MKV, MOV) en alta calidad.
-  - Las imágenes se cargan a la resolución de la pantalla, con un fundido al cambiar.
-  - Los vídeos van en bucle y sin sonido, y se paran cuando una ventana maximizada o a pantalla completa los tapa.
-- **Tu carpeta:** por defecto «Fondos» dentro de tu carpeta de imágenes. Lo que metas ahí aparece solo.
-- **Galería de internet:** busca en las imágenes destacadas de Wikimedia Commons, que son fotos de alta calidad con
-  licencia libre y no piden clave ni cuenta.
-  - Solo enseña las apaisadas de 2560 px o más.
-  - Al ponerla, se baja a tu carpeta, y su autor y licencia se apuntan en `~/.local/share/apogeo/fondos-creditos.json`.
-- **Que cambie solo:** cada 15 minutos, cada hora, cada día o al entrar en el piso. Pasa por tus fondos y los de la
-  carpeta, solo por unos u otros, o por los animados.
+- **Con Aura:** [Aura](https://github.com/antwny/aura) (de antwny, GPL-3) busca y baja fondos de Wallhaven, vídeos de
+  MotionBGS y la imagen del día de Bing, y lleva tu biblioteca. Va en el paquete `apogeo-aura`, construido desde su
+  código (revisado) con un parche pequeño (`paquetes/apogeo-aura/aura-apogeo.patch`):
+  - Lo que eliges en ella va solo al piso en el que estás (`/usr/lib/apogeo/apogeo-fondo`), con el reproductor de fondos
+    de Apogeo; sin plugins de fuera. En ese piso se apaga «que cambie solo», porque es una elección tuya.
+  - No se actualiza sola: se pone al día con Apogeo.
+  - Ajustes → Fondos: lo que tiene el piso ahora y «Elegir con Aura» (te lleva a ese piso y la abre).
+- **Tu biblioteca:** lo que bajas con Aura (Imágenes/Wallpapers/Aura) y las carpetas que mira ella (de serie, Wallpapers,
+  Wallpaper y Fondos en Imágenes y en Vídeos), más los fondos que añadiste antes de Aura. Se pone en cualquier piso desde
+  Ajustes → Fondos o el carrusel.
+  - Imágenes (JPG, PNG, WebP, AVIF, JPEG XL…) a la resolución de la pantalla, con un fundido al cambiar.
+  - Vídeos (MP4, WebM, MKV, MOV, AVI) en bucle y sin sonido; se paran cuando una ventana maximizada o a pantalla
+    completa los tapa. Su miniatura (un fotograma) va en `~/.cache/apogeo/miniaturas`.
+- **Que cambie solo:** cada 15 minutos, cada hora, cada día o al entrar en el piso. Pasa por tu biblioteca, por los
+  animados o por los dos.
 
-Lo hacen `apogeo_fondos.py` (biblioteca y galería), `apogeo-pisos` (el de cada piso y que cambie solo) y el fondo de
+Lo hacen `apogeo_fondos.py` (la biblioteca), `apogeo-pisos` (el de cada piso y que cambie solo) y el fondo de
 Plasma `org.apogeo.fondo`.
 
 ## Escritorios

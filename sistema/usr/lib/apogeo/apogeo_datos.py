@@ -18,10 +18,10 @@ Lo sirve apogeo-pisos, que ya está siempre en marcha. Todo se devuelve como tex
   Examenes() / GuardarExamenes(json)    los exámenes [{id, asignatura, fecha AAAA-MM-DD}]
   Asignaturas()       ~/Estudios: cada asignatura con sus carpetas (Temas, Trabajos, Ejercicios, que se crean solas)
   CrearAsignatura(n)  una carpeta nueva en ~/Estudios con sus tres carpetas
-  Abrir(app)          abre una app de la lista (discord, spotify): la pide el modo partida de KWin (Meta+Tab)
+  Abrir(app)          abre una app de la lista (discord, spotify, aura): el modo partida de KWin (Meta+Tab), el carrusel
   Musica()            lo que suena (MPRIS): {app, titulo, artista, portada, sonando}; {} si no suena nada
   MusicaAccion(a)     Previous · PlayPause · Next en ese reproductor
-  Fondos()            tu biblioteca de fondos (animados, tuyos, carpeta), el de cada piso y «que cambie solo»
+  Fondos()            los fondos (animados y tu biblioteca de Aura), el de cada piso y «que cambie solo»
   PonerFondo(p, v)    el fondo del piso p (un animado o la ruta de una imagen o un vídeo); se ve al momento
   CambiarSolo(p, on)  «que cambie solo» en el piso p
   Ventanas()          tus ventanas: [{titulo, clase, app, pisos, x, y, w, h (de 0 a 1 en la pantalla), min, activa}]
@@ -100,7 +100,7 @@ class Datos(dbus.service.Object):
     # ---------- El tiempo ----------
 
     # Solo estas: el modo partida (apogeo-partida, en KWin) abre Discord o Spotify si aún no están
-    APPS = {'discord': 'discord.desktop', 'spotify': 'spotify-launcher.desktop'}
+    APPS = {'discord': 'discord.desktop', 'spotify': 'spotify-launcher.desktop', 'aura': 'io.github.antwny.aura.desktop'}
 
     @dbus.service.method(IFACE, in_signature='s')
     def Abrir(self, app):
@@ -181,6 +181,7 @@ class Datos(dbus.service.Object):
         import apogeo_fondos as fondos
         st = comun.load()
         out = fondos.library(st)
+        threading.Thread(target=fondos.make_thumbnails, daemon=True).start()  # (las que falten, para la próxima vez)
         out['pisos'] = {k: st['pisos'][k]['fondo'] for k in comun.FLOOR_KEYS}
         out['cambiar'] = st['fondos']['cambiar']
         return json.dumps(out, ensure_ascii=False)
