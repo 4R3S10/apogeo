@@ -182,6 +182,11 @@ _STOCK = {'fondo': '#120d14', 'superficie': '#1e1621', 'texto': '#f1e6ea', 'acen
           'radio': 1.0, 'claro': False}
 
 
+# Sube cuando cambian los generadores (así tus temas se vuelven a hacer con lo nuevo). 2: el brillo de la isla del color
+# del piso.
+GENERATED = 2
+
+
 def stock(t):
     return all(t.get(k) == v for k, v in _STOCK.items()) and abs(t.get('cristal', 0) - 0.587) < 0.04
 
@@ -190,7 +195,7 @@ def theme_name(t):
     """El nombre de tus temas generados con estos colores y formas: si cambian, otro nombre (así Plasma los vuelve a
     leer) y los mismos colores en otro piso usan los mismos temas."""
     import hashlib
-    key = json.dumps([t.get(k) for k in (*_STOCK, 'cristal')])
+    key = json.dumps([t.get(k) for k in (*_STOCK, 'cristal')] + ([GENERATED] if GENERATED > 1 else []))
     return MINE + '-' + hashlib.sha1(key.encode()).hexdigest()[:8]
 
 
@@ -330,11 +335,37 @@ def _kde(t):
     _run('qdbus6', 'org.kde.KWin', '/Effects', 'org.kde.kwin.Effects.reconfigureEffect', 'kwin4_effect_shapecorners')
 
 
+_login_last = {'copia': None}
+
+
+def _login_copy(st, t, per):
+    """Una copia de los colores para la pantalla de inicio de sesión, que no puede leer tus ajustes: los generales y, por
+    piso, sus colores y su fondo animado («8 · Inicio de sesión»: detrás, el fondo del piso que eliges). Solo si cambian."""
+    import apogeo_comun as comun
+    login = {k: v for k, v in t.items() if k != 'pisos'}
+    login['pisos'] = {}
+    for k in comun.FLOOR_KEYS:
+        x = per.get(k) or {}
+        value = ((st.get('pisos') or {}).get(k) or {}).get('fondo', '')
+        login['pisos'][k] = {**{c: x[c] for c in ('fondo', 'acento', 'sobreAcento', 'vivo', 'wp') if c in x},
+                             'estilo': comun.STYLES.index(value) if value in comun.STYLES else -1}
+    text = json.dumps(login, sort_keys=True)
+    if text == _login_last['copia']:
+        return
+    try:
+        subprocess.run(['pkexec', '/usr/lib/apogeo/apogeo-aspecto-login'], input=text, text=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+        _login_last['copia'] = text
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 def switch(st, floor, shown=None, log=print):
     """Has cambiado de piso (o de fondo en él): con «Del fondo», sus colores en todo. Lo llama apogeo-pisos un momento
     después del cambio (no en medio de la animación) y en segundo plano: si su tema aún no está hecho, se hace."""
-    t, _per = all_tokens(st, floor, shown)
+    t, per = all_tokens(st, floor, shown)
     write_tokens(t)
+    _login_copy(st, t, per)
     if t['nombre']:
         _generate(t)
     _kde(t)
@@ -346,13 +377,7 @@ def apply(st, floor='navegar', shown=None, log=print):
     """Pone tu aspecto en todo el sistema (lo llama apogeo-pisos al cambiar los ajustes)."""
     t, per = all_tokens(st, floor, shown)
     write_tokens(t)
-    # (y una copia de los colores para la pantalla de inicio de sesión, que no puede leer tus ajustes)
-    try:
-        login = {k: v for k, v in t.items() if k != 'pisos'}
-        subprocess.run(['pkexec', '/usr/lib/apogeo/apogeo-aspecto-login'], input=json.dumps(login), text=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
-    except (OSError, subprocess.SubprocessError):
-        pass
+    _login_copy(st, t, per)
     # Los temas de cada piso (los que falten) y fuera los que ya no se usan; luego, los del piso en el que estás
     for x in [t] + [v for k, v in per.items() if k != floor]:
         if x['nombre']:

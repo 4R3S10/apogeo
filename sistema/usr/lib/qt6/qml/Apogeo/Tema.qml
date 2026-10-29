@@ -43,6 +43,21 @@ QtObject {
     function r(n) { return Math.max(2, Math.round(n * radio)) }
     readonly property string posicion: c("posicion", "abajo-dcha")
 
+    // El color del cielo a esta hora (la tarjeta del tiempo): [arriba, abajo]. salida y puesta, «HH:MM» (del tiempo);
+    // nublado o lluvia lo apagan.
+    function colorCielo(ahora, salida, puesta, codigo) {
+        const min = s => { const m = /^(\d\d):(\d\d)$/.exec(s || ""); return m ? +m[1] * 60 + +m[2] : -1; };
+        const t = ahora.getHours() * 60 + ahora.getMinutes();
+        const sa = min(salida) >= 0 ? min(salida) : 7 * 60 + 30, pu = min(puesta) >= 0 ? min(puesta) : 19 * 60 + 30;
+        let c;
+        if (t >= sa - 45 && t < sa + 60) c = ["#4b5aa6", "#f2a07f"];          // amanecer
+        else if (t >= pu - 60 && t < pu + 30) c = ["#f39a5c", "#6a3f96"];     // atardecer
+        else if (t >= sa + 60 && t < pu - 60) c = ["#3f8fd8", "#86c3ee"];     // de día
+        else c = ["#0f1533", "#33265c"];                                       // de noche
+        const gris = codigo >= 51 ? 0.55 : codigo === 3 || codigo === 45 || codigo === 48 ? 0.4 : 0;
+        return gris ? c.map(x => Qt.tint(x, Qt.rgba(0.35, 0.38, 0.45, gris))) : c;
+    }
+
     readonly property var fondos: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces"]
     readonly property var nombresFondos: ["Tinta", "Humo", "Seda", "Mármol", "Relieve", "Remolino", "Dunas", "Luces"]
 

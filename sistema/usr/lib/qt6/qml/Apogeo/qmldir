@@ -2,8 +2,11 @@ module Apogeo
 singleton Tema 1.0 Tema.qml
 Texto 1.0 Texto.qml
 Icono 1.0 Icono.qml
+Barritas 1.0 Barritas.qml
 Boton 1.0 Boton.qml
 Campo 1.0 Campo.qml
+Cristal 1.0 Cristal.qml
+ColorDe 1.0 ColorDe.qml
 Interruptor 1.0 Interruptor.qml
 Segmentos 1.0 Segmentos.qml
 Deslizador 1.0 Deslizador.qml

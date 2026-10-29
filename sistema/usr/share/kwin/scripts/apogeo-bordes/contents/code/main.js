@@ -6,6 +6,9 @@
 // sonido y la hora de la isla). También salen empujando el ratón contra su borde. Al abrirse hacen sitio (las ventanas
 // se estrechan) y se quedan hasta que vuelves a pulsar su tecla.
 //
+// La isla también sale sola cuando tiene algo que enseñar (un aviso, el volumen…: «isla dinámica»): la isla llama al
+// atajo «apogeo-isla-mostrar» y, al acabar, a «apogeo-isla-soltar» (sin teclas; los invoca por D-Bus).
+//
 // Cómo: Plasma no deja sacar una barra escondida, así que se cambia su modo: la isla, un momento a «las ventanas van
 // debajo» (se ve, sin mover las ventanas); un panel, a «siempre visible» (y así hace sitio). Al panel se le dice si está
 // abierto («abierto» en su configuración): cerrado no gasta nada.
@@ -15,7 +18,7 @@ const KEEP = 110;         // mientras el ratón esté a esta distancia del borde
 const ISLAND = 0.3;       // la isla sale en el 40 % central del borde de abajo (de 0.3 a 0.7)
 const PANELS = { left: "org.apogeo.izquierdo", right: "org.apogeo.derecho" };
 
-const shown = { island: false };
+const shown = { island: false, forced: false };
 const open = { left: false, right: false };
 
 function plasma(script) {
@@ -28,11 +31,12 @@ function setHiding(location, mode) {
 
 function setPanel(side, on) {
     open[side] = on;
-    // (al abrir el rápido, los avisos cuentan como vistos: la campana de la isla deja de contarlos)
+    // (al abrir el rápido, los avisos cuentan como vistos: la campana y los números de los iconos de la isla dejan de
+    // contarlos)
     const seen = side === "right" && on ? new Date().toISOString() : "";
     plasma("panels().forEach(function (p) {" +
         "  p.widgets().forEach(function (x) {" +
-        "    if (x.type != 'org.apogeo.rapido' || !'" + seen + "') return;" +
+        "    if ((x.type != 'org.apogeo.rapido' && x.type != 'org.apogeo.isla') || !'" + seen + "') return;" +
         "    x.currentConfigGroup = ['General'];" +
         "    x.writeConfig('leidos', '" + seen + "');" +
         "    x.reloadConfig();" +
@@ -63,13 +67,28 @@ function update() {
     if (!shown.island && fromIslandEdge <= BAND && fx > ISLAND && fx < 1 - ISLAND && !fullscreen()) {
         shown.island = true;
         setHiding(islandAt, "windowsgobelow");
-    } else if (shown.island && (fromIslandEdge > KEEP || fx < ISLAND - 0.12 || fx > 1 - ISLAND + 0.12)) {
+    } else if (shown.island && !shown.forced && (fromIslandEdge > KEEP || fx < ISLAND - 0.12 || fx > 1 - ISLAND + 0.12)) {
         shown.island = false;
         setHiding(islandAt, "autohide");
     }
 }
 
 workspace.cursorPosChanged.connect(update);
+
+function islandAt() { return readConfig("islaArriba", false) ? "top" : "bottom"; }
+registerShortcut("apogeo-isla-mostrar", "Apogeo: la isla enseña algo", "", function () {
+    if (!readConfig("isla", true) || fullscreen()) return;
+    shown.forced = true;
+    if (!shown.island) { shown.island = true; setHiding(islandAt(), "windowsgobelow"); }
+});
+registerShortcut("apogeo-isla-soltar", "Apogeo: la isla ya no enseña nada", "", function () {
+    if (!shown.forced) return;
+    shown.forced = false;
+    // (si el ratón está encima, se queda: ya la esconderá update al irse)
+    const pos = workspace.cursorPos, g = workspace.activeScreen.geometry;
+    const top = readConfig("islaArriba", false);
+    if ((top ? pos.y - g.y : g.y + g.height - pos.y) > KEEP) { shown.island = false; setHiding(islandAt(), "autohide"); }
+});
 
 registerShortcut("apogeo-panel-izquierdo", "Apogeo: panel de widgets", "Meta+A", function () { setPanel("left", !open.left); });
 registerShortcut("apogeo-panel-derecho", "Apogeo: panel rápido", "Meta+N", function () { setPanel("right", !open.right); });

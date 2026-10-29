@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """
 Tu aspecto también en la pantalla de inicio de sesión (SDDM): esa pantalla sale antes de entrar y no puede leer tus
-ajustes, así que Apogeo le deja una copia de tus colores en /var/lib/apogeo/aspecto-login.json (solo colores, la letra y
-las esquinas, comprobados; nada más). Lo llama apogeo_aspecto al aplicar tu aspecto.
+ajustes, así que Apogeo le deja una copia de tus colores en /var/lib/apogeo/aspecto-login.json (solo colores, la letra,
+las esquinas y, por piso, sus colores y qué fondo animado de Apogeo lleva, comprobados; nada más). Lo llama apogeo_aspecto
+al aplicar tu aspecto y cuando cambian los colores de un piso.
 
   pkexec apogeo-aspecto-login     (lee de la entrada las fichas de tu aspecto)
 """
@@ -15,13 +16,10 @@ OUT = '/var/lib/apogeo/aspecto-login.json'
 HEX = re.compile(r'^#[0-9a-fA-F]{6}$')
 
 
-def main():
-    if os.geteuid() != 0:
-        return 2
-    try:
-        t = json.loads(sys.stdin.read(20000))
-    except ValueError:
-        return 1
+FLOORS = ('jugar', 'navegar', 'estudiar')
+
+
+def colors(t):
     out = {}
     for k in ('fondo', 'superficie', 'texto', 'acento', 'sobreAcento', 'vivo'):
         if HEX.match(str(t.get(k, ''))):
@@ -29,6 +27,23 @@ def main():
     wp = t.get('wp')
     if isinstance(wp, list) and len(wp) == 3 and all(HEX.match(str(c)) for c in wp):
         out['wp'] = [c.lower() for c in wp]
+    return out
+
+
+def main():
+    if os.geteuid() != 0:
+        return 2
+    try:
+        t = json.loads(sys.stdin.read(20000))
+    except ValueError:
+        return 1
+    out = colors(t)
+    pisos = t.get('pisos') if isinstance(t.get('pisos'), dict) else {}
+    out['pisos'] = {}
+    for k in FLOORS:
+        x = pisos.get(k) if isinstance(pisos.get(k), dict) else {}
+        style = x.get('estilo', -1)
+        out['pisos'][k] = dict(colors(x), estilo=style if isinstance(style, int) and 0 <= style < 8 else -1)
     font = str(t.get('letra', ''))
     if re.fullmatch(r"[\w .'-]{1,40}", font):
         out['letra'] = font

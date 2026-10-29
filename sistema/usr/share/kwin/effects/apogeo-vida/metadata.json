@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "KWin/Effect",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "Appearance",
+        "Description": "Las ventanas se abren con un saltito y se cierran encogiéndose",
+        "EnabledByDefault": false,
+        "Id": "apogeo-vida",
+        "License": "MIT",
+        "Name": "Apogeo: ventanas con vida"
+    },
+    "X-KDE-Ordering": 60,
+    "X-Plasma-API": "javascript"
+}

@@ -64,6 +64,7 @@ Window {
             [["Meta", "↑ ↓"], "Mitad de arriba o de abajo"],
             [["Meta", "RePág"], "Grande"],
             [["Meta", "AvPág"], "Minimizar"],
+            [["Alt", "Tab"], "Cambiar de ventana"],
             [["Meta", "W"], "Ver todas"],
             [["Meta", "D"], "Ver el escritorio"]] },
         { titulo: "Buscar y copiar", atajos: [

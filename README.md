@@ -51,8 +51,11 @@ Todo con la estética de Ágape, sacada de su código (tema Berenjena oscuro):
   de cada usuario: si solo estaba en `/etc/xdg`, Plasma se quedaba con el gris por defecto.
 - **Ventanas:** la barra de Ágape (título en el centro y sus botones planos; la ✕ se pone roja).
 - **Menús y avisos:** las tarjetas de Ágape.
-- **Inicio de sesión y bloqueo:** una tarjeta con la hora grande, tu foto y tu nombre, el piso (el control segmentado de
-  Ágape) y la contraseña, sobre el fondo del piso.
+- **Inicio de sesión** («8 · Inicio de sesión»): arriba la hora grande y la fecha; en el centro una tarjeta de cristal
+  con tu foto, «Hola, …», en qué piso entras y la contraseña. Detrás, el fondo animado de ese piso moviéndose, con sus
+  colores (con «Del fondo», los de cada piso): al elegir otro piso, cambia. Esa pantalla no puede leer tus ajustes, así
+  que `apogeo-aspecto-login` le deja en `/var/lib/apogeo/aspecto-login.json` solo los colores (también por piso) y qué
+  fondo animado lleva cada uno. El bloqueo: tu símbolo (ver abajo).
 - **Carpetas:** Papirus con el rosa empolvado de Ágape. Cursor berenjena y teclado EE. UU. internacional (ñ con AltGr+n).
 - **Sonidos:** propios y suaves (marimba de madera con un poco de sala) para avisos, errores, USB, volumen, capturas y lo
   hecho; al entrar, el «uu-uu» del búho sobre un acorde cálido. Se sintetizan al construir el paquete
@@ -94,8 +97,17 @@ Navegar: la música; Estudiar: el temporizador) y, al final, la red, el sonido, 
 hora. Al pasar por una app abierta, su vista en vivo (y ✕ para cerrarla). En la bandeja de KDE solo quedan los iconos de
 tus apps (Discord, Steam…).
 - **La red, el sonido, los avisos y la hora:** al pulsarlos sale el panel rápido de la derecha (ver «Paneles»).
-- **Avisos en pantalla:** los de Apogeo, abajo a la derecha, apilados, con sus botones y una rayita rosa con el tiempo
-  que les queda (se paran con el ratón encima). Respetan No molestar y los pisos sin avisos (salvo los urgentes).
+- **Isla dinámica** (cristal como los paneles): sale sola y crece cuando tiene algo que enseñar, y se esconde al
+  acabar (llama a los atajos sin tecla `apogeo-isla-mostrar`/`apogeo-isla-soltar` del script `apogeo-bordes`). Por
+  orden: el **volumen y el brillo** (en vez de la ventanita de KDE para el volumen; la del brillo la lleva Plasma
+  dentro y no se puede quitar), un **aviso** nuevo unos segundos (con sus botones; Responder abre el panel rápido;
+  luego queda en el historial), una **descarga** o copia (los avisos de trabajos de KDE y las apps que lo cuentan con
+  `LauncherEntry`), el **temporizador** de estudio (clic: pausa; derecho: otra vez) y **lo que suena** (portada, los
+  colores de la portada, avanzar y, con el ratón encima, los botones).
+- **Números en los iconos:** los avisos sin leer de cada app (y los que la app cuenta, con su barra de progreso).
+- **Avisos en pantalla:** los normales salen en la isla; los urgentes, abajo a la derecha, apilados, con sus botones y
+  una rayita rosa con el tiempo que les queda (se paran con el ratón encima). Respetan No molestar y los pisos sin
+  avisos (salvo los urgentes).
 
 ## Programas de serie
 
@@ -230,6 +242,15 @@ para buscar más.
 Lo hacen `apogeo_fondos.py` (la biblioteca), `apogeo-pisos` (el de cada piso y que cambie solo) y el fondo de
 Plasma `org.apogeo.fondo`.
 
+## Alt+Tab y animaciones de las ventanas
+
+- **Alt+Tab de cristal** («6»): el cambiador de ventanas `apogeo` (`/usr/share/kwin/tabbox/apogeo`), con tus ventanas
+  en grande y en vivo en una tarjeta de cristal, el nombre debajo, ✕ al pasar el ratón y las flechas para moverte.
+  Hasta ahora Alt+Tab no hacía nada: `apogeo-pisos` lo guardaba mal en kglobalaccel («Alt+\x01»); se arregla solo.
+- **Animaciones con vida** («7»): el efecto de KWin `apogeo-vida` abre las ventanas con un saltito y las cierra
+  encogiéndose; al minimizar, la lámpara mágica de KWin las lleva a su icono de la isla. KWin no anima nada sin
+  tarjeta gráfica (en una máquina virtual sin aceleración, por ejemplo).
+
 ## Ventanas en carrusel (como niri)
 
 En Ajustes → Pisos, por piso: las ventanas en columnas que se deslizan de lado, como en niri, con
@@ -248,13 +269,16 @@ Lo pone `apogeo-pisos` (`carousel()`): Karousel solo trabaja en los escritorios 
 ## Paneles («nivel pro»: «2 · Dos paneles altos»)
 
 El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). Lo demás va en dos paneles altos,
-uno a cada lado, con los colores del fondo del piso. Salen con su tecla o empujando el ratón contra su borde, **hacen
+uno a cada lado, **de cristal** («1 · Cristal con tu fondo»: detrás, tu fondo difuminado y oscurecido, con un brillo del
+color del piso arriba; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo). Salen con su tecla o empujando el ratón contra su borde, **hacen
 sitio** (las ventanas se estrechan y vuelven al cerrarlos) y se quedan hasta que vuelves a pulsar la tecla.
 - **Panel de widgets** (izquierda, Meta+A; `org.apogeo.izquierdo`): tu foto y «Buenos días/Buenas tardes/Buenas
   noches», y tres pestañas. Abierto, coge el teclado (para escribir) y al cerrarlo lo devuelve.
-  - **Widgets:** lo que suena (portada y botones), la semana (al pulsarla sale la **agenda** a su lado: el mes, el
+  - **Widgets:** lo que suena (la portada, sus colores en toda la tarjeta, una barra para avanzar y los botones), la
+    semana (puntitos en los días con exámenes o planes y «Próximo: …» (al pulsarla sale la **agenda** a su lado: el mes, el
     tiempo de tu ciudad, tus planes de Ágape, **recordatorios** y **temporizadores**, que suenan con «Posponer 10
-    min»), el tiempo, tu PC en anillos (procesador, memoria, temperatura y gráfica si es AMD), los **relojes del mundo**
+    min»), el tiempo (del color del cielo: amanecer, día, atardecer o noche, y gris si llueve), tu PC en anillos
+    (procesador, memoria, temperatura y gráfica si es AMD; el procesador con su gráfica del último minuto), los **relojes del mundo**
     (el de aquí, Nueva York y Tokio; ajuste `relojes`) y tus fondos de Aura y los animados para este piso.
   - **Estudios** (solo en Estudiar, y se abre sola al llegar): el temporizador 25/5, los exámenes con lo que falta, las
     tareas de hoy y tus asignaturas de `~/Estudios` (un clic abre su carpeta).
@@ -263,7 +287,8 @@ sitio** (las ventanas se estrechan y vuelven al cerrarlos) y se quedan hasta que
 - **Panel rápido** (derecha, Meta+N o pulsando la red, el sonido o la hora de la isla; `org.apogeo.derecho`): cuánto
   lleva encendido el PC con Aspecto, Todos los ajustes y apagar; **los pisos**; la red, el sonido y el micro en
   pastillas; bluetooth, fondo animado, no molestar, ahorro del piso y luz nocturna en botones redondos; volumen y brillo;
-  **tus avisos** (abrirlos, quitarlos o «Borrar todo») y abajo el tiempo de las próximas horas (en barras) y días.
+  **tus avisos** agrupados por app («Ver todos»), con sus botones y **Responder** ahí mismo (quitarlos o «Borrar
+  todo») y abajo el tiempo de las próximas horas (en barras) y días.
   Al abrirlo, los avisos cuentan como vistos.
 
 Los abre el script de KWin `apogeo-bordes` (cambia el panel de «se esconde» a «siempre visible», que es lo que hace sitio,

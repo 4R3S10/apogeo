@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Shapes
+import QtQuick.Effects
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5Support
@@ -11,11 +12,13 @@ import Apogeo
 
 // El panel de widgets de Apogeo («2 · Dos paneles altos»), alto, a la izquierda: sale con Meta+A o empujando el ratón
 // contra el borde (el script de KWin apogeo-bordes) y hace sitio. Arriba, tu foto y un saludo; debajo, tres pestañas:
-//  - Widgets: lo que suena, la semana (abre la agenda a su lado), el tiempo, tu PC en anillos, los relojes del mundo y
-//    tus fondos de Aura para este piso.
+//  - Widgets: lo que suena (la portada de fondo, con sus colores, y la barra para avanzar), la semana con lo que toca
+//    (abre la agenda a su lado), el tiempo con el color del cielo, tu PC en anillos (y la CPU del último minuto), los
+//    relojes del mundo y tus fondos de Aura para este piso.
 //  - Estudios (solo en Estudiar, y se abre sola al llegar): el temporizador, los exámenes, las tareas de hoy y tus
 //    asignaturas.
 //  - Notas: tus notas en tarjetas con su color; «Nueva» pone una, se escriben ahí mismo y se ordenan arrastrándolas.
+// El fondo es «Cristal con tu fondo» (Cristal): el fondo del piso desenfocado, como si se viera a través.
 // Los datos los da apogeo-pisos (Datos, por D-Bus) y solo se piden con el panel abierto («abierto», lo pone el script);
 // abierto, el panel coge el teclado.
 PlasmoidItem {
@@ -51,11 +54,18 @@ PlasmoidItem {
     property var tareas: []
     property var examenes: []
     property var yo: ({})          // tu nombre y tu foto (apogeo-ajustes rapido)
+    property var semana: ({})      // los días de esta semana con algo y lo próximo (Semana)
+    property var historia: []      // la CPU del último minuto (una cada vuelta: 2 s)
 
     function cargar(lento) {
         if (tab === "widgets") {
-            datos.pedir("Pc", [], d => { if (d) root.pc = d; });
+            datos.pedir("Pc", [], d => {
+                if (!d) return;
+                root.pc = d;
+                root.historia = root.historia.concat([d.cpu || 0]).slice(-30);
+            });
             if (lento) {
+                datos.pedir("Semana", [], d => { if (d) root.semana = d; });
                 datos.pedir("Tiempo", [], d => { if (d) root.tiempo = d; });
                 datos.pedir("Relojes", [], d => { if (d) root.relojes = d; });
                 datos.pedir("Fondos", [], d => { if (d) root.fondos = d; });
@@ -145,21 +155,43 @@ PlasmoidItem {
         color: Tema.pulsado
         Rectangle { height: parent.height; radius: 2; color: Tema.rosa; width: parent.width * Math.max(0, Math.min(1, parent.valor)) }
     }
-    // Un arco: el fondo apagado y, encima, lo lleno en el color del piso
+    // Un arco: el fondo apagado y, encima, lo lleno con un degradado de los colores del piso (un anillo relleno, para
+    // poder pintarlo con degradado; las puntas, redondas)
     component Arco: Shape {
         id: arco
         property real valor: 0
         property real grosor: 6
+        readonly property real cx: width / 2
+        readonly property real cy: height / 2
+        readonly property real medio: width / 2 - grosor           // el radio por el centro del trazo
+        readonly property real giro: 360 * Math.max(0.001, Math.min(0.999, valor))
+        readonly property real fin: (giro - 90) * Math.PI / 180
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
             strokeColor: Tema.pulsado
             strokeWidth: arco.grosor; fillColor: "transparent"
-            PathAngleArc { centerX: arco.width / 2; centerY: arco.height / 2; radiusX: arco.width / 2 - arco.grosor; radiusY: radiusX; startAngle: 0; sweepAngle: 360 }
+            PathAngleArc { centerX: arco.cx; centerY: arco.cy; radiusX: arco.medio; radiusY: radiusX; startAngle: 0; sweepAngle: 360 }
         }
         ShapePath {
-            strokeColor: Tema.rosa
-            strokeWidth: arco.grosor; fillColor: "transparent"; capStyle: ShapePath.RoundCap
-            PathAngleArc { centerX: arco.width / 2; centerY: arco.height / 2; radiusX: arco.width / 2 - arco.grosor; radiusY: radiusX; startAngle: -90; sweepAngle: 360 * Math.max(0, Math.min(1, arco.valor)) }
+            strokeColor: "transparent"
+            fillGradient: ConicalGradient {
+                centerX: arco.cx; centerY: arco.cy; angle: 90
+                GradientStop { position: 0; color: Tema.vivo }
+                GradientStop { position: 1; color: Tema.rosa }
+            }
+            PathAngleArc { centerX: arco.cx; centerY: arco.cy; radiusX: arco.medio + arco.grosor / 2; radiusY: radiusX; startAngle: -90; sweepAngle: arco.giro }
+            PathAngleArc { centerX: arco.cx; centerY: arco.cy; radiusX: arco.medio - arco.grosor / 2; radiusY: radiusX; startAngle: arco.giro - 90; sweepAngle: -arco.giro; moveToStart: false }
+        }
+        Rectangle { // las puntas
+            visible: arco.valor > 0.005
+            x: arco.cx - width / 2; y: arco.cy - arco.medio - height / 2
+            width: arco.grosor; height: width; radius: width / 2; color: Tema.rosa
+        }
+        Rectangle {
+            visible: arco.valor > 0.005
+            x: arco.cx + arco.medio * Math.cos(arco.fin) - width / 2; y: arco.cy + arco.medio * Math.sin(arco.fin) - height / 2
+            width: arco.grosor; height: width; radius: width / 2
+            color: Qt.tint(Tema.rosa, Qt.rgba(Tema.vivo.r, Tema.vivo.g, Tema.vivo.b, Math.min(1, arco.valor)))
         }
     }
     component Anillo: Column {
@@ -182,6 +214,20 @@ PlasmoidItem {
         font.pixelSize: 13
         Keys.onEscapePressed: { text = ""; focus = false; }
     }
+    // Un botón de la música: redondo; el de en medio, lleno con el color de la portada
+    component BotonMusica: QQC2.AbstractButton {
+        id: bm
+        property string icono
+        property color lleno: "transparent"
+        readonly property bool relleno: lleno.a > 0
+        width: relleno ? 40 : 32; height: width
+        hoverEnabled: true
+        opacity: enabled ? 1 : 0.4
+        scale: pressed ? 0.9 : 1
+        Behavior on scale { NumberAnimation { duration: 100 } }
+        background: Rectangle { radius: width / 2; color: bm.relleno ? bm.lleno : bm.hovered ? Qt.rgba(1, 1, 1, 0.14) : "transparent" }
+        contentItem: Item { Icono { anchors.centerIn: parent; nombre: bm.icono; width: 16; height: 16; color: bm.relleno ? "#1b1420" : "white" } }
+    }
     component Quitar: QQC2.AbstractButton {
         id: q
         width: 22; height: 22
@@ -195,6 +241,9 @@ PlasmoidItem {
         Layout.preferredWidth: 360
         Layout.fillWidth: true
         Layout.fillHeight: true
+
+        // «Cristal con tu fondo»
+        Cristal { anchors.fill: parent; activo: root.abierto }
 
         Agenda { id: agenda; panel: vista }
         Connections {
@@ -262,45 +311,135 @@ PlasmoidItem {
                     width: parent.width
                     spacing: 10
 
-                    // --- Lo que suena ---
-                    Tarjeta {
+                    // --- Lo que suena: la portada de fondo (borrosa) y sus colores ---
+                    Item {
                         id: musica
                         readonly property var p: mpris.currentPlayer
+                        readonly property bool suena: !!p && p.playbackStatus === Mpris.PlaybackStatus.Playing
+                        readonly property string arte: p && p.artUrl ? p.artUrl.toString() : ""
                         Mpris.Mpris2Model { id: mpris }
+                        ColorDe { id: colores; fuente: musica.arte }
+                        // (dónde va la canción: se pregunta cada segundo mientras suena y el panel está abierto)
+                        Timer { interval: 1000; repeat: true; running: root.abierto && musica.suena; onTriggered: musica.p.updatePosition() }
+                        width: parent.width
+                        height: p ? 184 : 52
+                        Behavior on height { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+
+                        Rectangle {
+                            id: formaMusica
+                            anchors.fill: parent
+                            radius: Tema.r(18)
+                            color: musica.p ? colores.oscuro : Tema.encima
+                            Behavior on color { ColorAnimation { duration: 700 } }
+                            layer.enabled: true
+                        }
                         Item {
-                            width: parent.width
-                            height: musica.p ? 90 : 20
-                            Texto { visible: !musica.p; text: "Nada sonando"; color: Tema.apagado }
-                            Icono { visible: !musica.p; anchors.right: parent.right; nombre: "musica"; color: Tema.tenue }
-                            Row {
-                                visible: !!musica.p
-                                width: parent.width
-                                spacing: 12
-                                Rectangle {
-                                    width: 72; height: 72; radius: Tema.r(14)
-                                    color: Tema.rosaSuave
-                                    clip: true
-                                    Icono { anchors.centerIn: parent; nombre: "musica"; color: Tema.rosa }
-                                    Image { anchors.fill: parent; source: musica.p ? musica.p.artUrl : ""; fillMode: Image.PreserveAspectCrop; asynchronous: true }
-                                }
-                                Column {
-                                    width: parent.width - 84
-                                    spacing: 2
-                                    Texto { width: parent.width; text: musica.p ? musica.p.track : ""; font.pixelSize: 15; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                                    Texto { width: parent.width; text: musica.p ? [musica.p.artist, musica.p.identity].filter(Boolean).join(" · ") : ""; color: Tema.apagado; font.pixelSize: 12; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                                    Row {
-                                        topPadding: 6
-                                        spacing: 6
-                                        Boton { tipo: "plano"; icono: "anterior"; implicitHeight: 30; enabled: musica.p && musica.p.canGoPrevious; onClicked: musica.p.Previous() }
-                                        Boton { tipo: "principal"; icono: musica.p && musica.p.playbackStatus === Mpris.PlaybackStatus.Playing ? "pausa" : "reproducir"; implicitHeight: 30; implicitWidth: 42; onClicked: musica.p.PlayPause() }
-                                        Boton { tipo: "plano"; icono: "siguiente"; implicitHeight: 30; enabled: musica.p && musica.p.canGoNext; onClicked: musica.p.Next() }
-                                    }
+                            id: portadaFondo
+                            anchors.fill: parent
+                            visible: false
+                            layer.enabled: true
+                            Image {
+                                anchors.centerIn: parent
+                                width: parent.width * 1.25; height: width
+                                source: musica.arte
+                                sourceSize: Qt.size(64, 64)
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                gradient: Gradient {
+                                    GradientStop { position: 0; color: Qt.rgba(0, 0, 0, 0.15) }
+                                    GradientStop { position: 1; color: Qt.rgba(0, 0, 0, 0.55) }
                                 }
                             }
-                            Barra {
-                                visible: !!musica.p
-                                anchors.bottom: parent.bottom; width: parent.width
-                                valor: musica.p && musica.p.length > 0 ? musica.p.position / musica.p.length : 0
+                        }
+                        MultiEffect {
+                            anchors.fill: parent
+                            visible: !!musica.p && musica.arte !== ""
+                            source: portadaFondo
+                            blurEnabled: true; blur: 1; blurMax: 48
+                            autoPaddingEnabled: false   // (sin esto, el desenfoque se sale de la tarjeta)
+                            maskEnabled: true; maskSource: formaMusica
+                        }
+
+                        Texto { visible: !musica.p; x: 16; anchors.verticalCenter: parent.verticalCenter; text: "Nada sonando"; color: Tema.apagado }
+                        Icono { visible: !musica.p; anchors.right: parent.right; anchors.rightMargin: 16; anchors.verticalCenter: parent.verticalCenter; nombre: "musica"; color: Tema.tenue }
+
+                        Item {
+                            visible: !!musica.p
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            Rectangle {
+                                id: tapa
+                                width: 78; height: 78
+                                radius: Tema.r(14)
+                                color: Qt.rgba(1, 1, 1, 0.08)
+                                Icono { anchors.centerIn: parent; nombre: "musica"; color: colores.vivo }
+                                Image {
+                                    id: tapaImagen
+                                    anchors.fill: parent
+                                    source: musica.arte
+                                    sourceSize: Qt.size(156, 156)
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    visible: false
+                                }
+                                Rectangle { id: tapaForma; anchors.fill: parent; radius: parent.radius; visible: false; layer.enabled: true }
+                                MultiEffect { anchors.fill: parent; source: tapaImagen; maskEnabled: true; maskSource: tapaForma; visible: tapaImagen.status === Image.Ready }
+                            }
+                            Column {
+                                x: tapa.width + 13
+                                width: parent.width - x
+                                spacing: 2
+                                Texto { width: parent.width; text: musica.p ? musica.p.track || musica.p.identity : ""; color: "white"; font.pixelSize: 15; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                                Texto { width: parent.width; text: musica.p ? [musica.p.artist, musica.p.identity].filter(Boolean).join(" · ") : ""; color: Qt.rgba(1, 1, 1, 0.7); font.pixelSize: 12; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                                Item { width: 1; height: 8 }
+                                Barritas { height: 24; cuantas: 16; grosor: 3; sonando: musica.suena && root.abierto; color: colores.vivo }
+                            }
+                            // La barra para avanzar (arrastrando o con un clic)
+                            Item {
+                                id: avance
+                                y: tapa.height + 10
+                                width: parent.width; height: 16
+                                readonly property real largo: musica.p ? musica.p.length : 0
+                                readonly property real valor: largo > 0 && musica.p ? Math.min(1, musica.p.position / largo) : 0
+                                readonly property real mostrado: zonaAvance.pressed ? zonaAvance.v : valor
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width; height: zonaAvance.containsMouse ? 6 : 4; radius: height / 2
+                                    color: Qt.rgba(1, 1, 1, 0.2)
+                                    Behavior on height { NumberAnimation { duration: 120 } }
+                                    Rectangle { width: parent.width * avance.mostrado; height: parent.height; radius: parent.radius; color: "white" }
+                                }
+                                Rectangle {
+                                    visible: zonaAvance.containsMouse || zonaAvance.pressed
+                                    x: parent.width * avance.mostrado - width / 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 14; height: 14; radius: 7; color: "white"
+                                }
+                                MouseArea {
+                                    id: zonaAvance
+                                    anchors.fill: parent
+                                    enabled: !!musica.p && musica.p.canSeek && avance.largo > 0
+                                    hoverEnabled: true
+                                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                    property real v: 0
+                                    function a(x) { v = Math.max(0, Math.min(1, x / width)); }
+                                    onPressed: m => a(m.x)
+                                    onPositionChanged: m => { if (pressed) a(m.x); }
+                                    onReleased: musica.p.position = Math.round(v * avance.largo)
+                                }
+                            }
+                            Texto { y: avance.y + avance.height + 1; text: root.mmss((zonaAvance.pressed ? zonaAvance.v * avance.largo : musica.p ? musica.p.position : 0) / 1e6); color: Qt.rgba(1, 1, 1, 0.6); font.pixelSize: 11 }
+                            Texto { y: avance.y + avance.height + 1; anchors.right: parent.right; visible: avance.largo > 0; text: root.mmss(avance.largo / 1e6); color: Qt.rgba(1, 1, 1, 0.6); font.pixelSize: 11 }
+                            Row {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.bottom: parent.bottom
+                                spacing: 18
+                                BotonMusica { icono: "anterior"; enabled: !!musica.p && musica.p.canGoPrevious; onClicked: musica.p.Previous() }
+                                BotonMusica { icono: musica.suena ? "pausa" : "reproducir"; lleno: colores.vivo; onClicked: musica.p.PlayPause() }
+                                BotonMusica { icono: "siguiente"; enabled: !!musica.p && musica.p.canGoNext; onClicked: musica.p.Next() }
                             }
                         }
                     }
@@ -325,7 +464,10 @@ PlasmoidItem {
                                     required property int index
                                     readonly property date fecha: { const d = new Date(dias.lunes); d.setDate(d.getDate() + index); return d; }
                                     readonly property bool hoy: fecha.toDateString() === root.ahora.toDateString()
-                                    width: dias.width / 7; height: 52
+                                    // (lo que hay ese día: un puntito por cosa, hasta tres; los exámenes, en el otro color)
+                                    readonly property var cosas: root.semana.dias ? root.semana.dias[index] : null
+                                    readonly property var puntos: cosas ? Array(Math.min(3, cosas.examenes)).fill(true).concat(Array(Math.max(0, Math.min(3 - cosas.examenes, cosas.eventos))).fill(false)) : []
+                                    width: dias.width / 7; height: 60
                                     radius: Tema.r(14)
                                     color: hoy ? Tema.rosa : "transparent"
                                     Column {
@@ -333,27 +475,75 @@ PlasmoidItem {
                                         spacing: 2
                                         Texto { anchors.horizontalCenter: parent.horizontalCenter; text: "LMXJVSD"[dia.index]; font.pixelSize: 11; color: dia.hoy ? Tema.sobreRosa : Tema.tenue }
                                         Texto { anchors.horizontalCenter: parent.horizontalCenter; text: dia.fecha.getDate(); font.pixelSize: 15; font.weight: Font.Bold; color: dia.hoy ? Tema.sobreRosa : Tema.texto }
+                                        Row {
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            height: 6
+                                            spacing: 3
+                                            Repeater {
+                                                model: dia.puntos
+                                                delegate: Rectangle {
+                                                    required property bool modelData
+                                                    width: 5; height: 5; radius: 2.5
+                                                    color: dia.hoy ? Tema.sobreRosa : modelData ? Tema.vivo : Tema.rosa
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-                        // El tiempo de tu ciudad, en una línea
+                        // Lo próximo que toca (un plan, un recordatorio o un examen)
                         Item {
-                            y: dias.y + dias.height + 10
+                            id: proximo
+                            readonly property var p: root.semana.proximo || null
+                            y: dias.y + dias.height + 8
                             width: parent.width
-                            height: visible ? 34 : 0
-                            visible: root.tiempo.temp !== undefined || !!root.tiempo.sinCiudad
-                            Rectangle { width: parent.width; height: 1; color: Tema.linea }
-                            Icono { y: 12; width: 20; height: 20; nombre: root.cielo(root.tiempo.codigo); color: Tema.rosa }
+                            height: p ? 40 : 0
+                            visible: !!p
+                            Rectangle { width: 3; height: parent.height - 6; y: 3; radius: 1.5; color: proximo.p && proximo.p.examen ? Tema.vivo : Tema.rosa }
+                            Column {
+                                x: 12
+                                width: parent.width - 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                Texto { width: parent.width; text: proximo.p ? "Próximo: " + proximo.p.texto : ""; font.weight: Font.Bold; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                                Texto {
+                                    width: parent.width
+                                    readonly property int d: proximo.p ? proximo.p.dias : 0
+                                    text: proximo.p ? (d === 0 ? "hoy" : d === 1 ? "mañana" : "en " + d + " días") + (proximo.p.hora ? " · " + proximo.p.hora : "") : ""
+                                    color: Tema.apagado; font.pixelSize: 12; elide: Text.ElideRight; wrapMode: Text.NoWrap
+                                }
+                            }
+                        }
+                        // El tiempo de tu ciudad: una franja con el color del cielo a esta hora
+                        Rectangle {
+                            id: franjaTiempo
+                            readonly property var cielo: Tema.colorCielo(root.ahora, root.tiempo.salida, root.tiempo.puesta, root.tiempo.codigo || 0)
+                            readonly property bool hay: root.tiempo.temp !== undefined
+                            y: (proximo.visible ? proximo.y + proximo.height : dias.y + dias.height) + 10
+                            width: parent.width
+                            height: visible ? 46 : 0
+                            visible: hay || !!root.tiempo.sinCiudad
+                            radius: Tema.r(14)
+                            color: Tema.pulsado
+                            gradient: hay ? cieloDegradado : null
+                            Gradient {
+                                id: cieloDegradado
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0; color: franjaTiempo.cielo[0] }
+                                GradientStop { position: 1; color: franjaTiempo.cielo[1] }
+                            }
+                            Icono { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 22; height: 22; nombre: root.cielo(root.tiempo.codigo); color: franjaTiempo.hay ? "white" : Tema.rosa }
                             Texto {
-                                x: 30; y: 12
-                                width: parent.width - x - (minmax.visible ? minmax.width + 8 : 0)
+                                x: 44; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - x - (minmax.visible ? minmax.width + 20 : 12)
                                 text: root.tiempo.sinCiudad ? "Elige tu ciudad para ver el tiempo" : root.tiempo.temp + "° · " + (root.tiempo.ciudad || "")
                                 font.weight: root.tiempo.sinCiudad ? Font.Normal : Font.Bold
-                                color: root.tiempo.sinCiudad ? Tema.apagado : Tema.texto
+                                font.pixelSize: root.tiempo.sinCiudad ? 13 : 15
+                                color: franjaTiempo.hay ? "white" : Tema.apagado
+                                style: franjaTiempo.hay ? Text.Raised : Text.Normal; styleColor: Qt.rgba(0, 0, 0, 0.25)
                                 elide: Text.ElideRight; wrapMode: Text.NoWrap
                             }
-                            Texto { id: minmax; y: 12; anchors.right: parent.right; visible: root.tiempo.max !== undefined; text: root.tiempo.max + "° / " + root.tiempo.min + "°"; color: Tema.apagado; font.pixelSize: 13 }
+                            Texto { id: minmax; anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; visible: root.tiempo.max !== undefined; text: root.tiempo.max + "° / " + root.tiempo.min + "°"; color: Qt.rgba(1, 1, 1, 0.85); font.pixelSize: 13 }
                         }
                         MouseArea { // (toda la tarjeta: fuera de su contenido, que si no la estira)
                             parent: semana
@@ -386,6 +576,37 @@ PlasmoidItem {
                                     required property var modelData
                                     width: anillos.width / anillos.cosas.length; height: 88
                                     Anillo { anchors.horizontalCenter: cosa.horizontalCenter; valor: cosa.modelData.p; valorTexto: cosa.modelData.v; nombre: cosa.modelData.n }
+                                }
+                            }
+                        }
+                        // La CPU del último minuto
+                        Item {
+                            id: grafica
+                            y: anillos.y + 96
+                            width: parent.width; height: 62
+                            visible: root.historia.length > 1
+                            readonly property var puntos: {
+                                const h = root.historia, n = Math.max(2, h.length), w = width, alto = 44;
+                                return h.map((v, i) => Qt.point(w * i / (n - 1), 16 + alto * (1 - Math.min(100, v) / 100)));
+                            }
+                            Texto { text: "CPU · último minuto"; color: Tema.tenue; font.pixelSize: 11 }
+                            Texto { anchors.right: parent.right; text: "máx. " + Math.max.apply(null, root.historia.concat([0])) + "%"; color: Tema.tenue; font.pixelSize: 11 }
+                            Shape {
+                                anchors.fill: parent
+                                preferredRendererType: Shape.CurveRenderer
+                                ShapePath {
+                                    strokeColor: "transparent"
+                                    fillGradient: LinearGradient {
+                                        x1: 0; y1: 16; x2: 0; y2: grafica.height
+                                        GradientStop { position: 0; color: Qt.rgba(Tema.rosa.r, Tema.rosa.g, Tema.rosa.b, 0.35) }
+                                        GradientStop { position: 1; color: Qt.rgba(Tema.rosa.r, Tema.rosa.g, Tema.rosa.b, 0) }
+                                    }
+                                    PathPolyline { path: grafica.puntos.concat([Qt.point(grafica.puntos.length ? grafica.puntos[grafica.puntos.length - 1].x : 0, grafica.height), Qt.point(0, grafica.height)]) }
+                                }
+                                ShapePath {
+                                    strokeColor: Tema.rosa; strokeWidth: 2; fillColor: "transparent"
+                                    joinStyle: ShapePath.RoundJoin; capStyle: ShapePath.RoundCap
+                                    PathPolyline { path: grafica.puntos }
                                 }
                             }
                         }

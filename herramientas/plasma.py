@@ -5,7 +5,7 @@ cristal y las tarjetas de Ágape. Con efectos (lo normal) se usa la versión tra
 la opaca.
 
   - Paneles (la isla y los de los lados): cristal de Ágape, rgba(superficie, .55) con desenfoque, radio 20, borde del 10 % y el brillo
-    de 1 px arriba.
+    de 1 px arriba, del color del piso.
   - Menús, avisos y ventanitas: tarjeta de Ágape (el cromo casi opaco), radio 16, sombra grande y suave.
   - Bocadillos: cromo, radio 10.
   - La raya del foco en un panel: en la isla, la del acento en su borde de dentro; en los paneles de los lados, ninguna.
@@ -31,14 +31,14 @@ def mix(a, b, t):
 CHROME = mix(SURFACE, TEXT, 0.03)
 
 
-def frame_svg(R, M, fill, opacity, shadow_size, shadow_alpha, highlight=True, extra_hints=True):
+def frame_svg(R, M, fill, opacity, shadow_size, shadow_alpha, highlight=True, extra_hints=True, shine=None):
     """Un marco de 9 trozos con sus pistas (márgenes), su máscara (para el desenfoque) y su sombra, con los nombres que
     usa Plasma (los mismos que el tema Breeze)."""
     S = shadow_size + R        # esquina de la sombra: lo que sale por fuera + lo que queda debajo del marco
     E = 10                     # largo de los trozos de los lados
     border = f'fill="{TEXT}" fill-opacity="0.1"'
     body = f'fill="{fill}" fill-opacity="{opacity}"'
-    shine = 'fill="#ffffff" fill-opacity="0.06"'
+    shine = f'fill="{shine[0]}" fill-opacity="{shine[1]}"' if shine else 'fill="#ffffff" fill-opacity="0.06"'
     out, defs = [], []
 
     # ----- El marco (arriba a la izquierda en el lienzo) -----
@@ -265,7 +265,8 @@ def main():
     root = os.path.join(DST, THEME)
     files = {
         # Isla y columna de pisos: cristal de Ágape
-        'translucent/widgets/panel-background.svg': frame_svg(r(20), 6, SURFACE, CRISTAL, 22, 0.32),
+        # (el brillo de arriba, del color del piso: como el cristal de los paneles de los lados, «Cristal con tu fondo»)
+        'translucent/widgets/panel-background.svg': frame_svg(r(20), 6, SURFACE, CRISTAL, 22, 0.32, shine=(ACCENT, 0.45)),
         'widgets/panel-background.svg': frame_svg(r(20), 6, CHROME, 0.97, 22, 0.32),
         # Menús, avisos y ventanitas: tarjeta de Ágape
         'translucent/dialogs/background.svg': frame_svg(r(16), 12, CHROME, min(0.98, CRISTAL + 0.35), 32, 0.45),

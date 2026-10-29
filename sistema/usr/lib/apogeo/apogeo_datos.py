@@ -96,6 +96,34 @@ class Datos(dbus.service.Object):
         bus.add_signal_receiver(self._reminder_action, 'ActionInvoked', 'org.freedesktop.Notifications',
                                 path='/org/freedesktop/Notifications')
         GLib.timeout_add_seconds(10, self._check_reminders)
+        # Los números y barritas que ponen las apps en su icono (Unity LauncherEntry: Discord, Telegram, Ágape…)
+        self.badges = {}
+        bus.add_signal_receiver(self._badge, 'Update', 'com.canonical.Unity.LauncherEntry')
+
+    # ---------- Los números de los iconos de la isla ----------
+
+    def _badge(self, uri, props):
+        app = str(uri).replace('application://', '').removesuffix('.desktop')
+        b = self.badges.get(app, {})
+        for key, name in (('count', 'numero'), ('count-visible', 'verNumero'), ('progress', 'progreso'),
+                          ('progress-visible', 'verProgreso'), ('urgent', 'urgente')):
+            if key in props:
+                b[name] = bool(props[key]) if name.startswith('ver') or name == 'urgente' else float(props[key])
+        self.badges[app] = b
+
+    @dbus.service.method(IFACE, out_signature='s')
+    def Insignias(self):
+        """{app (su .desktop sin la extensión): {numero, progreso (0..1)}}, solo lo que se ve."""
+        out = {}
+        for app, b in self.badges.items():
+            x = {}
+            if b.get('verNumero') and b.get('numero', 0) > 0:
+                x['numero'] = int(b['numero'])
+            if b.get('verProgreso') and 0 <= b.get('progreso', -1) < 1:
+                x['progreso'] = round(b['progreso'], 3)
+            if x:
+                out[app] = x
+        return json.dumps(out)
 
     # ---------- El tiempo ----------
 
@@ -186,6 +214,17 @@ class Datos(dbus.service.Object):
         out['cambiar'] = st['fondos']['cambiar']
         return json.dumps(out, ensure_ascii=False)
 
+    @dbus.service.method(IFACE, in_signature='s', out_signature='s')
+    def Cristal(self, floor):
+        """El fondo del piso para el cristal: {imagen (desenfocada, '' si es animado), animado (su número o -1)}."""
+        import apogeo_comun as comun
+        import apogeo_fondos as fondos
+        if floor not in comun.FLOOR_KEYS:
+            return json.dumps({'imagen': '', 'animado': -1})
+        value = comun.load()['pisos'][floor]['fondo']
+        return json.dumps({'imagen': fondos.glass(value),
+                           'animado': comun.STYLES.index(value) if value in comun.STYLES else -1})
+
     @dbus.service.method(IFACE, in_signature='ss')
     def PonerFondo(self, floor, value):
         import apogeo_comun as comun
@@ -218,7 +257,7 @@ class Datos(dbus.service.Object):
             return
         url = (f"https://api.open-meteo.com/v1/forecast?latitude={float(city['lat'])}&longitude={float(city['lon'])}"
                '&current=temperature_2m,weather_code,is_day&hourly=temperature_2m&daily=weather_code,temperature_2m_max,'
-               'temperature_2m_min&forecast_days=4&timezone=auto')
+               'temperature_2m_min,sunrise,sunset&forecast_days=4&timezone=auto')
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'Apogeo'}), timeout=12) as r:
                 d = json.load(r)
@@ -233,6 +272,9 @@ class Datos(dbus.service.Object):
             'ciudad': str(city.get('name', '')),
             'temp': round(d['current']['temperature_2m']), 'codigo': int(d['current']['weather_code']),
             'dia': bool(d['current']['is_day']),
+            # (para el color del cielo de la tarjeta: «HH:MM»)
+            'salida': str((d['daily'].get('sunrise') or [''])[0])[11:16],
+            'puesta': str((d['daily'].get('sunset') or [''])[0])[11:16],
             'max': round(d['daily']['temperature_2m_max'][0]), 'min': round(d['daily']['temperature_2m_min'][0]),
             'horas': [{'h': times[i][11:13], 't': round(temps[i])} for i in range(start, min(start + 6, len(times)))],
             'dias': [{'dia': 'LMXJVSD'[datetime.date.fromisoformat(day).weekday()],
@@ -299,6 +341,37 @@ class Datos(dbus.service.Object):
         timers = [{'id': r['id'], 'texto': r['texto'], 'termina': r['cuando']} for r in self.reminders
                   if r['tipo'] == 'temporizador']
         return json.dumps({'cosas': things, 'temporizadores': timers}, ensure_ascii=False)
+
+    @dbus.service.method(IFACE, out_signature='s')
+    def Semana(self):
+        """Esta semana (de lunes a domingo) para la tarjeta del panel: {dias: [{eventos, examenes}] ×7, proximo}.
+        proximo: lo siguiente que toca (un plan de Ágape, un recordatorio o un examen, en los próximos 30 días):
+        {texto, dias (0 hoy), hora, examen} o null."""
+        now = datetime.datetime.now()
+        today = now.date()
+        monday = today - datetime.timedelta(days=today.weekday())
+        week = [{'eventos': 0, 'examenes': 0} for _ in range(7)]
+        upcoming = []
+        def add(day, text, hour, exam):
+            i = (day - monday).days
+            if 0 <= i < 7:
+                week[i]['examenes' if exam else 'eventos'] += 1
+            days = (day - today).days
+            if 0 <= days <= 30 and not (days == 0 and hour and hour < now.strftime('%H:%M')):
+                upcoming.append((day, hour or '99', {'texto': text, 'dias': days, 'hora': hour, 'examen': exam}))
+        for e in self._agape_events():
+            add(datetime.date.fromisoformat(e['date']), str(e.get('text', '')), str(e.get('time') or ''), False)
+        for r in self.reminders:
+            if r['tipo'] == 'recordatorio':
+                when = datetime.datetime.fromtimestamp(r['cuando'])
+                add(when.date(), r['texto'], when.strftime('%H:%M'), False)
+        for e in self.study['examenes']:
+            try:
+                add(datetime.date.fromisoformat(e['fecha']), 'Examen de ' + e['asignatura'], '', True)
+            except (KeyError, ValueError):
+                pass
+        upcoming.sort(key=lambda u: (u[0], u[1]))
+        return json.dumps({'dias': week, 'proximo': upcoming[0][2] if upcoming else None}, ensure_ascii=False)
 
     @dbus.service.method(IFACE, in_signature='s', out_signature='s')
     def Marcas(self, month):

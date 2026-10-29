@@ -15,14 +15,17 @@ import Apogeo
 // borde o pulsando la red, el sonido o la hora de la isla (el script de KWin apogeo-bordes), y hace sitio. De arriba
 // abajo: cuánto lleva encendido el PC con «Aspecto», «Todos los ajustes» y apagar; los pisos; la red, el sonido y el
 // micro en pastillas; lo de todos los días en botones redondos (bluetooth, fondo animado, no molestar, ahorro del piso,
-// luz nocturna); el volumen y el brillo; tus avisos y, abajo, el tiempo de las próximas horas y días. Lo de los botones
-// lo lee y lo cambia «apogeo-ajustes rapido», solo con el panel abierto («abierto», lo pone el script).
+// luz nocturna); el volumen y el brillo; tus avisos (juntos por app, con sus botones y «Responder») y, abajo, el tiempo
+// de las próximas horas y días con el color del cielo a esta hora. El fondo es «Cristal con tu fondo» (Cristal).
+// Lo de los botones lo lee y lo cambia «apogeo-ajustes rapido», solo con el panel abierto («abierto», lo pone el script).
+// No coge el teclado, salvo mientras respondes a un aviso.
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
     toolTipMainText: ""
     toolTipSubText: ""
-    Plasmoid.status: PlasmaCore.Types.ActiveStatus
+    property bool escribiendo: false   // respondiendo a un aviso: entonces coge el teclado
+    Plasmoid.status: escribiendo && abierto ? PlasmaCore.Types.AcceptingInputStatus : PlasmaCore.Types.ActiveStatus
 
     readonly property bool abierto: !!Plasmoid.configuration.abierto
 
@@ -38,7 +41,8 @@ PlasmoidItem {
         showExpired: true
         showDismissed: true
         showJobs: false
-        groupMode: NotificationManager.Notifications.GroupDisabled
+        groupMode: NotificationManager.Notifications.GroupApplicationsFlat
+        groupLimit: 2
         sortMode: NotificationManager.Notifications.SortByDate
         sortOrder: Qt.DescendingOrder
         limit: 30
@@ -78,7 +82,9 @@ PlasmoidItem {
             if (root.vuelta++ % 24 === 0) datos.pedir("Tiempo", [], d => { if (d) root.tiempo = d; });
         }
     }
-    onAbiertoChanged: if (abierto) vuelta = 0
+    onAbiertoChanged: { if (abierto) vuelta = 0; else escribiendo = false; }
+    property date ahora: new Date()
+    Timer { interval: 60000; repeat: true; running: root.abierto; onTriggered: root.ahora = new Date() }
 
     // Cambiar de piso: se le pide a KWin directamente (como la columna de pisos de antes)
     function go(index) {
@@ -177,6 +183,25 @@ PlasmoidItem {
         }
         contentItem: Item { Icono { anchors.centerIn: parent; width: 18; height: 18; nombre: re.icono; color: re.on ? Tema.sobreRosa : Tema.texto } }
     }
+    // Un botón pequeño de un aviso (los de la app y «Responder», lleno)
+    component Chico: AbstractButton {
+        id: ch
+        property bool lleno: false
+        property string icono
+        height: 28
+        width: icono ? 28 : chTexto.implicitWidth + 20
+        hoverEnabled: true
+        background: Rectangle {
+            radius: height / 2
+            color: ch.lleno ? (ch.hovered ? Qt.lighter(Tema.rosa, 1.08) : Tema.rosa) : (ch.hovered ? Tema.pulsado : Tema.encima)
+            border.width: ch.lleno ? 0 : 1
+            border.color: Tema.borde
+        }
+        contentItem: Item {
+            Texto { id: chTexto; visible: !ch.icono; anchors.centerIn: parent; text: ch.text; font.pixelSize: 12; font.weight: Font.Bold; color: ch.lleno ? Tema.sobreRosa : Tema.texto; wrapMode: Text.NoWrap }
+            Icono { visible: !!ch.icono; anchors.centerIn: parent; width: 14; height: 14; nombre: ch.icono || "cerrar"; color: ch.lleno ? Tema.sobreRosa : Tema.texto }
+        }
+    }
     component Level: Rectangle {
         id: lv
         property string icono
@@ -217,6 +242,9 @@ PlasmoidItem {
         Layout.preferredWidth: 360
         Layout.fillWidth: true
         Layout.fillHeight: true
+
+        // «Cristal con tu fondo»
+        Cristal { anchors.fill: parent; activo: root.abierto }
 
         Column {
             id: arriba
@@ -406,6 +434,7 @@ PlasmoidItem {
                 Texto { anchors.horizontalCenter: parent.horizontalCenter; text: "Nada nuevo"; color: Tema.apagado }
             }
             ListView {
+                id: listaAvisos
                 y: cabAvisos.height + 6
                 width: parent.width
                 height: parent.height - y
@@ -413,42 +442,156 @@ PlasmoidItem {
                 spacing: 6
                 boundsBehavior: Flickable.StopAtBounds
                 model: notifs
-                delegate: AbstractButton {
-                    id: nd
+                property int respondiendo: -1   // el aviso al que estás respondiendo (su índice)
+                delegate: Loader {
+                    id: fila
                     required property var model
                     required property int index
                     width: ListView.view.width
-                    height: 60
-                    hoverEnabled: true
-                    onClicked: notifs.invokeDefaultAction(notifs.index(index, 0))
-                    background: Rectangle { radius: Tema.r(14); color: nd.hovered ? Tema.pulsado : Tema.encima }
-                    contentItem: Item {
-                        Kirigami.Icon {
-                            id: appIcon
-                            x: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 28; height: 28
-                            source: nd.model.applicationIconName || nd.model.iconName || "apogeo"
+                    sourceComponent: model.isGroup ? grupo : aviso
+                }
+                // La cabeza de cada app: su icono, su nombre y cuántos; «Ver todos» si hay más de dos
+                Component {
+                    id: grupo
+                    Item {
+                        readonly property var m: parent ? parent.model : ({})
+                        readonly property int i: parent ? parent.index : 0
+                        height: 30
+                        Kirigami.Icon { id: gIco; x: 4; anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18; source: m.applicationIconName || "apogeo" }
+                        Texto {
+                            x: gIco.x + gIco.width + 8; anchors.verticalCenter: parent.verticalCenter
+                            text: (m.applicationName || "") + " · " + m.groupChildrenCount
+                            font.pixelSize: 12; font.weight: Font.Bold; color: Tema.apagado; wrapMode: Text.NoWrap
                         }
-                        Column {
-                            x: appIcon.x + appIcon.width + 11
-                            width: parent.width - x - 36
-                            anchors.verticalCenter: parent.verticalCenter
-                            Texto { width: parent.width; elide: Text.ElideRight; wrapMode: Text.NoWrap; font.weight: Font.Bold; font.pixelSize: 13; text: nd.model.summary || nd.model.applicationName || "" }
-                            Texto { width: parent.width; elide: Text.ElideRight; wrapMode: Text.NoWrap; color: Tema.apagado; font.pixelSize: 12; textFormat: Text.PlainText
-                                    text: (nd.model.applicationName ? nd.model.applicationName + " · " : "") + root.ago(nd.model.created || new Date()) + (nd.model.body ? " · " + String(nd.model.body).replace(/<[^>]*>/g, "") : "") }
+                        Row {
+                            anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
+                            AbstractButton {
+                                id: verTodos
+                                visible: m.groupChildrenCount > 2
+                                width: vtTexto.implicitWidth + 14; height: 24
+                                hoverEnabled: true
+                                onClicked: m.isGroupExpanded = !m.isGroupExpanded
+                                background: Rectangle { radius: Tema.r(8); color: verTodos.hovered ? Tema.pulsado : "transparent" }
+                                contentItem: Texto { id: vtTexto; text: m.isGroupExpanded ? "Ver menos" : "Ver todos"; font.pixelSize: 12; color: Tema.rosa; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            }
+                            AbstractButton {
+                                id: cierraGrupo
+                                width: 24; height: 24
+                                hoverEnabled: true
+                                onClicked: notifs.close(notifs.index(i, 0))
+                                background: Rectangle { radius: Tema.r(8); color: cierraGrupo.hovered ? Tema.pulsado : "transparent" }
+                                contentItem: Item { Icono { anchors.centerIn: parent; width: 11; height: 11; nombre: "cerrar"; color: Tema.apagado } }
+                            }
                         }
-                        AbstractButton {
-                            id: close
-                            anchors.right: parent.right
-                            anchors.rightMargin: 6
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 26; height: 26
-                            visible: nd.hovered
-                            hoverEnabled: true
-                            onClicked: notifs.close(notifs.index(nd.index, 0))
-                            background: Rectangle { radius: Tema.r(8); color: close.hovered ? Tema.encima : "transparent" }
-                            contentItem: Item { Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: Tema.apagado } }
+                    }
+                }
+                // Un aviso: lo que dice, sus botones (los que trae la app) y responder, si deja
+                Component {
+                    id: aviso
+                    AbstractButton {
+                        id: nd
+                        readonly property var m: parent ? parent.model : ({})
+                        readonly property int i: parent ? parent.index : 0
+                        readonly property var nombres: (m.actionNames || []).filter(n => n !== "default" && n !== "inline-reply")
+                        readonly property var etiquetas: (m.actionLabels || []).filter((l, k) => (m.actionNames || [])[k] !== "default" && (m.actionNames || [])[k] !== "inline-reply")
+                        readonly property bool botones: nombres.length > 0 || !!m.hasReplyAction
+                        readonly property bool respondiendo: listaAvisos.respondiendo === i
+                        height: contenido.implicitHeight + 22
+                        hoverEnabled: true
+                        onClicked: notifs.invokeDefaultAction(notifs.index(i, 0))
+                        background: Rectangle { radius: Tema.r(14); color: nd.hovered ? Tema.pulsado : Tema.encima }
+                        contentItem: Item {
+                            Kirigami.Icon {
+                                id: appIcon
+                                x: 12; y: 11
+                                width: 28; height: 28
+                                visible: !nd.m.isInGroup
+                                source: nd.m.applicationIconName || nd.m.iconName || "apogeo"
+                            }
+                            Column {
+                                id: contenido
+                                x: nd.m.isInGroup ? 14 : appIcon.x + appIcon.width + 11
+                                y: 11
+                                width: parent.width - x - 32
+                                spacing: 2
+                                Texto { width: parent.width; elide: Text.ElideRight; wrapMode: Text.NoWrap; font.weight: Font.Bold; font.pixelSize: 13; text: nd.m.summary || nd.m.applicationName || "" }
+                                Texto {
+                                    width: parent.width
+                                    visible: text !== ""
+                                    maximumLineCount: 2; elide: Text.ElideRight; wrapMode: Text.Wrap
+                                    color: Tema.apagado; font.pixelSize: 12; textFormat: Text.PlainText
+                                    text: nd.m.body ? String(nd.m.body).replace(/<[^>]*>/g, "").trim() : ""
+                                }
+                                Texto {
+                                    width: parent.width
+                                    color: Tema.tenue; font.pixelSize: 11; wrapMode: Text.NoWrap; elide: Text.ElideRight
+                                    text: (nd.m.isInGroup ? "" : (nd.m.applicationName ? nd.m.applicationName + " · " : "")) + (root.ahora, root.ago(nd.m.created || new Date()))
+                                }
+                                // Los botones del aviso
+                                Flow {
+                                    visible: nd.botones && !nd.respondiendo
+                                    width: parent.width
+                                    topPadding: 6
+                                    spacing: 6
+                                    Repeater {
+                                        model: nd.nombres
+                                        delegate: Chico {
+                                            required property int index
+                                            text: nd.etiquetas[index] || ""
+                                            onClicked: notifs.invokeAction(notifs.index(nd.i, 0), nd.nombres[index])
+                                        }
+                                    }
+                                    Chico {
+                                        visible: !!nd.m.hasReplyAction
+                                        text: nd.m.replyActionLabel || "Responder"
+                                        lleno: true
+                                        onClicked: { listaAvisos.respondiendo = nd.i; root.escribiendo = true; }
+                                    }
+                                }
+                                // Responder ahí mismo
+                                Row {
+                                    visible: nd.respondiendo
+                                    topPadding: 6
+                                    spacing: 6
+                                    Campo {
+                                        id: respuesta
+                                        width: contenido.width - 40
+                                        implicitHeight: 34
+                                        font.pixelSize: 13
+                                        placeholderText: nd.m.replyPlaceholderText || "Escribe tu respuesta"
+                                        onVisibleChanged: if (visible) enfocar.restart()
+                                        Timer { id: enfocar; interval: 120; onTriggered: respuesta.forceActiveFocus() }
+                                        Keys.onEscapePressed: { text = ""; listaAvisos.respondiendo = -1; root.escribiendo = false; }
+                                        onAccepted: enviar.clicked()
+                                    }
+                                    Chico {
+                                        id: enviar
+                                        width: 34; height: 34
+                                        lleno: true
+                                        icono: "enviar"
+                                        onClicked: {
+                                            if (respuesta.text.trim() === "") return;
+                                            notifs.reply(notifs.index(nd.i, 0), respuesta.text.trim());
+                                            respuesta.text = "";
+                                            listaAvisos.respondiendo = -1;
+                                            root.escribiendo = false;
+                                        }
+                                    }
+                                }
+                            }
+                            AbstractButton {
+                                id: close
+                                anchors.right: parent.right
+                                anchors.rightMargin: 6
+                                y: 8
+                                width: 26; height: 26
+                                visible: nd.hovered
+                                hoverEnabled: true
+                                onClicked: notifs.close(notifs.index(nd.i, 0))
+                                background: Rectangle { radius: Tema.r(8); color: close.hovered ? Tema.encima : "transparent" }
+                                contentItem: Item { Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: Tema.apagado } }
+                            }
                         }
                     }
                 }
@@ -463,6 +606,17 @@ PlasmoidItem {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 14
             readonly property var w: root.tiempo
+            readonly property bool hay: w.temp !== undefined
+            // El color del cielo a esta hora (amanecer, día, atardecer o noche; más gris si está nublado o llueve)
+            readonly property var cielo: Tema.colorCielo(root.ahora, w.salida, w.puesta, w.codigo || 0)
+            readonly property color letra: hay ? "white" : Tema.texto
+            readonly property color letraSuave: hay ? Qt.rgba(1, 1, 1, 0.75) : Tema.apagado
+            gradient: hay ? degradadoCielo : null
+            Gradient {
+                id: degradadoCielo
+                GradientStop { position: 0; color: tiempo.cielo[0] }
+                GradientStop { position: 1; color: tiempo.cielo[1] }
+            }
             readonly property var horas: w.horas || []
             readonly property real tmin: horas.length ? Math.min.apply(null, horas.map(h => h.t)) : 0
             readonly property real tmax: horas.length ? Math.max.apply(null, horas.map(h => h.t)) : 1
@@ -479,13 +633,13 @@ PlasmoidItem {
                     visible: tiempo.w.temp !== undefined
                     width: parent.width; height: parent.height
                     // Ahora
-                    Icono { id: ahoraIco; width: 34; height: 34; nombre: root.cielo(tiempo.w.codigo, tiempo.w.dia); color: Tema.rosa }
+                    Icono { id: ahoraIco; width: 34; height: 34; nombre: root.cielo(tiempo.w.codigo, tiempo.w.dia); color: "white" }
                     Column {
                         x: ahoraIco.width + 12
-                        Texto { text: tiempo.w.temp + "°"; font.pixelSize: 26; font.weight: Font.Black; lineHeight: 0.9 }
-                        Texto { text: root.cieloTexto(tiempo.w.codigo) + " · " + (tiempo.w.ciudad || ""); color: Tema.apagado; font.pixelSize: 12; wrapMode: Text.NoWrap }
+                        Texto { text: tiempo.w.temp + "°"; color: tiempo.letra; font.pixelSize: 26; font.weight: Font.Black; lineHeight: 0.9 }
+                        Texto { text: root.cieloTexto(tiempo.w.codigo) + " · " + (tiempo.w.ciudad || ""); color: tiempo.letraSuave; font.pixelSize: 12; wrapMode: Text.NoWrap }
                     }
-                    Texto { anchors.right: parent.right; y: 6; text: tiempo.w.max + "° / " + tiempo.w.min + "°"; color: Tema.apagado; font.pixelSize: 13 }
+                    Texto { anchors.right: parent.right; y: 6; text: tiempo.w.max + "° / " + tiempo.w.min + "°"; color: tiempo.letraSuave; font.pixelSize: 13 }
                     // Las próximas horas
                     Row {
                         id: barras
@@ -500,16 +654,16 @@ PlasmoidItem {
                                 required property int index
                                 width: barras.width / Math.max(1, tiempo.horas.length); height: barras.height
                                 readonly property real p: tiempo.tmax > tiempo.tmin ? (modelData.t - tiempo.tmin) / (tiempo.tmax - tiempo.tmin) : 0.5
-                                Texto { anchors.horizontalCenter: parent.horizontalCenter; y: barra.y - 18; text: hora.modelData.t + "°"; font.pixelSize: 12; font.weight: Font.Bold }
+                                Texto { anchors.horizontalCenter: parent.horizontalCenter; y: barra.y - 18; text: hora.modelData.t + "°"; color: tiempo.letra; font.pixelSize: 12; font.weight: Font.Bold }
                                 Rectangle {
                                     id: barra
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     anchors.bottom: parent.bottom; anchors.bottomMargin: 18
                                     width: 14; radius: 7
                                     height: 14 + hora.p * 30
-                                    color: hora.index === 0 ? Tema.rosa : Tema.rosaSuave
+                                    color: hora.index === 0 ? "white" : Qt.rgba(1, 1, 1, 0.3)
                                 }
-                                Texto { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; text: hora.modelData.h + "h"; font.pixelSize: 11; color: Tema.tenue }
+                                Texto { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; text: hora.modelData.h + "h"; font.pixelSize: 11; color: tiempo.letraSuave }
                             }
                         }
                     }
@@ -524,10 +678,10 @@ PlasmoidItem {
                                 id: dia
                                 required property var modelData
                                 width: dias.width; height: 26
-                                Texto { width: 22; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.dia; font.weight: Font.Bold; color: Tema.apagado }
-                                Icono { x: 26; anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18; nombre: root.cielo(dia.modelData.codigo, true) }
-                                Texto { x: 54; anchors.verticalCenter: parent.verticalCenter; text: root.cieloTexto(dia.modelData.codigo); font.pixelSize: 12; color: Tema.apagado }
-                                Texto { anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.max + "° / " + dia.modelData.min + "°"; font.pixelSize: 12 }
+                                Texto { width: 22; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.dia; font.weight: Font.Bold; color: tiempo.letraSuave }
+                                Icono { x: 26; anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18; nombre: root.cielo(dia.modelData.codigo, true); color: "white" }
+                                Texto { x: 54; anchors.verticalCenter: parent.verticalCenter; text: root.cieloTexto(dia.modelData.codigo); font.pixelSize: 12; color: tiempo.letraSuave }
+                                Texto { anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.max + "° / " + dia.modelData.min + "°"; color: tiempo.letra; font.pixelSize: 12 }
                             }
                         }
                     }

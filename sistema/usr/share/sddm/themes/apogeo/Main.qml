@@ -2,9 +2,10 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 
-// Inicio de sesión de Apogeo, con la estética de Ágape: a la izquierda la tarjeta (la hora grande, tu nombre, en qué piso
-// empiezas y la contraseña) y detrás el fondo de Ágape del piso elegido. Cada piso es una sesión («Apogeo · Jugar»,
-// etc.): así la elección llega a la sesión sin que esta pantalla toque tus archivos.
+// Inicio de sesión de Apogeo («8 · Inicio de sesión»): detrás, el fondo animado del piso que eliges, moviéndose y con sus
+// colores (cambian al elegir otro piso); arriba la hora grande y la fecha; en el centro, una tarjeta de cristal con tu
+// foto, tu nombre, la contraseña y en qué piso entras. Cada piso es una sesión («Apogeo · Jugar», etc.): así la elección
+// llega a la sesión sin que esta pantalla toque tus archivos.
 Rectangle {
     id: root
     width: 1920
@@ -28,15 +29,21 @@ Rectangle {
     readonly property color muted: Qt.rgba(text.r, text.g, text.b, 0.62)
     readonly property color hover: Qt.rgba(text.r, text.g, text.b, 0.07)
     readonly property color border: Qt.rgba(text.r, text.g, text.b, 0.1)
-    readonly property color accent: c("acento", "#e0a9b4")
-    readonly property color accentText: c("sobreAcento", "#2a1c26")
+    // Los del piso elegido (con «Del fondo», cada piso tiene los suyos), si los hay
+    readonly property var p: f.pisos && f.pisos[floors[floor].key] ? f.pisos[floors[floor].key] : ({})
+    function cp(k, d) { return p[k] !== undefined ? p[k] : c(k, d) }
+    readonly property color accent: cp("acento", "#e0a9b4")
+    readonly property color accentText: cp("sobreAcento", "#2a1c26")
     readonly property string font: c("letra", "Bricolage Grotesque")
-    readonly property var wp: c("wp", ["#4a2c4f", "#7a4458", "#e0a9b4"])
+    readonly property var wp: cp("wp", ["#4a2c4f", "#7a4458", "#e0a9b4"])
     readonly property var floors: [
         { key: "jugar", name: "Jugar", kind: 7 },      // Luces
         { key: "navegar", name: "Navegar", kind: 0 },  // Tinta
         { key: "estudiar", name: "Estudiar", kind: 2 } // Seda
     ]
+    // El fondo animado de ese piso (el suyo, si es uno de Apogeo; si es una foto o un vídeo tuyo, el de serie del piso
+    // con sus colores: esos esta pantalla no los puede leer)
+    readonly property int kind: p.estilo !== undefined && p.estilo >= 0 ? p.estilo : floors[floor].kind
     property int floor: 1
     property int user: Math.max(0, userModel.lastIndex)
     property var sessionIndex: ({})   // piso → índice de su sesión
@@ -75,29 +82,75 @@ Rectangle {
         }
     }
 
-    // Fondo de Ágape del piso elegido (el mismo sombreador que el escritorio, quieto)
+    // El fondo animado del piso elegido (el mismo sombreador que el escritorio), moviéndose a 30 imágenes por segundo
+    // (sin gráfica de verdad, quieto). Al cambiar de piso, se funde con el nuevo.
+    property real time: 40
+    Timer {
+        interval: 33; repeat: true
+        running: GraphicsInfo.api !== GraphicsInfo.Software
+        onTriggered: root.time += 0.033
+    }
     ShaderEffect {
         id: fx
         width: Math.round(root.width / 3)
         height: Math.round(root.height / 3)
-        property real t: 40
-        property real kind: root.floors[root.floor].kind
+        property real t: root.time
+        property real kind: root.kind
         property real light: 0
         property size res: Qt.size(root.width, root.height)
         property color base: root.color
         property color c1: root.wp[0]
         property color c2: root.wp[1]
         property color c3: root.wp[2]
+        Behavior on c1 { ColorAnimation { duration: 600 } }
+        Behavior on c2 { ColorAnimation { duration: 600 } }
+        Behavior on c3 { ColorAnimation { duration: 600 } }
         fragmentShader: "file:///usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders/fondo.frag.qsb"
     }
     ShaderEffectSource {
+        id: fxView
         anchors.fill: parent
         sourceItem: fx
         textureSize: Qt.size(fx.width, fx.height)
         smooth: true
         hideSource: true
     }
-    Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.2 }
+    onKindChanged: fade.restart()
+    SequentialAnimation {
+        id: fade
+        NumberAnimation { target: fxView; property: "opacity"; to: 0.35; duration: 120 }
+        NumberAnimation { target: fxView; property: "opacity"; to: 1; duration: 420; easing.type: Easing.OutCubic }
+    }
+    Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.22 }
+
+    // La hora grande y la fecha, arriba en el centro
+    Column {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: parent.height * 0.1
+        spacing: 2
+        Text {
+            id: bigClock
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: root.text
+            font { family: root.font; pixelSize: 96; weight: Font.ExtraBold; letterSpacing: -2 }
+            style: Text.Raised; styleColor: Qt.rgba(0, 0, 0, 0.25)
+            function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
+            Component.onCompleted: update()
+            Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
+        }
+        Text {
+            id: date
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.85)
+            font { family: root.font; pixelSize: 20; weight: Font.DemiBold }
+            function update() {
+                const d = Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
+                text = d.charAt(0).toUpperCase() + d.slice(1);
+            }
+            Component.onCompleted: update()
+            Timer { interval: 60000; running: true; repeat: true; onTriggered: date.update() }
+        }
+    }
 
     RectangularShadow {
         anchors.fill: card
@@ -106,51 +159,45 @@ Rectangle {
         radius: card.radius
         color: Qt.rgba(0, 0, 0, 0.45)
     }
+    // La tarjeta de cristal, en el centro (un poco por debajo de la mitad)
     Rectangle {
         id: card
-        x: 40; y: 40
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: Math.round(parent.height * 0.56 - height / 2)
         width: 440
-        height: parent.height - 80
-        radius: 20
+        height: inner.implicitHeight + 72
+        radius: 26
         readonly property color sup: Qt.tint(root.c("superficie", "#1e1621"), Qt.rgba(root.text.r, root.text.g, root.text.b, 0.03))
-        color: Qt.rgba(sup.r, sup.g, sup.b, 0.92)
+        color: Qt.rgba(sup.r, sup.g, sup.b, 0.62)
         border.color: root.border
-        Rectangle { // el brillo de 1 px de arriba
+        Rectangle { // el brillo de arriba, del color del piso
             x: parent.radius; y: 1
             width: parent.width - 2 * parent.radius; height: 1
-            color: Qt.rgba(1, 1, 1, 0.06)
-        }
-
-        Image {
-            x: 40; y: 40
-            width: 44; height: 44
-            source: "logo.svg"
-            sourceSize: Qt.size(88, 88)
+            color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.55)
         }
 
         Column {
+            id: inner
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.margins: 40
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 12
+            y: 36
+            spacing: 14
 
-            Text {
-                id: bigClock
-                color: root.text
-                font { family: root.font; pixelSize: 72; weight: Font.ExtraBold; letterSpacing: -1 }
-                function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
-                Component.onCompleted: update()
-                Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
-            }
-            Row {
+            Column {
                 width: parent.width
-                spacing: 14
-                Item { // tu foto (la de la bienvenida o Ajustes), en círculo con el borde rosa
+                spacing: 12
+                Item { // tu foto (la de la bienvenida o Ajustes), en círculo con el borde del color del piso; sin foto, el logo
                     id: face
-                    width: 48; height: 48
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: faceImg.status === Image.Ready
+                    width: 96; height: 96
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    Image {
+                        anchors.centerIn: parent
+                        visible: faceImg.status !== Image.Ready
+                        width: 64; height: 64
+                        source: "logo.svg"
+                        sourceSize: Qt.size(128, 128)
+                    }
                     Image {
                         id: faceImg
                         anchors.fill: parent
@@ -165,15 +212,15 @@ Rectangle {
                     }
                     Rectangle { id: faceMask; anchors.fill: parent; radius: width / 2; visible: false; layer.enabled: true }
                     MultiEffect { anchors.fill: parent; source: faceImg; maskEnabled: true; maskSource: faceMask }
-                    Rectangle { anchors.fill: parent; anchors.margins: -3; radius: width / 2; color: "transparent"; border.width: 2; border.color: root.accent }
+                    Rectangle { visible: faceImg.status === Image.Ready; anchors.fill: parent; anchors.margins: -4; radius: width / 2; color: "transparent"; border.width: 3; border.color: root.accent }
                 }
                 Text {
                     text: "Hola, " + (root.userReal[root.user] || "")
                     color: root.text
-                    width: parent.width - (face.visible ? face.width + parent.spacing : 0)
-                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
-                    font { family: root.font; pixelSize: 24; weight: Font.Bold }
+                    font { family: root.font; pixelSize: 26; weight: Font.Bold }
                     MouseArea {
                         anchors.fill: parent
                         enabled: userModel.count > 1
@@ -183,15 +230,17 @@ Rectangle {
                 }
             }
             Text {
-                text: userModel.count > 1 ? "¿En qué piso empiezas? (pulsa tu nombre para cambiar de usuario)" : "¿En qué piso empiezas?"
+                text: userModel.count > 1 ? "¿En qué piso entras? (pulsa tu nombre para cambiar de usuario)" : "¿En qué piso entras?"
                 color: root.muted
                 width: parent.width
+                horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
                 font { family: root.font; pixelSize: 15 }
             }
 
             // Pisos: el control segmentado de Ágape
             Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
                 width: seg.implicitWidth + 6
                 height: 40
                 radius: 14
@@ -296,54 +345,42 @@ Rectangle {
             }
         }
 
-        // Fecha y botones de reiniciar / apagar (los botones de Ágape)
-        Text {
-            id: date
-            x: 40
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 36
-            color: root.muted
-            font { family: root.font; pixelSize: 14 }
-            function update() {
-                const d = Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
-                text = d.charAt(0).toUpperCase() + d.slice(1);
-            }
-            Component.onCompleted: update()
-            Timer { interval: 60000; running: true; repeat: true; onTriggered: date.update() }
-        }
-        Row {
-            anchors.right: parent.right
-            anchors.rightMargin: 32
-            anchors.verticalCenter: date.verticalCenter
-            spacing: 2
-            Repeater {
-                model: [
-                    { icon: "reiniciar", tip: "Reiniciar", run: () => sddm.reboot(), can: sddm.canReboot },
-                    { icon: "apagar", tip: "Apagar", run: () => sddm.powerOff(), can: sddm.canPowerOff }
-                ]
-                delegate: Item {
-                    required property var modelData
-                    visible: modelData.can
-                    width: 34; height: 34
-                    Rectangle { anchors.fill: parent; radius: 12; color: btn.containsMouse ? root.hover : "transparent" }
-                    Image {
-                        id: btnIcon
-                        anchors.centerIn: parent
-                        width: 17; height: 17
-                        source: modelData.icon + ".svg"
-                        sourceSize: Qt.size(34, 34)
-                        visible: false
-                    }
-                    MultiEffect {
-                        anchors.fill: btnIcon
-                        source: btnIcon
-                        colorization: 1
-                        colorizationColor: btn.containsMouse ? root.text : root.muted
-                    }
-                    MouseArea { id: btn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: modelData.run() }
-                    ToolTip.visible: btn.containsMouse
-                    ToolTip.text: modelData.tip
+    }
+
+    // Reiniciar y apagar (los botones de Ágape), abajo a la derecha
+    Row {
+        anchors.right: parent.right
+        anchors.rightMargin: 32
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 28
+        spacing: 2
+        Repeater {
+            model: [
+                { icon: "reiniciar", tip: "Reiniciar", run: () => sddm.reboot(), can: sddm.canReboot },
+                { icon: "apagar", tip: "Apagar", run: () => sddm.powerOff(), can: sddm.canPowerOff }
+            ]
+            delegate: Item {
+                required property var modelData
+                visible: modelData.can
+                width: 34; height: 34
+                Rectangle { anchors.fill: parent; radius: 12; color: btn.containsMouse ? root.hover : "transparent" }
+                Image {
+                    id: btnIcon
+                    anchors.centerIn: parent
+                    width: 17; height: 17
+                    source: modelData.icon + ".svg"
+                    sourceSize: Qt.size(34, 34)
+                    visible: false
                 }
+                MultiEffect {
+                    anchors.fill: btnIcon
+                    source: btnIcon
+                    colorization: 1
+                    colorizationColor: btn.containsMouse ? root.text : root.muted
+                }
+                MouseArea { id: btn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: modelData.run() }
+                ToolTip.visible: btn.containsMouse
+                ToolTip.text: modelData.tip
             }
         }
     }

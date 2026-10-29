@@ -338,6 +338,28 @@ def setup(bus):
         panel_shortcuts()
         kwin_reconfigure()
         st['paneles'] = PANELS
+    if st.get('dinamica', 0) < DYNAMIC:
+        # Isla dinámica: el volumen sale en la isla (no en la ventanita de KDE); «7 · Animaciones con vida» (abrir con
+        # un saltito y cerrar encogiéndose: apogeo-vida; minimizar con la lámpara mágica, hacia su icono en la isla) y
+        # «6 · Alt+Tab de cristal» (el selector de ventanas «apogeo»)
+        kw('plasmaparc', 'General', 'VolumeOsd', 'false')
+        kw('plasmaparc', 'General', 'MuteOsd', 'false')
+        for action in ('unloadModule', 'loadModule'):  # (el que la saca lo lee al empezar)
+            run('qdbus6', 'org.kde.kded6', '/kded', 'org.kde.kded6.' + action, 'audioshortcutsservice')
+        for effect, on in (('apogeo-vida', 'true'), ('scale', 'false'), ('fade', 'false'), ('glide', 'false'),
+                           ('magiclamp', 'true'), ('squash', 'false')):
+            kw('kwinrc', 'Plugins', effect + 'Enabled', on)
+        kw('kwinrc', 'TabBox', 'LayoutName', 'apogeo')
+        kw('kwinrc', 'TabBox', 'ShowTabBox', 'true')
+        kwin_reconfigure()
+        # (antes Alt+Tab se guardaba como «Alt+\x01» y no hacía nada: se vuelve a poner bien)
+        try:
+            g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'),
+                               'org.kde.KGlobalAccel')
+            g.setForeignShortcutKeys(['kwin', 'Walk Through Windows', '', ''], _keys(0x09000001))
+        except dbus.DBusException as e:
+            log('Alt+Tab: %s' % e)
+        st['dinamica'] = DYNAMIC
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
@@ -363,6 +385,7 @@ ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos d
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
 PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la columna de pisos)
 PANEL_WIDTH = 376  # su ancho
+DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
 AESTHETICS = 16  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
 FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
@@ -492,7 +515,7 @@ def search_shortcuts():
     solo lo lee al empezar la sesión)."""
     keys = _keys
     meta, alt_f1, alt_f2, alt_space, search = 0x01000022, 0x09000030, 0x09000031, 0x08000020, 0x01000092
-    alt_tab, meta_tab, ctrl_alt_t, print_key = 0x08000001, 0x11000001, 0x0C000054, 0x01000009
+    alt_tab, meta_tab, ctrl_alt_t, print_key = 0x09000001, 0x11000001, 0x0C000054, 0x01000009
     meta_v, meta_period, meta_shift_s, meta_slash = 0x10000056, 0x1000002e, 0x12000053, 0x1000002f
     try:
         g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')

@@ -49,6 +49,36 @@ def library(st=None):
     }
 
 
+def glass(value):
+    """El fondo de un piso, pequeño y desenfocado (para el cristal de los paneles y la isla): su url, o '' si es un
+    animado de Apogeo (esos se pintan con su sombreador). Se hace una vez (ffmpeg) y se guarda con las miniaturas."""
+    if not comun.is_wallpaper_file(value):
+        return ''
+    try:
+        stamp = f'{value}:{os.path.getmtime(value)}:cristal1'
+    except OSError:
+        return ''
+    out = os.path.join(THUMBS, hashlib.sha1(stamp.encode()).hexdigest()[:20] + '-cristal.jpg')
+    if os.path.isfile(out):
+        return _url(out)
+    os.makedirs(THUMBS, exist_ok=True)
+    tmp = f'{out}.{os.getpid()}.jpg'
+    seek = ['-ss', '2'] if comun.is_video(value) else []
+    try:
+        # 320 px de ancho y un desenfoque fuerte: estirado a la pantalla parece cristal esmerilado
+        subprocess.run(['ffmpeg', '-nostdin', '-loglevel', 'error', *seek, '-i', value, '-frames:v', '1',
+                        '-vf', 'scale=320:-2,gblur=sigma=9,eq=saturation=1.35', '-q:v', '4', '-y', tmp],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if os.path.isfile(tmp) and os.path.getsize(tmp) > 0:
+        os.replace(tmp, out)
+        return _url(out)
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    return ''
+
+
 def make_thumbnails(st=None, limit=40):
     """Las miniaturas que faltan de los vídeos de tu biblioteca (y de los que tienen puestos los pisos). Cuántas hizo."""
     if not _busy.acquire(blocking=False):

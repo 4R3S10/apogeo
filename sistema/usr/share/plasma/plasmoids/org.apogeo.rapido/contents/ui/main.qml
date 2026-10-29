@@ -10,7 +10,7 @@ import Apogeo
 
 // Al final de la isla («I1 · Una sola isla»): la red, el sonido, los avisos sin leer y la hora. Al pulsarla sale el panel
 // rápido de la derecha (org.apogeo.derecho, por el atajo del script de KWin apogeo-bordes). Aquí también salen tus avisos
-// en pantalla, con el estilo de Apogeo (Avisos.qml). (Sustituye al reloj y a la bandeja de KDE: en la bandeja solo
+// urgentes en pantalla, con el estilo de Apogeo (Avisos.qml; los demás los enseña la isla dinámica). (Sustituye al reloj y a la bandeja de KDE: en la bandeja solo
 // quedan los iconos de tus apps.)
 PlasmoidItem {
     id: root
@@ -20,7 +20,7 @@ PlasmoidItem {
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
 
     // ---------- Lo que se ve en la isla: red, sonido, avisos y hora (en vivo, sin preguntar a nadie) ----------
-    // Los avisos en pantalla, con el estilo de Apogeo (abajo a la derecha)
+    // Los avisos urgentes en pantalla, con el estilo de Apogeo (abajo a la derecha)
     Avisos {}
 
     // La red: lo que diga NetworkManager (cada 20 s; es muy rápido)

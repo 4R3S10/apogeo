@@ -7,12 +7,11 @@ import org.kde.plasma.plasmoid
 import org.kde.notificationmanager as NotificationManager
 import Apogeo
 
-// Los avisos que salen en pantalla, con el estilo de Apogeo (en lugar de la campana de KDE, que ya no está en la
-// bandeja): abajo a la derecha, uno encima de otro (3 como mucho), con el icono y el nombre de la app, el título, el
-// texto y sus botones (y, si la app deja, contestar ahí mismo). Se van solos a los pocos segundos (no mientras el
-// ratón está encima ni mientras contestas; los urgentes se quedan) y pasan al historial del panel rápido. Con «No
-// molestar» o en Jugar y Estudiar no salen (pasan directos al historial: el resumen de al volver los enseña), salvo los
-// urgentes, como los recordatorios y los temporizadores.
+// Los avisos urgentes en pantalla (los recordatorios, los temporizadores…), con el estilo de Apogeo: abajo a la
+// derecha, por encima de todo (también de un juego a pantalla completa), con el icono y el nombre de la app, el título,
+// el texto y sus botones (y, si la app deja, contestar ahí mismo); se quedan hasta que los quitas. Los demás no salen
+// aquí: pasan al historial del panel rápido y los enseña la isla dinámica (org.apogeo.isla) unos segundos; con «No
+// molestar» o en Jugar y Estudiar, ni eso (el resumen de al volver los enseña).
 Item {
     id: avisos
 
@@ -53,8 +52,8 @@ Item {
             required property int index
             readonly property bool urgent: model.urgency === NotificationManager.Notifications.CriticalUrgency
             readonly property int timeout: urgent || model.resident ? 0 : (model.timeout > 0 ? model.timeout : 6000)
-            // En silencio solo salen los urgentes; los demás se van directos al historial
-            readonly property bool shown: urgent || (!avisos.inhibited && !model.wasAddedDuringInhibition)
+            // Solo los urgentes; los demás se van directos al historial (y de ahí, a la isla)
+            readonly property bool shown: urgent
             onShownChanged: avisos.layoutRev++
             // Su sonido, si lo trae (como hace Plasma; en silencio no suena)
             Component.onCompleted: if (shown) popups.playSoundHint(popups.index(index, 0))
@@ -87,7 +86,9 @@ Item {
                 HoverHandler { id: hover }
                 Timer { // se va solo (no mientras lo miras)
                     id: life
-                    interval: pop.shown ? pop.timeout : 1
+                    // (los que no salen aquí: en silencio, al historial ya; los demás, cuando la isla acabe de enseñarlos,
+                    // que es quien los quita: esto es por si no lo hace)
+                    interval: pop.shown ? pop.timeout : avisos.inhibited || pop.model.wasAddedDuringInhibition ? 1 : 30000
                     running: !pop.shown || (pop.timeout > 0 && !hover.hovered && !pop.replying)
                     onTriggered: popups.expire(pop.idx())
                 }
