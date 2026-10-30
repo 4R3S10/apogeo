@@ -4,7 +4,7 @@
     "titulo": "30 de octubre",
     "cosas": [
       {"icono": "jugar", "titulo": "Centro de control, como en la PS5", "como": "En una partida, pulsa el botón PS (o Xbox) del mando: abajo salen lo que suena (⏮ ⏯ ⏭), Discord (apagar tu micro o abrirlo al lado del juego), los avisos que han llegado, el volumen y volver a la consola. Mantén el botón PS y pulsa → o ← para cambiar de canción, o ↑ ↓ para el volumen. Mantenido un rato, trae la consola."},
-      {"icono": "salud", "titulo": "HUD pequeño, siempre a la vista", "como": "En los juegos sale arriba a la izquierda una línea fina con los FPS y la temperatura y el uso del procesador y de la gráfica, en letra pequeña sobre un fondo casi transparente. Mayús derecha+F12 lo esconde."},
+      {"icono": "salud", "titulo": "HUD pequeño, siempre a la vista", "como": "En los juegos solo salen los FPS, pequeños, arriba a la izquierda. La temperatura aparece arriba a la derecha, en rojo, solo si se calienta; las temperaturas y los ventiladores, siempre, en el centro de control (botón PS). Mayús derecha+F12 lo esconde."},
       {"icono": "pisos", "titulo": "Jugar es la consola", "como": "En Jugar no hay escritorio: si cierras la consola, vuelve sola. Para salir, ↓ en el mando o Meta+F2."},
       {"icono": "texto", "titulo": "Apuntes con letra de libro", "como": "Las notas del panel y tus bóvedas de Obsidian usan Source Serif 4, más cómoda para leer. Estudiar es de papel claro de 8:00 a 20:00 y grafito con ámbar por la noche."},
       {"icono": "pisos", "titulo": "Los tres modos, de verdad", "como": "Jugar, Navegar y Estudiar ya no son una capa de pintura: cada modo guarda sus propias apps al llegar, su acento y su fondo. Se cambia desde el conmutador, con Meta+F1/F2/F3 o desde Ajustes → Modos."},

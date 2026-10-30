@@ -15,6 +15,7 @@ Con el mando (sin Steam por medio: lo lee este programa) o el teclado:
 D-Bus: org.apogeo.Consola /Consola org.apogeo.Consola.Show
 La parte de los juegos es apogeo_juegos.py.
 """
+import glob
 import json
 import os
 import subprocess
@@ -246,6 +247,34 @@ def main():
                 'avisos': _call('org.apogeo.Modos', '/Modos', 'org.apogeo.Modos1', 'Avisos') or [],
                 'volumen': {'nivel': vol[0], 'mudo': vol[1]} if vol else None,
             }, ensure_ascii=False)
+
+        @pyqtSlot(result=str)
+        def calor(self):
+            """Las temperaturas (las mismas que vigila apogeo-termico), el ventilador más rápido y el límite de Salud del PC
+            (a partir de él Apogeo enfría el PC: la temperatura sale arriba a la derecha en la partida)."""
+            out = {k: round(v) for k, v in comun.temperatures().items()}
+            fans = []
+            for f in glob.glob('/sys/class/hwmon/hwmon*/fan*_input'):
+                try:
+                    fans.append(int(open(f).read()))
+                except (OSError, ValueError):
+                    pass
+            out['ventilador'] = max(fans, default=0)
+            try:
+                with open('/etc/apogeo/salud.json') as f:
+                    limit = float(json.load(f).get('limite', 80))
+            except (OSError, ValueError, AttributeError):
+                limit = 80
+            out['limite'] = limit if 70 <= limit <= 85 else 80
+            return json.dumps(out)
+
+        @pyqtSlot(result=str)
+        def juego(self):
+            """El nombre de lo que tienes delante (la ventana activa, de apogeo-ventanas), para el centro."""
+            for w in _call('org.apogeo.Datos', '/Datos', 'org.apogeo.Datos', 'Ventanas') or []:
+                if w.get('activa') and 'apogeo' not in (w.get('clase') or '').lower():
+                    return w.get('titulo') or w.get('app') or ''
+            return ''
 
         @pyqtSlot(str)
         def musica(self, action):

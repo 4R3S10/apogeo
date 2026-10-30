@@ -799,8 +799,9 @@ def game_exes(g):
 
 
 def mangohud_conf(fps, extra=''):
-    return (f"""{MANAGED} MangoHud en tus juegos: siempre a la vista, pequeño y en una línea arriba a la izquierda (los
-# FPS y la temperatura del procesador y la gráfica; lo demás, con el botón PS). Mayús derecha+F12 lo esconde.
+    return (f"""{MANAGED} MangoHud en tus juegos («H2»): siempre a la vista, solo los FPS, pequeños, arriba a la
+# izquierda. La temperatura sale arriba a la derecha solo si se calienta (el centro de control de la consola); con el
+# botón PS, todo (temperaturas y ventiladores). Mayús derecha+F12 lo esconde.
 # Lo escribe Apogeo: si cambias algo aquí, borra la primera línea y lo dejará en paz.
 fps_limit={fps}
 control=mangohud
@@ -809,27 +810,14 @@ blacklist={NOT_GAME_PROCS}
 position=top-left
 offset_x=10
 offset_y=8
-horizontal
+fps_only
 hud_compact
 hud_no_margin
-round_corners=6
-background_alpha=0.2
-background_color=080A0F
+background_alpha=0
+alpha=0.7
 text_color=E9EDF5
-gpu_color=B79CFF
-cpu_color=B79CFF
-font_size=13
+font_size=12
 font_file=/usr/share/fonts/apogeo/GeistMono-Medium.ttf
-fps
-frametime=0
-gpu_stats
-gpu_temp
-gpu_load_change
-gpu_load_value=80,95
-cpu_stats
-cpu_temp
-cpu_load_change
-cpu_load_value=80,95
 {extra}""")
 
 

@@ -3,10 +3,12 @@ import QtQuick.Effects
 import org.kde.layershell as LayerShell
 import Apogeo
 
-// El centro de control de Jugar (el botón PS o Xbox, como en la PS5): una fila de tarjetas abajo, encima del juego y sin
-// pararlo: lo que suena (⏮ ⏯ ⏭), Discord (tu micro y abrirlo al lado del juego), los avisos que han llegado en la
-// partida, el volumen y volver a la consola. ← → elegir · ✕ (A) hacer · ↑ ↓ el volumen · ○ (B) o el botón otra vez,
-// cerrar. Con el botón central mantenido, → ← cambian de canción y ↑ ↓ el volumen: sale solo un aviso pequeño arriba.
+// El centro de control de Jugar (el botón PS o Xbox, como en la PS5): una banda abajo, de lado a lado, encima del juego
+// y sin pararlo: la hora, el juego, las temperaturas y los ventiladores; y tarjetas con lo que suena (⏮ ⏯ ⏭), Discord
+// (tu micro y abrirlo al lado del juego), los avisos que han llegado en la partida, el volumen y volver a la consola.
+// ← → elegir · ✕ (A) hacer · ↑ ↓ el volumen · ○ (B) o el botón otra vez, cerrar. Con el botón central mantenido, → ←
+// cambian de canción y ↑ ↓ el volumen: sale solo un aviso pequeño arriba a la derecha. Ahí mismo, en la partida, la
+// temperatura cuando llega al límite de Salud del PC («H2»: MangoHud solo enseña los FPS).
 // Va en la capa de encima de todo (layer-shell); mientras está abierto, el mando es solo suyo (lo coge apogeo-consola).
 Window {
     id: win
@@ -36,14 +38,18 @@ Window {
     readonly property string elegido: focos[Math.min(foco, focos.length - 1)]
 
     function leer() { try { d = JSON.parse(consola.centro()); } catch (e) {} }
+    property string juego: ""
     function abrir() {
+        juego = consola.juego();
         leer();
+        leerCalor();
         foco = focos.indexOf("pausa") >= 0 ? 1 : 0;
         toast = "";
-        if (visible) hide();          // (de solo el aviso a abierto: la capa se pide otra vez, ahora con el teclado)
+        if (visible) hide();          // (del aviso o el calor a abierto: la capa se pide otra vez, ahora con el teclado)
         abierto = true;
         consola.setCentro(true);
-        show(); raise(); requestActivate();
+        if (!visible) show();
+        raise(); requestActivate();
         aparecer.restart();
     }
     function cerrar() {
@@ -51,6 +57,7 @@ Window {
         abierto = false;
         consola.setCentro(false);
         hide();
+        if (hayAlgo) show();          // (sigue el aviso o el calor, ya sin el teclado)
     }
     function mover(n) { foco = Math.max(0, Math.min(focos.length - 1, foco + n)); }
     function luego() { leerLuego.restart(); }
@@ -76,19 +83,30 @@ Window {
         else if ((k === "arriba" || k === "abajo") && elegido === "volumen") { consola.volumen(k === "arriba" ? 0.05 : -0.05); luego(); }
     }
 
+    // ----- El calor («H2»): en la partida solo los FPS (MangoHud); la temperatura sale arriba a la derecha solo cuando
+    // llega al límite de Salud del PC (desde ahí Apogeo lo va enfriando). Se mira cada 3 s, solo en Jugar.
+    property var calor: ({})
+    readonly property bool caliente: Math.max(calor.cpu || 0, calor.gpu || 0) >= (calor.limite || 80)
+    function leerCalor() { try { calor = JSON.parse(consola.calor()); } catch (e) {} }
+    Timer {
+        interval: 3000; repeat: true; running: true
+        onTriggered: { if (win.abierto || !consola.fueraDeJugar()) win.leerCalor(); else win.calor = ({}); }
+    }
+    readonly property bool hayAlgo: abierto || toast !== "" || caliente
+    onHayAlgoChanged: { if (hayAlgo && !visible) show(); else if (!hayAlgo && visible) hide(); }
+
     // ----- El aviso pequeño de los atajos (botón central mantenido + flechas) -----
     property string toast: ""
     property string toastIcono: ""
     function avisar(icono, texto) {
         toastIcono = icono; toast = texto;
-        if (!visible) show();
         toastTimer.restart();
     }
-    Timer { id: toastTimer; interval: 1800; onTriggered: { win.toast = ""; if (!win.abierto) win.hide(); } }
+    Timer { id: toastTimer; interval: 1800; onTriggered: win.toast = "" }
     function atajo(que) {
         if (que === "siguiente" || que === "anterior") {
             consola.musica(que === "siguiente" ? "Next" : "Previous");
-            avisar(que, que === "siguiente" ? "Siguiente canción" : "Canción anterior");
+            avisar(que, que === "siguiente" ? "Siguiente" : "Anterior");
             cancion.restart();          // (y en cuanto cambia, cuál es)
         } else {
             consola.volumen(que === "subir" ? 0.05 : -0.05);
@@ -97,7 +115,7 @@ Window {
     }
     Timer {
         id: cancion; interval: 700
-        onTriggered: { win.leer(); if (win.suena) win.avisar(win.toastIcono, win.d.musica.titulo + (win.d.musica.artista ? " · " + win.d.musica.artista : "")); }
+        onTriggered: { win.leer(); if (win.suena) win.avisar(win.toastIcono, (win.toastIcono === "anterior" ? "Anterior" : "Siguiente") + ": «" + win.d.musica.titulo + "»"); }
     }
     Timer {
         id: volumenLuego; interval: 120
@@ -123,84 +141,121 @@ Window {
         }
     }
 
-    // ----- El aviso de arriba -----
-    Rectangle {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: win.toast ? 32 : 12
-        Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-        opacity: win.toast && !win.abierto ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 160 } }
-        width: Math.min(tr.implicitWidth + 28, win.width - 48); height: 40; radius: 20
-        color: Qt.rgba(0.03, 0.04, 0.06, 0.86)
-        border.color: Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, 0.35)
-        Row {
-            id: tr
-            anchors.centerIn: parent
-            spacing: 10
-            Icono { nombre: win.toastIcono === "anterior" ? "anterior" : win.toastIcono === "volumen" ? "volumen" : "siguiente"; color: Tema.acento; anchors.verticalCenter: parent.verticalCenter }
+    // ----- Arriba a la derecha: el aviso de los atajos y, si se calienta, la temperatura -----
+    Column {
+        anchors.right: parent.right; anchors.top: parent.top
+        anchors.margins: 14
+        spacing: 8
+        Rectangle {
+            anchors.right: parent.right
+            visible: win.caliente && !win.abierto
+            width: cl.implicitWidth + 16; height: 24; radius: 6
+            color: Qt.rgba(0.03, 0.04, 0.06, 0.55)
             Texto {
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.min(implicitWidth, win.width - 120)
-                text: win.toast; elide: Text.ElideRight; wrapMode: Text.NoWrap
-                font { pixelSize: 13; weight: Font.Medium }
-                color: "#e9edf5"
+                id: cl
+                anchors.centerIn: parent
+                text: [["CPU", win.calor.cpu], ["GPU", win.calor.gpu]].filter(t => (t[1] || 0) >= (win.calor.limite || 80))
+                      .map(t => t[0] + " " + t[1] + "°").join(" · ") + " ↑"
+                wrapMode: Text.NoWrap
+                font { family: Tema.mono; pixelSize: 11; weight: Font.DemiBold }
+                color: Tema.error
+            }
+        }
+        Rectangle {
+            anchors.right: parent.right
+            opacity: win.toast && !win.abierto ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 160 } }
+            visible: opacity > 0
+            width: Math.min(tr.implicitWidth + 24, win.width / 3); height: 34; radius: 9
+            color: Qt.rgba(0.04, 0.05, 0.08, 0.92)
+            border.color: Qt.rgba(1, 1, 1, 0.08)
+            Row {
+                id: tr
+                anchors.centerIn: parent
+                spacing: 8
+                Icono { nombre: win.toastIcono === "anterior" ? "anterior" : win.toastIcono === "volumen" ? "volumen" : "siguiente"; color: Tema.acento; anchors.verticalCenter: parent.verticalCenter }
+                Texto {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(implicitWidth, win.width / 3 - 56)
+                    text: win.toast; elide: Text.ElideRight; wrapMode: Text.NoWrap
+                    font { pixelSize: 12; weight: Font.Medium }
+                    color: "#e9edf5"
+                }
             }
         }
     }
 
-    // ----- El centro -----
-    Rectangle {   // el juego se oscurece un poco por abajo (se sigue viendo)
+    // ----- El centro («como en la PS5»): el juego un poco más oscuro y, abajo, una banda de lado a lado -----
+    Rectangle {
         anchors.fill: parent
         visible: win.abierto
-        gradient: Gradient {
-            GradientStop { position: 0.45; color: "transparent" }
-            GradientStop { position: 1; color: Qt.rgba(0, 0, 0, 0.62) }
-        }
+        color: Qt.rgba(0.03, 0.04, 0.06, 0.35)
         MouseArea { anchors.fill: parent; onClicked: win.cerrar() }
     }
 
-    Item {
+    Rectangle {
         id: panel
         visible: win.abierto
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 40
-        width: col.width; height: col.height
-        scale: Math.min(1, (win.width - 48) / col.width)
-        transformOrigin: Item.Bottom
+        anchors.left: parent.left; anchors.right: parent.right
+        y: win.height - height
+        height: col.height * col.scale + 34
+        color: Qt.rgba(0.043, 0.055, 0.078, 0.94)
+        Rectangle { width: parent.width; height: 1; color: Qt.rgba(0.91, 0.93, 0.96, 0.1) }
         ParallelAnimation {
             id: aparecer
             NumberAnimation { target: panel; property: "opacity"; from: 0; to: 1; duration: 160; easing.type: Easing.OutCubic }
-            NumberAnimation { target: panel; property: "anchors.bottomMargin"; from: 16; to: 40; duration: 220; easing.type: Easing.OutCubic }
+            NumberAnimation { target: panel; property: "y"; from: win.height - panel.height + 24; to: win.height - panel.height; duration: 220; easing.type: Easing.OutCubic }
         }
-        MouseArea { anchors.fill: parent }   // (un clic entre tarjetas no lo cierra)
+        MouseArea { anchors.fill: parent }   // (un clic en la banda no lo cierra)
 
         Column {
             id: col
-            spacing: 14
-            Row {
-                spacing: 10
-                x: 4
-                Nucleo { width: 22; height: 22; disco: false; anchors.verticalCenter: parent.verticalCenter }
-                Texto {
+            x: 32; y: 16
+            spacing: 12
+            scale: Math.min(1, (win.width - 64) / cartas.implicitWidth)
+            transformOrigin: Item.TopLeft
+            // La hora y el juego; a la derecha, el calor y los ventiladores (aquí sí: en la partida no estorban)
+            Item {
+                width: Math.max(cartas.implicitWidth, (win.width - 64) / col.scale); height: 18
+                Row {
+                    spacing: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "CENTRO DE CONTROL"
-                    font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 2.6 }
-                    color: Qt.rgba(0.91, 0.93, 0.96, 0.7)
+                    Nucleo { width: 18; height: 18; disco: false; anchors.verticalCenter: parent.verticalCenter }
+                    Texto {
+                        id: hora
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Qt.formatTime(new Date(), "HH:mm")
+                        font { family: Tema.mono; pixelSize: 12; weight: Font.DemiBold }
+                        color: "#e9edf5"
+                        Timer { interval: 10000; repeat: true; running: win.abierto; onTriggered: hora.text = Qt.formatTime(new Date(), "HH:mm") }
+                    }
+                    Texto {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: win.juego !== ""
+                        text: "· " + win.juego
+                        width: Math.min(implicitWidth, 520); elide: Text.ElideRight; wrapMode: Text.NoWrap
+                        font.pixelSize: 12
+                        color: Qt.rgba(0.91, 0.93, 0.96, 0.7)
+                    }
                 }
                 Texto {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "← → elegir · " + win.btn.a + " hacer · " + win.btn.b + " cerrar"
-                    font { family: Tema.mono; pixelSize: 10 }
-                    color: Qt.rgba(0.91, 0.93, 0.96, 0.45)
+                    anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                    wrapMode: Text.NoWrap
+                    text: [win.calor.cpu ? "CPU " + win.calor.cpu + "°" : "", win.calor.gpu ? "GPU " + win.calor.gpu + "°" : "",
+                           win.calor.ventilador ? win.calor.ventilador + " rpm" : ""].filter(t => t).join(" · ")
+                          + "     ← → elegir · " + win.btn.a + " hacer · " + win.btn.b + " cerrar"
+                    font { family: Tema.mono; pixelSize: 11 }
+                    color: win.caliente ? Tema.error : Qt.rgba(0.91, 0.93, 0.96, 0.6)
                 }
             }
             Row {
-                spacing: 14
+                id: cartas
+                spacing: 12
 
                 // Lo que suena
                 Tarjeta {
                     width: 384
+                    enfocada: ["anterior", "pausa", "siguiente", "spotify"].indexOf(win.elegido) >= 0
                     Row {
                         spacing: 14
                         Rectangle {
@@ -250,6 +305,7 @@ Window {
                 // Discord
                 Tarjeta {
                     width: 236
+                    enfocada: win.elegido === "micro" || win.elegido === "discord"
                     Column {
                         spacing: 4
                         width: 200
@@ -398,11 +454,11 @@ Window {
     component Tarjeta: Rectangle {
         property bool enfocada: false
         default property alias contenido: dentro.data
-        height: 168
-        radius: 18
-        color: Qt.rgba(0.06, 0.07, 0.1, 0.9)
-        border.width: enfocada ? 2 : 1
-        border.color: enfocada ? Tema.acento : Qt.rgba(1, 1, 1, 0.08)
+        height: 160
+        radius: 14
+        color: "#151b24"
+        border.width: 2
+        border.color: enfocada ? Tema.acento : "transparent"
         Behavior on border.color { ColorAnimation { duration: 120 } }
         Item { id: dentro; x: 18; y: 18; width: parent.width - 36; height: parent.height - 36 }
     }
