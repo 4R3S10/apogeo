@@ -16,6 +16,9 @@ depende de leer el firmware: al encender, como administrador, deja el estado en 
 (sí/no y la entrada de arranque) por si no se puede leer efibootmgr sin permisos.
 
   apogeo-windows estado          (sin permisos) {"windows": bool}: ¿hay un Windows en el PC?
+  apogeo-windows revisar         (sin permisos) lo que conviene saber antes de ir a Windows: Secure Boot (y si el
+                                 firmware está en modo de configuración), TPM, BitLocker y el sitio libre en su partición
+                                 de arranque, con los avisos en castellano. Solo lee: nunca toca el arranque ni las claves.
   pkexec apogeo-windows ir       (lee de la entrada {"modo": "juego", "id", "nombre", "lanzar", "proceso"} o
                                  {"modo": "escritorio"}): deja la nota y reinicia en Windows
   apogeo-windows sync            (al encender, como administrador) trae juegos.json y deja Apogeo el primero
@@ -36,6 +39,8 @@ GAMES = os.path.join(VAR, 'windows-juegos.json')
 STATE = os.path.join(VAR, 'windows-estado.json')
 WINDOWS_LOADER = 'EFI/Microsoft/Boot/bootmgfw.efi'
 NOTE_VERSION = 2
+EFI_GLOBAL = '8be4df61-93ca-11d2-aa0d-00e098032b8c'
+ESP_MIN_MB = 20   # (la nota, tus juegos y sus portadas; Windows también necesita sitio ahí para actualizarse)
 
 
 def _run(*cmd):
@@ -86,12 +91,15 @@ def read_state():
 
 
 def write_state(**data):
-    """El estado que puede leer la consola sin ser administrador (Windows sí/no y su entrada de arranque)."""
+    """El estado que puede leer la consola sin ser administrador (Windows sí/no, su entrada de arranque y el sitio libre
+    en su partición de arranque, que sin permisos no se puede montar)."""
+    free = data.get('esp_libre', read_state().get('esp_libre'))
     try:
         os.makedirs(VAR, exist_ok=True)
         tmp = STATE + '.nuevo'
         with open(tmp, 'w') as f:
             json.dump({'windows': bool(data.get('windows')), 'entry': str(data.get('entry') or ''),
+                       'esp_libre': free if isinstance(free, int) else None,
                        'comprobado': int(time.time()), 'version': 1}, f)
         os.chmod(tmp, 0o644)
         os.replace(tmp, STATE)
@@ -119,6 +127,63 @@ def estado():
     if 'windows' in st and st.get('comprobado'):
         return bool(st.get('windows'))
     return windows_por_archivos()
+
+
+def efi_var(name):
+    """Una variable del firmware de una sola cifra (SecureBoot, SetupMode): True, False o None si no se puede leer."""
+    try:
+        with open(f'/sys/firmware/efi/efivars/{name}-{EFI_GLOBAL}', 'rb') as f:
+            data = f.read()
+        return bool(data[4]) if len(data) >= 5 else None   # (4 bytes de atributos y el valor)
+    except OSError:
+        return None
+
+
+def bitlocker():
+    """¿Hay alguna partición cifrada con BitLocker? (lsblk lo sabe sin permisos)"""
+    r = _run('lsblk', '-J', '-o', 'FSTYPE')
+    try:
+        data = json.loads(r.stdout) if r else {}
+    except ValueError:
+        return False
+
+    def walk(items):
+        return any((d.get('fstype') or '').lower() == 'bitlocker' or walk(d.get('children')) for d in items or [])
+    return walk(data.get('blockdevices'))
+
+
+def revisar():
+    """Lo que conviene saber antes de ir a Windows (solo lee). «avisos»: [{nivel: 'aviso'|'info', texto}]."""
+    sb, setup = efi_var('SecureBoot'), efi_var('SetupMode')
+    tpm = os.path.exists('/sys/class/tpm/tpm0')
+    bl = bitlocker()
+    free = read_state().get('esp_libre')
+    if not isinstance(free, int):
+        free = None
+        for d in esps():   # (si está montada, se puede mirar sin permisos)
+            if d.get('mountpoint') and (os.path.exists(os.path.join(d['mountpoint'], WINDOWS_LOADER))
+                                        or _ci_exists(d['mountpoint'], WINDOWS_LOADER)):
+                try:
+                    st = os.statvfs(d['mountpoint'])
+                    free = st.f_bavail * st.f_frsize // (1024 * 1024)
+                except OSError:
+                    pass
+    avisos = []
+    if sb is False:
+        avisos.append({'nivel': 'aviso', 'texto': 'Secure Boot está apagado: Valorant, Battlefield 6 y FACEIT no abren '
+                       'sin él.' + (' Tu PC está listo para que Apogeo firme su arranque con claves propias; '
+                                    'aún no lo hace.' if setup else '')})
+    if not tpm:
+        avisos.append({'nivel': 'aviso', 'texto': 'No se ve el TPM: Windows 11 y Valorant lo piden. Actívalo en la '
+                       'BIOS (fTPM o PTT).'})
+    if bl:
+        avisos.append({'nivel': 'info', 'texto': 'Windows tiene BitLocker. Ten a mano tu clave de recuperación (en tu '
+                       'cuenta de Microsoft): si cambia el arranque, Windows te la puede pedir.'})
+    if free is not None and free < ESP_MIN_MB:
+        avisos.append({'nivel': 'aviso', 'texto': f'Queda poco sitio en la partición de arranque de Windows ({free} MB):'
+                       ' tus juegos y sus portadas podrían no caber.'})
+    return {'secureBoot': sb, 'modoConfiguracion': setup, 'tpm': tpm, 'bitlocker': bl, 'espLibreMB': free,
+            'avisos': avisos}
 
 
 def esps():
@@ -287,6 +352,13 @@ def sync():
     apogeo_first()
     try:
         with WindowsEsp() as esp:
+            # El sitio libre que le queda (sin permisos no se puede montar para mirarlo)
+            try:
+                st = os.statvfs(os.path.dirname(os.path.dirname(esp.path)))
+                write_state(windows=True, entry=entry or read_state().get('entry') or '',
+                            esp_libre=st.f_bavail * st.f_frsize // (1024 * 1024))
+            except OSError:
+                pass
             # Si estás en Apogeo, una nota que siga ahí es de un salto que no llegó a hacerse: fuera (así Windows no
             # abre un juego viejo si lo enciendes a mano)
             try:
@@ -327,6 +399,9 @@ def main():
     a = sys.argv[1:]
     if a == ['estado']:
         print(json.dumps({'windows': estado()}))
+        return 0
+    if a == ['revisar']:
+        print(json.dumps(revisar(), ensure_ascii=False))
         return 0
     if os.geteuid() != 0:
         print(__doc__.strip(), file=sys.stderr)

@@ -605,6 +605,49 @@ Window {
             }
         }
     }
+    // Antes de ir a Windows: lo que conviene saber (Secure Boot, TPM, BitLocker, sitio en su arranque), arriba a la
+    // derecha en la pestaña Windows. Solo avisa: Apogeo nunca toca las claves del arranque por su cuenta.
+    Rectangle {
+        id: avisosBox
+        readonly property var avisos: lib.windowsAvisos || []
+        visible: win.tabKey === "windows" && avisos.length > 0
+        anchors { right: parent.right; rightMargin: 48; top: barra.bottom; topMargin: 8 }
+        width: 440
+        height: avisosCol.implicitHeight + 32
+        radius: Tema.r(16)
+        color: Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.82)
+        border.color: Tema.borde
+        z: 5
+        Column {
+            id: avisosCol
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 16 }
+            spacing: 10
+            Texto {
+                text: "ANTES DE IR A WINDOWS"
+                color: Tema.apagado
+                font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 1.6 }
+            }
+            Repeater {
+                model: avisosBox.avisos
+                delegate: Row {
+                    required property var modelData
+                    spacing: 10
+                    Rectangle {
+                        y: 6
+                        width: 8; height: 8; radius: 4
+                        color: modelData.nivel === "aviso" ? "#ffc857" : Tema.acento
+                    }
+                    Texto {
+                        width: 390
+                        text: modelData.texto
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 14
+                        lineHeight: 1.2
+                    }
+                }
+            }
+        }
+    }
     // La marca de agua, muy tenue, a la derecha del vacío
     Nucleo {
         visible: !win.game

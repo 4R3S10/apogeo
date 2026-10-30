@@ -241,6 +241,11 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
   - Allí no hay Meta+Tab (Apogeo no está en marcha): el overlay de Discord y la Xbox Game Bar para Spotify.
   - Valorant y EA FC piden Secure Boot y TPM 2.0: en el PC de verdad, Apogeo arrancará con Secure Boot (firmado con
     claves propias). Nunca se salta ningún antitrampas.
+  - **Antes de ir a Windows** (`apogeo-windows revisar`, sin permisos y solo leyendo): la pestaña Windows de la consola
+    avisa si Secure Boot está apagado (y si el firmware está en modo de configuración, listo para las claves propias),
+    si no se ve el TPM, si Windows tiene BitLocker (ten a mano la clave de recuperación) y si queda poco sitio en su
+    partición de arranque (menos de 20 MB; lo mide `apogeo-windows sync` al encender). Nunca toca las claves por su
+    cuenta.
 
 ## Bienvenida
 

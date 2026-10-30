@@ -491,6 +491,15 @@ def windows_installed():
         return False
 
 
+def windows_checks():
+    """Los avisos de antes de ir a Windows (Secure Boot, TPM, BitLocker, sitio en su arranque)."""
+    r = subprocess.run(['/usr/lib/apogeo/apogeo-windows', 'revisar'], capture_output=True, text=True)
+    try:
+        return json.loads(r.stdout).get('avisos') or []
+    except ValueError:
+        return []
+
+
 def to_windows(note):
     """Reinicia en Windows con la nota (un juego o el escritorio para instalar). Devuelve '' o el problema."""
     r = subprocess.run(['pkexec', '/usr/lib/apogeo/apogeo-windows', 'ir'], input=json.dumps(note), text=True,
@@ -516,6 +525,7 @@ def tabs():
     out['emuladoresHay'] = emulators_installed() if shutil.which('flatpak') else {}
     out['anyps5'] = os.path.exists(os.path.join(ANYPS5, 'actual', 'relinker'))
     out['windowsHay'] = windows_installed()
+    out['windowsAvisos'] = windows_checks() if out['windowsHay'] or win else []
     return out
 
 
