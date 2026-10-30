@@ -66,28 +66,32 @@ PlasmoidItem {
                              + "org.kde.kglobalaccel.Component.invokeShortcut string:apogeo-panel-derecho");
     }
 
-    // En la isla: red · sonido · avisos (con los que no has visto) · la hora, en una sola pastilla
+    // En la isla: red · sonido · avisos (con los que no has visto) · la hora, en una sola pastilla. En la barra fina de
+    // arriba (Órbita): la hora primero, más pequeño
+    readonly property bool fina: Plasmoid.location === PlasmaCore.Types.TopEdge || (root.height > 0 && root.height < 34)
     compactRepresentation: Item {
         id: compact
         readonly property int unread: notifs.unreadNotificationsCount
+        readonly property int alto: root.fina ? 26 : 38
         Layout.minimumWidth: chip.implicitWidth + 4
         Layout.preferredWidth: chip.implicitWidth + 4
-        Layout.minimumHeight: 38
-        implicitHeight: 38
+        Layout.minimumHeight: alto
+        implicitHeight: alto
         Rectangle {
             id: bg
             anchors.centerIn: parent
-            width: chip.implicitWidth; height: 38
-            radius: Tema.r(13)
+            width: chip.implicitWidth; height: compact.alto
+            radius: root.fina ? 9 : Tema.r(13)
             color: area.containsMouse ? Tema.encima : "transparent"
             Behavior on color { ColorAnimation { duration: 180 } }
         }
         Row {
             id: chip
             anchors.centerIn: parent
-            spacing: 11
-            leftPadding: 11
-            rightPadding: 12
+            spacing: root.fina ? 10 : 11
+            leftPadding: root.fina ? 9 : 11
+            rightPadding: root.fina ? 10 : 12
+            Texto { visible: root.fina; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font { family: Tema.mono; pixelSize: 12; weight: Font.DemiBold } color: Tema.texto }
             Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.netIcon; color: root.netIcon === "sinred" ? Tema.rosa : Tema.apagado }
             Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.muted ? "silencio" : "volumen"; color: Tema.apagado }
             Item {
@@ -102,7 +106,7 @@ PlasmoidItem {
                     Texto { id: n; anchors.centerIn: parent; text: compact.unread > 9 ? "9+" : compact.unread; font.pixelSize: 9; font.weight: Font.Black; color: Tema.sobreRosa }
                 }
             }
-            Texto { id: clockText; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font.pixelSize: 15; font.weight: Font.Bold; color: Tema.texto }
+            Texto { id: clockText; visible: !root.fina; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font.pixelSize: 15; font.weight: Font.Bold; color: Tema.texto }
         }
         MouseArea {
             id: area

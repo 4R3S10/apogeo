@@ -70,7 +70,7 @@ Window {
             [["Meta", "W"], "Ver todas"],
             [["Meta", "D"], "Ver el escritorio"]] },
         { titulo: "Buscar y copiar", atajos: [
-            [["Meta"], "Apps, archivos y cuentas"],
+            [["Meta"], "La Órbita: apps, órdenes y cuentas"],
             [["Meta", "V"], "Lo que has copiado"],
             [["Meta", "."], "Emojis"],
             [["Meta", "E"], "Tus archivos"]] },

@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 """
-Apps y buscador de Apogeo («A1»): el cajón encima de la isla con todas tus apps por tipo (Jugar, Estudiar, Internet y
-chat, Ver y crear, Sistema) y, en cuanto escribes: arriba la cuenta si es una («15% de 80», «10 € en dólares»:
-apogeo_calculo), lo que encuentran los buscadores de KDE (apps, ajustes…) agrupado, tus archivos por su nombre (el
-índice ligero de apogeo-archivos) y al final «Buscar en la web con Ágape». Todo con el teclado: flechas elegir, Intro abrir, Esc
-cerrar. Se queda preparado en segundo plano (lo arranca apogeo-pisos al entrar, o D-Bus la primera vez) para salir al
-momento.
+La Órbita abierta («C · Orbe central»; sustituye al buscador): al pulsar el orbe o Meta, arriba la paleta y, debajo, a la
+izquierda tus apps del modo (las que fijas tú: ~/.config/apogeo/fijadas.json; «Todas» con todas por tipo) y a la
+derecha el inspector (lo que suena, los avisos de tus apps, lo que se baja y lo próximo de tu calendario). En cuanto
+escribes: arriba la cuenta si es una («15% de 80», «10 € en dólares»: apogeo_calculo), las órdenes (los modos, apagar,
+reiniciar, bloquear, ajustes…), lo que encuentran los buscadores de KDE (apps, ajustes…) agrupado, tus archivos por su
+nombre (el índice ligero de apogeo-archivos) y al final «Buscar en la web con Ágape». Todo con el teclado: flechas
+elegir, Intro abrir, Esc cerrar. Se queda preparado en segundo plano (lo arranca apogeo-pisos al entrar, o D-Bus la
+primera vez) para salir al momento.
 
 También la guía de atajos («G1 + G3», Atajos.qml): todos los de Apogeo y, arriba, los del piso en el que estás. Sale
 mientras mantienes Meta (lo avisa apogeo-meta por el bus del sistema; al soltar se va y Meta no abre el buscador) o con
@@ -17,12 +19,15 @@ Meta+/ (entonces Esc o un clic la cierran).
 D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (el botón rosa de la isla y la tecla Meta) y .Atajos
 (Meta+/: apogeo-atajos.desktop)
 """
+import json
 import os
+import subprocess
 import sys
 
 SERVICE, PATH, IFACE = 'org.apogeo.Buscador', '/Buscador', 'org.apogeo.Buscador'
 QML = os.environ.get('APOGEO_BUSCADOR_QML', '/usr/share/apogeo/buscador/Buscador.qml')
 ATAJOS_QML = os.path.join(os.path.dirname(QML), 'Atajos.qml')
+MODO = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'modo.json')
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 
 # Los grupos del cajón, en orden. Una app va al primero que encaje: primero por su nombre (las de Apogeo), luego por sus
@@ -54,6 +59,84 @@ def grouped_apps():
         icon = info.get_icon()
         out[group].append({'id': did, 'nombre': info.get_name(), 'icono': icon.to_string() if icon else 'application-x-executable'})
     return [{'grupo': g, 'apps': sorted(a, key=lambda x: x['nombre'].lower())} for g, a in out.items() if a]
+
+
+# ---------- Tus apps de cada modo (las de la Órbita abierta) ----------
+
+PINS = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'fijadas.json')
+# De serie: Estudiar con lo de estudiar, Ágape y Spotify; Navegar vacío (pones las que quieras); Jugar no tiene orbe
+PINS_DEFAULT = {
+    'navegar': [],
+    'estudiar': ['obsidian.desktop', 'org.kde.okular.desktop', 'com.github.xournalpp.xournalpp.desktop', 'anki.desktop',
+                 'org.onlyoffice.desktopeditors.desktop', 'ares.desktop', 'spotify-launcher.desktop'],
+    'jugar': [],
+}
+
+
+def load_pins():
+    try:
+        with open(PINS) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        data = {}
+    return {k: [str(x) for x in data.get(k, v)] if isinstance(data.get(k, v), list) else list(v)
+            for k, v in PINS_DEFAULT.items()}
+
+
+def save_pins(pins):
+    os.makedirs(os.path.dirname(PINS), exist_ok=True)
+    tmp = PINS + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump(pins, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, PINS)
+
+
+def app_info(desktop_id):
+    """{id, nombre, icono} de una app instalada (None si no está)."""
+    import gi
+    gi.require_version('Gio', '2.0')
+    from gi.repository import Gio
+    try:
+        info = Gio.DesktopAppInfo.new(desktop_id)
+    except TypeError:
+        info = None
+    if not info:
+        return None
+    icon = info.get_icon()
+    return {'id': desktop_id, 'nombre': info.get_name(), 'icono': icon.to_string() if icon else 'application-x-executable'}
+
+
+# ---------- Las órdenes de la paleta ----------
+
+def plain(text):
+    import unicodedata
+    return ''.join(c for c in unicodedata.normalize('NFD', text.lower()) if unicodedata.category(c) != 'Mn').strip()
+
+
+# (id, nombre, lo que hace, icono de Apogeo, palabras con las que sale)
+COMMANDS = [
+    ('modo:jugar', 'Jugar', 'Ir al modo Jugar (la consola)', 'jugar', 'jugar juegos consola modo'),
+    ('modo:navegar', 'Navegar', 'Ir al modo Navegar', 'navegar', 'navegar internet web modo'),
+    ('modo:estudiar', 'Estudiar', 'Ir al modo Estudiar', 'estudiar', 'estudiar estudio apuntes modo'),
+    ('apagar', 'Apagar', 'Apagar el PC (te pregunta antes)', 'apagar', 'apagar apaga shutdown'),
+    ('reiniciar', 'Reiniciar', 'Reiniciar el PC (te pregunta antes)', 'actualizar', 'reiniciar reinicia reboot'),
+    ('suspender', 'Suspender', 'Dormir el PC: vuelve al momento', 'luna', 'suspender dormir suspend'),
+    ('bloquear', 'Bloquear', 'Bloquear la pantalla', 'llave', 'bloquear bloquea lock'),
+    ('sesion', 'Cerrar sesión', 'Salir de tu sesión (te pregunta antes)', 'salir', 'cerrar sesion salir logout'),
+    ('ajustes', 'Ajustes de Apogeo', 'Abrir los ajustes', 'ajustes', 'ajustes configuracion opciones'),
+    ('atajos', 'Atajos', 'La guía de atajos de teclado', 'texto', 'atajos teclado teclas'),
+]
+
+
+def find_commands(text):
+    q = plain(text)
+    if len(q) < 2:
+        return []
+    out = []
+    for cid, name, what, icon, words in COMMANDS:
+        if any(w.startswith(q) for w in words.split()) or plain(name).startswith(q):
+            out.append({'id': cid, 'nombre': name, 'detalle': what, 'icono': icon})
+    return out[:4]
 
 
 ARCHIVOS = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'apogeo', 'archivos.db')
@@ -225,6 +308,86 @@ def main():
                 cmd = ['gio', 'open', path]
             subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice', *cmd],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+        # ----- La Órbita abierta: tus apps del modo, las órdenes y el inspector -----
+        pinsChanged = pyqtSignal()
+
+        @pyqtSlot(result=str)
+        def modo(self):
+            """El modo en el que estás (jugar, navegar o estudiar), el que publica apogeo-pisos."""
+            try:
+                with open(MODO) as f:
+                    m = str(json.load(f).get('modo') or '')
+            except (OSError, ValueError):
+                m = ''
+            return m if m in PINS_DEFAULT else 'navegar'
+
+        @pyqtSlot(str, result='QVariantList')
+        def fijadas(self, modo):
+            return [a for a in (app_info(i) for i in load_pins().get(modo, [])) if a]
+
+        @pyqtSlot(str, str, bool)
+        def fijar(self, modo, desktop_id, on):
+            """Fijar una app en el modo (al final) o quitarla."""
+            pins = load_pins()
+            if modo not in pins:
+                return
+            have = [i for i in pins[modo] if i != desktop_id]
+            pins[modo] = have + [desktop_id] if on else have
+            save_pins(pins)
+            self.pinsChanged.emit()
+
+        @pyqtSlot(str, result='QVariantList')
+        def ordenes(self, text):
+            return find_commands(text)
+
+        @pyqtSlot(str)
+        def orden(self, cid):
+            def run(*cmd):
+                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            prompt = {'apagar': 'promptShutDown', 'reiniciar': 'promptReboot', 'sesion': 'promptLogout'}
+            if cid.startswith('modo:'):
+                run('dbus-send', '--session', '--type=method_call', '--dest=org.apogeo.Modos', '/Modos',
+                    'org.apogeo.Modos1.Cambiar', 'string:' + cid[5:])
+            elif cid in prompt:
+                run('dbus-send', '--session', '--type=method_call', '--dest=org.kde.LogoutPrompt', '/LogoutPrompt',
+                    'org.kde.LogoutPrompt.' + prompt[cid])
+            elif cid == 'suspender':
+                run('systemctl', 'suspend')
+            elif cid == 'bloquear':
+                run('loginctl', 'lock-session')
+            elif cid == 'ajustes':
+                run('/usr/lib/apogeo/apogeo-ajustes')
+            elif cid == 'atajos':
+                self.atajos.emit(False)
+
+        @pyqtSlot(result=str)
+        def inspector(self):
+            """Lo de la derecha, en JSON: lo que suena, los números de tus apps (Discord, Telegram…) con su nombre y su
+            icono, lo que se baja y lo próximo del calendario (todo de apogeo-pisos: org.apogeo.Datos)."""
+            def call(method):
+                import dbus
+                try:
+                    return json.loads(str(dbus.SessionBus().get_object('org.apogeo.Datos', '/Datos').get_dbus_method(
+                        method, 'org.apogeo.Datos')(timeout=3)))
+                except (dbus.DBusException, ValueError):
+                    return None
+            badges = call('Insignias') or {}
+            avisos, bajando = [], []
+            for app, b in badges.items():
+                info = app_info(app + '.desktop') or {'nombre': app, 'icono': app}
+                if b.get('numero'):
+                    avisos.append({'app': info['nombre'], 'icono': info['icono'], 'numero': b['numero']})
+                if 'progreso' in b:
+                    bajando.append({'app': info['nombre'], 'icono': info['icono'], 'progreso': b['progreso']})
+            return json.dumps({'musica': call('Musica') or {}, 'avisos': avisos, 'bajando': bajando,
+                               'proximo': (call('Proximo') or [])[:2]}, ensure_ascii=False)
+
+        @pyqtSlot(str)
+        def musica(self, action):
+            subprocess.Popen(['dbus-send', '--session', '--type=method_call', '--dest=org.apogeo.Datos', '/Datos',
+                              'org.apogeo.Datos.MusicaAccion', 'string:' + action],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         @pyqtSlot(str)
         def web(self, text):

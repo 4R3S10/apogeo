@@ -438,6 +438,37 @@ def setup(bus):
         except dbus.DBusException as e:
             log('Alt+Tab: %s' % e)
         st['dinamica'] = DYNAMIC
+    if st.get('orbe', 0) < ORB:
+        # «C · Orbe central»: arriba, una barra fina sin fondo con el modo a la izquierda y, a la derecha, los iconos de
+        # tus apps (bandeja) y el panel rápido (la hora, la red, los avisos); abajo, solo el orbe (la isla)
+        plasma_script(bus, """
+            var bar = panels().filter(function (p) {
+                return p.widgets().some(function (w) { return w.type == 'org.apogeo.modo'; });
+            })[0];
+            if (!bar) {
+                bar = new Panel;
+                bar.location = 'top';
+                bar.floating = false;
+                bar.height = 30;
+                bar.lengthMode = 'fill';
+                bar.hiding = 'none';
+                bar.addWidget('org.apogeo.modo');
+                bar.addWidget('org.kde.plasma.panelspacer');
+                var tray = bar.addWidget('org.kde.plasma.systemtray');
+                tray.currentConfigGroup = ['General'];
+                tray.writeConfig('extraItems', []);
+                tray.writeConfig('hiddenItems', []);
+                tray.reloadConfig();
+                bar.addWidget('org.apogeo.rapido');
+            }
+            panels().forEach(function (p) {
+                if (!p.widgets().some(function (w) { return w.type == 'org.apogeo.isla'; })) return;
+                p.widgets().forEach(function (w) {
+                    if (w.type == 'org.kde.plasma.systemtray' || w.type == 'org.apogeo.rapido') w.remove();
+                });
+            });
+        """)
+        st['orbe'] = ORB
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
@@ -463,6 +494,7 @@ ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos d
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los modos con el cristal (B1)
 PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la columna de pisos)
 PANEL_WIDTH = 376  # su ancho
+ORB = 1  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
 AESTHETICS = 17  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita)
 FONT = 'Geist,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Órbita
@@ -1121,14 +1153,19 @@ def island(bus, st):
     # Dónde va y su tamaño (Ajustes → Aspecto): la isla abajo o arriba
     t = aspecto.tokens(aspecto.settings_of(st))
     top = t['posicion'] == 'arriba-dcha'
-    # Se esconde del todo (o no, si lo quitas en los ajustes); el script de KWin «apogeo-bordes» la saca al acercar el
-    # ratón a una franja ancha del borde, y tiene que saber si lo hace (y en qué borde está)
+    # Se aparta de las ventanas (o no, si lo quitas en los ajustes): con el escritorio a la vista se ve («C · Orbe
+    # central»); el script de KWin «apogeo-bordes» la saca al acercar el ratón a una franja ancha del borde, y tiene que
+    # saber si lo hace (y en qué borde está)
     kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if cfg['esconder'] else 'false')
     kw('kwinrc', 'Script-apogeo-bordes', 'islaArriba', 'true' if top else 'false')
     kwin_reconfigure()
     plasma_script(bus, """
         panels().forEach(function (p) {
             var types = p.widgets().map(function (w) { return w.type; });
+            if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, en el borde contrario al de la isla
+                if (p.location != %s) p.location = %s;
+                return;
+            }
             if (types.indexOf('org.apogeo.isla') < 0) return;
             if (p.location != %s) p.location = %s;
             if (p.height != %d) p.height = %d;
@@ -1144,8 +1181,9 @@ def island(bus, st):
                 w.reloadConfig();
             });
         });
-    """ % (json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
-           json.dumps('autohide' if cfg['esconder'] else 'none'),
+    """ % (json.dumps('bottom' if top else 'top'), json.dumps('bottom' if top else 'top'),
+           json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
+           json.dumps('dodgewindows' if cfg['esconder'] else 'none'),
            json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 

@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "System Information",
+        "Description": "En la barra fina de arriba de Órbita: el modo en el que estás (abre la Órbita)",
+        "Icon": "apogeo",
+        "Id": "org.apogeo.modo",
+        "License": "MIT",
+        "Name": "Modo",
+        "Version": "0.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

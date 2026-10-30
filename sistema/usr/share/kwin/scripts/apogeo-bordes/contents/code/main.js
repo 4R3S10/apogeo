@@ -1,5 +1,5 @@
-// Apogeo: la isla (abajo, o arriba) se esconde del todo, pero sale en cuanto el ratón entra en una franja ancha del
-// borde (no hace falta llegar al último píxel). Mientras el ratón esté encima, se queda; al alejarse, se vuelve a
+// Apogeo: la isla (abajo, o arriba) se aparta de las ventanas (con el escritorio a la vista, se ve), pero sale en cuanto
+// el ratón entra en una franja ancha del borde (no hace falta llegar al último píxel). Mientras el ratón esté encima, se queda; al alejarse, se vuelve a
 // esconder sola (la esconde Plasma). Con una ventana a pantalla completa (un juego, la consola) no sale.
 //
 // Los dos paneles («nivel pro»): el de widgets a la izquierda (Meta+A) y el rápido a la derecha (Meta+N, o la red, el
@@ -25,9 +25,13 @@ function plasma(script) {
     callDBus("org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", script);
 }
 
+// (solo la isla: la barra fina de Órbita puede estar en el mismo borde)
 function setHiding(location, mode) {
-    plasma("panels().forEach(function (p) { if (p.location == '" + location + "') p.hiding = '" + mode + "'; });");
+    plasma("panels().forEach(function (p) { if (p.location == '" + location + "' && p.widgets().some(function (w) {" +
+           " return w.type == 'org.apogeo.isla'; })) p.hiding = '" + mode + "'; });");
 }
+// Sin nada que enseñar, la isla se aparta de las ventanas: con el escritorio a la vista, se ve («C · Orbe central»)
+const REST = "dodgewindows";
 
 function setPanel(side, on) {
     open[side] = on;
@@ -69,7 +73,7 @@ function update() {
         setHiding(islandAt, "windowsgobelow");
     } else if (shown.island && !shown.forced && (fromIslandEdge > KEEP || fx < ISLAND - 0.12 || fx > 1 - ISLAND + 0.12)) {
         shown.island = false;
-        setHiding(islandAt, "autohide");
+        setHiding(islandAt, REST);
     }
 }
 
@@ -87,7 +91,7 @@ registerShortcut("apogeo-isla-soltar", "Apogeo: la isla ya no enseña nada", "",
     // (si el ratón está encima, se queda: ya la esconderá update al irse)
     const pos = workspace.cursorPos, g = workspace.activeScreen.geometry;
     const top = readConfig("islaArriba", false);
-    if ((top ? pos.y - g.y : g.y + g.height - pos.y) > KEEP) { shown.island = false; setHiding(islandAt(), "autohide"); }
+    if ((top ? pos.y - g.y : g.y + g.height - pos.y) > KEEP) { shown.island = false; setHiding(islandAt(), REST); }
 });
 
 registerShortcut("apogeo-panel-izquierdo", "Apogeo: panel de widgets", "Meta+A", function () { setPanel("left", !open.left); });

@@ -32,6 +32,7 @@ VIVO = _T.get('vivo', ACCENT)
 RADIO = float(_T.get('radio', 0.7))          # las esquinas: 1 = redondas; 0.7 = suaves (la de Órbita)
 CRISTAL = float(_T.get('cristal', 0.55))     # lo opaco del cristal de la isla y los paneles
 NOMBRE = _T.get('nombre')                    # el nombre del tema generado (None = el de serie)
+ESTILO = _T.get('estilo', 'orbita')          # orbita (de serie), apogeo (Clásico), agape, fondo…
 CLARO = bool(_T.get('claro', False))
 LETRA = _T.get('letra', 'Geist')
 MONO = _T.get('mono', 'Geist Mono')

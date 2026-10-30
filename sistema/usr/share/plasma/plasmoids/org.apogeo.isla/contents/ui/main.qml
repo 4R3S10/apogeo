@@ -32,6 +32,12 @@ import Apogeo
 // El volumen, el brillo y los avisos sacan la isla aunque estuviera escondida (se lo pide al script de KWin).
 // Lo de cada piso se puede quitar en Ajustes de Apogeo → Isla (apogeo-pisos lo escribe en la configuración de este widget).
 // La hora, el sonido, la red y los avisos son los widgets de Plasma que van a su lado en el mismo panel.
+//
+// Con Órbita («C · Orbe central») la isla es el orbe: en el centro, el orbe del color del modo en el que estás (un clic,
+// o Meta, abre la Órbita: la paleta, tus apps del modo y el inspector) y a sus lados los otros dos modos en bolitas
+// (un clic te lleva; el tuyo siempre va en el centro). Al pasar el ratón salen a los lados tus ventanas abiertas. Lo que
+// pasa ahora (volumen, avisos, descargas, el temporizador, la música) sale en una pastilla encima del orbe. La hora, la
+// red y los avisos van arriba, en la barra fina (org.apogeo.modo y el panel rápido). Con Clásico, la isla de siempre.
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
@@ -53,6 +59,28 @@ PlasmoidItem {
 
     readonly property int floorIndex: Math.max(0, desktops.desktopIds.indexOf(desktops.currentDesktop))
     readonly property string floor: desktops.desktopNames[floorIndex] || "Navegar"
+
+    // ---------- Órbita: el orbe y las bolitas de los otros modos ----------
+    readonly property bool orbita: (Tema.f.estilo || "orbita") === "orbita"
+    onOrbitaChanged: loadPins()
+    readonly property var modos: ["jugar", "navegar", "estudiar"]
+    readonly property string modo: modos.indexOf(floor.toLowerCase()) >= 0 ? floor.toLowerCase() : "navegar"
+    function colorModo(m) {
+        return Tema.claro ? ({ jugar: "#6f52c9", navegar: "#0b86a8", estudiar: "#a85a00" })[m]
+                          : ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[m];
+    }
+    function nombreModo(m) { return ({ jugar: "Jugar", navegar: "Navegar", estudiar: "Estudiar" })[m] }
+    function irA(m) {
+        run("dbus-send --session --type=method_call --dest=org.apogeo.Modos /Modos org.apogeo.Modos1.Cambiar string:" + m);
+    }
+    function abrirOrbita() {
+        run("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle");
+    }
+    // Las ventanas salen al pasar el ratón (y se quedan un momento al salir, para poder llegar a ellas)
+    property bool orbeHover: false
+    readonly property bool ventanasFuera: orbeHover || quedate.running
+    Timer { id: quedate; interval: 450 }
+    onOrbeHoverChanged: if (!orbeHover) quedate.restart()
 
     P5Support.DataSource {
         id: runner
@@ -292,7 +320,7 @@ PlasmoidItem {
     property bool loadingPins: false
     function loadPins() {
         loadingPins = true;
-        tasks.launcherList = Plasmoid.configuration["fijadas" + floor] || [];
+        tasks.launcherList = orbita ? [] : (Plasmoid.configuration["fijadas" + floor] || []);   // (con Órbita, en la paleta)
         loadingPins = false;
     }
     onFloorChanged: loadPins()
@@ -474,228 +502,119 @@ PlasmoidItem {
     }
 
     fullRepresentation: RowLayout {
+        id: fila
         spacing: 6
         Layout.minimumWidth: implicitWidth
         Layout.preferredWidth: implicitWidth
+        HoverHandler { onHoveredChanged: root.orbeHover = hovered }
 
         // Tus apps por tipo y, al escribir, el buscador (apps, archivos, calculadora, la web…): la pastilla del acento
         AgapeButton {
+            visible: !root.orbita
             iconName: "apps"
             on: true
             tip: "Apps y buscar (Meta)"
-            onClicked: root.run("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle")
+            onClicked: root.abrirOrbita()
         }
 
-        Separator {}
+        Separator { visible: !root.orbita }
 
         // ----- Jugar -----
         Chip {
-            visible: root.floor === "Jugar" && root.temp > 0 && Plasmoid.configuration.extraJugar
+            visible: root.floor === "Jugar" && root.temp > 0 && Plasmoid.configuration.extraJugar && !root.orbita
             iconName: "temperatura"
             text: Math.round(root.temp) + " °C"
             fg: root.temp >= Plasmoid.configuration.limite ? root.warn : root.text
         }
         Chip {
-            visible: root.floor === "Jugar" && Plasmoid.configuration.extraJugar
+            visible: root.floor === "Jugar" && Plasmoid.configuration.extraJugar && !root.orbita
             iconName: "fps"
             text: Plasmoid.configuration.fps + " FPS"
         }
         AgapeButton {
-            visible: root.floor === "Jugar"
+            visible: root.floor === "Jugar" && !root.orbita
             iconName: "hud"
             tip: "MangoHud en el juego: enseñar o esconder (también Mayús derecha+F12)"
             onClicked: root.run("mangohudctl toggle no_display")
         }
         AgapeButton {
-            visible: root.floor === "Jugar"
+            visible: root.floor === "Jugar" && !root.orbita
             iconName: "consola"
             tip: "Consola de juegos"
             onClicked: root.run("/usr/lib/apogeo/apogeo-juegos consola")
         }
         AgapeButton {
-            visible: root.floor === "Jugar"
+            visible: root.floor === "Jugar" && !root.orbita
             iconName: "escritorio"
             tip: "Ver el escritorio"
             onClicked: root.run("dbus-send --session --type=method_call --dest=org.kde.kglobalaccel /component/kwin org.kde.kglobalaccel.Component.invokeShortcut 'string:Show Desktop'")
         }
 
-        Separator { visible: tasks.count > 0 && root.floor === "Jugar" }
+        Separator { visible: tasks.count > 0 && root.floor === "Jugar" && !root.orbita }
 
-        // ----- Tus apps del piso: fijadas y abiertas -----
+        // ----- Órbita: a la izquierda, la mitad de tus ventanas; la bolita del modo de antes; el orbe; la del de después y
+        // la otra mitad de tus ventanas -----
+        Repeater {
+            model: root.orbita ? tasks : null
+            delegate: TaskTile { lado: "izq" }
+        }
+        Bolita { visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 2) % 3] }
+        Item {
+            id: orbe
+            visible: root.orbita
+            Layout.preferredWidth: 48
+            Layout.preferredHeight: 48
+            Rectangle {   // al pasar el ratón, un halo del color del modo
+                anchors.centerIn: parent
+                width: 48; height: 48; radius: 24
+                color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, orbeArea.containsMouse ? 0.22 : 0)
+                Behavior on color { ColorAnimation { duration: 180 } }
+            }
+            Rectangle {
+                anchors.centerIn: parent
+                width: 40; height: 40; radius: 20
+                color: Tema.claro ? Tema.superficie : "#0b0e14"
+                border.width: 2
+                border.color: root.accent
+                scale: orbeArea.pressed ? 0.92 : 1
+                Behavior on scale { NumberAnimation { duration: 120 } }
+                Rectangle { anchors.centerIn: parent; width: 11; height: 11; radius: 5.5; color: Tema.texto }
+            }
+            MouseArea {
+                id: orbeArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.abrirOrbita()
+            }
+            QQC2.ToolTip.visible: orbeArea.containsMouse && !root.ventanasFuera
+            QQC2.ToolTip.text: root.nombreModo(root.modo) + " · apps, buscar y lo que pasa (Meta)"
+            QQC2.ToolTip.delay: 700
+        }
+        Bolita { visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 1) % 3] }
+
+        // ----- Tus apps del piso: fijadas y abiertas (con Órbita, la otra mitad de tus ventanas) -----
         Repeater {
             model: tasks
-            delegate: Item {
-                id: task
-                required property var model
-                required property int index
-                readonly property bool launcher: !!model.IsLauncher
-                readonly property string url: model.LauncherUrlWithoutIcon ? model.LauncherUrlWithoutIcon.toString() : ""
-                readonly property bool pinned: Plasmoid.configuration["fijadas" + root.floor].indexOf(url) >= 0
-                visible: !root.hiddenApp(model.AppId)
-                Layout.preferredWidth: visible ? 40 : 0
-                Layout.preferredHeight: 40
-                Rectangle {
-                    anchors.fill: parent
-                    radius: Tema.r(13)
-                    color: hoverTask.pressed ? root.press : hoverTask.containsMouse || task.model.IsActive ? root.hover : "transparent"
-                    Behavior on color { ColorAnimation { duration: 180 } }
-                }
-                // Todas iguales: cada icono en su baldosa redondeada, con un toque del color de tu estilo
-                Rectangle {
-                    id: tile
-                    anchors.centerIn: parent
-                    width: 32; height: 32
-                    radius: Tema.r(10)
-                    color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.16)
-                    border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.22)
-                    border.width: 1
-                    opacity: task.launcher ? 0.82 : task.model.IsMinimized ? 0.5 : 1
-                    scale: hoverTask.pressed ? 0.9 : 1
-                    Behavior on scale { NumberAnimation { duration: 120 } }
-                    Kirigami.Icon {
-                        id: appIcon
-                        anchors.centerIn: parent
-                        width: 22; height: 22
-                        source: task.model.decoration
-                        layer.enabled: true
-                        layer.effect: MultiEffect { colorization: 0.14; colorizationColor: root.accent }
-                    }
-                }
-                // Sus avisos sin mirar (o el número que pone la app) y, si baja algo, su barrita
-                readonly property var badge: root.badgeOf(model.AppId || url.replace(/^.*\//, ""))
-                Rectangle {
-                    visible: task.badge.numero > 0
-                    z: 2
-                    x: tile.x + tile.width - width / 2 - 2
-                    y: tile.y - 5
-                    width: Math.max(17, badgeText.implicitWidth + 8); height: 17
-                    radius: height / 2
-                    color: Tema.rosa
-                    border.width: 2
-                    border.color: Tema.cromo
-                    Texto { id: badgeText; anchors.centerIn: parent; text: task.badge.numero > 99 ? "99+" : task.badge.numero; font.pixelSize: 10; font.weight: Font.Black; color: Tema.sobreRosa }
-                    scale: visible ? 1 : 0.4
-                    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
-                }
-                Rectangle {
-                    visible: task.badge.progreso >= 0
-                    z: 2
-                    anchors.horizontalCenter: tile.horizontalCenter
-                    y: tile.y + tile.height - 5
-                    width: tile.width - 8; height: 4; radius: 2
-                    color: Qt.rgba(0, 0, 0, 0.5)
-                    Rectangle { width: parent.width * Math.max(0, task.badge.progreso); height: parent.height; radius: 2; color: root.accent }
-                }
-                // Dónde está su icono (para que la ventana se minimice hacia él)
-                function publish() {
-                    if (task.launcher) return;
-                    const g = task.mapToGlobal(0, 0);
-                    tasks.requestPublishDelegateGeometry(tasks.makeModelIndex(task.index), Qt.rect(g.x, g.y, task.width, task.height), task);
-                }
-                Component.onCompleted: Qt.callLater(publish)
-                Rectangle { // el puntito rosa de cada ventana abierta (en la activa, una rayita); las fijadas cerradas, sin él
-                    visible: !task.launcher
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: -3
-                    width: task.model.IsActive ? 14 : 5
-                    height: 4; radius: 2
-                    color: root.accent
-                    opacity: task.model.IsMinimized ? 0.35 : 1
-                    Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                }
-                MouseArea {
-                    id: hoverTask
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onEntered: task.publish()
-                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-                    onClicked: mouse => {
-                        const idx = tasks.makeModelIndex(task.index);
-                        if (mouse.button === Qt.RightButton) {
-                            root.menuTask = { index: task.index, url: task.url, pinned: task.pinned, window: !task.launcher };
-                            taskMenu.visualParent = task;
-                            taskMenu.openRelative();
-                        } else if (mouse.button === Qt.MiddleButton) {
-                            task.launcher ? tasks.requestActivate(idx) : tasks.requestNewInstance(idx);
-                        } else if (task.launcher) {
-                            tasks.requestActivate(idx);   // (en un lanzador, abre la app)
-                        } else if (task.model.IsActive) {
-                            tasks.requestToggleMinimized(idx);
-                        } else {
-                            tasks.requestActivate(idx);
-                        }
-                    }
-                }
-                // Al pasar el ratón: la vista en vivo de la ventana (o el nombre, si está cerrada)
-                PlasmaCore.ToolTipArea {
-                    anchors.fill: parent
-                    interactive: !task.launcher
-                    location: Tema.posicion === "arriba-dcha" ? PlasmaCore.Types.TopEdge : PlasmaCore.Types.BottomEdge
-                    mainText: task.launcher ? (task.model.display || "") : ""
-                    subText: task.launcher ? "Abrir" : ""
-                    mainItem: task.launcher ? null : preview
-                    Item {
-                        id: preview
-                        visible: false
-                        width: 260
-                        height: 190
-                        TaskManager.ScreencastingRequest {
-                            id: cast
-                            // solo mientras se ve la vista (no gasta nada si no)
-                            uuid: preview.visible && task.model.WinIdList && task.model.WinIdList.length ? task.model.WinIdList[0] : ""
-                        }
-                        Rectangle {
-                            x: 0; y: 0
-                            width: parent.width; height: 146
-                            radius: Tema.r(12)
-                            color: Qt.rgba(0, 0, 0, 0.25)
-                            clip: true
-                            Kirigami.Icon { anchors.centerIn: parent; width: 48; height: 48; source: task.model.decoration; visible: !thumb.visible }
-                            PipeWire.PipeWireSourceItem {
-                                id: thumb
-                                anchors.fill: parent
-                                anchors.margins: 4
-                                nodeId: cast.nodeId
-                                visible: nodeId > 0 && ready
-                            }
-                        }
-                        Texto {
-                            x: 4; y: 154
-                            width: parent.width - 40
-                            elide: Text.ElideRight
-                            wrapMode: Text.NoWrap
-                            font.weight: Font.Bold
-                            font.pixelSize: 13
-                            text: task.model.display || ""
-                        }
-                        Texto {
-                            x: 4; y: 172
-                            width: parent.width - 40
-                            elide: Text.ElideRight
-                            wrapMode: Text.NoWrap
-                            color: Tema.apagado
-                            font.pixelSize: 11
-                            text: task.model.AppName || ""
-                        }
-                        Rectangle {
-                            id: closeBtn
-                            anchors.right: parent.right
-                            y: 156
-                            width: 28; height: 28; radius: Tema.r(9)
-                            color: closeArea.containsMouse ? Tema.error : "transparent"
-                            Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: closeArea.containsMouse ? "#ffffff" : Tema.apagado }
-                            MouseArea { id: closeArea; anchors.fill: parent; hoverEnabled: true; onClicked: tasks.requestClose(tasks.makeModelIndex(task.index)) }
-                        }
-                    }
-                }
-            }
+            delegate: TaskTile { lado: root.orbita ? "der" : "" }
         }
 
-        // ----- Isla dinámica: lo que pasa ahora (la isla se estira con ello) -----
-        Separator { visible: moment.Layout.preferredWidth > 1 }
+        // ----- Isla dinámica: lo que pasa ahora (la isla se estira con ello; con Órbita, en la pastilla de encima) -----
+        Separator { visible: !root.orbita && moment.Layout.preferredWidth > 1 }
+        Item {
+            id: momentSlot   // (su sitio en la isla clásica)
+            visible: !root.orbita && moment.Layout.preferredWidth > 1
+            Layout.preferredHeight: 40
+            Layout.preferredWidth: moment.Layout.preferredWidth
+        }
         Item {
             id: moment
+            // En la isla clásica, en su sitio; con Órbita, dentro de la pastilla de encima del orbe
+            parent: root.orbita ? pillBox : momentSlot
+            x: root.orbita ? 8 : 0
+            y: root.orbita ? 8 : 0
+            width: Layout.preferredWidth
+            height: 40
             readonly property string kind: root.moment
             readonly property Item current: ({ osd: osdView, aviso: noticeView, descarga: downloadView, temporizador: timerView, musica: musicView })[kind] || null
             Layout.preferredHeight: 40
@@ -917,7 +836,232 @@ PlasmoidItem {
                 tintTo: Qt.darker(cover.vivo, 2.4)
             }
         }
+        Binding { target: root; property: "momentoAncho"; value: moment.Layout.preferredWidth }
+        Component.onCompleted: root.orbePara = orbe
+        Separator { visible: !root.orbita }
+    }
 
-        Separator {}
+    // La pastilla de encima del orbe (Órbita): lo que pasa ahora
+    PlasmaCore.Dialog {
+        id: pastilla
+        visible: root.orbita && root.moment !== "" && root.orbePara !== null
+        visualParent: root.orbita ? orbePara : null
+        location: Tema.posicion === "arriba-dcha" ? PlasmaCore.Types.TopEdge : PlasmaCore.Types.BottomEdge
+        type: PlasmaCore.Dialog.Tooltip
+        flags: Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint
+        hideOnWindowDeactivate: false
+        backgroundHints: PlasmaCore.Dialog.NoBackground
+        mainItem: Rectangle {
+            id: pillBox
+            width: Math.max(56, root.momentoAncho + 16)
+            height: 56
+            radius: 28
+            color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.96)
+            border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
+        }
+    }
+    property Item orbePara: null
+    property real momentoAncho: 0
+
+    // Una app de la isla (fijada o abierta). Con Órbita, solo ventanas, a un lado u otro del orbe y al pasar el ratón
+    component TaskTile: Item {
+                id: task
+                required property var model
+                required property int index
+                property string lado: ""
+                readonly property bool launcher: !!model.IsLauncher
+                readonly property string url: model.LauncherUrlWithoutIcon ? model.LauncherUrlWithoutIcon.toString() : ""
+                readonly property bool pinned: Plasmoid.configuration["fijadas" + root.floor].indexOf(url) >= 0
+                readonly property bool aqui: lado === "" || (lado === "izq") === (index % 2 === 0)
+                visible: !root.hiddenApp(model.AppId) && aqui && (lado === "" || Layout.preferredWidth > 0.5)
+                Layout.preferredWidth: !root.hiddenApp(model.AppId) && aqui && (lado === "" || root.ventanasFuera) ? 40 : 0
+                Behavior on Layout.preferredWidth { enabled: task.lado !== ""; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                opacity: lado === "" || root.ventanasFuera ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 180 } }
+                Layout.preferredHeight: 40
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Tema.r(13)
+                    color: hoverTask.pressed ? root.press : hoverTask.containsMouse || task.model.IsActive ? root.hover : "transparent"
+                    Behavior on color { ColorAnimation { duration: 180 } }
+                }
+                // Todas iguales: cada icono en su baldosa redondeada, con un toque del color de tu estilo
+                Rectangle {
+                    id: tile
+                    anchors.centerIn: parent
+                    width: 32; height: 32
+                    radius: Tema.r(10)
+                    color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.16)
+                    border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.22)
+                    border.width: 1
+                    opacity: task.launcher ? 0.82 : task.model.IsMinimized ? 0.5 : 1
+                    scale: hoverTask.pressed ? 0.9 : 1
+                    Behavior on scale { NumberAnimation { duration: 120 } }
+                    Kirigami.Icon {
+                        id: appIcon
+                        anchors.centerIn: parent
+                        width: 22; height: 22
+                        source: task.model.decoration
+                        layer.enabled: true
+                        layer.effect: MultiEffect { colorization: 0.14; colorizationColor: root.accent }
+                    }
+                }
+                // Sus avisos sin mirar (o el número que pone la app) y, si baja algo, su barrita
+                readonly property var badge: root.badgeOf(model.AppId || url.replace(/^.*\//, ""))
+                Rectangle {
+                    visible: task.badge.numero > 0
+                    z: 2
+                    x: tile.x + tile.width - width / 2 - 2
+                    y: tile.y - 5
+                    width: Math.max(17, badgeText.implicitWidth + 8); height: 17
+                    radius: height / 2
+                    color: Tema.rosa
+                    border.width: 2
+                    border.color: Tema.cromo
+                    Texto { id: badgeText; anchors.centerIn: parent; text: task.badge.numero > 99 ? "99+" : task.badge.numero; font.pixelSize: 10; font.weight: Font.Black; color: Tema.sobreRosa }
+                    scale: visible ? 1 : 0.4
+                    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+                }
+                Rectangle {
+                    visible: task.badge.progreso >= 0
+                    z: 2
+                    anchors.horizontalCenter: tile.horizontalCenter
+                    y: tile.y + tile.height - 5
+                    width: tile.width - 8; height: 4; radius: 2
+                    color: Qt.rgba(0, 0, 0, 0.5)
+                    Rectangle { width: parent.width * Math.max(0, task.badge.progreso); height: parent.height; radius: 2; color: root.accent }
+                }
+                // Dónde está su icono (para que la ventana se minimice hacia él)
+                function publish() {
+                    if (task.launcher) return;
+                    const g = task.mapToGlobal(0, 0);
+                    tasks.requestPublishDelegateGeometry(tasks.makeModelIndex(task.index), Qt.rect(g.x, g.y, task.width, task.height), task);
+                }
+                Component.onCompleted: Qt.callLater(publish)
+                Rectangle { // el puntito rosa de cada ventana abierta (en la activa, una rayita); las fijadas cerradas, sin él
+                    visible: !task.launcher
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: -3
+                    width: task.model.IsActive ? 14 : 5
+                    height: 4; radius: 2
+                    color: root.accent
+                    opacity: task.model.IsMinimized ? 0.35 : 1
+                    Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                }
+                MouseArea {
+                    id: hoverTask
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: task.publish()
+                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+                    onClicked: mouse => {
+                        const idx = tasks.makeModelIndex(task.index);
+                        if (mouse.button === Qt.RightButton) {
+                            root.menuTask = { index: task.index, url: task.url, pinned: task.pinned, window: !task.launcher };
+                            taskMenu.visualParent = task;
+                            taskMenu.openRelative();
+                        } else if (mouse.button === Qt.MiddleButton) {
+                            task.launcher ? tasks.requestActivate(idx) : tasks.requestNewInstance(idx);
+                        } else if (task.launcher) {
+                            tasks.requestActivate(idx);   // (en un lanzador, abre la app)
+                        } else if (task.model.IsActive) {
+                            tasks.requestToggleMinimized(idx);
+                        } else {
+                            tasks.requestActivate(idx);
+                        }
+                    }
+                }
+                // Al pasar el ratón: la vista en vivo de la ventana (o el nombre, si está cerrada)
+                PlasmaCore.ToolTipArea {
+                    anchors.fill: parent
+                    interactive: !task.launcher
+                    location: Tema.posicion === "arriba-dcha" ? PlasmaCore.Types.TopEdge : PlasmaCore.Types.BottomEdge
+                    mainText: task.launcher ? (task.model.display || "") : ""
+                    subText: task.launcher ? "Abrir" : ""
+                    mainItem: task.launcher ? null : preview
+                    Item {
+                        id: preview
+                        visible: false
+                        width: 260
+                        height: 190
+                        TaskManager.ScreencastingRequest {
+                            id: cast
+                            // solo mientras se ve la vista (no gasta nada si no)
+                            uuid: preview.visible && task.model.WinIdList && task.model.WinIdList.length ? task.model.WinIdList[0] : ""
+                        }
+                        Rectangle {
+                            x: 0; y: 0
+                            width: parent.width; height: 146
+                            radius: Tema.r(12)
+                            color: Qt.rgba(0, 0, 0, 0.25)
+                            clip: true
+                            Kirigami.Icon { anchors.centerIn: parent; width: 48; height: 48; source: task.model.decoration; visible: !thumb.visible }
+                            PipeWire.PipeWireSourceItem {
+                                id: thumb
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                nodeId: cast.nodeId
+                                visible: nodeId > 0 && ready
+                            }
+                        }
+                        Texto {
+                            x: 4; y: 154
+                            width: parent.width - 40
+                            elide: Text.ElideRight
+                            wrapMode: Text.NoWrap
+                            font.weight: Font.Bold
+                            font.pixelSize: 13
+                            text: task.model.display || ""
+                        }
+                        Texto {
+                            x: 4; y: 172
+                            width: parent.width - 40
+                            elide: Text.ElideRight
+                            wrapMode: Text.NoWrap
+                            color: Tema.apagado
+                            font.pixelSize: 11
+                            text: task.model.AppName || ""
+                        }
+                        Rectangle {
+                            id: closeBtn
+                            anchors.right: parent.right
+                            y: 156
+                            width: 28; height: 28; radius: Tema.r(9)
+                            color: closeArea.containsMouse ? Tema.error : "transparent"
+                            Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: closeArea.containsMouse ? "#ffffff" : Tema.apagado }
+                            MouseArea { id: closeArea; anchors.fill: parent; hoverEnabled: true; onClicked: tasks.requestClose(tasks.makeModelIndex(task.index)) }
+                        }
+                    }
+                }
+            }
+
+    // Órbita: la bolita de otro modo, con su nombre debajo (un clic te lleva)
+    component Bolita: Item {
+        id: b
+        property string m
+        readonly property color c: root.colorModo(m)
+        Layout.preferredWidth: 50
+        Layout.preferredHeight: 48
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 5
+            width: 24; height: 24; radius: 12
+            color: bm.containsMouse ? Qt.rgba(b.c.r, b.c.g, b.c.b, 0.25) : (Tema.claro ? Tema.superficie : "#151b24")
+            border.width: 1.5
+            border.color: b.c
+            scale: bm.pressed ? 0.88 : bm.containsMouse ? 1.08 : 1
+            Behavior on scale { NumberAnimation { duration: 140 } }
+            Behavior on color { ColorAnimation { duration: 160 } }
+        }
+        Texto {
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 32
+            text: root.nombreModo(b.m)
+            color: b.c
+            wrapMode: Text.NoWrap
+            font { pixelSize: 10; weight: Font.DemiBold }
+        }
+        MouseArea { id: bm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.irA(b.m) }
     }
 }

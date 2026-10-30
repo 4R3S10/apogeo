@@ -17,7 +17,7 @@ import os
 import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/plasma/desktoptheme'
-from fichas import SURFACE, TEXT, ACCENT, NOMBRE, CRISTAL, r
+from fichas import SURFACE, TEXT, ACCENT, NOMBRE, CRISTAL, ESTILO, r
 
 THEME = NOMBRE or 'apogeo'
 
@@ -261,13 +261,34 @@ def widgets():
     return files
 
 
+def bare(svg):
+    """Órbita («C · Orbe central»): la barra fina de arriba y el orbe de abajo, sueltos sobre tu escritorio, sin cristal
+    detrás. Plasma busca primero los trozos con el prefijo del borde del panel («north-…» arriba, «south-…» abajo) y,
+    si están, usa esos: aquí, vacíos (sin cristal ni máscara de desenfoque). Sin sombra de panel (la dibujaría KWin
+    debajo de la barra y del orbe). Los paneles de los lados siguen con su cristal (lo pintan ellos)."""
+    parts = ['topleft', 'top', 'topright', 'left', 'center', 'right', 'bottomleft', 'bottom', 'bottomright']
+    extra = []
+    for edge in ('north', 'south'):
+        extra += [f'<rect id="{edge}-{p}" x="0" y="0" width="4" height="4" fill="none"/>' for p in parts]
+        extra += [f'<rect id="mask-{edge}-{p}" x="0" y="0" width="4" height="4" fill="none"/>' for p in parts]
+        extra += [f'<rect id="{edge}-hint-{side}-margin" x="0" y="0" width="2" height="2" fill="none"/>'
+                  for side in ('top', 'bottom', 'left', 'right')]
+    svg = svg.replace('id="shadow-', 'id="sin-sombra-')
+    return svg.replace('\n</svg>\n', '\n' + '\n'.join(extra) + '\n</svg>\n')
+
+
+def panel(svg):
+    return bare(svg) if ESTILO == 'orbita' else svg
+
+
 def main():
     root = os.path.join(DST, THEME)
     files = {
         # Isla y columna de pisos: cristal de Ágape
         # (el brillo de arriba, del color del piso: como el cristal de los paneles de los lados, «Cristal con tu fondo»)
-        'translucent/widgets/panel-background.svg': frame_svg(r(20), 6, SURFACE, CRISTAL, 22, 0.32, shine=(ACCENT, 0.45)),
-        'widgets/panel-background.svg': frame_svg(r(20), 6, CHROME, 0.97, 22, 0.32),
+        # (con Órbita, la barra fina de arriba y el orbe sin fondo: bare)
+        'translucent/widgets/panel-background.svg': panel(frame_svg(r(20), 6, SURFACE, CRISTAL, 22, 0.32, shine=(ACCENT, 0.45))),
+        'widgets/panel-background.svg': panel(frame_svg(r(20), 6, CHROME, 0.97, 22, 0.32)),
         # Menús, avisos y ventanitas: tarjeta de Ágape
         'translucent/dialogs/background.svg': frame_svg(r(16), 12, CHROME, min(0.98, CRISTAL + 0.35), 32, 0.45),
         'dialogs/background.svg': frame_svg(r(16), 12, CHROME, 0.98, 32, 0.45),

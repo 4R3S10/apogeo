@@ -110,7 +110,27 @@ arriba), con una vista en pequeño de cómo queda.
   `/usr/lib/apogeo/temas`) y los pone; «Volver a lo de serie» los quita.
 - Lo de Apogeo hecho en QML (Tema) lee `~/.config/apogeo/aspecto.json` y cambia solo, también los fondos animados.
 
-### La isla («I1 · Una sola isla»)
+### El escritorio de Órbita («C · Orbe central»)
+
+Casi vacío, como en la bienvenida de una consola:
+- **Arriba, una barra fina sin fondo:** a la izquierda el modo en el que estás, pequeño y en su color
+  (`org.apogeo.modo`; un clic abre la Órbita); a la derecha la hora, los iconos de tus apps (bandeja), la red, el
+  sonido y la campana (el panel rápido: un clic abre el de la derecha).
+- **Abajo, el orbe** (la isla, sin cristal detrás): el del modo en el que estás en el centro y, a sus lados, los otros
+  dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo siempre queda
+  en el centro). Al pasar el ratón salen a los lados tus ventanas abiertas (su vista en vivo, ✕, clic derecho). Lo que
+  pasa ahora (volumen, avisos, descargas, el temporizador, la música) sale en una pastilla encima del orbe. Se aparta
+  de las ventanas (con el escritorio a la vista, se ve) y sale al acercar el ratón al borde.
+- **La Órbita abierta** (clic en el orbe o Meta; sustituye al buscador, `apogeo-buscador`): arriba la paleta;
+  debajo, a la izquierda **tus apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza
+  vacío; Estudiar con Obsidian, Okular, Xournal++, Anki, ONLYOFFICE, Ágape y Spotify; en «Todas», la chincheta fija
+  una) y a la derecha el **inspector** (lo que suena con sus botones, los números de tus apps, lo que se baja y lo
+  próximo de tu calendario). Al escribir: la cuenta, las **órdenes** (Jugar, Navegar, Estudiar, apagar, reiniciar,
+  suspender, bloquear, cerrar sesión, ajustes, atajos), apps y ajustes de KDE, tus archivos y la web con Ágape.
+- Las barras y el orbe sin fondo son del estilo de Plasma de Órbita (`herramientas/plasma.py`: los trozos «north-…» y
+  «south-…» de `panel-background`, vacíos, y sin sombra de panel). Con Clásico, la isla de cristal de siempre.
+
+### La isla («I1 · Una sola isla», Clásico)
 
 Todo en el mismo cristal: el botón de las apps, **tus apps del modo** (las fijadas, aunque estén cerradas, y las
 abiertas; clic derecho para fijar o dejar de fijar, en cada modo las suyas), lo de cada modo (Jugar: temperatura y FPS;
@@ -331,8 +351,7 @@ delante (que enseña la suya) ni con algo a pantalla completa.
 
 ## Sin restos de CachyOS
 
-- **Buscador:** la lupa de la isla, la tecla Meta o Alt+Espacio abren una tarjeta en el centro, como el buscador de
-  Ágape, con lo que encuentran los buscadores de KDE (apps, archivos, ajustes…) y «Buscar en la web con Ágape».
+- **Buscador:** la Órbita abierta (el orbe, la tecla Meta o Alt+Espacio): ver «El escritorio de Órbita».
 - **Guía de atajos (mantener Meta o Meta+/, «G1 + G3»):** una tarjeta grande en el centro con los atajos de Apogeo
   (modos, ventanas, buscar y copiar, pantalla) y, arriba y resaltados, los del modo en el que estás (Jugar: modo
   partida y HUD; Navegar: los de Ágape; Estudiar: apuntes lado a lado y sacar texto). Manteniendo Meta 0,6 s sale sin

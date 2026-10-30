@@ -3,6 +3,8 @@
     "fecha": "2026-10-30",
     "titulo": "30 de octubre",
     "cosas": [
+      {"icono": "isla", "titulo": "El escritorio de Órbita", "como": "Abajo, el orbe del modo en el que estás y, a sus lados, los otros dos en bolitas: un clic te lleva. Al pasar el ratón salen tus ventanas; lo que pasa ahora (volumen, avisos, música) sale encima. Arriba, solo el modo y la hora."},
+      {"icono": "buscar", "titulo": "La Órbita abierta", "como": "Pulsa el orbe o Meta: la paleta arriba, tus apps del modo a la izquierda (fija las que quieras con la chincheta, en «Todas») y a la derecha lo que pasa. Escribe «estudiar», «apagar» o «15% de 80»."},
       {"icono": "jugar", "titulo": "Centro de control, como en la PS5", "como": "En una partida, pulsa el botón PS (o Xbox) del mando: abajo salen lo que suena (⏮ ⏯ ⏭), Discord (apagar tu micro o abrirlo al lado del juego), los avisos que han llegado, el volumen y volver a la consola. Mantén el botón PS y pulsa → o ← para cambiar de canción, o ↑ ↓ para el volumen. Mantenido un rato, trae la consola."},
       {"icono": "salud", "titulo": "HUD pequeño, siempre a la vista", "como": "En los juegos solo salen los FPS, pequeños, arriba a la izquierda. La temperatura aparece arriba a la derecha, en rojo, solo si se calienta; las temperaturas y los ventiladores, siempre, en el centro de control (botón PS). Mayús derecha+F12 lo esconde."},
       {"icono": "pisos", "titulo": "Jugar es la consola", "como": "En Jugar no hay escritorio: si cierras la consola, vuelve sola. Para salir, ↓ en el mando o Meta+F2."},
