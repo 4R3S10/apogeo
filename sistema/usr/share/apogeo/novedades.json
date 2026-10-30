@@ -3,6 +3,7 @@
     "fecha": "2026-10-30",
     "titulo": "30 de octubre",
     "cosas": [
+      {"icono": "llave", "titulo": "El bloqueo, con la hora recortada", "como": "La pantalla de bloqueo ya enseña tu fondo dentro de los números de la hora (antes salían en blanco) y recuerda en qué modo estabas."},
       {"icono": "buscar", "titulo": "La Órbita, en halo", "como": "Al pulsar el orbe ya no se ve doble: el orbe se enciende en su sitio y de él salen tus tarjetas, que se despliegan en abanico sobre un arco de luz (tu nota, la música, los avisos y lo de hoy; en Estudiar, también tu estudio). Al cerrarla, todo vuelve al orbe."},
       {"icono": "imagen", "titulo": "Cambiar de modo, sin tirones", "como": "Cada modo tiene su fondo preparado: al cambiar se funden suavemente, sin pasar por el del modo anterior ni pedir la contraseña. Y Jugar vuelve a abrir la consola."},
       {"icono": "ventana", "titulo": "El panel rápido, en módulos", "como": "El panel de la derecha son ahora piezas de cristal sueltas, como un centro de control: botones redondos, lo que suena con su portada, el volumen y el brillo en barras altas que se arrastran, y tus avisos y el tiempo debajo. Sale solo al pulsar la esquina de la barra de arriba (o Meta+N): empujar el ratón contra el borde ya no lo abre ni hace brillar el lateral."},

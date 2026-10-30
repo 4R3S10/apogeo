@@ -359,8 +359,9 @@ En Órbita, el panel es de **«cristal grafito» (W1)**: neutro, sin el brillo d
   todo») y abajo el tiempo de las próximas horas (en barras) y días.
   Al abrirlo, los avisos cuentan como vistos.
 
-Lo abre el script de KWin `apogeo-bordes` (cambia el panel de «se esconde» a «siempre visible», que es lo que hace sitio,
-y le dice si está abierto: cerrado no pide nada). Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). En el
+Lo abre el script de KWin `apogeo-bordes` (cambia el panel a «siempre visible», que es lo que hace sitio, y le dice si
+está abierto: cerrado no pide nada). Cerrado no se «esconde solo» (KWin le guardaría el borde derecho: brillaría y
+saldría al empujar el ratón): queda en «las ventanas van debajo» y el script lo saca fuera de la pantalla. Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). En el
 tema de Plasma, la raya del foco no sale en los paneles de los lados (cruzaba el panel junto a lo que escribías).
 
 El widget del escritorio es `org.apogeo.escritorio`:

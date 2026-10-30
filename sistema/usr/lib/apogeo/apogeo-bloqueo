@@ -13,8 +13,8 @@ poner() { # poner <nuestro> <carpeta de Plasma> <archivo>
     [ -f "$d/$3.kde" ] && mv -f "$d/$3.kde" "$d/$3"
     return 0
   fi
-  # Si el archivo es de Plasma (no el nuestro), se guarda antes de cambiarlo
-  if [ -f "$d/$3" ] && ! cmp -s "$1" "$d/$3"; then
+  # Si el archivo es de Plasma (no uno nuestro, de esta versión o de otra), se guarda antes de cambiarlo
+  if [ -f "$d/$3" ] && ! cmp -s "$1" "$d/$3" && ! grep -q "de Apogeo" "$d/$3"; then
     cp -f "$d/$3" "$d/$3.kde"
   fi
   install -m644 "$1" "$d/$3"

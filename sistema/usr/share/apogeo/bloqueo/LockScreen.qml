@@ -38,10 +38,17 @@ Item {
         { key: "navegar", name: "Navegar", fondo: "orbitas" },
         { key: "estudiar", name: "Estudiar", fondo: "aurora" }
     ]
+    // La configuración del fondo del bloqueo (org.apogeo.fondo): el bloqueo de KDE da su fondo como «wallpaper» (en
+    // versiones de antes, «wallpaperIntegration»)
+    function fondoCfg() {
+        try { if (typeof wallpaper !== "undefined" && wallpaper && wallpaper.configuration) return wallpaper.configuration; } catch (e) {}
+        try { return wallpaperIntegration.configuration; } catch (e) {}
+        return null;
+    }
     // El piso en el que estabas: el fondo del bloqueo es el suyo (lo pone apogeo-pisos)
     property int floor: {
         try {
-            const cfg = wallpaperIntegration.configuration;
+            const cfg = fondoCfg() || {};
             // El piso lo apunta apogeo-pisos; si no está (versiones de antes), se deduce del fondo
             let k = floors.findIndex(f => f.key === String(cfg.Piso || ""));
             if (k < 0) k = floors.findIndex(f => f.fondo === String(cfg.Estilo || ""));
@@ -179,14 +186,15 @@ Item {
     // El fondo de tu modo, si es una foto (lo apunta apogeo-pisos en el del bloqueo): desenfocado y oscuro detrás de todo
     // y nítido dentro de los números. Con un fondo animado o un vídeo, sobre él, una sombra y los números en blanco
     readonly property string archivo: {
-        try { return String(wallpaperIntegration.configuration.Archivo || ""); } catch (e) { return ""; }
+        const cfg = fondoCfg();
+        return cfg ? String(cfg.Archivo || "") : "";
     }
     readonly property bool foto: /\.(jpe?g|png|webp|avif|jxl|bmp)$/i.test(archivo) && fotoImg.status === Image.Ready
     readonly property color modoColor: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[floors[floor].key]
     Image {
         id: fotoImg
         anchors.fill: parent
-        source: /\.(jpe?g|png|webp|avif|jxl|bmp)$/i.test(root.archivo) ? "file://" + root.archivo : ""
+        source: /\.(jpe?g|png|webp|avif|jxl|bmp)$/i.test(root.archivo) ? "file://" + encodeURI(root.archivo) : ""
         sourceSize: Qt.size(width, height)
         fillMode: Image.PreserveAspectCrop
         asynchronous: true

@@ -10,8 +10,10 @@
 // atajo «apogeo-isla-mostrar» y, al acabar, a «apogeo-isla-soltar» (sin teclas; los invoca por D-Bus).
 //
 // Cómo: Plasma no deja sacar una barra escondida, así que se cambia su modo: la isla, un momento a «las ventanas van
-// debajo» (se ve, sin mover las ventanas); un panel, a «siempre visible» (y así hace sitio). Al panel se le dice si está
-// abierto («abierto» en su configuración): cerrado no gasta nada.
+// debajo» (se ve, sin mover las ventanas); el panel rápido, a «siempre visible» (y así hace sitio). Cerrado no se
+// «esconde solo» (KWin le guardaría el borde: brillaría y saldría al empujar el ratón): queda en «las ventanas van
+// debajo» y este script lo saca fuera de la pantalla; al abrirlo, Plasma lo vuelve a poner en su sitio. Al panel se le
+// dice si está abierto («abierto» en su configuración): cerrado no gasta nada.
 
 const BAND = 26;          // alto (abajo) o ancho (derecha) de la franja que saca la isla, en píxeles
 const KEEP = 110;         // mientras el ratón esté a esta distancia del borde, sigue fuera
@@ -47,12 +49,36 @@ function setPanel(side, on) {
         "  });" +
         "  var w = p.widgets().filter(function (x) { return x.type == '" + PANELS[side] + "'; })[0];" +
         "  if (!w) return;" +
-        "  p.hiding = '" + (on ? "none" : "autohide") + "';" +
+        "  p.hiding = '" + (on ? "none" : "windowsgobelow") + "';" +
         "  w.currentConfigGroup = ['General'];" +
         "  w.writeConfig('abierto', " + on + ");" +
         "  w.reloadConfig();" +
         "});");
+    if (side === "right" && !on) { fuera(); guardar.stop(); guardar.start(); }
 }
+
+// El panel rápido (una barra de Plasma alta y estrecha, en la mitad derecha de su pantalla) y sacarlo de la pantalla
+function esRapido(w) {
+    if (!w || !w.dock || !w.output) return false;
+    const s = w.output.geometry, g = w.frameGeometry;
+    return g.height > s.height / 2 && g.width < s.width / 2 && g.x + g.width / 2 > s.x + s.width / 2;
+}
+function fuera() {
+    if (open.right) return;
+    for (const w of workspace.windowList()) {
+        if (!esRapido(w)) continue;
+        const s = w.output.geometry, g = w.frameGeometry;
+        if (g.x < s.x + s.width) w.frameGeometry = { x: s.x + s.width + 40, y: g.y, width: g.width, height: g.height };
+    }
+}
+// (Plasma lo recoloca a su aire: cada vez que se mueve estando cerrado, otra vez fuera; y un poco después de cerrarlo)
+const guardar = new QTimer();
+guardar.interval = 400;
+guardar.singleShot = true;
+guardar.timeout.connect(fuera);
+function vigilar(w) { if (w && w.dock) w.frameGeometryChanged.connect(function () { if (!open.right && esRapido(w)) fuera(); }); }
+workspace.windowList().forEach(vigilar);
+workspace.windowAdded.connect(function (w) { vigilar(w); fuera(); });
 
 function fullscreen() {
     const w = workspace.activeWindow;

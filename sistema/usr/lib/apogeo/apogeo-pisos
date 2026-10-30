@@ -408,7 +408,7 @@ def setup(bus):
                 p.floating = true;
                 p.height = %d;
                 p.lengthMode = 'fill';
-                p.hiding = 'autohide';
+                p.hiding = 'windowsgobelow';   // (cerrado, apogeo-bordes lo saca de la pantalla)
                 p.addWidget(s[1]);
             });
         """ % PANEL_WIDTH)
