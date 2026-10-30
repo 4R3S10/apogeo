@@ -70,10 +70,12 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
 - **Ventanas:** la barra de ventanas con el título en el centro y sus botones planos (la ✕ se pone roja), del color
   del modo.
 - **Menús y avisos:** tarjetas de cristal del modo.
-- **Inicio de sesión** («8 · Inicio de sesión», con el orbe): arriba la hora grande y la fecha; en el centro una
-  tarjeta de cristal con tu foto, «Hola, …», en qué modo entras y la contraseña. El modo se elige con el orbe, como en
-  el escritorio: el elegido en el centro, con su color, y los otros dos en bolitas a sus lados (← → o un clic). Detrás, el fondo animado de ese modo moviéndose, con sus
-  colores (con «Del fondo», los de cada modo): al elegir otro modo, cambia. Esa pantalla no puede leer tus ajustes, así
+- **Inicio de sesión** («N2 · Hora recortada», como el bloqueo): detrás, la Tierra vista desde el espacio (la del
+  arranque, `tierra.png`), desenfocada y oscura; la hora gigante recortada en ella (dentro de los números se ve
+  nítida), la fecha debajo y una línea fina para la contraseña, con el cursor del color del modo. Arriba a la izquierda,
+  los modos: en el que entras, en su color (clic, ← → o ↑ ↓). Con más de una cuenta, su nombre encima de la contraseña
+  (clic: la siguiente). Sin la foto de la Tierra (aún no se ha bajado), el fondo animado del modo y la hora en blanco.
+  Esa pantalla no puede leer tus ajustes, así
   que `apogeo-aspecto-login` le deja en `/var/lib/apogeo/aspecto-login.json` solo los colores (también por modo) y qué
   fondo animado lleva cada uno. El bloqueo: tu símbolo (ver abajo).
 - **Carpetas:** Papirus con las carpetas del acento (un tema de iconos por color que hereda de Papirus). Cursor
@@ -81,8 +83,9 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
 - **Sonidos:** propios y suaves (marimba de madera con un poco de sala) para avisos, errores, USB, volumen, capturas y lo
   hecho; al entrar, dos notas suaves que bajan un poco, sobre un acorde cálido. Se sintetizan al construir el paquete
   (`herramientas/sonidos.py`).
-- **Fondos de serie (de Aura, Wallhaven):** Navegar una nebulosa azul (`4ddk8g`), Estudiar un atardecer mínimo oscuro
-  (`mdjrqy`) y Jugar nubes violeta (`k88m2m`). No van en el paquete (son de sus autores): `apogeo_fondos.bajar_de_serie`
+- **Fondos de serie (de Aura, Wallhaven), todos del espacio:** Navegar una nebulosa azul (`4ddk8g`), Estudiar una
+  nebulosa ámbar (`2eqjpm`, antes el atardecer `mdjrqy`, que se cambia solo si seguía puesto) y Jugar nubes violeta
+  (`k88m2m`). No van en el paquete (son de sus autores): `apogeo_fondos.bajar_de_serie`
   los baja una vez al entrar a `Imágenes/Wallpapers/Aura` y los pone donde seguía el animado de serie; si no hay
   internet, siguen los animados.
 - **Arranque y apagado:** el Núcleo sobre **la Tierra vista desde la Luna** (Wallhaven `k7zv97`, oscurecida; la baja

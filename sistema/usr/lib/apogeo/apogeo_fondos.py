@@ -22,11 +22,21 @@ _busy = threading.Lock()  # (una tanda de miniaturas a la vez)
 THUMBS = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(comun.HOME, '.cache')), 'apogeo', 'miniaturas')
 
 
-# Los fondos de serie de Órbita, de Wallhaven (como lo que bajas con Aura): Navegar, la nebulosa azul; Estudiar, el
-# atardecer mínimo; Jugar, las nubes violeta. No se pueden repartir con Apogeo: se bajan a tu biblioteca de Aura la
-# primera vez que entras con internet (apogeo-pisos) y van a su modo si aún tenía el animado de serie (el de antes).
-DE_SERIE = {'navegar': ('4ddk8g', 'orbitas'), 'estudiar': ('mdjrqy', 'aurora'), 'jugar': ('k88m2m', 'nebulosa')}
+# Los fondos de serie de Órbita, de Wallhaven (como lo que bajas con Aura), todos del espacio (al entrar vienes de la
+# Tierra): Navegar, la nebulosa azul; Estudiar, la nebulosa ámbar; Jugar, las nubes violeta. No se pueden repartir con
+# Apogeo: se bajan a tu biblioteca de Aura la primera vez que entras con internet (apogeo-pisos) y van a su modo si aún
+# tenía el animado de serie (el de antes) o un fondo de serie anterior (ANTES).
+DE_SERIE = {'navegar': ('4ddk8g', 'orbitas'), 'estudiar': ('2eqjpm', 'aurora'), 'jugar': ('k88m2m', 'nebulosa')}
+ANTES = {'estudiar': ('mdjrqy',)}  # (el atardecer, que no era del espacio)
 _AGENTE = 'Apogeo (https://github.com/4R3S10/apogeo)'
+
+
+def es_de_serie_antiguo(floor, fondo):
+    """Si ese fondo es lo que ese piso traía de serie antes (el animado o una foto de serie anterior)."""
+    if fondo == DE_SERIE[floor][1]:
+        return True
+    name = os.path.basename(str(fondo or ''))
+    return any(name.startswith(f'wallhaven-{w}.') for w in ANTES.get(floor, ()))
 
 
 def _bajar(url, timeout):

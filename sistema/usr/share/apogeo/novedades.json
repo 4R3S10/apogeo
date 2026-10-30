@@ -1,5 +1,13 @@
 [
   {
+    "fecha": "2026-10-31",
+    "titulo": "31 de octubre",
+    "cosas": [
+      {"icono": "llave", "titulo": "Entrar, desde el espacio", "como": "La pantalla para entrar al encender es ahora como el bloqueo: la Tierra vista desde el espacio, tu hora recortada en ella, los modos arriba a la izquierda y una línea fina para la contraseña."},
+      {"icono": "imagen", "titulo": "Estudiar, en el espacio", "como": "Estudiar estrena una nebulosa ámbar, del mismo estilo que las de Navegar y Jugar (se baja sola y cambia el atardecer si aún lo tenías)."}
+    ]
+  },
+  {
     "fecha": "2026-10-30",
     "titulo": "30 de octubre",
     "cosas": [

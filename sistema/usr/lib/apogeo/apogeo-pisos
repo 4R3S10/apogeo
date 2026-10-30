@@ -505,7 +505,7 @@ PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la 
 PANEL_WIDTH = 376  # su ancho
 ORB = 3  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo; 2: sin el panel de widgets;
 # 3: tus ventanas arriba, en el centro)
-DEFAULT_WALLPAPERS = 1  # igual, para los fondos de serie de Órbita de Wallhaven (se bajan una vez)
+DEFAULT_WALLPAPERS = 2  # igual, para los fondos de serie de Órbita de Wallhaven (se bajan una vez)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
 AESTHETICS = 18  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita;
 # 18: Órbita también para quien se quedó en el aspecto de antes)
@@ -1299,7 +1299,8 @@ def real_gpu():
 
 def default_wallpapers():
     """Los fondos de serie de Órbita (apogeo_fondos.DE_SERIE): se bajan una vez a tu biblioteca de Aura y van a su modo
-    si aún tenía el animado de serie. Al guardar los ajustes se ponen solos. Sin internet, en la próxima sesión."""
+    si aún tenía el animado de serie o un fondo de serie anterior (el atardecer de Estudiar: 2). Al guardar los ajustes
+    se ponen solos. Sin internet, en la próxima sesión."""
     if load_state().get('fondos_serie', 0) >= DEFAULT_WALLPAPERS:
         return False
 
@@ -1314,7 +1315,7 @@ def default_wallpapers():
             st = ajustes.load()
             changed = False
             for floor, path in got.items():
-                if st['pisos'][floor]['fondo'] == apogeo_fondos.DE_SERIE[floor][1]:
+                if st['pisos'][floor]['fondo'] != path and apogeo_fondos.es_de_serie_antiguo(floor, st['pisos'][floor]['fondo']):
                     st['pisos'][floor]['fondo'] = path
                     changed = True
             if changed:

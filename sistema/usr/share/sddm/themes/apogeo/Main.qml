@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 
-// Inicio de sesión de Órbita («8 · Inicio de sesión»): detrás, el fondo animado del modo que eliges, moviéndose y con sus
-// colores (cambian al elegir otro); arriba la hora grande y la fecha; en el centro, una tarjeta de cristal con tu foto,
-// tu nombre, la contraseña y en qué modo entras: el orbe, como en el escritorio (el modo elegido en el centro y los otros
-// dos en bolitas a sus lados; ← → o un clic en una bolita). Cada modo es una sesión («Apogeo · Jugar», etc.): así la elección llega
-// a la sesión sin que esta pantalla toque tus archivos.
+// Inicio de sesión de Órbita, como el bloqueo («N2 · Hora recortada»): detrás, la Tierra vista desde el espacio (la del
+// arranque, tierra.png del tema de Plymouth: al entrar vienes de ella); la hora gigante recortada en ella (dentro de los
+// números se ve nítida; fuera, desenfocada y oscura), la fecha debajo y una línea para la contraseña. Arriba a la
+// izquierda, los modos: en el que entras, en su color (clic, ← → o ↑ ↓). Sin la foto de la Tierra (aún no se ha bajado),
+// el fondo animado del modo y los números en blanco. Cada modo es una sesión («Apogeo · Jugar», etc.): así la elección
+// llega a la sesión sin que esta pantalla toque tus archivos.
 Rectangle {
     id: root
     width: 1920
@@ -88,16 +89,17 @@ Rectangle {
         }
     }
 
-    // El fondo animado del piso elegido (el mismo sombreador que el escritorio), moviéndose a 30 imágenes por segundo
-    // (sin gráfica de verdad, quieto). Al cambiar de piso, se funde con el nuevo.
+    // Sin la Tierra: el fondo animado del piso elegido (el mismo sombreador que el escritorio), moviéndose a 30 imágenes
+    // por segundo (sin gráfica de verdad, quieto). Al cambiar de piso, se funde con el nuevo.
     property real time: 40
     Timer {
         interval: 33; repeat: true
-        running: GraphicsInfo.api !== GraphicsInfo.Software
+        running: !root.foto && GraphicsInfo.api !== GraphicsInfo.Software
         onTriggered: root.time += 0.033
     }
     ShaderEffect {
         id: fx
+        visible: !root.foto
         width: Math.round(root.width / 3)
         height: Math.round(root.height / 3)
         property real t: root.time
@@ -116,6 +118,7 @@ Rectangle {
     ShaderEffectSource {
         id: fxView
         anchors.fill: parent
+        visible: !root.foto
         sourceItem: fx
         textureSize: Qt.size(fx.width, fx.height)
         smooth: true
@@ -127,247 +130,207 @@ Rectangle {
         NumberAnimation { target: fxView; property: "opacity"; to: 0.35; duration: 120 }
         NumberAnimation { target: fxView; property: "opacity"; to: 1; duration: 420; easing.type: Easing.OutCubic }
     }
-    Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.22 }
+    Rectangle { anchors.fill: parent; visible: !root.foto; color: "#05080c"; opacity: 0.45 }
 
-    // La marca de Órbita, arriba a la izquierda (el Núcleo y su nombre)
-    Row {
-        x: 34; y: 28
-        spacing: 10
-        Image {
-            anchors.verticalCenter: parent.verticalCenter
-            width: 30; height: 30
-            source: "logo.svg"
-            sourceSize: Qt.size(60, 60)
-        }
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: "ÓRBITA"
-            color: root.muted
-            font { family: "Geist Mono"; pixelSize: 12; weight: Font.DemiBold; letterSpacing: 3.4 }
-        }
+    // La Tierra desde el espacio: desenfocada y oscura detrás de todo, nítida dentro de los números
+    readonly property bool foto: tierra.status === Image.Ready
+    Image {
+        id: tierra
+        anchors.fill: parent
+        source: "file:///usr/share/plymouth/themes/apogeo/tierra.png"
+        sourceSize: Qt.size(width, height)
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        visible: false
     }
-
-    // La hora grande y la fecha, arriba en el centro
-    Column {
-        id: clockCol
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height * 0.1
-        spacing: 2
-        Text {
-            id: bigClock
-            anchors.horizontalCenter: parent.horizontalCenter
-            color: root.text
-            font { family: root.font; pixelSize: 96; weight: Font.ExtraBold; letterSpacing: -2 }
-            style: Text.Raised; styleColor: Qt.rgba(0, 0, 0, 0.25)
-            function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
-            Component.onCompleted: update()
-            Timer { interval: 5000; running: true; repeat: true; onTriggered: bigClock.update() }
-        }
-        Text {
-            id: date
-            anchors.horizontalCenter: parent.horizontalCenter
-            color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.85)
-            font { family: root.font; pixelSize: 20; weight: Font.DemiBold }
-            function update() {
-                const d = Qt.locale("es_ES").toString(new Date(), "dddd d 'de' MMMM");
-                text = d.charAt(0).toUpperCase() + d.slice(1);
-            }
-            Component.onCompleted: update()
-            Timer { interval: 60000; running: true; repeat: true; onTriggered: date.update() }
-        }
+    MultiEffect {
+        anchors.fill: parent
+        source: tierra
+        visible: root.foto
+        blurEnabled: true; blur: 1; blurMax: 64
+        brightness: -0.18
+        saturation: -0.1
     }
-
-    RectangularShadow {
-        anchors.fill: card
-        offset.y: 16
-        blur: 44
-        radius: card.radius
-        color: Qt.rgba(0, 0, 0, 0.45)
-    }
-    // La tarjeta de cristal, en el centro (un poco por debajo de la mitad)
+    // (un poco de oscuridad arriba y abajo, para que la hora flote)
     Rectangle {
-        id: card
+        anchors.fill: parent
+        gradient: Gradient {
+            GradientStop { position: 0; color: Qt.rgba(0.02, 0.03, 0.05, 0.35) }
+            GradientStop { position: 0.5; color: "transparent" }
+            GradientStop { position: 1; color: Qt.rgba(0.02, 0.03, 0.05, 0.55) }
+        }
+    }
+    MouseArea { anchors.fill: parent; onClicked: password.forceActiveFocus() }
+
+    // ---------- La hora recortada ----------
+    readonly property real tam: Math.min(400, width / 3.2, height / 2.3)
+    property string hora: Qt.formatDateTime(new Date(), "HH:mm")
+    property string fecha: Qt.locale("es_ES").toString(new Date(), "dddd, d 'de' MMMM")
+    Timer {
+        interval: 2000; running: true; repeat: true
+        onTriggered: {
+            root.hora = Qt.formatDateTime(new Date(), "HH:mm");
+            root.fecha = Qt.locale("es_ES").toString(new Date(), "dddd, d 'de' MMMM");
+        }
+    }
+    Item {
+        id: horaCaja
+        width: parent.width
+        height: root.tam * 1.05
+        y: parent.height * 0.38 - height / 2
+    }
+    component Numeros: Text {
+        x: 0; y: horaCaja.y
+        width: root.width; height: horaCaja.height
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        text: root.hora
+        font { family: root.font; pixelSize: root.tam; weight: Font.ExtraBold; letterSpacing: -root.tam * 0.05 }
+    }
+    Item {
+        id: mascara
+        anchors.fill: parent
+        visible: false
+        layer.enabled: true
+        Numeros { color: "white" }
+    }
+    Item {
+        anchors.fill: parent
+        visible: root.foto
+        MultiEffect {
+            anchors.fill: parent
+            source: tierra
+            maskEnabled: true
+            maskSource: mascara
+        }
+        layer.enabled: true
+        layer.effect: MultiEffect { shadowEnabled: true; shadowColor: root.accent; shadowBlur: 1; shadowOpacity: 0.35; shadowHorizontalOffset: 0; shadowVerticalOffset: 0 }
+    }
+    Numeros {
+        visible: !root.foto
+        color: Qt.rgba(1, 1, 1, 0.92)
+        layer.enabled: true
+        layer.effect: MultiEffect { shadowEnabled: true; shadowColor: root.accent; shadowBlur: 1; shadowOpacity: 0.4; shadowHorizontalOffset: 0; shadowVerticalOffset: 0 }
+    }
+    Numeros {
+        color: "transparent"
+        style: Text.Outline
+        styleColor: Qt.rgba(1, 1, 1, 0.35)
+    }
+    Text {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: Math.max(clockCol.y + clockCol.height + 28, Math.round(parent.height * 0.56 - height / 2))
-        width: 440
-        height: inner.implicitHeight + 72
-        radius: 26
-        readonly property color sup: Qt.tint(root.c("superficie", "#0f131a"), Qt.rgba(root.text.r, root.text.g, root.text.b, 0.03))
-        color: Qt.rgba(sup.r, sup.g, sup.b, 0.62)
-        border.color: root.border
-        Rectangle { // el brillo de arriba, del color del piso
-            x: parent.radius; y: 1
-            width: parent.width - 2 * parent.radius; height: 1
-            color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.55)
-        }
+        y: horaCaja.y + horaCaja.height + 18
+        text: root.fecha
+        color: "#dfe5ee"
+        font { family: root.font; pixelSize: 26; weight: Font.Light; letterSpacing: 0.5 }
+        layer.enabled: true
+        layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.6); shadowBlur: 0.6; shadowVerticalOffset: 2 }
+    }
 
-        Column {
-            id: inner
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: 40
-            y: 36
-            spacing: 14
-
-            Column {
-                width: parent.width
-                spacing: 12
-                Item { // tu foto (la de la bienvenida o Ajustes), en círculo con el borde del color del piso; sin foto, el logo
-                    id: face
-                    width: 96; height: 96
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    Image {
-                        anchors.centerIn: parent
-                        visible: faceImg.status !== Image.Ready
-                        width: 64; height: 64
-                        source: "logo.svg"
-                        sourceSize: Qt.size(128, 128)
-                    }
-                    Image {
-                        id: faceImg
-                        anchors.fill: parent
-                        source: {
-                            // (sin foto propia, SDDM da su cara gris de siempre: esa no se pone)
-                            const f = root.userIcons[root.user] || "";
-                            return f === "" || f.indexOf("/sddm/faces/") >= 0 ? "" : f.startsWith("/") ? "file://" + f : f;
-                        }
-                        sourceSize: Qt.size(96, 96)
-                        fillMode: Image.PreserveAspectCrop
-                        visible: false
-                    }
-                    Rectangle { id: faceMask; anchors.fill: parent; radius: width / 2; visible: false; layer.enabled: true }
-                    MultiEffect { anchors.fill: parent; source: faceImg; maskEnabled: true; maskSource: faceMask }
-                    Rectangle { visible: faceImg.status === Image.Ready; anchors.fill: parent; anchors.margins: -4; radius: width / 2; color: "transparent"; border.width: 3; border.color: root.accent }
-                }
+    // ---------- Arriba a la izquierda: los modos (en el que entras, en su color) ----------
+    Row {
+        x: 48; y: 40
+        spacing: 22
+        Repeater {
+            model: root.floors
+            delegate: Row {
+                id: modoFila
+                required property var modelData
+                required property int index
+                readonly property bool on: index === root.floor
+                readonly property color c: root.modeColor(index)
+                spacing: 8
+                opacity: on ? 1 : modoArea.containsMouse ? 0.8 : 0.45
+                Behavior on opacity { NumberAnimation { duration: 160 } }
+                Rectangle { width: 6; height: 6; radius: 3; color: modoFila.c; visible: modoFila.on; anchors.verticalCenter: parent.verticalCenter }
                 Text {
-                    text: "Hola, " + (root.userReal[root.user] || "")
-                    color: root.text
-                    width: parent.width
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    font { family: root.font; pixelSize: 26; weight: Font.Bold }
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: userModel.count > 1
-                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: root.user = (root.user + 1) % userModel.count // otro usuario
-                    }
+                    text: modoFila.modelData.name.toUpperCase()
+                    color: modoFila.on ? modoFila.c : "#cfd6e0"
+                    font { family: "Geist Mono"; pixelSize: 12; letterSpacing: 3 }
+                    MouseArea { id: modoArea; anchors.fill: parent; anchors.margins: -8; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.floor = modoFila.index; password.forceActiveFocus(); } }
                 }
-            }
-            Text {
-                text: userModel.count > 1 ? "¿En qué modo entras? ← → (pulsa tu nombre para cambiar de usuario)" : "¿En qué modo entras?  ← →"
-                color: root.muted
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                font { family: root.font; pixelSize: 15 }
-            }
-
-            // Los modos: el orbe del elegido en el centro y los otros dos en bolitas a sus lados (Jugar, Navegar y
-            // Estudiar dan la vuelta: ← a la izquierda, → a la derecha). Igual que abajo en el escritorio.
-            Item {
-                id: orbs
-                width: parent.width
-                height: 104
-                Repeater {
-                    model: root.floors
-                    delegate: Item {
-                        id: orb
-                        required property var modelData
-                        required property int index
-                        // -1 a la izquierda, 0 en el centro, 1 a la derecha
-                        readonly property int slot: ((index - root.floor + 4) % 3) - 1
-                        readonly property bool on: slot === 0
-                        readonly property color tint: root.modeColor(index)
-                        readonly property real size: on ? 58 : 28
-                        width: 120; height: orbs.height
-                        x: orbs.width / 2 - width / 2 + slot * 118
-                        z: on ? 2 : 1
-                        Behavior on x { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
-                        RectangularShadow { // el halo del elegido
-                            anchors.fill: disc
-                            radius: width / 2
-                            blur: 26; spread: -2
-                            color: orb.tint
-                            opacity: orb.on ? 0.55 : 0
-                            Behavior on opacity { NumberAnimation { duration: 300 } }
-                        }
-                        Rectangle {
-                            id: disc
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            y: orb.on ? 4 : 19
-                            width: orb.size; height: width; radius: width / 2
-                            color: orb.on ? "#0b0e14" : "#151b24"
-                            border.width: orb.on ? 2 : 1.5
-                            border.color: orb.on || orbArea.containsMouse ? orb.tint : Qt.rgba(orb.tint.r, orb.tint.g, orb.tint.b, 0.6)
-                            Behavior on width { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
-                            Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
-                            Rectangle { // el núcleo
-                                anchors.centerIn: parent
-                                width: orb.on ? 16 : 0; height: width; radius: width / 2
-                                color: "#e9edf5"
-                                Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
-                            }
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            y: 72
-                            text: orb.modelData.name
-                            color: orb.on ? orb.tint : root.muted
-                            font {
-                                family: "Geist Mono"; pixelSize: orb.on ? 13 : 11
-                                weight: orb.on ? Font.Bold : Font.DemiBold
-                                letterSpacing: orb.on ? 2.6 : 1.4
-                                capitalization: Font.AllUppercase
-                            }
-                        }
-                        MouseArea {
-                            id: orbArea
-                            anchors.fill: disc
-                            anchors.margins: -10
-                            hoverEnabled: true
-                            cursorShape: orb.on ? Qt.ArrowCursor : Qt.PointingHandCursor
-                            onClicked: { root.floor = orb.index; password.forceActiveFocus(); }
-                        }
-                    }
-                }
-            }
-
-            Item { width: 1; height: 6 }
-
-            TextField {
-                id: password
-                width: parent.width
-                height: 44
-                echoMode: TextInput.Password
-                placeholderText: "Contraseña"
-                placeholderTextColor: root.muted
-                color: root.text
-                font { family: root.font; pixelSize: 15 }
-                leftPadding: 14
-                focus: true
-                background: Rectangle {
-                    radius: 14
-                    color: root.hover
-                    border.color: password.activeFocus ? root.accent : "transparent"
-                    border.width: 1
-                }
-                onAccepted: root.login()
-                // ← → giran los modos (en una contraseña con puntos, mover el cursor no sirve de mucho)
-                Keys.onLeftPressed: root.floor = (root.floor + 2) % 3
-                Keys.onRightPressed: root.floor = (root.floor + 1) % 3
-                Keys.onUpPressed: root.floor = (root.floor + 2) % 3
-                Keys.onDownPressed: root.floor = (root.floor + 1) % 3
-            }
-
-            Text {
-                text: root.error
-                visible: root.error !== ""
-                color: "#ff6b81"
-                font { family: root.font; pixelSize: 14 }
             }
         }
+    }
 
+    // ---------- Abajo: quién entra (solo si hay más de una cuenta) y la contraseña, una línea con el cursor del modo ----------
+    Text {
+        visible: userModel.count > 1
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: entrada.y - 34
+        text: (root.userReal[root.user] || "") + "  ⇄"
+        color: Qt.rgba(1, 1, 1, 0.7)
+        font { family: root.font; pixelSize: 15 }
+        MouseArea {
+            anchors.fill: parent
+            anchors.margins: -6
+            cursorShape: Qt.PointingHandCursor
+            onClicked: { root.user = (root.user + 1) % userModel.count; password.forceActiveFocus(); } // otra cuenta
+        }
+    }
+    Item {
+        id: entrada
+        width: Math.min(420, parent.width - 80)
+        height: 40
+        x: (parent.width - width) / 2
+        y: parent.height - 120
+        SequentialAnimation {
+            id: shake
+            loops: 2
+            NumberAnimation { target: entrada; property: "x"; to: (root.width - entrada.width) / 2 + 12; duration: 50 }
+            NumberAnimation { target: entrada; property: "x"; to: (root.width - entrada.width) / 2 - 12; duration: 80 }
+            NumberAnimation { target: entrada; property: "x"; to: (root.width - entrada.width) / 2; duration: 50 }
+        }
+        Text {
+            id: etiqueta
+            anchors.verticalCenter: parent.verticalCenter
+            text: "CONTRASEÑA"
+            color: Qt.rgba(1, 1, 1, 0.55)
+            font { family: "Geist Mono"; pixelSize: 11; letterSpacing: 2.5 }
+        }
+        TextField {
+            id: password
+            anchors.left: etiqueta.right; anchors.leftMargin: 14
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            height: 40
+            echoMode: TextInput.Password
+            passwordCharacter: "●"
+            color: "#eceef3"
+            font { family: "Geist Mono"; pixelSize: 15; letterSpacing: 4 }
+            leftPadding: 2
+            focus: true
+            cursorDelegate: Rectangle {
+                width: 2
+                color: root.accent
+                visible: password.cursorVisible
+            }
+            background: Item {
+                Rectangle {
+                    anchors.bottom: parent.bottom; anchors.bottomMargin: 8
+                    width: parent.width; height: 1
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0; color: password.activeFocus ? root.accent : Qt.rgba(1, 1, 1, 0.45) }
+                        GradientStop { position: 1; color: Qt.rgba(1, 1, 1, 0.12) }
+                    }
+                }
+            }
+            onAccepted: root.login()
+            // ← → (o ↑ ↓) cambian el modo en el que entras (en una contraseña con puntos, mover el cursor no sirve de mucho)
+            Keys.onLeftPressed: root.floor = (root.floor + 2) % 3
+            Keys.onRightPressed: root.floor = (root.floor + 1) % 3
+            Keys.onUpPressed: root.floor = (root.floor + 2) % 3
+            Keys.onDownPressed: root.floor = (root.floor + 1) % 3
+        }
+    }
+    Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: entrada.y + entrada.height + 10
+        text: root.error
+        visible: root.error !== ""
+        color: "#ff6b81"
+        font { family: root.font; pixelSize: 13 }
     }
 
     // Reiniciar y apagar (los botones de Ágape), abajo a la derecha
@@ -420,6 +383,7 @@ Rectangle {
         function onLoginFailed() {
             root.error = "Contraseña incorrecta";
             password.text = "";
+            shake.restart();
             password.forceActiveFocus();
         }
     }
