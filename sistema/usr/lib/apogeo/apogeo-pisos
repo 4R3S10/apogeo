@@ -392,7 +392,7 @@ def setup(bus):
         st['cristal'] = CRYSTAL
     if st.get('paneles', 0) < PANELS:
         # «Nivel pro»: fuera la columna de pisos (los pisos van arriba del panel rápido) y, a la derecha, el panel rápido
-        # alto. Escondido: lo saca el script apogeo-bordes (Meta+N, la barra de arriba o el ratón contra el borde) y,
+        # alto. Escondido: lo saca el script apogeo-bordes (Meta+N o un clic en la esquina de la barra de arriba) y,
         # abierto, hace sitio. (El de widgets de la izquierda ya no está: lo suyo va en la Órbita abierta.)
         plasma_script(bus, """
             panels().forEach(function (p) {

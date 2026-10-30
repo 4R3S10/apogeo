@@ -4,10 +4,10 @@ import org.kde.milou as Milou
 import org.kde.kirigami as Kirigami
 import Apogeo
 
-// La Órbita abierta («G3 · Constelación»): al pulsar el orbe o Meta. En el centro, unida al orbe por un haz de luz, la
-// cubierta con tus apps fijadas del modo y el buscador; alrededor, unidos al orbe por hilos de luz, los satélites con lo
-// que pasa ahora: lo que suena (con su portada y sus colores), los avisos, tu nota (con sus casillas), lo que queda hoy
-// en tu calendario y, en Estudiar, tu estudio. Un clic en la nota, el calendario o el estudio los abre enteros (Esc
+// La Órbita abierta («C2 · Halo»): al pulsar el orbe o Meta. En el centro, unida al orbe por un haz de luz, la cubierta
+// con tus apps fijadas del modo y el buscador; encima, en abanico sobre un arco de luz alrededor del orbe, los satélites
+// con lo que pasa ahora: tu nota (con sus casillas), lo que suena (con su portada y sus colores), en Estudiar tu estudio,
+// los avisos (clic: abrirlo; ✕: quitarlo) y lo que queda hoy en tu calendario. Al abrir salen del orbe y se despliegan. Un clic en la nota, el calendario o el estudio los abre enteros (Esc
 // vuelve). Las apps se fijan desde el buscador (la chincheta de cada una, o Ctrl+Intro) y se quitan con su chincheta o
 // el clic derecho. Al escribir, encima del campo y en una sola lista: tus apps, la cuenta (Intro la copia), las órdenes
 // (los modos, apagar, reiniciar, bloquear, ajustes…), lo que encuentran los buscadores de KDE (Milou), tus archivos por
@@ -45,6 +45,31 @@ Window {
     property var estudio: ({})
     property real ahora: Date.now()
 
+    // El halo: los satélites, del mismo ancho y alto, en abanico sobre un arco alrededor del orbe (un poco girados
+    // hacia él). En Estudiar son cinco; si no, cuatro. El radio se ajusta para no tapar la cubierta ni salirse.
+    readonly property bool cinco: modo === "estudiar"
+    readonly property var angulos: cinco ? [-60, -30, 0, 30, 60] : [-48, -16, 16, 48]
+    readonly property real anchoSat: u(cinco ? 232 : 250)
+    readonly property real altoSat: Math.max(u(150), musica.natural, avisosSat.natural, nota.natural, calendario.natural,
+                                             cinco ? estudioSat.natural : 0)
+    readonly property point centro: Qt.point(orbe.x + orbe.width / 2, orbe.y + orbe.height / 2)
+    readonly property real radio: {
+        const rad = angulos.map(a => a * Math.PI / 180);
+        const techoMax = centro.y - techo * 0.6 - altoSat / 2;
+        const ladoMax = (width / 2 - u(16) - anchoSat * 0.62) / Math.sin(rad[rad.length - 1]);
+        // (los que caen encima de la cubierta, por encima de ella)
+        const deckArriba = orbe.y - u(44) - deck.height, pref = u(cinco ? 500 : 470);
+        let r = pref;
+        for (const a of rad)
+            if (Math.abs(Math.sin(a)) * pref < deck.width / 2 + anchoSat / 2)
+                r = Math.max(r, (centro.y - deckArriba + altoSat / 2 + u(28)) / Math.cos(a));
+        return Math.max(u(260), Math.min(r, techoMax, ladoMax));
+    }
+    // Se esconden al escribir o al abrir uno entero
+    property real verS: verSatelites ? 1 : 0
+    Behavior on verS { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+    function rgba(c, a) { return "rgba(" + Math.round(c.r * 255) + "," + Math.round(c.g * 255) + "," + Math.round(c.b * 255) + "," + a + ")" }
+
     // Sin escribir: tus fijadas y «+»
     readonly property var flat: fijadas.concat([{ id: "", nombre: "Fijar", icono: "" }])
     // Al escribir, en orden: tus apps, la cuenta (0 o 1), las órdenes, lo de KDE, tus archivos y la web
@@ -81,18 +106,17 @@ Window {
         if (modo === "estudiar") datos.pedir("Estudio", [], d => { if (d) win.estudio = d; });
     }
     // Dónde está el orbe de la isla (y sus bolitas), en esta ventana: la Órbita sale de él. Sin saberlo, abajo en el centro
-    property point orbeEn: Qt.point(width / 2, height - 37)
-    property var bolasEn: [Qt.point(width / 2 - 47, height - 44), Qt.point(width / 2 + 47, height - 44)]
+    // (lo que dice la isla, ya en esta ventana: [orbe x, y, bolita izquierda x, y, derecha x, y], o nada)
+    property var orbeDato: null
+    readonly property point orbeEn: orbeDato ? Qt.point(orbeDato[0], orbeDato[1]) : Qt.point(width / 2, height - 37)
+    readonly property var bolasEn: orbeDato ? [Qt.point(orbeDato[2], orbeDato[3]), Qt.point(orbeDato[4], orbeDato[5])]
+                                            : [Qt.point(width / 2 - 47, height - 44), Qt.point(width / 2 + 47, height - 44)]
     function leerOrbe() {
         const n = String(buscador.donde() || "").split(",").map(Number);
-        const sx = win.screen ? win.screen.virtualX : 0, sy = win.screen ? win.screen.virtualY : 0;
-        if (n.length === 6 && n.every(v => !isNaN(v)) && n[1] - sy > height / 2 && n[1] - sy < height) {
-            orbeEn = Qt.point(n[0] - sx, n[1] - sy);
-            bolasEn = [Qt.point(n[2] - sx, n[3] - sy), Qt.point(n[4] - sx, n[5] - sy)];
-        } else {
-            orbeEn = Qt.point(width / 2, height - 37);
-            bolasEn = [Qt.point(width / 2 - 47, height - 44), Qt.point(width / 2 + 47, height - 44)];
-        }
+        const p = win.screen;
+        const sx = p ? p.virtualX : 0, sy = p ? p.virtualY : 0, alto = p ? p.height : height;
+        orbeDato = n.length === 6 && n.every(v => !isNaN(v)) && n[1] - sy > alto / 2 && n[1] - sy < alto
+                   ? n.map((v, i) => v - (i % 2 ? sy : sx)) : null;
     }
     function open() {
         cierre.stop();
@@ -277,12 +301,54 @@ Window {
         ScriptAction { script: win.cerrado() }
     }
 
-    // ---------- Los hilos de luz, del orbe a cada satélite (y el haz hasta la cubierta) ----------
-    Hilo { b: Qt.point(musica.x + musica.width / 2, musica.y + musica.height); visible: musica.visible; opacity: musica.opacity; retraso: 0 }
-    Hilo { b: Qt.point(avisosSat.x + avisosSat.width / 2, avisosSat.y + avisosSat.height); visible: avisosSat.visible; opacity: avisosSat.opacity; retraso: 600 }
-    Hilo { b: Qt.point(nota.x + nota.width, nota.y + nota.height / 2); visible: nota.visible; opacity: nota.opacity; retraso: 300 }
-    Hilo { b: Qt.point(calendario.x, calendario.y + calendario.height / 2); visible: calendario.visible; opacity: calendario.opacity; retraso: 900 }
-    Hilo { b: Qt.point(estudioSat.x + estudioSat.width / 2, estudioSat.y + estudioSat.height); visible: estudioSat.visible; opacity: estudioSat.opacity; retraso: 1200 }
+    // ---------- El arco de luz del halo (sale del orbe con ellos y una chispa lo recorre) y el haz hasta la cubierta ----------
+    Canvas {
+        id: arco
+        anchors.fill: parent
+        visible: opacity > 0.01
+        opacity: win.verS
+        readonly property real r: win.radio * (0.6 + 0.4 * win.llegada)
+        readonly property real tope: (win.angulos[win.angulos.length - 1] + 22) * win.llegada
+        readonly property string pinta: [r, tope, win.centro.x, win.centro.y, Tema.acento].join()
+        onPintaChanged: requestPaint()
+        onPaint: {
+            const c = getContext("2d");
+            c.reset();
+            if (tope <= 0) return;
+            const t = tope * Math.PI / 180, cx = win.centro.x, cy = win.centro.y;
+            const g = c.createLinearGradient(cx - r * Math.sin(t), 0, cx + r * Math.sin(t), 0);
+            g.addColorStop(0, win.rgba(Tema.acento, 0));
+            g.addColorStop(0.5, win.rgba(Tema.acento, 0.9));
+            g.addColorStop(1, win.rgba(Tema.acento, 0));
+            c.strokeStyle = g;
+            c.lineCap = "round";
+            for (const [ancho, alfa] of [[win.u(10), 0.1], [win.u(4), 0.22], [1.6, 1]]) {
+                c.globalAlpha = alfa;
+                c.lineWidth = ancho;
+                c.beginPath();
+                c.arc(cx, cy, r, -Math.PI / 2 - t, -Math.PI / 2 + t, false);
+                c.stroke();
+            }
+        }
+    }
+    Rectangle {   // la chispa: cruza el arco de punta a punta
+        id: chispa
+        property real p: 0
+        readonly property real a: (win.angulos[win.angulos.length - 1] + 22) * (2 * p - 1) * Math.PI / 180
+        visible: arco.visible && win.llegada === 1
+        x: win.centro.x + win.radio * Math.sin(a) - width / 2
+        y: win.centro.y - win.radio * Math.cos(a) - height / 2
+        width: win.u(5); height: width; radius: width / 2
+        color: Qt.lighter(Tema.acento, 1.35)
+        opacity: arco.opacity * Math.sin(p * Math.PI)
+        Rectangle { anchors.centerIn: parent; width: parent.width * 4; height: width; radius: width / 2; color: Tema.acento; opacity: 0.25 }
+        SequentialAnimation on p {
+            running: chispa.visible
+            loops: Animation.Infinite
+            NumberAnimation { from: 0; to: 1; duration: 4200; easing.type: Easing.InOutSine }
+            PauseAnimation { duration: 1600 }
+        }
+    }
     Item {   // el haz
         visible: deck.visible
         opacity: deck.opacity
@@ -318,8 +384,7 @@ Window {
         id: musica
         readonly property var m: win.insp.musica || ({})
         readonly property bool suena: !!m.titulo
-        x: win.margen; y: win.techo
-        width: win.u(340)
+        puesto: 1
         titulo: suena ? (m.sonando ? "Sonando" : "En pausa") : "Música"
         punto: suena && m.sonando ? "#3ddc84" : Tema.tenue
         derecha: suena ? (m.app || "") : ""
@@ -329,8 +394,8 @@ Window {
             visible: musica.suena
             spacing: win.u(14)
             Rectangle {
-                width: win.u(84); height: width
-                radius: Tema.r(win.u(14))
+                width: win.u(64); height: width
+                radius: Tema.r(win.u(12))
                 color: Qt.rgba(colores.vivo.r, colores.vivo.g, colores.vivo.b, 0.2)
                 clip: true
                 Icono { anchors.centerIn: parent; width: win.u(22); height: width; nombre: "musica"; color: colores.vivo; visible: art.status !== Image.Ready }
@@ -344,13 +409,13 @@ Window {
                 }
             }
             Column {
-                width: musica.cuerpoAncho - win.u(84) - win.u(14)
+                width: musica.cuerpoAncho - win.u(64) - win.u(14)
                 spacing: win.u(2)
-                Texto { width: parent.width; text: musica.m.titulo || ""; font { pixelSize: win.u(17); weight: Font.DemiBold } elide: Text.ElideRight; wrapMode: Text.NoWrap; textFormat: Text.PlainText }
+                Texto { width: parent.width; text: musica.m.titulo || ""; font { pixelSize: win.u(15); weight: Font.DemiBold } elide: Text.ElideRight; wrapMode: Text.NoWrap; textFormat: Text.PlainText }
                 Texto { width: parent.width; text: musica.m.artista || ""; color: Tema.apagado; font.pixelSize: win.u(13); elide: Text.ElideRight; wrapMode: Text.NoWrap; textFormat: Text.PlainText }
-                Item { width: 1; height: win.u(8) }
+                Item { width: 1; height: win.u(4) }
                 Row {
-                    spacing: win.u(10)
+                    spacing: win.u(6)
                     Redondo { icono: "anterior"; anchors.verticalCenter: parent.verticalCenter; onClicked: { buscador.musica("Previous"); refrescar.restart(); } }
                     Redondo { icono: musica.m.sonando ? "pausa" : "reproducir"; lleno: true; anchors.verticalCenter: parent.verticalCenter; onClicked: { buscador.musica("PlayPause"); refrescar.restart(); } }
                     Redondo { icono: "siguiente"; anchors.verticalCenter: parent.verticalCenter; onClicked: { buscador.musica("Next"); refrescar.restart(); } }
@@ -373,8 +438,7 @@ Window {
     // Tus avisos: los últimos, con su app; lo que se baja, arriba
     Satelite {
         id: avisosSat
-        x: win.width - win.margen - width; y: win.techo
-        width: win.u(360)
+        puesto: win.cinco ? 3 : 2
         titulo: "Avisos"
         derecha: win.avisos.length ? String(win.avisos.length) : ""
         clicable: false
@@ -397,26 +461,31 @@ Window {
             }
         }
         Repeater {
-            model: win.avisos.slice(0, 3)
+            model: win.avisos.slice(0, 2)
             delegate: Item {
                 id: av
                 required property var modelData
                 required property int index
                 readonly property string cuerpo: (modelData.texto || "").replace(/<[^>]*>/g, "")
                 readonly property string cabeza: modelData.titulo && av.cuerpo && modelData.titulo !== modelData.nombre ? modelData.titulo + " · " + modelData.nombre : modelData.nombre
-                readonly property bool chips: index === 0 || avArea.containsMouse || quitar.encima || abrirChip.encima
                 width: avisosSat.cuerpoAncho
-                height: avCol.height + win.u(14)
+                height: avCol.height + win.u(12)
                 Rectangle {   // la línea de arriba (menos en el primero)
                     visible: av.index > 0
                     width: parent.width; height: 1
                     color: Qt.rgba(1, 1, 1, 0.07)
                 }
-                MouseArea { id: avArea; anchors.fill: parent; hoverEnabled: true }
+                MouseArea {
+                    id: avArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: av.modelData.abrir ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: if (av.modelData.abrir) { buscador.launch(av.modelData.abrir); win.close(); }
+                }
                 Rectangle {
                     id: cara
-                    y: win.u(10)
-                    width: win.u(32); height: width; radius: width / 2
+                    y: win.u(9)
+                    width: win.u(28); height: width; radius: width / 2
                     color: Qt.rgba(1, 1, 1, 0.08)
                     Kirigami.Icon {
                         id: avIcono
@@ -434,28 +503,38 @@ Window {
                 }
                 Column {
                     id: avCol
-                    x: cara.width + win.u(12); y: win.u(8)
+                    x: cara.width + win.u(10); y: win.u(7)
                     width: parent.width - x
                     spacing: win.u(3)
                     Item {
                         width: parent.width; height: avCab.height
                         Texto { id: avCab; width: parent.width - avHora.width - win.u(8); text: av.cabeza; color: Tema.apagado; font.pixelSize: win.u(12); elide: Text.ElideRight; wrapMode: Text.NoWrap; textFormat: Text.PlainText }
-                        Texto { id: avHora; anchors.right: parent.right; text: win.hace(av.modelData.cuando); color: Tema.tenue; font.pixelSize: win.u(12) }
+                        Texto { id: avHora; anchors.right: parent.right; visible: !avArea.containsMouse && !quitar.containsMouse; text: win.hace(av.modelData.cuando); color: Tema.tenue; font.pixelSize: win.u(12) }
+                        Icono {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: avCab.verticalCenter
+                            visible: !avHora.visible
+                            width: win.u(12); height: width
+                            nombre: "cerrar"
+                            color: quitar.containsMouse ? Tema.texto : Tema.apagado
+                            MouseArea {
+                                id: quitar
+                                anchors.fill: parent
+                                anchors.margins: -win.u(6)
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: { buscador.quitarAviso(av.modelData.cuando); win.leerAhora(); }
+                            }
+                        }
                     }
                     Texto {
                         width: parent.width
                         text: av.cuerpo || av.modelData.titulo || ""
                         font.pixelSize: win.u(14)
-                        maximumLineCount: 2
+                        maximumLineCount: 1
                         elide: Text.ElideRight
+                        wrapMode: Text.NoWrap
                         textFormat: Text.PlainText
-                    }
-                    Row {
-                        visible: av.chips
-                        spacing: win.u(6)
-                        topPadding: win.u(4)
-                        Chip { id: abrirChip; visible: av.modelData.abrir !== ""; text: "Abrir"; onClicked: { buscador.launch(av.modelData.abrir); win.close(); } }
-                        Chip { id: quitar; text: "Quitar"; onClicked: { buscador.quitarAviso(av.modelData.cuando); win.leerAhora(); } }
                     }
                 }
             }
@@ -471,10 +550,8 @@ Window {
         readonly property int cabeza: lineas.findIndex(l => l.trim() !== "")
         readonly property bool conTitulo: cabeza >= 0 && !/^\s*[-*]\s\[[ xX]\]/.test(lineas[cabeza])
         // (las líneas de debajo del título, sin las vacías: [número de línea, texto])
-        readonly property var resto: lineas.map((l, i) => [i, l]).filter(p => p[1].trim() !== "" && !(conTitulo && p[0] === cabeza)).slice(0, 5)
-        x: win.margen
-        y: deck.y + deck.height - height - win.u(56)
-        width: win.u(280)
+        readonly property var resto: lineas.map((l, i) => [i, l]).filter(p => p[1].trim() !== "" && !(conTitulo && p[0] === cabeza)).slice(0, 3)
+        puesto: 0
         titulo: "Nota"
         punto: "#e9edf5"
         derecha: win.notas.length > 1 ? win.notas.length + " notas" : ""
@@ -547,11 +624,9 @@ Window {
                 if (!c.hora || c.hora >= hhmm) o.push({ cuando: c.hora || "Hoy", texto: c.texto, sub: c.tipo === "recordatorio" ? "recordatorio" : "" });
             for (const p of (win.insp.proximo || []))
                 if (p.dias > 0) o.push({ cuando: (p.dias === 1 ? "Mañana" : "En " + p.dias + " días") + (p.hora ? " " + p.hora : ""), texto: p.texto, sub: "" });
-            return o.slice(0, 4);
+            return o.slice(0, 3);
         }
-        x: win.width - win.margen - width
-        y: deck.y + deck.height - height
-        width: win.u(280)
+        puesto: win.cinco ? 4 : 3
         titulo: new Date(win.ahora).toLocaleDateString(Qt.locale("es_ES"), "dddd d")
         punto: "#ffb35c"
         derecha: cosas.length ? String(cosas.length) : ""
@@ -594,8 +669,7 @@ Window {
         id: estudioSat
         readonly property bool hay: win.modo === "estudiar"
         visible: hay && opacity > 0.01
-        x: (win.width - width) / 2; y: win.techo
-        width: win.u(240)
+        puesto: 2
         titulo: win.estudio.fase === "largo" ? "Descanso largo" : win.estudio.fase === "descanso" ? "Descanso" : "Estudio"
         punto: win.estudio.corriendo ? "#ffb35c" : Tema.tenue
         derecha: win.estudio.asignatura || ""
@@ -1006,18 +1080,24 @@ Window {
         property string derecha: ""
         property bool clicable: true
         property color tinte: "transparent"
+        property int puesto: 0                    // su sitio en el halo, de izquierda a derecha
         readonly property real pad: win.u(16)
         readonly property real cuerpoAncho: width - 2 * pad
+        readonly property real natural: cuerpo.y + cuerpo.height + pad
         default property alias contenido: cuerpo.data
         signal pulsado()
-        property real ver: win.verSatelites ? 1 : 0
-        Behavior on ver { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         visible: opacity > 0.01
-        opacity: win.llegada * ver
-        // (sale del orbe: crece un poco y sube hacia su sitio)
-        scale: 0.92 + 0.08 * win.llegada
-        transform: Translate { y: (1 - win.llegada) * win.u(24) }
-        height: cuerpo.y + cuerpo.height + pad
+        opacity: win.llegada * win.verS
+        // (sale del orbe: empieza cerca de él y juntos, y se despliega en abanico hasta su sitio en el arco)
+        readonly property real ang: (win.angulos[Math.min(puesto, win.angulos.length - 1)] || 0) * (0.35 + 0.65 * win.llegada) * Math.PI / 180
+        readonly property real rr: win.radio * (0.6 + 0.4 * win.llegada)
+        x: win.centro.x + rr * Math.sin(ang) - width / 2
+        y: win.centro.y - rr * Math.cos(ang) - height / 2
+        rotation: ang * 0.3 * 180 / Math.PI
+        scale: 0.86 + 0.14 * win.llegada
+        width: win.anchoSat
+        height: win.altoSat
+        antialiasing: true
         radius: Tema.r(win.u(18))
         color: Qt.rgba(0.07, 0.08, 0.105, 0.84)
         border.color: Qt.rgba(1, 1, 1, sArea.containsMouse && clicable ? 0.18 : 0.08)
@@ -1082,53 +1162,6 @@ Window {
             GradientStop { position: 1; color: "transparent" }
         }
     }
-    // Un hilo de luz del orbe a un satélite, con una chispa que viaja por él
-    component Hilo: Item {
-        id: h
-        property point b
-        property int retraso: 0
-        readonly property point a: Qt.point(win.width / 2, orbe.y)
-        readonly property real dy: a.y - b.y
-        anchors.fill: parent
-        Shape {
-            anchors.fill: parent
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-                strokeColor: Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, 0.32)
-                strokeWidth: 1.2
-                fillColor: "transparent"
-                capStyle: ShapePath.RoundCap
-                startX: h.a.x; startY: h.a.y
-                PathCubic { x: h.b.x; y: h.b.y; control1X: h.a.x; control1Y: h.a.y - h.dy * 0.5; control2X: h.b.x; control2Y: h.b.y + h.dy * 0.5 }
-            }
-        }
-        PathInterpolator {
-            id: viaje
-            path: Path {
-                startX: h.a.x; startY: h.a.y
-                PathCubic { x: h.b.x; y: h.b.y; control1X: h.a.x; control1Y: h.a.y - h.dy * 0.5; control2X: h.b.x; control2Y: h.b.y + h.dy * 0.5 }
-            }
-            SequentialAnimation on progress {
-                running: win.visible && h.visible
-                loops: Animation.Infinite
-                PauseAnimation { duration: h.retraso }
-                NumberAnimation { from: 0; to: 1; duration: 2400; easing.type: Easing.InOutSine }
-                PauseAnimation { duration: 1800 - h.retraso }
-            }
-        }
-        Rectangle {   // la chispa
-            x: viaje.x - width / 2; y: viaje.y - height / 2
-            width: win.u(5); height: width; radius: width / 2
-            color: Qt.lighter(Tema.acento, 1.35)
-            opacity: Math.sin(viaje.progress * Math.PI) * 0.9
-        }
-        Rectangle {   // el nudo, donde llega
-            x: h.b.x - width / 2; y: h.b.y - height / 2
-            width: win.u(7); height: width; radius: width / 2
-            color: Tema.acento
-            Rectangle { anchors.centerIn: parent; width: parent.width * 3; height: width; radius: width / 2; color: Tema.acento; opacity: 0.18 }
-        }
-    }
     component Titulo: Texto {
         x: win.u(6)
         topPadding: win.u(10)
@@ -1147,16 +1180,6 @@ Window {
         Behavior on scale { NumberAnimation { duration: 100 } }
         Icono { anchors.centerIn: parent; width: win.u(16); height: width; nombre: rd.icono; color: rd.lleno ? "#0b0e14" : Tema.texto }
         MouseArea { id: rm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: rd.clicked() }
-    }
-    component Chip: Rectangle {
-        id: ch
-        property alias text: chT.text
-        readonly property bool encima: chA.containsMouse
-        signal clicked()
-        width: chT.implicitWidth + win.u(20); height: win.u(24); radius: height / 2
-        color: Qt.rgba(1, 1, 1, chA.containsMouse ? 0.16 : 0.08)
-        Texto { id: chT; anchors.centerIn: parent; font.pixelSize: win.u(12) }
-        MouseArea { id: chA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ch.clicked() }
     }
     // Una app fijada (o «+»): clic abrirla; su chincheta o el clic derecho la quitan del modo
     component Tile: Item {

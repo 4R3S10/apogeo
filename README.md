@@ -139,15 +139,17 @@ Casi vacío, como en la bienvenida de una consola:
 - **Al abrir la Órbita**, el orbe no se duplica: la Órbita pinta el suyo justo encima del de la isla (la isla le dice
   dónde está por D-Bus, `AbrirDesde`/`Orbe` de `apogeo-buscador`), se enciende y los satélites salen de él; al
   cerrarla, vuelven a él y se apaga.
-- **La Órbita abierta** («G3 · Constelación»; clic en el orbe o Meta; sustituye al buscador, `apogeo-buscador`):
+- **La Órbita abierta** («C2 · Halo»; clic en el orbe o Meta; sustituye al buscador, `apogeo-buscador`):
   todo a la vista nada más entrar, sin pestañas. En el centro, unida al orbe por un haz de luz, la cubierta con **tus
   apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza vacío; Estudiar con Obsidian,
   Okular, Xournal++, Anki, ONLYOFFICE, Ágape y Spotify) y el buscador. Las demás apps solo se encuentran buscando: su
-  chincheta (o Ctrl+Intro) las fija; en la cubierta, su chincheta o el clic derecho las quitan. Alrededor, unidos al
-  orbe por hilos de luz con una chispa que viaja, los **satélites**: lo que suena (su portada, sus colores en el
+  chincheta (o Ctrl+Intro) las fija; en la cubierta, su chincheta o el clic derecho las quitan. Encima, en abanico
+  sobre un **arco de luz** alrededor del orbe (con una chispa que lo recorre), los **satélites**, todos del mismo
+  tamaño y un poco girados hacia el orbe (al abrir salen de él y se despliegan; el radio se ajusta para no tapar la
+  cubierta): **tu nota** a la izquierda, lo que suena (su portada, sus colores en el
   cristal y las barritas, y sus botones), tus **avisos** (los últimos 12 los apunta `apogeo-pisos` en
-  `$XDG_RUNTIME_DIR/apogeo-avisos.json`; «Abrir» su app o «Quitar»; arriba lo que se baja), **tu nota** (la primera
-  del modo; las líneas `- [ ]` son casillas que se marcan ahí), lo que queda **hoy** en tu calendario y lo próximo y,
+  `$XDG_RUNTIME_DIR/apogeo-avisos.json`; un clic abre su app y la ✕ lo quita; arriba lo que se baja); la nota es la
+  primera del modo (las líneas `- [ ]` son casillas que se marcan ahí); a la derecha lo que queda **hoy** en tu calendario y lo próximo y,
   en Estudiar, **tu estudio** (el 25/5 con su botón). Un clic en la nota, el calendario o el estudio los abre enteros
   (tus **notas**, la **agenda** con el mes, el tiempo y tu ciudad, recordatorios y temporizadores, y **Estudios**: el
   25/5, los exámenes, las tareas de hoy y tus asignaturas); Esc vuelve. Al escribir, encima del campo: tus apps, la
@@ -341,17 +343,19 @@ Lo pone `apogeo-pisos` (`carousel()`): Karousel solo trabaja en los escritorios 
 
 ## El panel rápido
 
-El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). A la derecha, un panel alto
-**de cristal** («1 · Cristal con tu fondo»: detrás, tu fondo difuminado y oscurecido, con un brillo del color del modo
-arriba; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo). Sale con Meta+N, desde la
+El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). A la derecha, el panel rápido
+en **módulos de cristal sueltos** («R2 · Módulos», como un centro de control; cada uno «Cristal con tu fondo»: detrás,
+tu fondo difuminado y oscurecido; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo;
+el panel de Plasma no pinta nada detrás: los trozos «east-…» del estilo de Órbita están vacíos). Sale con Meta+N, desde la
 barra de arriba (el borde de la pantalla no hace nada ni brilla), **hace sitio** (las ventanas se estrechan y vuelven al cerrarlo) y
 se queda hasta que vuelves a pulsar la tecla. El panel de widgets de la izquierda ya no está: la agenda (con el tiempo y
 tu ciudad, recordatorios y temporizadores), tus notas y Estudios van en la Órbita abierta, como satélites.
 En Órbita, el panel es de **«cristal grafito» (W1)**: neutro, sin el brillo del modo, y lo encendido en blanco.
-- **Panel rápido** (derecha, Meta+N o pulsando la red, el sonido o la hora de la isla; `org.apogeo.derecho`): cuánto
-  lleva encendido el PC con Identidad, Todos los ajustes y apagar; **los modos**; la red, el sonido y el micro en
-  pastillas; bluetooth, fondo animado, no molestar, ahorro del modo y luz nocturna en botones redondos; volumen y brillo;
-  **tus avisos** agrupados por app («Ver todos»), con sus botones y **Responder** ahí mismo (quitarlos o «Borrar
+- **Panel rápido** (derecha, Meta+N o pulsando la red, el sonido o la hora de la barra de arriba; `org.apogeo.derecho`):
+  la red, el bluetooth, el micro y el sonido en botones redondos y, al lado, **lo que suena** (portada, ⏮ ⏯ ⏭);
+  **los modos**; el volumen y el brillo en **barras altas** (se arrastran, se pulsan o con la rueda) junto a luz
+  nocturna, no molestar, el ahorro del modo y el fondo animado; cuánto lleva encendido el PC con Aspecto, Todos los
+  ajustes y apagar; **tus avisos** agrupados por app («Ver todos»), con sus botones y **Responder** ahí mismo (quitarlos o «Borrar
   todo») y abajo el tiempo de las próximas horas (en barras) y días.
   Al abrirlo, los avisos cuentan como vistos.
 

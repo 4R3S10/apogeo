@@ -11,12 +11,13 @@ import org.kde.notificationmanager as NotificationManager
 import org.kde.plasma.private.volume as PulseAudio
 import Apogeo
 
-// El panel rápido de Apogeo («2 · Dos paneles altos»), alto, a la derecha: sale con Meta+N, empujando el ratón contra el
-// borde o pulsando la red, el sonido o la hora de la isla (el script de KWin apogeo-bordes), y hace sitio. De arriba
-// abajo: cuánto lleva encendido el PC con «Aspecto», «Todos los ajustes» y apagar; los pisos; la red, el sonido y el
-// micro en pastillas; lo de todos los días en botones redondos (bluetooth, fondo animado, no molestar, ahorro del piso,
-// luz nocturna); el volumen y el brillo; tus avisos (juntos por app, con sus botones y «Responder») y, abajo, el tiempo
-// de las próximas horas y días con el color del cielo a esta hora. El fondo es «Cristal con tu fondo» (Cristal); en
+// El panel rápido de Apogeo («R2 · Módulos»), a la derecha: sale solo con Meta+N o pulsando la red, el sonido o la hora
+// de la barra de arriba (el script de KWin apogeo-bordes; el borde de la pantalla no hace nada), y hace sitio. Son
+// módulos de cristal sueltos, como un centro de control. De arriba abajo: la red, el bluetooth, el micro y el sonido en
+// botones redondos, al lado lo que suena (portada y ⏮ ⏯ ⏭); los modos; el volumen y el brillo en barras altas (se
+// arrastran) junto a luz nocturna, no molestar, el ahorro del modo y el fondo animado; cuánto lleva encendido el PC con
+// «Aspecto», «Todos los ajustes» y apagar; tus avisos (juntos por app, con sus botones y «Responder») y, abajo, el tiempo
+// de las próximas horas y días con el color del cielo a esta hora. Cada módulo es «Cristal con tu fondo» (Cristal); en
 // Órbita, «cristal grafito» (W1): neutro, sin el brillo del modo, y lo encendido en blanco.
 // Lo de los botones lo lee y lo cambia «apogeo-ajustes rapido», solo con el panel abierto («abierto», lo pone el script).
 // No coge el teclado, salvo mientras respondes a un aviso.
@@ -53,6 +54,10 @@ PlasmoidItem {
     property var st: ({ red: {}, bt: {}, energia: {} })
     property var pc: ({})
     property var tiempo: ({})
+    property var musica: ({})
+    function leerMusica() { datos.pedir("Musica", [], d => { root.musica = d || {}; }) }
+    function tocar(que) { datos.hacer("MusicaAccion", [que]); musicaLuego.restart(); }
+    Timer { id: musicaLuego; interval: 400; onTriggered: root.leerMusica() }
     readonly property string tool: "/usr/lib/apogeo/apogeo-ajustes rapido"
 
     P5Support.DataSource {
@@ -80,6 +85,7 @@ PlasmoidItem {
         onTriggered: {
             root.refresh();
             datos.pedir("Pc", [], d => { if (d) root.pc = d; });
+            root.leerMusica();
             if (root.vuelta++ % 24 === 0) datos.pedir("Tiempo", [], d => { if (d) root.tiempo = d; });
         }
     }
@@ -138,27 +144,38 @@ PlasmoidItem {
         color: Tema.encima
         Item { id: caja; x: parent.relleno; y: parent.relleno; width: parent.width - 2 * parent.relleno }
     }
-    // Una pastilla: la red, el sonido, el micro (encendida, en el color del piso)
-    component Pastilla: AbstractButton {
-        id: pa
+    // Un módulo: un trozo de cristal suelto (entre uno y otro se ve tu escritorio)
+    component Modulo: Item {
+        default property alias contenido: dentroMod.data
+        property real relleno: 12
+        Cristal { anchors.fill: parent; activo: root.abierto; brillo: false; oscuro: Tema._orbita ? 0.66 : 0.54; radio: Tema.r(20) }
+        Item { id: dentroMod; anchors.fill: parent; anchors.margins: parent.relleno }
+    }
+    // Una opción de todos los días, a lo ancho: su icono, su nombre y si está encendida (encendida, en blanco)
+    component Opcion: AbstractButton {
+        id: op
         property string icono
         property string sub
         property bool on: false
-        height: 54
         hoverEnabled: true
-        background: Rectangle {
-            radius: height / 2
-            color: pa.on ? (pa.hovered ? Qt.darker(Tema.encendido, 1.06) : Tema.encendido) : (pa.hovered ? Tema.pulsado : Tema.encima)
-            Behavior on color { ColorAnimation { duration: 160 } }
+        opacity: enabled ? 1 : 0.45
+        background: Item {
+            Cristal { anchors.fill: parent; visible: !op.on; activo: root.abierto; brillo: false; oscuro: Tema._orbita ? 0.66 : 0.54; radio: Tema.r(16) }
+            Rectangle {
+                anchors.fill: parent
+                radius: Tema.r(16)
+                color: op.on ? (op.hovered ? Qt.darker(Tema.encendido, 1.06) : Tema.encendido) : op.hovered ? Tema.pulsado : "transparent"
+                Behavior on color { ColorAnimation { duration: 160 } }
+            }
         }
         contentItem: Item {
-            Icono { id: pIco; x: 14; anchors.verticalCenter: parent.verticalCenter; nombre: pa.icono; color: pa.on ? Tema.sobreEncendido : Tema.texto }
+            Icono { id: opIco; x: 12; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; nombre: op.icono; color: op.on ? Tema.sobreEncendido : Tema.texto }
             Column {
-                x: pIco.x + pIco.width + 9
-                width: parent.width - x - 10
+                x: opIco.x + opIco.width + 10
+                width: parent.width - x - 8
                 anchors.verticalCenter: parent.verticalCenter
-                Texto { width: parent.width; text: pa.text; font.pixelSize: 13; font.weight: Font.Bold; color: pa.on ? Tema.sobreEncendido : Tema.texto; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                Texto { width: parent.width; text: pa.sub; font.pixelSize: 11; color: pa.on ? Qt.rgba(Tema.sobreEncendido.r, Tema.sobreEncendido.g, Tema.sobreEncendido.b, 0.7) : Tema.apagado; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                Texto { width: parent.width; text: op.text; font.pixelSize: 13; font.weight: Font.DemiBold; color: op.on ? Tema.sobreEncendido : Tema.texto; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                Texto { width: parent.width; visible: op.sub !== ""; text: op.sub; font.pixelSize: 11; color: op.on ? Qt.rgba(Tema.sobreEncendido.r, Tema.sobreEncendido.g, Tema.sobreEncendido.b, 0.65) : Tema.apagado; elide: Text.ElideRight; wrapMode: Text.NoWrap }
             }
         }
     }
@@ -167,7 +184,7 @@ PlasmoidItem {
         id: re
         property string icono
         property bool on: false
-        width: 50; height: 50
+        width: 54; height: 54
         hoverEnabled: true
         opacity: enabled ? 1 : 0.45
         ToolTip.visible: hovered
@@ -182,7 +199,7 @@ PlasmoidItem {
                 Behavior on color { ColorAnimation { duration: 160 } }
             }
         }
-        contentItem: Item { Icono { anchors.centerIn: parent; width: 18; height: 18; nombre: re.icono; color: re.on ? Tema.sobreEncendido : Tema.texto } }
+        contentItem: Item { Icono { anchors.centerIn: parent; width: 20; height: 20; nombre: re.icono; color: re.on ? Tema.sobreEncendido : Tema.texto } }
     }
     // Un botón pequeño de un aviso (los de la app y «Responder», lleno)
     component Chico: AbstractButton {
@@ -203,27 +220,46 @@ PlasmoidItem {
             Icono { visible: !!ch.icono; anchors.centerIn: parent; width: 14; height: 14; nombre: ch.icono || "cerrar"; color: ch.lleno ? Tema.sobreEncendido : Tema.texto }
         }
     }
-    component Level: Rectangle {
-        id: lv
+    // El volumen o el brillo, en una barra alta: se llena desde abajo y se arrastra (o se pulsa) para cambiarlo
+    component Vertical: Item {
+        id: vt
         property string icono
         property int value: 0
         signal elegido(int value)
-        width: parent ? parent.width : 0
-        height: 44
-        radius: Tema.r(16)
-        color: Tema.encima
-        Icono { x: 14; anchors.verticalCenter: parent.verticalCenter; nombre: lv.icono; color: Tema.apagado }
-        Deslizador {
-            id: slider
-            x: 40
-            width: parent.width - 54
-            anchors.verticalCenter: parent.verticalCenter
-            from: 0; to: 100; stepSize: 1
-            onMoved: throttle.restart()
-            onPressedChanged: if (!pressed) lv.elegido(Math.round(value))
-            Binding on value { value: lv.value; when: !slider.pressed }
+        property real ahora: value
+        Binding on ahora { value: vt.value; when: !zonaVt.pressed }
+        opacity: enabled ? 1 : 0.45
+        Cristal { anchors.fill: parent; activo: root.abierto; brillo: false; oscuro: Tema._orbita ? 0.66 : 0.54; radio: Tema.r(20) }
+        Item {
+            anchors.fill: parent
+            clip: true
+            Rectangle {   // lo lleno (con las esquinas de abajo redondeadas como el módulo)
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: Math.max(0, Math.min(1, vt.ahora / 100)) * parent.height
+                radius: Tema.r(20)
+                color: Tema.encendido
+                Behavior on height { enabled: !zonaVt.pressed; NumberAnimation { duration: 140 } }
+            }
         }
-        Timer { id: throttle; interval: 150; onTriggered: lv.elegido(Math.round(slider.value)) }
+        Icono {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom; anchors.bottomMargin: 14
+            width: 20; height: 20
+            nombre: vt.icono
+            color: vt.ahora > 14 ? Tema.sobreEncendido : Tema.texto
+        }
+        MouseArea {
+            id: zonaVt
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            function lee(y) { vt.ahora = Math.round(Math.max(0, Math.min(1, 1 - y / height)) * 100); throttleVt.restart(); }
+            onPressed: m => lee(m.y)
+            onPositionChanged: m => { if (pressed) lee(m.y); }
+            onReleased: vt.elegido(vt.ahora)
+            onWheel: w => { vt.ahora = Math.max(0, Math.min(100, vt.ahora + (w.angleDelta.y > 0 ? 5 : -5))); vt.elegido(vt.ahora); }
+        }
+        Timer { id: throttleVt; interval: 150; onTriggered: vt.elegido(vt.ahora) }
     }
     component Mini: AbstractButton {
         id: mb
@@ -244,42 +280,104 @@ PlasmoidItem {
         Layout.fillWidth: true
         Layout.fillHeight: true
 
-        // «Cristal con tu fondo»
-        Cristal { anchors.fill: parent; activo: root.abierto; brillo: !Tema._orbita; oscuro: Tema._orbita ? 0.64 : 0.52 }
-
         Column {
             id: arriba
-            x: 14; y: 16
-            width: parent.width - 28
+            x: 12; y: 12
+            width: parent.width - 24
             spacing: 10
+            readonly property real mitad: (width - spacing) / 2
 
-            // --- Encendido · Aspecto · Ajustes · Apagar ---
-            Item {
-                width: parent.width; height: 38
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    Texto { text: "Encendido"; color: Tema.tenue; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.9; font.capitalization: Font.AllUppercase }
-                    Texto { text: root.pc.encendido === undefined ? "…" : root.encendido(root.pc.encendido); font.pixelSize: 16; font.weight: Font.Black; wrapMode: Text.NoWrap }
+            // --- La red, el bluetooth, el micro y el sonido · lo que suena ---
+            Row {
+                width: parent.width
+                spacing: 10
+                Modulo {
+                    width: arriba.mitad; height: 150
+                    Grid {
+                        anchors.centerIn: parent
+                        columns: 2
+                        spacing: 14
+                        Redondo {
+                            text: "Red: " + (root.st.red.texto || "…")
+                            icono: root.st.red.on ? "wifi" : "sinred"
+                            on: !!root.st.red.on
+                            onClicked: root.act("red")
+                        }
+                        Redondo {
+                            text: !root.st.bt.hay ? "Bluetooth: este equipo no tiene" : "Bluetooth"
+                            icono: "bluetooth"
+                            enabled: !!root.st.bt.hay
+                            on: !!root.st.bt.on
+                            onClicked: root.act("bluetooth")
+                        }
+                        Redondo {
+                            readonly property bool mudo: !root.source || root.source.muted
+                            enabled: !!root.source
+                            text: !root.source ? "Micro: no hay" : mudo ? "Micro apagado" : "Micro encendido"
+                            icono: "micro"
+                            on: !mudo
+                            onClicked: root.source.muted = !root.source.muted
+                        }
+                        Redondo {
+                            readonly property bool mudo: !root.sink || root.sink.muted
+                            text: mudo ? "Sonido: silencio" : "Sonido: " + (root.st.volumen || 0) + " %"
+                            icono: mudo ? "silencio" : "volumen"
+                            on: !mudo
+                            onClicked: if (root.sink) root.sink.muted = !root.sink.muted
+                        }
+                    }
                 }
-                Row {
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 6
-                    Mini { icono: "lapiz"; text: "Aspecto"; onClicked: runner.connectSource("setsid -f /usr/lib/apogeo/apogeo-ajustes aspecto") }
-                    Mini { icono: "ajustes"; text: "Todos los ajustes"; onClicked: root.open("apogeo-ajustes") }
-                    Mini { icono: "apagar"; text: "Apagar, reiniciar o cerrar sesión"; onClicked: root.act("apagar") }
+                Modulo {
+                    id: suena
+                    readonly property bool hay: !!root.musica.titulo
+                    width: arriba.mitad; height: 150
+                    Rectangle {   // la portada
+                        id: portada
+                        width: parent.width; height: 66
+                        radius: Tema.r(12)
+                        clip: true
+                        color: Tema.encima
+                        Icono { anchors.centerIn: parent; width: 22; height: 22; nombre: "musica"; color: Tema.apagado; visible: tapa.status !== Image.Ready }
+                        Image {
+                            id: tapa
+                            anchors.fill: parent
+                            source: suena.hay ? (root.musica.portada || "") : ""
+                            sourceSize: Qt.size(width * 2, height * 2)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            visible: false
+                        }
+                        Rectangle { id: formaTapa; anchors.fill: parent; radius: parent.radius; visible: false; layer.enabled: true }
+                        MultiEffect { anchors.fill: parent; source: tapa; visible: tapa.status === Image.Ready; maskEnabled: true; maskSource: formaTapa }
+                    }
+                    Texto {
+                        y: portada.height + 8
+                        width: parent.width
+                        text: suena.hay ? root.musica.titulo : "Nada sonando"
+                        color: suena.hay ? Tema.texto : Tema.apagado
+                        font.pixelSize: 13; font.weight: Font.DemiBold
+                        elide: Text.ElideRight; wrapMode: Text.NoWrap; textFormat: Text.PlainText
+                    }
+                    Row {
+                        anchors.bottom: parent.bottom
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 12
+                        enabled: suena.hay
+                        opacity: enabled ? 1 : 0.4
+                        Mini { icono: "anterior"; text: "Anterior"; anchors.verticalCenter: parent.verticalCenter; onClicked: root.tocar("Previous") }
+                        Chico { icono: root.musica.sonando ? "pausa" : "reproducir"; lleno: true; width: 34; height: 34; anchors.verticalCenter: parent.verticalCenter; onClicked: root.tocar("PlayPause") }
+                        Mini { icono: "siguiente"; text: "Siguiente"; anchors.verticalCenter: parent.verticalCenter; onClicked: root.tocar("Next") }
+                    }
                 }
             }
 
-            // --- Los pisos ---
-            Rectangle {
-                width: parent.width; height: 46
-                radius: Tema.r(16)
-                color: Tema.encima
+            // --- Los modos ---
+            Modulo {
+                width: parent.width; height: 50
+                relleno: 4
                 Row {
                     id: pisos
                     anchors.fill: parent
-                    anchors.margins: 4
                     spacing: 4
                     Repeater {
                         model: desktops.desktopIds
@@ -291,10 +389,10 @@ PlasmoidItem {
                             hoverEnabled: true
                             onClicked: root.go(index)
                             background: Item {
-                                RectangularShadow { anchors.fill: parent; visible: piso.on; radius: Tema.r(12); blur: 14; spread: -4; offset.y: 4; color: Tema.rosa }
+                                RectangularShadow { anchors.fill: parent; visible: piso.on; radius: Tema.r(14); blur: 14; spread: -4; offset.y: 4; color: Tema.rosa }
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: Tema.r(12)
+                                    radius: Tema.r(14)
                                     color: piso.on ? Tema.rosa : piso.hovered ? Tema.pulsado : "transparent"
                                     Behavior on color { ColorAnimation { duration: 160 } }
                                 }
@@ -312,100 +410,92 @@ PlasmoidItem {
                 }
             }
 
-            // --- La red, el sonido y el micro ---
+            // --- El volumen y el brillo · lo de todos los días ---
             Row {
-                id: pastillas
                 width: parent.width
-                spacing: 8
-                readonly property real ancho: (width - 16) / 3
-                Pastilla {
-                    width: pastillas.ancho
-                    text: "Red"
-                    icono: root.st.red.on ? "wifi" : "sinred"
-                    on: !!root.st.red.on
-                    sub: root.st.red.texto || "…"
-                    onClicked: root.act("red")
+                spacing: 10
+                Vertical {
+                    width: 66; height: 184
+                    icono: root.sink && root.sink.muted ? "silencio" : "volumen"
+                    value: root.st.volumen || 0
+                    onElegido: v => root.act("volumen", v)
                 }
-                Pastilla {
-                    width: pastillas.ancho
-                    readonly property bool mudo: !root.sink || root.sink.muted
-                    text: "Sonido"
-                    icono: mudo ? "silencio" : "volumen"
-                    on: !mudo
-                    sub: mudo ? "Silencio" : (root.st.volumen || 0) + " %"
-                    onClicked: if (root.sink) root.sink.muted = !root.sink.muted
+                Vertical { // (siempre está, aunque la pantalla no deje cambiar el brillo: así el panel no cambia de tamaño)
+                    width: 66; height: 184
+                    enabled: (root.st.brillo !== undefined ? root.st.brillo : -1) >= 0
+                    icono: "sol"
+                    value: Math.max(0, root.st.brillo || 0)
+                    onElegido: v => root.act("brillo", v)
                 }
-                Pastilla {
-                    width: pastillas.ancho
-                    readonly property bool mudo: !root.source || root.source.muted
-                    enabled: !!root.source
-                    text: "Micro"
-                    icono: "micro"
-                    on: !mudo
-                    sub: !root.source ? "No hay" : mudo ? "Apagado" : "Encendido"
-                    onClicked: root.source.muted = !root.source.muted
+                Column {
+                    width: parent.width - 2 * 66 - 2 * parent.spacing
+                    spacing: 8
+                    readonly property real alto: (184 - 3 * spacing) / 4
+                    Opcion {
+                        width: parent.width; height: parent.alto
+                        text: "Luz nocturna"
+                        sub: on ? "Encendida" : "Apagada"
+                        icono: "luna"
+                        on: !!root.st.luz
+                        onClicked: root.act("luz")
+                    }
+                    Opcion {
+                        width: parent.width; height: parent.alto
+                        text: "No molestar"
+                        sub: on ? "Encendido" : "Apagado"
+                        icono: "silencio"
+                        on: !!root.st.silencio
+                        onClicked: root.act("silencio")
+                    }
+                    Opcion {
+                        width: parent.width; height: parent.alto
+                        text: "Ahorro"
+                        sub: "en " + root.floorName
+                        icono: "energia"
+                        on: root.st.energia[root.floorKey] === "power-saver"
+                        onClicked: root.act("energia", root.floorKey)
+                    }
+                    Opcion {
+                        width: parent.width; height: parent.alto
+                        text: "Fondo animado"
+                        sub: !root.st.grafica ? "quieto: no hay gráfica" : on ? "Encendido" : "Apagado"
+                        icono: "foto"
+                        on: !!root.st.animar
+                        onClicked: root.act("animar")
+                    }
                 }
             }
 
-            // --- Lo de todos los días ---
-            Row {
-                id: redondos
-                width: parent.width
-                spacing: (width - 5 * 50) / 4
-                Redondo {
-                    text: !root.st.bt.hay ? "Bluetooth: este equipo no tiene" : "Bluetooth"
-                    icono: "bluetooth"
-                    enabled: !!root.st.bt.hay
-                    on: !!root.st.bt.on
-                    onClicked: root.act("bluetooth")
+            // --- Encendido · Aspecto · Ajustes · Apagar ---
+            Modulo {
+                width: parent.width; height: 54
+                relleno: 10
+                Row {
+                    x: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    Texto { anchors.verticalCenter: parent.verticalCenter; text: "Encendido"; color: Tema.tenue; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.9; font.capitalization: Font.AllUppercase; wrapMode: Text.NoWrap }
+                    Texto { anchors.verticalCenter: parent.verticalCenter; text: root.pc.encendido === undefined ? "…" : root.encendido(root.pc.encendido); font.pixelSize: 14; font.weight: Font.Bold; wrapMode: Text.NoWrap }
                 }
-                Redondo {
-                    text: !root.st.grafica ? "Fondo animado (quieto: no hay gráfica)" : "Fondo animado"
-                    icono: "foto"
-                    on: !!root.st.animar
-                    onClicked: root.act("animar")
+                Row {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 6
+                    Mini { icono: "lapiz"; text: "Aspecto"; onClicked: runner.connectSource("setsid -f /usr/lib/apogeo/apogeo-ajustes aspecto") }
+                    Mini { icono: "ajustes"; text: "Todos los ajustes"; onClicked: root.open("apogeo-ajustes") }
+                    Mini { icono: "apagar"; text: "Apagar, reiniciar o cerrar sesión"; onClicked: root.act("apagar") }
                 }
-                Redondo {
-                    text: "No molestar"
-                    icono: "silencio"
-                    on: !!root.st.silencio
-                    onClicked: root.act("silencio")
-                }
-                Redondo {
-                    text: "Ahorro de energía en " + root.floorName
-                    icono: "energia"
-                    on: root.st.energia[root.floorKey] === "power-saver"
-                    onClicked: root.act("energia", root.floorKey)
-                }
-                Redondo {
-                    text: "Luz nocturna"
-                    icono: "luna"
-                    on: !!root.st.luz
-                    onClicked: root.act("luz")
-                }
-            }
-
-            Level {
-                icono: "volumen"
-                value: root.st.volumen || 0
-                onElegido: v => root.act("volumen", v)
-            }
-            Level { // (siempre está, aunque la pantalla no deje cambiar el brillo: así el panel no cambia de tamaño)
-                enabled: (root.st.brillo !== undefined ? root.st.brillo : -1) >= 0
-                opacity: enabled ? 1 : 0.45
-                icono: "sol"
-                value: Math.max(0, root.st.brillo || 0)
-                onElegido: v => root.act("brillo", v)
             }
         }
 
-        // --- Tus avisos (lo que sobra entre lo de arriba y el tiempo) ---
-        Item {
+        // --- Tus avisos (lo que necesitan, como mucho lo que sobra hasta abajo dejando sitio al tiempo) ---
+        Modulo {
             id: avisos
-            x: 14
-            y: arriba.y + arriba.height + 14
-            width: parent.width - 28
-            height: tiempo.y - y - 10
+            x: 12
+            y: arriba.y + arriba.height + 10
+            width: parent.width - 24
+            height: Math.min(parent.height - 12 - tiempoMod.height - 10 - y, notifs.count === 0 ? 92 : cabAvisos.height + 6 + listaAvisos.contentHeight + 2 * relleno)
+            visible: height > 60
             Item {
                 id: cabAvisos
                 width: parent.width; height: 26
@@ -427,12 +517,12 @@ PlasmoidItem {
                     contentItem: Texto { id: clearText; text: "Borrar todo"; font.pixelSize: 12; color: Tema.apagado; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 }
             }
-            Column {
+            Texto {
                 visible: notifs.count === 0
-                anchors.centerIn: parent
-                spacing: 8
-                Icono { anchors.horizontalCenter: parent.horizontalCenter; nombre: "campana"; width: 28; height: 28; color: Tema.tenue }
-                Texto { anchors.horizontalCenter: parent.horizontalCenter; text: "Nada nuevo"; color: Tema.apagado }
+                y: cabAvisos.height + 8
+                x: 4
+                text: "Nada nuevo"
+                color: Tema.apagado
             }
             ListView {
                 id: listaAvisos
@@ -600,89 +690,96 @@ PlasmoidItem {
         }
 
         // --- El tiempo: ahora, las próximas horas (en barras) y los próximos días ---
-        Tarjeta {
-            id: tiempo
-            x: 14
-            width: parent.width - 28
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 14
-            readonly property var w: root.tiempo
-            readonly property bool hay: w.temp !== undefined
-            // El color del cielo a esta hora (amanecer, día, atardecer o noche; más gris si está nublado o llueve)
-            readonly property var cielo: Tema.colorCielo(root.ahora, w.salida, w.puesta, w.codigo || 0)
-            readonly property color letra: hay ? "white" : Tema.texto
-            readonly property color letraSuave: hay ? Qt.rgba(1, 1, 1, 0.75) : Tema.apagado
-            gradient: hay ? degradadoCielo : null
-            Gradient {
-                id: degradadoCielo
-                GradientStop { position: 0; color: tiempo.cielo[0] }
-                GradientStop { position: 1; color: tiempo.cielo[1] }
-            }
-            readonly property var horas: w.horas || []
-            readonly property real tmin: horas.length ? Math.min.apply(null, horas.map(h => h.t)) : 0
-            readonly property real tmax: horas.length ? Math.max.apply(null, horas.map(h => h.t)) : 1
-            Item {
-                width: parent.width
-                height: tiempo.w.temp === undefined ? 20 : 214
-                Texto {
-                    visible: tiempo.w.temp === undefined
-                    width: parent.width
-                    text: tiempo.w.sinCiudad ? "Elige tu ciudad en la agenda (Meta → Agenda) para ver el tiempo" : "Mirando el tiempo…"
-                    color: Tema.apagado; font.pixelSize: 13
+        Modulo {
+            id: tiempoMod
+            x: 12
+            width: parent.width - 24
+            height: tiempo.height
+            y: avisos.visible ? avisos.y + avisos.height + 10 : avisos.y   // (justo debajo de los avisos)
+            relleno: 0
+            Tarjeta {
+                id: tiempo
+                width: tiempoMod.width
+                radius: Tema.r(20)
+                color: "transparent"
+                readonly property var w: root.tiempo
+                readonly property bool hay: w.temp !== undefined
+                // El color del cielo a esta hora (amanecer, día, atardecer o noche; más gris si está nublado o llueve)
+                readonly property var cielo: Tema.colorCielo(root.ahora, w.salida, w.puesta, w.codigo || 0)
+                readonly property color letra: hay ? "white" : Tema.texto
+                readonly property color letraSuave: hay ? Qt.rgba(1, 1, 1, 0.75) : Tema.apagado
+                gradient: hay ? degradadoCielo : null
+                Gradient {
+                    id: degradadoCielo
+                    GradientStop { position: 0; color: tiempo.cielo[0] }
+                    GradientStop { position: 1; color: tiempo.cielo[1] }
                 }
+                readonly property var horas: w.horas || []
+                readonly property real tmin: horas.length ? Math.min.apply(null, horas.map(h => h.t)) : 0
+                readonly property real tmax: horas.length ? Math.max.apply(null, horas.map(h => h.t)) : 1
                 Item {
-                    visible: tiempo.w.temp !== undefined
-                    width: parent.width; height: parent.height
-                    // Ahora
-                    Icono { id: ahoraIco; width: 34; height: 34; nombre: root.cielo(tiempo.w.codigo, tiempo.w.dia); color: "white" }
-                    Column {
-                        x: ahoraIco.width + 12
-                        Texto { text: tiempo.w.temp + "°"; color: tiempo.letra; font.pixelSize: 26; font.weight: Font.Black; lineHeight: 0.9 }
-                        Texto { text: root.cieloTexto(tiempo.w.codigo) + " · " + (tiempo.w.ciudad || ""); color: tiempo.letraSuave; font.pixelSize: 12; wrapMode: Text.NoWrap }
-                    }
-                    Texto { anchors.right: parent.right; y: 6; text: tiempo.w.max + "° / " + tiempo.w.min + "°"; color: tiempo.letraSuave; font.pixelSize: 13 }
-                    // Las próximas horas
-                    Row {
-                        id: barras
-                        y: 54
+                    width: parent.width
+                    height: tiempo.w.temp === undefined ? 20 : 214
+                    Texto {
+                        visible: tiempo.w.temp === undefined
                         width: parent.width
-                        height: 82
-                        Repeater {
-                            model: tiempo.horas
-                            delegate: Item {
-                                id: hora
-                                required property var modelData
-                                required property int index
-                                width: barras.width / Math.max(1, tiempo.horas.length); height: barras.height
-                                readonly property real p: tiempo.tmax > tiempo.tmin ? (modelData.t - tiempo.tmin) / (tiempo.tmax - tiempo.tmin) : 0.5
-                                Texto { anchors.horizontalCenter: parent.horizontalCenter; y: barra.y - 18; text: hora.modelData.t + "°"; color: tiempo.letra; font.pixelSize: 12; font.weight: Font.Bold }
-                                Rectangle {
-                                    id: barra
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.bottom: parent.bottom; anchors.bottomMargin: 18
-                                    width: 14; radius: 7
-                                    height: 14 + hora.p * 30
-                                    color: hora.index === 0 ? "white" : Qt.rgba(1, 1, 1, 0.3)
+                        text: tiempo.w.sinCiudad ? "Elige tu ciudad en la agenda (Meta → Agenda) para ver el tiempo" : "Mirando el tiempo…"
+                        color: Tema.apagado; font.pixelSize: 13
+                    }
+                    Item {
+                        visible: tiempo.w.temp !== undefined
+                        width: parent.width; height: parent.height
+                        // Ahora
+                        Icono { id: ahoraIco; width: 34; height: 34; nombre: root.cielo(tiempo.w.codigo, tiempo.w.dia); color: "white" }
+                        Column {
+                            x: ahoraIco.width + 12
+                            Texto { text: tiempo.w.temp + "°"; color: tiempo.letra; font.pixelSize: 26; font.weight: Font.Black; lineHeight: 0.9 }
+                            Texto { text: root.cieloTexto(tiempo.w.codigo) + " · " + (tiempo.w.ciudad || ""); color: tiempo.letraSuave; font.pixelSize: 12; wrapMode: Text.NoWrap }
+                        }
+                        Texto { anchors.right: parent.right; y: 6; text: tiempo.w.max + "° / " + tiempo.w.min + "°"; color: tiempo.letraSuave; font.pixelSize: 13 }
+                        // Las próximas horas
+                        Row {
+                            id: barras
+                            y: 54
+                            width: parent.width
+                            height: 82
+                            Repeater {
+                                model: tiempo.horas
+                                delegate: Item {
+                                    id: hora
+                                    required property var modelData
+                                    required property int index
+                                    width: barras.width / Math.max(1, tiempo.horas.length); height: barras.height
+                                    readonly property real p: tiempo.tmax > tiempo.tmin ? (modelData.t - tiempo.tmin) / (tiempo.tmax - tiempo.tmin) : 0.5
+                                    Texto { anchors.horizontalCenter: parent.horizontalCenter; y: barra.y - 18; text: hora.modelData.t + "°"; color: tiempo.letra; font.pixelSize: 12; font.weight: Font.Bold }
+                                    Rectangle {
+                                        id: barra
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        anchors.bottom: parent.bottom; anchors.bottomMargin: 18
+                                        width: 14; radius: 7
+                                        height: 14 + hora.p * 30
+                                        color: hora.index === 0 ? "white" : Qt.rgba(1, 1, 1, 0.3)
+                                    }
+                                    Texto { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; text: hora.modelData.h + "h"; font.pixelSize: 11; color: tiempo.letraSuave }
                                 }
-                                Texto { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; text: hora.modelData.h + "h"; font.pixelSize: 11; color: tiempo.letraSuave }
                             }
                         }
-                    }
-                    // Los próximos días
-                    Column {
-                        id: dias
-                        y: barras.y + barras.height + 8
-                        width: parent.width
-                        Repeater {
-                            model: tiempo.w.dias || []
-                            delegate: Item {
-                                id: dia
-                                required property var modelData
-                                width: dias.width; height: 26
-                                Texto { width: 22; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.dia; font.weight: Font.Bold; color: tiempo.letraSuave }
-                                Icono { x: 26; anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18; nombre: root.cielo(dia.modelData.codigo, true); color: "white" }
-                                Texto { x: 54; anchors.verticalCenter: parent.verticalCenter; text: root.cieloTexto(dia.modelData.codigo); font.pixelSize: 12; color: tiempo.letraSuave }
-                                Texto { anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.max + "° / " + dia.modelData.min + "°"; color: tiempo.letra; font.pixelSize: 12 }
+                        // Los próximos días
+                        Column {
+                            id: dias
+                            y: barras.y + barras.height + 8
+                            width: parent.width
+                            Repeater {
+                                model: tiempo.w.dias || []
+                                delegate: Item {
+                                    id: dia
+                                    required property var modelData
+                                    width: dias.width; height: 26
+                                    Texto { width: 22; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.dia; font.weight: Font.Bold; color: tiempo.letraSuave }
+                                    Icono { x: 26; anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18; nombre: root.cielo(dia.modelData.codigo, true); color: "white" }
+                                    Texto { x: 54; anchors.verticalCenter: parent.verticalCenter; text: root.cieloTexto(dia.modelData.codigo); font.pixelSize: 12; color: tiempo.letraSuave }
+                                    Texto { anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: dia.modelData.max + "° / " + dia.modelData.min + "°"; color: tiempo.letra; font.pixelSize: 12 }
+                                }
                             }
                         }
                     }

@@ -262,13 +262,14 @@ def widgets():
 
 
 def bare(svg):
-    """Órbita («C · Orbe central»): la barra fina de arriba y el orbe de abajo, sueltos sobre tu escritorio, sin cristal
-    detrás. Plasma busca primero los trozos con el prefijo del borde del panel («north-…» arriba, «south-…» abajo) y,
-    si están, usa esos: aquí, vacíos (sin cristal ni máscara de desenfoque). Sin sombra de panel (la dibujaría KWin
-    debajo de la barra y del orbe). Los paneles de los lados siguen con su cristal (lo pintan ellos)."""
+    """Órbita («C · Orbe central»): la barra fina de arriba, el orbe de abajo y el panel rápido de la derecha, sueltos
+    sobre tu escritorio, sin cristal detrás. Plasma busca primero los trozos con el prefijo del borde del panel
+    («north-…» arriba, «south-…» abajo, «east-…» a la derecha) y, si están, usa esos: aquí, vacíos (sin cristal ni
+    máscara de desenfoque). Sin sombra de panel (la dibujaría KWin debajo de la barra y del orbe). El panel rápido son
+    módulos de cristal sueltos («R2»): cada uno pinta el suyo."""
     parts = ['topleft', 'top', 'topright', 'left', 'center', 'right', 'bottomleft', 'bottom', 'bottomright']
     extra = []
-    for edge in ('north', 'south'):
+    for edge in ('north', 'south', 'east'):
         extra += [f'<rect id="{edge}-{p}" x="0" y="0" width="4" height="4" fill="none"/>' for p in parts]
         extra += [f'<rect id="mask-{edge}-{p}" x="0" y="0" width="4" height="4" fill="none"/>' for p in parts]
         extra += [f'<rect id="{edge}-hint-{side}-margin" x="0" y="0" width="2" height="2" fill="none"/>'
