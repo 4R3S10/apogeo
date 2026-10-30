@@ -207,7 +207,8 @@ Seccion {
         enabled: !sec.sigueAgape
         opacity: enabled ? 1 : 0.45
         titulo: "Claro u oscuro"
-        detalle: sec.a.modo === "hora" ? "Claro de 8:00 a 20:00" : ""
+        detalle: sec.a.modo === "hora" ? "Claro de 8:00 a 20:00"
+               : sec.a.modo === "piso" && sec.a.estilo === "orbita" ? "Estudiar en papel de 8:00 a 20:00; lo demás, grafito" : ""
         Segmentos {
             readonly property var valores: ["piso", "oscuro", "claro", "hora"]
             opciones: [{ texto: "Por modo" }, { texto: "Oscuro" }, { texto: "Claro" }, { texto: "La hora" }]

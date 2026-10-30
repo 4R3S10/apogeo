@@ -45,7 +45,7 @@ STYLES = {
                'letra': 'Geist', 'mono': 'Geist Mono',
                'acentos': {'jugar': '#b79cff', 'navegar': '#45d6ff', 'estudiar': '#ffb35c'},
                'acentosClaro': {'jugar': '#6d4bc4', 'navegar': '#007a99', 'estudiar': '#a85a00'},
-               'claroPiso': {'estudiar': True}},
+               'claroPiso': {'estudiar': 'hora'}},   # («E3»: Estudiar en papel de día y en grafito de noche)
     # La identidad clásica (Berenjena y rosa de Ágape), escondida como «Clásico».
     'apogeo': {'nombre': 'Clásico', 'fondo': '#120d14', 'superficie': '#1e1621', 'texto': '#f1e6ea', 'acento': '#e0a9b4',
                'sobreAcento': '#2a1c26', 'vivo': '#ff8fc6', 'wp': ['#4a2c4f', '#7a4458', '#e0a9b4'],
@@ -164,7 +164,8 @@ def tokens(a, st=None, floor='navegar', wallpaper=None):
     dark_style = not s.get('claro')
     want_light = a['modo'] == 'claro' or (a['modo'] == 'hora' and light_now())
     if a['modo'] == 'piso':
-        want_light = bool(s.get('claroPiso', {}).get(mode)) if key == 'orbita' else not dark_style
+        light = s.get('claroPiso', {}).get(mode) if key == 'orbita' else not dark_style
+        want_light = light_now() if light == 'hora' else bool(light)
     if a['modo'] == 'oscuro':
         want_light = False
     # El acento curado del modo (Órbita), salvo que hayas elegido uno a mano

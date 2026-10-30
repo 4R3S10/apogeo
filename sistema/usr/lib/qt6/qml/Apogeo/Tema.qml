@@ -47,6 +47,7 @@ QtObject {
 
     readonly property string letra: c("letra", "Geist")
     readonly property string mono: c("mono", "Geist Mono")
+    readonly property string serif: "Source Serif 4"   // (para leer y escribir apuntes)
     readonly property real letraPt: c("letraPt", 10)
     // Los fondos animados: base y sus tres colores (el tercero es el acento del modo)
     readonly property var wp: c("wp", ["#0b1118", piso === "jugar" ? "#2b2147" :

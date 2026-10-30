@@ -681,6 +681,51 @@ def _keys(*codes):
                       signature='(ai)')
 
 
+OBSIDIAN_SNIPPET = """/* Órbita · tus apuntes en Source Serif 4 (lo pone Apogeo; apágalo en Ajustes → Apariencia → Fragmentos CSS) */
+body {
+  --font-text-theme: "Source Serif 4", Georgia, serif;
+  --font-interface-theme: "Geist", sans-serif;
+  --font-monospace-theme: "Geist Mono", monospace;
+}
+.theme-light { --interactive-accent: #a85a00; --text-accent: #a85a00; --background-primary: #fbf8f2; }
+.theme-dark { --interactive-accent: #ffb35c; --text-accent: #ffb35c; --text-on-accent: #241605; }
+"""
+
+
+def obsidian_notes(st):
+    """Tus bóvedas de Obsidian con la letra de los apuntes (Source Serif 4) y el ámbar de Estudiar: un fragmento CSS
+    que se enciende una sola vez por bóveda (si luego lo apagas, se respeta)."""
+    try:
+        with open(os.path.join(HOME, '.config/obsidian/obsidian.json')) as f:
+            vaults = [v.get('path') for v in (json.load(f).get('vaults') or {}).values() if isinstance(v, dict)]
+    except (OSError, ValueError, AttributeError):
+        return
+    done = st.setdefault('obsidian', [])
+    for path in vaults:
+        conf = os.path.join(path or '', '.obsidian')
+        if not path or not os.path.isdir(conf) or path in done:
+            continue
+        try:
+            os.makedirs(os.path.join(conf, 'snippets'), exist_ok=True)
+            with open(os.path.join(conf, 'snippets', 'orbita-apuntes.css'), 'w') as f:
+                f.write(OBSIDIAN_SNIPPET)
+            look = os.path.join(conf, 'appearance.json')
+            try:
+                with open(look) as f:
+                    data = json.load(f)
+            except (OSError, ValueError):
+                data = {}
+            on = data.setdefault('enabledCssSnippets', [])
+            if 'orbita-apuntes' not in on:
+                on.append('orbita-apuntes')
+            with open(look + '.nuevo', 'w') as f:
+                json.dump(data, f, indent=2)
+            os.replace(look + '.nuevo', look)
+            done.append(path)
+        except OSError as e:
+            log('obsidian:', e)
+
+
 def carousel(st):
     """Karousel en los pisos que lo tienen (por el nombre del escritorio), con los huecos y anchos de Ajustes y sus
     atajos en Meta+Alt. Sin ningún piso, apagado y con los atajos de KWin de siempre."""
@@ -1194,6 +1239,9 @@ def main():
             go(bus, int(sys.argv[2].partition(':')[2].strip('/')))
         return
     setup(bus)
+    st = load_state()
+    obsidian_notes(st)
+    save_state(st)
     light_effects()
     fluid_screen(ajustes.load())
     carousel(ajustes.load())

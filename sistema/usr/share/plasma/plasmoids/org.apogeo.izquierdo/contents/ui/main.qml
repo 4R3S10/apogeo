@@ -1054,8 +1054,8 @@ PlasmoidItem {
                             placeholderTextColor: Qt.rgba(nota.tinta.r, nota.tinta.g, nota.tinta.b, 0.45)
                             selectionColor: nota.tinta
                             selectedTextColor: nota.papel
-                            font.family: Tema.letra
-                            font.pixelSize: 14
+                            font.family: Tema.serif   // (los apuntes, en Source Serif 4)
+                            font.pixelSize: 15
                             wrapMode: TextEdit.Wrap
                             background: null
                             Keys.onEscapePressed: focus = false

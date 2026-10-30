@@ -46,7 +46,8 @@ package_apogeo() {
   python "$h/letra.py" "$h/fuentes/Geist[wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
   python "$h/letra.py" "$h/fuentes/GeistMono[wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
   python "$h/letra.py" "$h/fuentes/BricolageGrotesque[opsz,wdth,wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
-  for f in Geist GeistMono Bricolage; do
+  python "$h/letra.py" "$h/fuentes/SourceSerif4[opsz,wght].ttf" "$pkgdir/usr/share/fonts/apogeo"   # (los apuntes)
+  for f in Geist GeistMono Bricolage SourceSerif4; do
     install -Dm644 "$h/fuentes/$f-OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/$f-OFL.txt"
   done
   python "$h/ventanas.py" "$pkgdir/usr/share/aurorae/themes"

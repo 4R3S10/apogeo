@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 """
-El símbolo de Apogeo —«Núcleo»—: un punto sólido rodeado por tres órbitas abiertas, cada una con su nodo. Geométrico,
+El símbolo de Apogeo —«Núcleo», «N1 · Una órbita por modo»—: un punto sólido rodeado por tres órbitas abiertas, cada
+una con su nodo y del color de su modo (Navegar cian arriba, Estudiar ámbar abajo a la derecha, Jugar violeta abajo a la
+izquierda). Geométrico,
 legible a 16 px y a 512 px, y a gusto en el grafito de Órbita. La identidad clásica (el búho) se conserva en
 logo-clasico.py.
 
@@ -11,15 +13,16 @@ import math
 import os
 import sys
 
-ACCENT = sys.argv[2] if len(sys.argv) > 2 else '#45d6ff'
+ACCENT = sys.argv[2] if len(sys.argv) > 2 else '#45d6ff'   # (Navegar)
+AMBER, VIOLET = '#ffb35c', '#b79cff'                        # (Estudiar y Jugar)
 DISC = '#0b0e14'
 RING = '#1c2430'
 TEXT = '#e9edf5'
 MUTED = '#8b94a7'
 FRAMES = 24
 
-# Los tres arcos: (rotación, color, opacidad). El primero es el del modo de serie (Navegar): cian.
-ARCS = ((0, ACCENT, 1.0), (120, TEXT, 0.42), (240, TEXT, 0.28))
+# Los tres arcos: (rotación, color, opacidad), uno por modo
+ARCS = ((0, ACCENT, 1.0), (120, AMBER, 1.0), (240, VIOLET, 1.0))
 SPAN = 82           # grados que ocupa cada arco
 RADIUS = 27.5
 
@@ -40,8 +43,8 @@ def arc(rot, color, opacity):
     n = pt(a1 + rot, RADIUS, 50, 50)
     # (una vuelta casi completa: el hueco queda entre el final de un arco y el principio del siguiente)
     return (f'<path d="M{f2(*p0)} A{RADIUS} {RADIUS} 0 0 1 {f2(*p1)}" fill="none" stroke="{color}" '
-            f'stroke-width="2.6" stroke-linecap="round" opacity="{opacity}"/>'
-            f'<circle cx="{n[0]:.2f}" cy="{n[1]:.2f}" r="2.9" fill="{color}" opacity="{opacity}"/>')
+            f'stroke-width="3" stroke-linecap="round" opacity="{opacity}"/>'
+            f'<circle cx="{n[0]:.2f}" cy="{n[1]:.2f}" r="3.2" fill="{color}" opacity="{opacity}"/>')
 
 
 def nucleo(rot=0, pulse=0.0, disc=True):
@@ -50,11 +53,10 @@ def nucleo(rot=0, pulse=0.0, disc=True):
         body += (f'<circle cx="50" cy="50" r="48" fill="{DISC}"/>'
                  f'<circle cx="50" cy="50" r="47.25" fill="none" stroke="{RING}" stroke-width="1.5"/>')
     arcs = ''.join(arc(r + rot, c, o) for r, c, o in ARCS)
-    # El núcleo: un punto sólido con un halo muy leve del acento
+    # El núcleo: un punto sólido con un halo muy leve
     core_r = 7.4 + pulse
-    body += (f'<circle cx="50" cy="50" r="{core_r + 5.6:.2f}" fill="{ACCENT}" opacity="0.10"/>'
-             f'<circle cx="50" cy="50" r="{core_r:.2f}" fill="{TEXT}"/>'
-             f'<circle cx="47.4" cy="47.2" r="{core_r * 0.28:.2f}" fill="{ACCENT}" opacity="0.85"/>')
+    body += (f'<circle cx="50" cy="50" r="{core_r + 5.6:.2f}" fill="{TEXT}" opacity="0.07"/>'
+             f'<circle cx="50" cy="50" r="{core_r:.2f}" fill="{TEXT}"/>')
     body += f'<g>{arcs}</g>'
     return body
 
@@ -70,5 +72,5 @@ if __name__ == '__main__':
     open(f'{M}/logo.svg', 'w').write(svg())
     open(f'{M}/logo-silueta.svg', 'w').write(svg(disc=False))
     for i in range(FRAMES):
-        angle = i * (180 / FRAMES)
+        angle = i * (360 / FRAMES)  # (una vuelta entera: cada órbita tiene su color)
         open(f'{M}/aleteo-{i:02d}.svg', 'w').write(svg(rot=angle, pulse=0.45 * math.sin(2 * math.pi * i / FRAMES)))
