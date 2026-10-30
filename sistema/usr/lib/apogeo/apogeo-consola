@@ -6,7 +6,10 @@ tienda o plataforma (Steam, Epic, Emuladores, PS5 y Windows) con toda tu bibliot
 
 Con el mando (sin Steam por medio: lo lee este programa) o el teclado:
   ← → elegir · ✕ (A) / Intro jugar o descargar · □ (X) / Supr quitar · L1 R1 (LB RB) / Q E pestaña · ○ (B) / Esc atrás
-  el botón central del mando (PS o Xbox), desde cualquier sitio, trae la consola. Los botones salen como en tu mando.
+  el botón central del mando (PS o Xbox), como en la PS5: pulsado y soltado, el centro de control encima del juego
+  (Centro.qml: lo que suena, Discord, los avisos de la partida, el volumen y volver a la consola); mantenido, la
+  consola. Con él mantenido, → ← cambian de canción y ↑ ↓ el volumen. Fuera de Jugar trae la consola.
+  Los botones salen como en tu mando.
 
   apogeo-consola            la abre (o la trae delante, si ya está)
 D-Bus: org.apogeo.Consola /Consola org.apogeo.Consola.Show
@@ -21,6 +24,7 @@ import threading
 
 SERVICE, PATH, IFACE = 'org.apogeo.Consola', '/Consola', 'org.apogeo.Consola'
 QML = os.environ.get('APOGEO_CONSOLA_QML', '/usr/share/apogeo/consola/Consola.qml')
+CENTRO_QML = os.path.join(os.path.dirname(QML), 'Centro.qml')
 MODO = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'modo.json')
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 
@@ -216,6 +220,63 @@ def main():
         def floor(self, n):
             subprocess.Popen(['/usr/lib/apogeo/apogeo-pisos', 'ir', str(n)], start_new_session=True)
 
+        # ----- El centro de control (el botón PS, como en la PS5) -----
+        guia = pyqtSignal()                            # el botón central, pulsado y soltado: el centro
+        atajo = pyqtSignal(str, arguments=['what'])    # con él mantenido: siguiente, anterior, subir, bajar
+        abierto = False                                # (el centro, a la vista: el mando solo es suyo)
+
+        @pyqtSlot(bool)
+        def setCentro(self, on):
+            self.abierto = on
+
+        @pyqtSlot()
+        def traer(self):
+            self.shown.emit()
+
+        @pyqtSlot(result=str)
+        def centro(self):
+            """Lo del centro, en JSON: lo que suena, Discord (si está abierto, sus mensajes y tu micro), los avisos que han
+            llegado en la partida (Jugar no los enseña: los guarda apogeo-pisos) y el volumen."""
+            mic, vol = _volume('@DEFAULT_AUDIO_SOURCE@'), _volume('@DEFAULT_AUDIO_SINK@')
+            badges = _call('org.apogeo.Datos', '/Datos', 'org.apogeo.Datos', 'Insignias') or {}
+            return json.dumps({
+                'musica': _call('org.apogeo.Datos', '/Datos', 'org.apogeo.Datos', 'Musica') or {},
+                'discord': {'abierto': _running('Discord', 'discord'), 'micro': not mic[1] if mic else None,
+                            'mensajes': badges.get('discord', {}).get('numero', 0)},
+                'avisos': _call('org.apogeo.Modos', '/Modos', 'org.apogeo.Modos1', 'Avisos') or [],
+                'volumen': {'nivel': vol[0], 'mudo': vol[1]} if vol else None,
+            }, ensure_ascii=False)
+
+        @pyqtSlot(str)
+        def musica(self, action):
+            """Previous · PlayPause · Next en lo que suena (lo mismo que la isla)."""
+            _call('org.apogeo.Datos', '/Datos', 'org.apogeo.Datos', 'MusicaAccion', action, answer=False)
+
+        @pyqtSlot()
+        def spotify(self):
+            _call('org.apogeo.Datos', '/Datos', 'org.apogeo.Datos', 'Abrir', 'spotify', answer=False)
+
+        @pyqtSlot()
+        def micro(self):
+            """Tu micro, apagado o encendido (el del sistema: vale para Discord y para todo)."""
+            subprocess.run(['wpctl', 'set-mute', '@DEFAULT_AUDIO_SOURCE@', 'toggle'], capture_output=True, timeout=3)
+
+        @pyqtSlot(float)
+        def volumen(self, step):
+            """Más o menos volumen (de 0 a 1; nunca por encima del 100 %)."""
+            if step:
+                subprocess.run(['wpctl', 'set-volume', '-l', '1', '@DEFAULT_AUDIO_SINK@',
+                                f'{abs(step):.2f}{"+" if step > 0 else "-"}'], capture_output=True, timeout=3)
+            else:
+                subprocess.run(['wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', 'toggle'], capture_output=True, timeout=3)
+
+        @pyqtSlot()
+        def discord(self):
+            """Discord al lado del juego sin quitarlo de la pantalla: el modo partida de KWin (Meta+Tab; si Discord no está
+            abierto, lo abre). Un momento después, cuando el juego vuelve a estar delante."""
+            QTimer.singleShot(350, lambda: _call('org.kde.kglobalaccel', '/component/kwin', 'org.kde.kglobalaccel.Component',
+                                                 'invokeShortcut', 'Apogeo partida', answer=False))
+
     @pyqtClassInfo('D-Bus Interface', IFACE)
     class Adaptor(QDBusAbstractAdaptor):
         @pyqtSlot()
@@ -239,15 +300,50 @@ def main():
     engine.load(QUrl.fromLocalFile(QML))
     if not engine.rootObjects():
         return 1
+    engine.load(QUrl.fromLocalFile(CENTRO_QML))
     threading.Thread(target=gamepads, args=(consola,), daemon=True).start()
     return app.exec()
+
+
+# ---------- Lo que lee el centro de control ----------
+
+def _call(service, path, iface, method, *args, answer=True):
+    """Un método de D-Bus que devuelve JSON (los de apogeo-pisos), ya leído; None si no está o no contesta."""
+    import dbus
+    try:
+        out = dbus.SessionBus().get_object(service, path).get_dbus_method(method, iface)(*args, timeout=3)
+        return json.loads(str(out)) if answer else None
+    except (dbus.DBusException, ValueError):
+        return None
+
+
+def _volume(target):
+    """(nivel de 0 a 1, en silencio) de la salida o del micro (wpctl: «Volume: 0.40 [MUTED]»); None si no hay."""
+    try:
+        out = subprocess.run(['wpctl', 'get-volume', target], capture_output=True, text=True, timeout=3).stdout.split()
+        return round(float(out[1]), 2), '[MUTED]' in out
+    except (OSError, subprocess.SubprocessError, IndexError, ValueError):
+        return None
+
+
+def _running(*names):
+    for pid in os.listdir('/proc'):
+        if pid.isdigit():
+            try:
+                with open(f'/proc/{pid}/comm') as f:
+                    if f.read().strip() in names:
+                        return True
+            except OSError:
+                pass
+    return False
 
 
 # ---------- El mando ----------
 
 def gamepads(consola):
-    """Lee los mandos (evdev) y se los pasa a la consola (que solo hace caso con su ventana delante). El botón central la
-    trae siempre."""
+    """Lee los mandos (evdev) y se los pasa a la consola (que solo hace caso con su ventana delante) o, con el centro de
+    control abierto, al centro (y entonces el mando es solo suyo: el juego no se entera). El botón central, al soltarlo:
+    el centro de control (en Jugar) o la consola (mantenido, o fuera de Jugar); con él mantenido, las flechas son atajos."""
     try:
         import evdev
         from evdev import ecodes as e
@@ -258,9 +354,15 @@ def gamepads(consola):
     names = {e.BTN_SOUTH: 'a', e.BTN_EAST: 'b', e.BTN_WEST: 'x', e.BTN_NORTH: 'y', e.BTN_TL: 'lb', e.BTN_TR: 'rb',
              e.BTN_START: 'start', e.BTN_DPAD_LEFT: 'izquierda', e.BTN_DPAD_RIGHT: 'derecha',
              e.BTN_DPAD_UP: 'arriba', e.BTN_DPAD_DOWN: 'abajo'}
+    hat = {(e.ABS_HAT0X, -1): 'izquierda', (e.ABS_HAT0X, 1): 'derecha', (e.ABS_HAT0Y, -1): 'arriba',
+           (e.ABS_HAT0Y, 1): 'abajo'}
+    combos = {'derecha': 'siguiente', 'izquierda': 'anterior', 'arriba': 'subir', 'abajo': 'bajar'}
+    LONG = 0.7  # segundos mantenido: la consola en vez del centro
     sel = selectors.DefaultSelector()
     known = {}
-    stick = {}  # dispositivo → -1/0/1 en horizontal (para no repetir)
+    stick = {}     # dispositivo → -1/0/1 en horizontal (para no repetir)
+    held = None    # el botón central mantenido: [cuándo, si ya se ha usado para un atajo]
+    grabbed = False
 
     def scan():
         for path in evdev.list_devices():
@@ -274,35 +376,63 @@ def gamepads(consola):
                     continue
                 known[path] = d
                 sel.register(d, selectors.EVENT_READ)
+                if grabbed:
+                    d.grab()
                 # Sony (054c): PlayStation; Microsoft (045e) o lo que diga Xbox: Xbox
                 xbox = d.info.vendor == 0x045e or 'xbox' in d.name.lower()
                 consola._kind.emit('xbox' if xbox else 'ps')
             except OSError:
                 pass
 
+    def grab(on):
+        for d in known.values():
+            try:
+                d.grab() if on else d.ungrab()
+            except OSError:
+                pass
+
     def send(button):
-        if button == 'guia':
+        nonlocal held
+        if held is not None and button in combos:
+            held[1] = True
+            consola.atajo.emit(combos[button])
+        elif held is None:
+            consola.pad.emit(button)
+
+    def guide(down):
+        nonlocal held
+        if down:
+            held = [time.time(), False]
+            return
+        if held is None:
+            return
+        start, used = held
+        held = None
+        if used:
+            return
+        if time.time() - start >= LONG or consola.fueraDeJugar():
             consola.shown.emit()
         else:
-            consola.pad.emit(button)
+            consola.guia.emit()
 
     last_scan = 0
     while True:
         if time.time() - last_scan > 3:  # mandos que se conectan después
             scan()
             last_scan = time.time()
-        for key, _ in sel.select(timeout=1):
+        if consola.abierto != grabbed:   # el centro abierto: el mando, solo para él
+            grabbed = consola.abierto
+            grab(grabbed)
+        for key, _ in sel.select(timeout=0.2):  # (corto: el centro se adueña del mando nada más abrirse)
             d = key.fileobj
             try:
                 for ev in d.read():
-                    if ev.type == e.EV_KEY and ev.value == 1:
-                        if ev.code == e.BTN_MODE:
-                            send('guia')
-                        elif ev.code in names:
-                            send(names[ev.code])
-                    elif ev.type == e.EV_ABS and ev.code in (e.ABS_HAT0X, e.ABS_HAT0Y) and ev.value:
-                        send({(e.ABS_HAT0X, -1): 'izquierda', (e.ABS_HAT0X, 1): 'derecha',
-                              (e.ABS_HAT0Y, -1): 'arriba', (e.ABS_HAT0Y, 1): 'abajo'}[(ev.code, ev.value)])
+                    if ev.type == e.EV_KEY and ev.code == e.BTN_MODE and ev.value in (0, 1):
+                        guide(ev.value == 1)
+                    elif ev.type == e.EV_KEY and ev.value == 1 and ev.code in names:
+                        send(names[ev.code])
+                    elif ev.type == e.EV_ABS and (ev.code, ev.value) in hat:
+                        send(hat[(ev.code, ev.value)])
                     elif ev.type == e.EV_ABS and ev.code == e.ABS_X:
                         info = d.absinfo(e.ABS_X)
                         mid = (info.max + info.min) / 2
@@ -315,7 +445,6 @@ def gamepads(consola):
             except OSError:  # desconectado
                 sel.unregister(d)
                 known.pop(d.path, None)
-
 
 if __name__ == '__main__':
     sys.exit(main())

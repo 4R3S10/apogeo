@@ -404,10 +404,18 @@ igual y siempre sirve: al encender y al iniciar sesión se pide ella.
 - **La consola de Jugar duerme** sin estar delante: deja de mirar tus juegos cada 20 segundos y suelta las imágenes; el
   arte se carga al tamaño de la pantalla. Tras media hora dormida fuera de Jugar se cierra (devuelve su memoria) y
   `apogeo-pisos` la abre al volver a Jugar.
-- **MangoHud en los juegos** (Vulkan, también Proton), escondido y con los colores de Apogeo: el botón «HUD» de la isla
-  en Jugar y del modo partida (Meta+Tab) lo enseña o esconde (`mangohudctl`; también Mayús derecha+F12). El límite de
-  FPS de Salud del PC va con MangoHud (vale en todos los juegos) y cada juego de Steam o Epic puede tener el suyo (30,
-  45 o 60) desde la consola. Ágape, Discord, Steam y Spotify quedan fuera.
+- **MangoHud en los juegos** (Vulkan, también Proton), siempre a la vista y pequeño: una línea arriba a la izquierda
+  con los FPS y la temperatura y el uso del procesador y de la gráfica (Geist Mono 13, fondo casi transparente).
+  Mayús derecha+F12 o el botón «HUD» del modo partida (Meta+Tab) lo esconden (`mangohudctl`). El límite de FPS de Salud
+  del PC va con MangoHud (vale en todos los juegos) y cada juego de Steam o Epic puede tener el suyo (30, 45 o 60) desde
+  la consola. Ágape, Discord, Steam y Spotify quedan fuera.
+- **Centro de control de Jugar** (como en la PS5): el botón PS o Xbox, pulsado y soltado en una partida, saca abajo,
+  encima del juego (layer-shell, sin pararlo), lo que suena (⏮ ⏯ ⏭; sin nada, «Abrir Spotify»), Discord (tu micro, el
+  del sistema, y abrirlo al lado del juego con el modo partida), los avisos que han llegado en la partida (los guarda
+  `apogeo-pisos`: `org.apogeo.Modos1.Avisos`), el volumen y volver a la consola. Mientras está abierto, el mando es solo
+  suyo (evdev con *grab*). Con el botón mantenido: → ← canción, ↑ ↓ volumen (con un aviso pequeño arriba); mantenido
+  0,7 s sin más, la consola. Si Steam también usa el botón (su menú), en Steam → Ajustes → Mando se puede quitar.
+- **Jugar es la consola:** si se cierra estando en Jugar, `apogeo-pisos` la vuelve a abrir.
 - Sin gráfica de verdad (máquina virtual), sin desenfoque; los fondos animados solo se mueven a la vista.
 
 ## Copia de Apogeo

@@ -110,6 +110,7 @@ class Modos(dbus.service.Object):
         self.bus = bus
         self.name = name
         self.actual = write_mode(current_index(bus))['modo']
+        self.missed = None   # (los avisos que no salen: los pone Floors)
 
     def publish(self, index):
         data = write_mode(index)
@@ -145,6 +146,13 @@ class Modos(dbus.service.Object):
         i = (self.Piso() - 1) % len(FLOORS)
         self.Cambiar(FLOORS[i]['key'])
         return FLOORS[i]['key']
+
+    @dbus.service.method('org.apogeo.Modos1', in_signature='', out_signature='s')
+    def Avisos(self):
+        """Los avisos que han llegado sin salir (en Jugar, Estudiar o con «No molestar»), el último primero, en JSON: los
+        enseña el centro de control de Jugar."""
+        items = self.missed.items if self.missed and self.missed.since is not None else []
+        return json.dumps(items[::-1][:30], ensure_ascii=False)
 
     @dbus.service.signal('org.apogeo.Modos1', signature='s')
     def Cambiado(self, modo):
@@ -361,7 +369,7 @@ def setup(bus):
             'PopupPosition', 'BottomRight')
         st['isla2'] = ISLAND2
     if st.get('mangohud', 0) < MANGOHUD:
-        # MangoHud en los juegos (escondido) con el límite de FPS: su configuración y el entorno de la sesión
+        # MangoHud en los juegos (pequeño, siempre a la vista) con el límite de FPS: su configuración y el entorno
         cfg = ajustes.load()
         ajustes.write_fps(cfg['fps'], cfg.get('juegos_fps'))
         st['mangohud'] = MANGOHUD
@@ -449,7 +457,7 @@ TRAY_HIDDEN = ['org.kde.plasma.clipboard', 'org.kde.kdeconnect', 'org.kde.plasma
 CLOCK = 1  # igual, para la hora de la isla
 QUICK = 1  # igual, para el panel rápido de la isla
 DESKTOP = 2  # igual, para el escritorio (sin iconos y con el widget de Apogeo a pantalla completa)
-MANGOHUD = 1  # igual, para MangoHud en los juegos
+MANGOHUD = 2  # igual, para MangoHud en los juegos (2: siempre a la vista, pequeño)
 LIGHTER = 2  # igual, para quitar de en medio lo que no se usa al entrar (menú global, accesibilidad)
 ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los modos con el cristal (B1)
@@ -861,6 +869,8 @@ class Floors:
         self.light_on = None       # la luz nocturna de KWin encendida (solo en Estudiar)
         self.light_conf = None     # el calor que se escribió en kwinrc (para no reescribirlo en cada piso)
         self.missed = Missed(bus)  # los avisos que llegan mientras no salen (para el resumen al volver)
+        if modos:
+            modos.missed = self.missed
         self.visited = set()
         self.last = None
         self.rotate_timer = None   # «que cambie solo»: el temporizador del piso en el que estás
@@ -1257,6 +1267,18 @@ def main():
     bus.add_signal_receiver(lambda _id: floors.apply(current_index(bus)), signal_name='currentChanged',
                             dbus_interface='org.kde.KWin.VirtualDesktopManager', path='/VirtualDesktopManager')
     go(bus, start_floor())
+    # Jugar es la consola («full modo consola»): si se cierra estando en Jugar, vuelve (si se cerrara sola nada más
+    # abrirse, como mucho 3 veces por minuto)
+    reopened = []
+
+    def console_gone(name, old, new):
+        if name != 'org.apogeo.Consola' or not old or new or floors.last is None or FLOORS[floors.last]['key'] != 'jugar':
+            return
+        now = time.time()
+        reopened[:] = [t for t in reopened if now - t < 60] + [now]
+        if len(reopened) <= 3:
+            GLib.timeout_add(1500, floors.wake_console, floors.last)
+    bus.add_signal_receiver(console_gone, 'NameOwnerChanged', 'org.freedesktop.DBus', path='/org/freedesktop/DBus')
     # El buscador, preparado (para que la lupa de la isla y la tecla Meta lo saquen al momento), y la música de abajo a
     # la izquierda (sale sola cuando suena algo)
     for name, args in (('buscador', ['--fondo']), ('musica', [])):

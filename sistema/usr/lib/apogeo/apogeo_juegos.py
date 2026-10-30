@@ -759,7 +759,7 @@ Solo tus copias de tus juegos: Apogeo no trae ni busca juegos.
 """
 
 
-# ---------- MangoHud: escondido en tus juegos, el límite de FPS de todos y el de cada juego ----------
+# ---------- MangoHud: en tus juegos (pequeño), el límite de FPS de todos y el de cada juego ----------
 
 MANGOHUD = os.path.join(HOME, '.config', 'MangoHud')
 MANAGED = '# Apogeo:'
@@ -799,29 +799,37 @@ def game_exes(g):
 
 
 def mangohud_conf(fps, extra=''):
-    return (f"""{MANAGED} MangoHud en tus juegos, escondido (el botón «HUD» de la isla en Jugar lo enseña; también
-# Mayús derecha+F12). Lo escribe Apogeo: si cambias algo aquí, borra la primera línea y lo dejará en paz.
-no_display
+    return (f"""{MANAGED} MangoHud en tus juegos: siempre a la vista, pequeño y en una línea arriba a la izquierda (los
+# FPS y la temperatura del procesador y la gráfica; lo demás, con el botón PS). Mayús derecha+F12 lo esconde.
+# Lo escribe Apogeo: si cambias algo aquí, borra la primera línea y lo dejará en paz.
 fps_limit={fps}
 control=mangohud
 toggle_hud=Shift_R+F12
 blacklist={NOT_GAME_PROCS}
 position=top-left
-round_corners=12
-background_alpha=0.55
-background_color=1E1621
-text_color=F1E6EA
-gpu_color=E0A9B4
-cpu_color=E0A9B4
-frametime_color=E0A9B4
-font_size=20
+offset_x=10
+offset_y=8
+horizontal
+hud_compact
+hud_no_margin
+round_corners=6
+background_alpha=0.2
+background_color=080A0F
+text_color=E9EDF5
+gpu_color=B79CFF
+cpu_color=B79CFF
+font_size=13
+font_file=/usr/share/fonts/apogeo/GeistMono-Medium.ttf
 fps
 frametime=0
 gpu_stats
 gpu_temp
+gpu_load_change
+gpu_load_value=80,95
 cpu_stats
 cpu_temp
-ram
+cpu_load_change
+cpu_load_value=80,95
 {extra}""")
 
 

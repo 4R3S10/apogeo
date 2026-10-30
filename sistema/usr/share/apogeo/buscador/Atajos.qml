@@ -35,6 +35,8 @@ Window {
         [["Meta", "Alt", "Intro"], "Carrusel: centrarla"]]
     readonly property var pisos: ({
         "Jugar": { icono: "jugar", atajos: [
+            [["PS · Xbox"], "Centro de control: música, Discord, avisos"],
+            [["PS", "→ ←"], "Canción siguiente o anterior"],
             [["Meta", "Tab"], "Modo partida: el juego y Discord"],
             [["⇧ dcha", "F12"], "Enseñar o esconder el HUD"],
             [["Alt", "Tab"], "Cambiar de ventana"],
