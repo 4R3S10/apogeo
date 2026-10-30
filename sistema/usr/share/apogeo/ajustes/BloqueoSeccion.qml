@@ -98,7 +98,7 @@ Seccion {
                     const c = getContext("2d");
                     c.reset();
                     if (pts.length < 2) return;
-                    const col = estado === "mal" ? "#ff8f9a" : "#ff8fc6";
+                    const col = estado === "mal" ? Tema.error : Tema.acento;
                     c.lineCap = "round"; c.lineJoin = "round";
                     for (const [w, a] of [[14, 0.12], [7, 0.3], [3, 1]]) {
                         c.globalAlpha = a;
@@ -161,7 +161,7 @@ Seccion {
         visible: sec.mensaje !== ""
         width: parent.width
         topPadding: 4
-        color: sec.bien ? Tema.rosa : "#ff8f9a"
+        color: sec.bien ? Tema.acento : Tema.error
         text: sec.mensaje
     }
 }

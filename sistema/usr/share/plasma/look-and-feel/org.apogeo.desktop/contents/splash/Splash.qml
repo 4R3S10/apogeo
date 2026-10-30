@@ -2,9 +2,9 @@ import QtQuick
 import QtQuick.Effects
 import Apogeo
 
-// Pantalla de carga al entrar en la sesión: la misma que al encender (el tema de Plymouth «A2 · Brillo y barra», con sus
-// imágenes y medidas): el búho de Apogeo batiendo las alas sobre el brillo berenjena y la barra fina rosa, que avanza con
-// cada etapa del arranque de Plasma. Así no se nota el paso de una a otra.
+// Pantalla de carga al entrar en la sesión: la misma que al encender (el tema de Plymouth, con sus imágenes y medidas):
+// el Núcleo de Órbita girando sobre el grafito y la barra fina del acento, que avanza con cada etapa del arranque de
+// Plasma. Así no se nota el paso de una a otra.
 Rectangle {
     id: root
     color: Tema.fondo

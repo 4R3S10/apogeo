@@ -132,7 +132,7 @@ Item {
 
       mainItem: Item {
         width: panel.width; height: panel.height
-        Rectangle { anchors.fill: parent; color: "#e6120d14" } // el fondo, berenjena muy oscuro
+        Rectangle { anchors.fill: parent; color: "#e6080a0f" } // el fondo, el grafito de Órbita
 
         Item {
             id: izquierda
@@ -175,22 +175,22 @@ Item {
                 width: Math.min(parent.width, 520)
                 height: 96
                 radius: 20
-                color: "#cc1e1621"
-                border.color: "#1af1e6ea"
+                color: "#cc0f131a"
+                border.color: "#1ae9edf5"
                 readonly property var p: root.musica && root.musica.app ? root.musica : null
                 Row {
                     anchors.fill: parent; anchors.margins: 16
                     spacing: 14
                     visible: !!musica.p
                     Rectangle {
-                        width: 64; height: 64; radius: 12; color: "#33e0a9b4"; clip: true
+                        width: 64; height: 64; radius: 12; color: "#330b0e14"; clip: true
                         Image { anchors.fill: parent; source: musica.p ? musica.p.portada : ""; fillMode: Image.PreserveAspectCrop }
                     }
                     Column {
                         width: parent.width - 64 - 14 - botones.width - 14
                         anchors.verticalCenter: parent.verticalCenter
                         Text { width: parent.width; text: musica.p ? musica.p.titulo : ""; color: Tema.texto; font.family: Tema.letra; font.pixelSize: 17; font.bold: true; elide: Text.ElideRight }
-                        Text { width: parent.width; text: musica.p ? (musica.p.artista || musica.p.app) : ""; color: "#9ef1e6ea"; font.family: Tema.letra; font.pixelSize: 13; elide: Text.ElideRight }
+                        Text { width: parent.width; text: musica.p ? (musica.p.artista || musica.p.app) : ""; color: "#9ee9edf5"; font.family: Tema.letra; font.pixelSize: 13; elide: Text.ElideRight }
                     }
                     Row {
                         id: botones
@@ -220,7 +220,7 @@ Item {
                     anchors.centerIn: parent
                     spacing: 12
                     visible: !musica.p
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: "No suena nada"; color: "#9ef1e6ea"; font.family: Tema.letra; font.pixelSize: 15 }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "No suena nada"; color: "#9ee9edf5"; font.family: Tema.letra; font.pixelSize: 15 }
                     Rectangle {
                         width: abrirT.width + 28; height: 38; radius: 13; color: Tema.rosa
                         Text { id: abrirT; anchors.centerIn: parent; text: "Abrir Spotify"; color: Tema.sobreRosa; font.family: Tema.letra; font.pixelSize: 14; font.bold: true }

@@ -38,8 +38,18 @@ FLOORS = ('jugar', 'navegar', 'estudiar')
 
 # Los estilos: fondo, superficie, texto, acento, texto sobre el acento, rosa vivo, y los 3 colores de los fondos animados
 STYLES = {
-    'apogeo': {'nombre': 'Apogeo', 'fondo': '#120d14', 'superficie': '#1e1621', 'texto': '#f1e6ea', 'acento': '#e0a9b4',
-               'sobreAcento': '#2a1c26', 'vivo': '#ff8fc6', 'wp': ['#4a2c4f', '#7a4458', '#e0a9b4']},
+    # Órbita: grafito, Geist y un acento por modo. Es la identidad de serie.
+    'orbita': {'nombre': 'Órbita', 'fondo': '#080a0f', 'superficie': '#0f131a', 'texto': '#e9edf5',
+               'acento': '#45d6ff', 'sobreAcento': '#041318', 'vivo': '#45d6ff',
+               'wp': ['#0b1118', '#12303d', '#45d6ff'], 'radio': 0.7, 'cristal': 0.588,
+               'letra': 'Geist', 'mono': 'Geist Mono',
+               'acentos': {'jugar': '#b79cff', 'navegar': '#45d6ff', 'estudiar': '#ffb35c'},
+               'acentosClaro': {'jugar': '#6d4bc4', 'navegar': '#007a99', 'estudiar': '#a85a00'},
+               'claroPiso': {'estudiar': True}},
+    # La identidad clásica (Berenjena y rosa de Ágape), escondida como «Clásico».
+    'apogeo': {'nombre': 'Clásico', 'fondo': '#120d14', 'superficie': '#1e1621', 'texto': '#f1e6ea', 'acento': '#e0a9b4',
+               'sobreAcento': '#2a1c26', 'vivo': '#ff8fc6', 'wp': ['#4a2c4f', '#7a4458', '#e0a9b4'],
+               'letra': 'Bricolage Grotesque'},
     'medianoche': {'nombre': 'Medianoche', 'fondo': '#0b0f17', 'superficie': '#151b27', 'texto': '#e6ecf5',
                    'acento': '#8fb4f2', 'sobreAcento': '#0f1b2e', 'vivo': '#9fc2ff', 'wp': ['#1d2c4a', '#2f4a78', '#8fb4f2']},
     'bosque': {'nombre': 'Bosque', 'fondo': '#0c130f', 'superficie': '#16201a', 'texto': '#e4efe7', 'acento': '#9ed9b0',
@@ -49,7 +59,7 @@ STYLES = {
     'papel': {'nombre': 'Papel', 'claro': True, 'fondo': '#f6f0ee', 'superficie': '#fffdfc', 'texto': '#2a1c26',
               'acento': '#b0476a', 'sobreAcento': '#ffffff', 'vivo': '#c4507a', 'wp': ['#ecdde1', '#dcbcc8', '#b0476a']},
 }
-DEFAULT = {'estilo': 'fondo', 'acento': '', 'modo': 'oscuro', 'letra': 'Bricolage Grotesque', 'esquinas': 'redondas',
+DEFAULT = {'estilo': 'orbita', 'acento': '', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves',
            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
 CORNERS = {'rectas': 0.35, 'suaves': 0.7, 'redondas': 1.0}
 SIZES = {'compacto': (9, 50), 'normal': (10, 56), 'grande': (11.5, 64)}     # (letra en pt, alto de la isla)
@@ -114,7 +124,9 @@ def settings_of(st):
     a = dict(DEFAULT)
     a.update({k: v for k, v in (st.get('aspecto') or {}).items() if k in DEFAULT})
     if a['estilo'] not in STYLES and a['estilo'] not in ('agape', 'fondo'):
-        a['estilo'] = 'apogeo'
+        a['estilo'] = 'orbita'
+    if a['modo'] not in ('oscuro', 'claro', 'hora', 'piso'):
+        a['modo'] = 'piso'
     if a['posicion'] not in ('abajo-dcha', 'arriba-dcha'):  # (ya no hay columna de pisos que poner a la izquierda)
         a['posicion'] = 'abajo-dcha'
     return a
@@ -126,38 +138,58 @@ def is_default(a):
 
 def tokens(a, st=None, floor='navegar', wallpaper=None):
     """Las fichas de tu aspecto (lo que leen Tema y los generadores). Con «Del fondo», las del piso «floor» (con
-    «wallpaper», el fondo que se ve ahora en él); sin ajustes (st), las de Apogeo."""
+    «wallpaper», el fondo que se ve ahora en él); sin ajustes (st), las de Órbita. En Órbita, cada modo tiene su acento
+    y Estudiar su papel claro (si el modo es «por modo»)."""
     g = agape_style() if a['estilo'] == 'agape' else None
     if g:
         font_pt, island = SIZES.get(a['tamano'], SIZES['normal'])
         t = {'estilo': 'agape', 'claro': g['claro'], 'fondo': g['fondo'], 'superficie': g['superficie'],
              'texto': g['texto'], 'acento': g['acento'], 'sobreAcento': g['sobreAcento'], 'vivo': g['vivo'],
              'wp': g['wp'], 'radio': g['radio'], 'cristal': round(g['cristal'], 3), 'letra': g['letra'],
-             'letraPt': font_pt, 'isla': island, 'animaciones': g['animaciones'], 'posicion': a['posicion']}
+             'mono': 'Geist Mono', 'modo': 'agape', 'letraPt': font_pt, 'isla': island,
+             'animaciones': g['animaciones'], 'posicion': a['posicion']}
         t['nombre'] = None if stock(t) else theme_name(t)
         return t
     if a['estilo'] == 'agape':
-        a = dict(a, estilo='apogeo')
+        a = dict(a, estilo='orbita')
     if a['estilo'] == 'fondo':
-        # Los colores del fondo del piso (sin foto ni color elegido, los de Apogeo); tu acento no cuenta
+        # Los colores del fondo del piso (sin foto ni color elegido, los de Órbita); tu acento no cuenta
         pal = paleta.of_floor(st, floor, wallpaper) if st else None
-        s = dict(STYLES['apogeo'], **(pal or {}), nombre='Del fondo')
+        s = dict(STYLES['orbita'], **(pal or {}), nombre='Del fondo')
         a = dict(a, acento='')
     else:
         s = dict(STYLES[a['estilo']])
+    key = a['estilo']
+    mode = floor if floor in FLOORS else 'navegar'
     dark_style = not s.get('claro')
     want_light = a['modo'] == 'claro' or (a['modo'] == 'hora' and light_now())
-    if a['modo'] == 'oscuro' and not dark_style:
+    if a['modo'] == 'piso':
+        want_light = bool(s.get('claroPiso', {}).get(mode)) if key == 'orbita' else not dark_style
+    if a['modo'] == 'oscuro':
         want_light = False
+    # El acento curado del modo (Órbita), salvo que hayas elegido uno a mano
+    if key == 'orbita' and not a['acento']:
+        acc = (s.get('acentosClaro') if want_light else s.get('acentos') or {}).get(mode, s['acento'])
+        s['acento'] = acc
+        s['vivo'] = mix(acc, '#000000' if want_light else '#ffffff', 0.12 if want_light else 0.18)
+        s['sobreAcento'] = '#ffffff' if want_light or luminance(acc) < 0.45 else '#041318'
+        s['wp'] = [s['wp'][0], mix(s['wp'][1], acc, 0.35), acc]
     if want_light and dark_style:
-        # La versión clara de un estilo oscuro: papel tintado con su color y el texto de su fondo
-        acc = s['acento']
-        s.update(fondo=mix('#ffffff', acc, 0.07), superficie=mix('#ffffff', acc, 0.025), texto=s['fondo'],
-                 acento=mix(s['vivo'], '#000000', 0.25), sobreAcento='#ffffff', vivo=mix(s['vivo'], '#000000', 0.12),
-                 wp=[mix('#ffffff', acc, 0.15), mix('#ffffff', acc, 0.35), mix(acc, '#000000', 0.3)], claro=True)
+        if key == 'orbita':
+            # Papel cálido, no un blanco clínico: el estudio se lee como un cuaderno
+            s.update(fondo='#f3efe6', superficie='#fbf8f2', texto='#1a1c22', claro=True,
+                     vivo=mix(s['acento'], '#000000', 0.10), sobreAcento='#ffffff')
+            s['wp'] = ['#f3efe6', '#e9e2d3', s['acento']]
+        else:
+            # La versión clara de un estilo oscuro: papel tintado con su color y el texto de su fondo
+            acc = s['acento']
+            s.update(fondo=mix('#ffffff', acc, 0.07), superficie=mix('#ffffff', acc, 0.025), texto=s['fondo'],
+                     acento=mix(s['vivo'], '#000000', 0.25), sobreAcento='#ffffff', vivo=mix(s['vivo'], '#000000', 0.12),
+                     wp=[mix('#ffffff', acc, 0.15), mix('#ffffff', acc, 0.35), mix(acc, '#000000', 0.3)], claro=True)
     elif not want_light and not dark_style:
-        # Papel en oscuro: el de Apogeo con su acento
-        s.update({k: STYLES['apogeo'][k] for k in ('fondo', 'superficie', 'texto', 'wp')}, claro=False)
+        # Un estilo claro en oscuro: el grafito de Órbita, con su acento
+        s.update({'fondo': '#080a0f', 'superficie': '#0f131a', 'texto': '#e9edf5', 'claro': False})
+        s['wp'] = ['#0b1118', mix('#12303d', s['acento'], 0.35), s['acento']]
     if a['acento']:
         acc = a['acento']
         s.update(acento=acc, vivo=mix(acc, '#ffffff', 0.25),
@@ -166,11 +198,12 @@ def tokens(a, st=None, floor='navegar', wallpaper=None):
     font_pt, island = SIZES.get(a['tamano'], SIZES['normal'])
     cristal = max(0.3, min(0.98, 1 - float(a['cristal']) / 100 * 0.75))   # 0 = opaco, 100 = muy transparente
     t = {
-        'estilo': a['estilo'], 'claro': bool(s.get('claro')),
+        'estilo': key, 'claro': bool(s.get('claro')),
         'fondo': s['fondo'], 'superficie': s['superficie'], 'texto': s['texto'], 'acento': s['acento'],
         'sobreAcento': s['sobreAcento'], 'vivo': s['vivo'], 'wp': s['wp'],
-        'radio': CORNERS.get(a['esquinas'], 1.0), 'cristal': round(cristal, 3),
-        'letra': a['letra'] or DEFAULT['letra'], 'letraPt': font_pt, 'isla': island,
+        'radio': CORNERS.get(a['esquinas'], 0.7), 'cristal': round(cristal, 3),
+        'letra': a['letra'] or s.get('letra') or DEFAULT['letra'], 'mono': s.get('mono', 'Geist Mono'),
+        'modo': a['modo'], 'letraPt': font_pt, 'isla': island,
         'animaciones': ANIMS.get(a['animaciones'], 1.0), 'posicion': a['posicion'],
     }
     t['nombre'] = None if stock(t) else theme_name(t)
@@ -178,13 +211,13 @@ def tokens(a, st=None, floor='navegar', wallpaper=None):
 
 
 # Lo que cambia los temas generados (colores, esquinas, cristal y claro u oscuro): si es lo de Apogeo, los del paquete
-_STOCK = {'fondo': '#120d14', 'superficie': '#1e1621', 'texto': '#f1e6ea', 'acento': '#e0a9b4', 'sobreAcento': '#2a1c26',
-          'radio': 1.0, 'claro': False}
+_STOCK = {'fondo': '#080a0f', 'superficie': '#0f131a', 'texto': '#e9edf5', 'acento': '#45d6ff', 'sobreAcento': '#041318',
+          'radio': 0.7, 'claro': False}
 
 
 # Sube cuando cambian los generadores (así tus temas se vuelven a hacer con lo nuevo). 2: el brillo de la isla del color
 # del piso.
-GENERATED = 2
+GENERATED = 3
 
 
 def stock(t):
@@ -286,14 +319,14 @@ ICONS_PREFIX = 'ApogeoCarpetas-'
 def icon_accent(t):
     """El color de las carpetas: el tuyo o, con «Del fondo», el más parecido (por su tono) de los de los animados."""
     acc = t['acento']
-    if t.get('estilo') != 'fondo' or acc in paleta.COLORS or acc == STYLES['apogeo']['acento']:
+    if t.get('estilo') != 'fondo' or acc in paleta.COLORS or acc == STYLES['orbita']['acento']:
         return acc
     import colorsys
     hue = lambda h: colorsys.rgb_to_hls(*(c / 255 for c in rgb(h)))
     h0, _l0, s0 = hue(acc)
-    choices = [c for c in paleta.COLORS if c] + [STYLES['apogeo']['acento']]
+    choices = [c for c in paleta.COLORS if c] + [STYLES['orbita']['acento'], *STYLES['orbita']['acentos'].values()]
     if s0 < 0.15:   # (casi gris: el rosa de Apogeo)
-        return STYLES['apogeo']['acento']
+        return STYLES['orbita']['acento']
     return min(choices, key=lambda c: min(abs(hue(c)[0] - h0), 1 - abs(hue(c)[0] - h0)))
 
 

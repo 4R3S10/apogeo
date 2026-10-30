@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 
-// El control segmentado de Ágape: opciones [{ texto, icono }], la elegida en la pastilla rosa con brillo
+// El control segmentado: opciones [{ texto, icono }], la elegida en la pastilla de acento con brillo
 Rectangle {
     id: seg
     property var opciones: []

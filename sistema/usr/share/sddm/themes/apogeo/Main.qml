@@ -2,18 +2,18 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 
-// Inicio de sesión de Apogeo («8 · Inicio de sesión»): detrás, el fondo animado del piso que eliges, moviéndose y con sus
-// colores (cambian al elegir otro piso); arriba la hora grande y la fecha; en el centro, una tarjeta de cristal con tu
-// foto, tu nombre, la contraseña y en qué piso entras. Cada piso es una sesión («Apogeo · Jugar», etc.): así la elección
-// llega a la sesión sin que esta pantalla toque tus archivos.
+// Inicio de sesión de Órbita («8 · Inicio de sesión»): detrás, el fondo animado del modo que eliges, moviéndose y con sus
+// colores (cambian al elegir otro); arriba la hora grande y la fecha; en el centro, una tarjeta de cristal con tu foto,
+// tu nombre, la contraseña y en qué modo entras. Cada modo es una sesión («Apogeo · Jugar», etc.): así la elección llega
+// a la sesión sin que esta pantalla toque tus archivos.
 Rectangle {
     id: root
     width: 1920
     height: 1080
-    color: c("fondo", "#120d14")
+    color: c("fondo", "#080a0f")
 
-    // Colores y letra: los de Ágape (Berenjena oscuro) o tu aspecto, si lo has cambiado (Ajustes → Aspecto, o «Como
-    // Ágape»): Apogeo deja una copia de tus colores en /var/lib/apogeo/aspecto-login.json, que esta pantalla sí puede leer
+    // Colores y letra: los de Órbita o tu identidad, si la has cambiado (Ajustes → Identidad, «Clásico» o «Como Ágape»):
+    // Apogeo deja una copia de tus colores en /var/lib/apogeo/aspecto-login.json, que esta pantalla sí puede leer
     property var f: ({})
     function c(k, d) { return f[k] !== undefined ? f[k] : d }
     Component.onCompleted: {
@@ -25,17 +25,17 @@ Rectangle {
         x.open("GET", "file:///var/lib/apogeo/aspecto-login.json");
         try { x.send(); } catch (e) {}
     }
-    readonly property color text: c("texto", "#f1e6ea")
+    readonly property color text: c("texto", "#e9edf5")
     readonly property color muted: Qt.rgba(text.r, text.g, text.b, 0.62)
     readonly property color hover: Qt.rgba(text.r, text.g, text.b, 0.07)
     readonly property color border: Qt.rgba(text.r, text.g, text.b, 0.1)
     // Los del piso elegido (con «Del fondo», cada piso tiene los suyos), si los hay
     readonly property var p: f.pisos && f.pisos[floors[floor].key] ? f.pisos[floors[floor].key] : ({})
     function cp(k, d) { return p[k] !== undefined ? p[k] : c(k, d) }
-    readonly property color accent: cp("acento", "#e0a9b4")
-    readonly property color accentText: cp("sobreAcento", "#2a1c26")
-    readonly property string font: c("letra", "Bricolage Grotesque")
-    readonly property var wp: cp("wp", ["#4a2c4f", "#7a4458", "#e0a9b4"])
+    readonly property color accent: cp("acento", "#45d6ff")
+    readonly property color accentText: cp("sobreAcento", "#041318")
+    readonly property string font: c("letra", "Geist")
+    readonly property var wp: cp("wp", ["#0b1118", "#12303d", "#45d6ff"])
     readonly property var floors: [
         { key: "jugar", name: "Jugar", kind: 7 },      // Luces
         { key: "navegar", name: "Navegar", kind: 0 },  // Tinta
@@ -123,6 +123,24 @@ Rectangle {
     }
     Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.22 }
 
+    // La marca de Órbita, arriba a la izquierda (el Núcleo y su nombre)
+    Row {
+        x: 34; y: 28
+        spacing: 10
+        Image {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 30; height: 30
+            source: "logo.svg"
+            sourceSize: Qt.size(60, 60)
+        }
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "ÓRBITA"
+            color: root.muted
+            font { family: "Geist Mono"; pixelSize: 12; weight: Font.DemiBold; letterSpacing: 3.4 }
+        }
+    }
+
     // La hora grande y la fecha, arriba en el centro
     Column {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -167,7 +185,7 @@ Rectangle {
         width: 440
         height: inner.implicitHeight + 72
         radius: 26
-        readonly property color sup: Qt.tint(root.c("superficie", "#1e1621"), Qt.rgba(root.text.r, root.text.g, root.text.b, 0.03))
+        readonly property color sup: Qt.tint(root.c("superficie", "#0f131a"), Qt.rgba(root.text.r, root.text.g, root.text.b, 0.03))
         color: Qt.rgba(sup.r, sup.g, sup.b, 0.62)
         border.color: root.border
         Rectangle { // el brillo de arriba, del color del piso
@@ -230,7 +248,7 @@ Rectangle {
                 }
             }
             Text {
-                text: userModel.count > 1 ? "¿En qué piso entras? (pulsa tu nombre para cambiar de usuario)" : "¿En qué piso entras?"
+                text: userModel.count > 1 ? "¿En qué modo entras? (pulsa tu nombre para cambiar de usuario)" : "¿En qué modo entras?"
                 color: root.muted
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
@@ -340,7 +358,7 @@ Rectangle {
             Text {
                 text: root.error
                 visible: root.error !== ""
-                color: "#ff8f9a"
+                color: "#ff6b81"
                 font { family: root.font; pixelSize: 14 }
             }
         }

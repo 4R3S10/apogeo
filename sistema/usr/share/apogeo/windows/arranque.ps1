@@ -1,6 +1,8 @@
 ﻿# Apogeo · Windows escondido · lo que corre como SISTEMA desde que se enciende (tarea «Apogeo-Arranque»).
 #  1. Trae la nota de Apogeo (EFI\apogeo\puente.json, en la partición de arranque) a C:\Apogeo\estado\puente.json y
-#     la borra de allí (si luego enciendes Windows a mano, no vuelve a abrir el juego).
+#     la borra de allí. La nota lleva versión, fecha y nonce: si no es válida, se ignora. La fecha admite horas de
+#     diferencia (Linux guarda el reloj del PC en UTC y Windows en hora local: al encender, Windows va 1-2 h por
+#     detrás); que no sea una nota vieja lo asegura Apogeo, que borra al encender la que no se llegó a usar.
 #  2. Espera a que el puente (la sesión) pida volver (C:\Apogeo\estado\volver): apunta tus juegos de Windows en
 #     EFI\apogeo\juegos.json para que Apogeo los enseñe en su consola y reinicia en Apogeo (BootNext a Limine).
 $ErrorActionPreference = 'Continue'
@@ -19,13 +21,28 @@ function Con-Arranque([scriptblock]$Hacer) {
 }
 
 # ---------- 1. La nota de Apogeo ----------
-Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Estado 'puente.json'), (Join-Path $Estado 'volver')
+Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Estado 'puente.json'), (Join-Path $Estado 'volver'),
+    (Join-Path $Estado 'puente-rechazado.txt')
 Con-Arranque {
     param($dir)
     $nota = Join-Path $dir 'puente.json'
-    if (Test-Path $nota) {
-        Copy-Item -Force $nota (Join-Path $Estado 'puente.json')
-        Remove-Item -Force $nota
+    if (-not (Test-Path $nota)) { return }
+    try {
+        $j = Get-Content $nota -Raw -Encoding UTF8 | ConvertFrom-Json
+        $edad = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [int64]$j.creado
+        $modo = [string]$j.modo
+        $valida = ([int]$j.version -ge 2) -and ([string]$j.nonce).Length -ge 8 -and
+                  ($edad -ge -50400) -and ($edad -le 54000) -and ($modo -in @('juego', 'escritorio'))
+        if ($valida) {
+            Copy-Item -Force $nota (Join-Path $Estado 'puente.json')
+        } else {
+            Set-Content -Path (Join-Path $Estado 'puente-rechazado.txt') -Encoding UTF8 `
+                -Value ("version={0} edad={1}s modo={2}" -f $j.version, $edad, $modo)
+        }
+    } catch {
+        Set-Content -Path (Join-Path $Estado 'puente-rechazado.txt') -Encoding UTF8 -Value "no se pudo leer: $_"
+    } finally {
+        Remove-Item -Force -ErrorAction SilentlyContinue $nota
     }
 }
 # El puente (la sesión) espera a esto para leer la nota
@@ -100,7 +117,9 @@ try {
     Con-Arranque {
         param($dir)
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        [IO.File]::WriteAllText((Join-Path $dir 'juegos.json'), $json, (New-Object Text.UTF8Encoding $false))
+        $tmp = Join-Path $dir 'juegos.json.nuevo'
+        [IO.File]::WriteAllText($tmp, $json, (New-Object Text.UTF8Encoding $false))
+        Move-Item -Force $tmp (Join-Path $dir 'juegos.json')
     }
 } catch { Write-Output "juegos: $_" }
 Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Estado 'volver')

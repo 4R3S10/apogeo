@@ -75,8 +75,8 @@ Window {
             anchors.fill: parent
             radius: art.radius
             gradient: Gradient {
-                GradientStop { position: 0; color: art.src && art.src.spotify ? "#1db954" : "#7a4458" }
-                GradientStop { position: 1; color: art.src && art.src.spotify ? "#0b3d20" : "#2a1830" }
+                GradientStop { position: 0; color: art.src && art.src.spotify ? "#1db954" : Tema.acento }
+                GradientStop { position: 1; color: art.src && art.src.spotify ? "#0b3d20" : Qt.darker(Tema.acento, 3.2) }
             }
             Icono { anchors.centerIn: parent; width: parent.width * 0.42; height: width; nombre: "musica"; color: "#ffffff" }
         }
@@ -231,7 +231,7 @@ Window {
                 visible: !!win.main && win.main.dur > 0
                 Rectangle {
                     y: 6; width: parent.width; height: 4; radius: 2
-                    color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.14)
+                    color: Tema.tinte(0.14)
                     Rectangle { height: parent.height; radius: 2; color: Tema.rosa; width: win.main && win.main.dur ? parent.width * Math.min(1, win.main.time / win.main.dur) : 0 }
                 }
                 Texto { y: 11; text: win.main ? win.mmss(win.main.time) : ""; color: Tema.tenue; font.pixelSize: 11 }

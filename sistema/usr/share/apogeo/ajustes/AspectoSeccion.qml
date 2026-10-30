@@ -3,21 +3,20 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 import Apogeo
 
-// Ajustes → Aspecto («K2 con vista previa»): arriba, los estilos completos de un clic (Apogeo es el de siempre y viene
-// puesto); en medio, cómo queda (en pequeño, al momento); debajo, cada detalle a mano. Todo se aplica solo en todo el
-// sistema (lo hace apogeo-pisos con apogeo_aspecto) y «Volver a lo de serie» lo deja como venía. De serie, «Del fondo»:
-// cada piso con los colores de su fondo (el color de un fondo animado se elige en Fondos). Con «Como Ágape», los colores
-// y las formas los manda Ágape (Personalizar) y aquí solo quedan el tamaño y dónde van la isla y la columna.
+// Ajustes → Identidad: arriba, los estilos completos de un clic (Órbita es el de serie y viene puesto); en medio, cómo
+// queda (en pequeño, al momento); debajo, cada detalle a mano. Todo se aplica solo en todo el sistema (lo hace
+// apogeo-pisos con apogeo_aspecto) y «Volver a lo de serie» lo deja como venía. La identidad clásica (Berenjena, rosa,
+// Bricolage) sigue disponible como «Clásico», y «Del fondo» toma los colores de la foto o el vídeo de cada piso.
 Seccion {
     id: sec
-    property string palabras: "aspecto tema estilo color colores acento claro oscuro letra fuente esquinas redondas cristal transparencia tamaño animaciones isla columna posicion personalizar"
-    titulo: "Aspecto"
-    intro: "Los colores, la letra y las formas de todo Apogeo. De serie, los colores salen del fondo: cada piso con los de su fondo, y al cambiar de fondo cambian solos."
+    property string palabras: "identidad aspecto tema estilo color colores acento claro oscuro letra fuente tipografia geist bricolage esquinas redondas cristal transparencia tamaño animaciones isla posicion personalizar orbita clasico"
+    titulo: "Identidad"
+    intro: "La piel de todo Apogeo. De serie, Órbita: grafito, Geist y un acento por modo (cian al navegar, ámbar al estudiar, violeta al jugar)."
 
     readonly property var a: apogeo.settings.aspecto || ({})
     readonly property var t: apogeo.lookTokens(a)          // las fichas de cómo queda (las mismas que se aplican)
     readonly property var estilos: apogeo.lookStyles
-    readonly property var orden: ["fondo", "agape", "apogeo", "medianoche", "bosque", "arena", "papel"]
+    readonly property var orden: ["orbita", "fondo", "agape", "apogeo", "medianoche", "bosque", "arena", "papel"]
     readonly property bool sigueAgape: a.estilo === "agape"
     readonly property bool sigueFondo: a.estilo === "fondo"
     function put(k, v) { apogeo.set("aspecto." + k, v) }
@@ -39,7 +38,10 @@ Seccion {
                 onClicked: {
                     sec.put("estilo", modelData);
                     sec.put("acento", "");
-                    if (modelData !== "agape" && sec.a.modo !== "hora") sec.put("modo", e.claro ? "claro" : "oscuro");
+                    if (e.letra) sec.put("letra", e.letra);
+                    if (modelData === "orbita") sec.put("modo", "piso");
+                    else if (modelData !== "agape" && modelData !== "fondo" && sec.a.modo !== "hora")
+                        sec.put("modo", e.claro ? "claro" : "oscuro");
                 }
                 background: Rectangle {
                     radius: Tema.r(16)
@@ -154,7 +156,7 @@ Seccion {
     Fila {
         visible: sec.sigueFondo
         titulo: "Del fondo"
-        detalle: "Cada piso coge los colores de su foto o su vídeo. A los fondos animados les das tú el color, en Fondos"
+        detalle: "Cada modo coge los colores de su foto o su vídeo. A los fondos animados les das tú el color, en Fondos"
     }
     Fila {
         enabled: !sec.sigueAgape && !sec.sigueFondo
@@ -164,7 +166,7 @@ Seccion {
         Row {
             spacing: 8
             Repeater {
-                model: ["", "#e0a9b4", "#b8a4f0", "#8fc9e8", "#9ed9b0", "#f2c48d", "#f28d8d"]
+                model: ["", "#45d6ff", "#b79cff", "#ffb35c", "#57e3b0", "#ff6b81", "#e0a9b4"]
                 delegate: AbstractButton {
                     id: sw
                     required property string modelData
@@ -207,8 +209,8 @@ Seccion {
         titulo: "Claro u oscuro"
         detalle: sec.a.modo === "hora" ? "Claro de 8:00 a 20:00" : ""
         Segmentos {
-            readonly property var valores: ["oscuro", "claro", "hora"]
-            opciones: [{ texto: "Oscuro" }, { texto: "Claro" }, { texto: "Según la hora" }]
+            readonly property var valores: ["piso", "oscuro", "claro", "hora"]
+            opciones: [{ texto: "Por modo" }, { texto: "Oscuro" }, { texto: "Claro" }, { texto: "La hora" }]
             actual: Math.max(0, valores.indexOf(sec.a.modo))
             onElegido: i => sec.put("modo", valores[i])
         }
@@ -217,10 +219,10 @@ Seccion {
         enabled: !sec.sigueAgape
         opacity: enabled ? 1 : 0.45
         titulo: "Letra"
-        detalle: sec.a.letra || "Bricolage Grotesque"
+        detalle: sec.a.letra || "Geist"
         Segmentos {
-            readonly property var valores: ["Bricolage Grotesque", "Noto Sans"]
-            opciones: [{ texto: "Bricolage" }, { texto: "Noto Sans" }, { texto: "Otra…" }]
+            readonly property var valores: ["Geist", "Geist Mono", "Noto Sans"]
+            opciones: [{ texto: "Geist" }, { texto: "Geist Mono" }, { texto: "Otra…" }]
             actual: valores.indexOf(sec.a.letra) >= 0 ? valores.indexOf(sec.a.letra) : 2
             onElegido: i => i < 2 ? sec.put("letra", valores[i]) : fontDialog.open()
         }

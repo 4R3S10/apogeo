@@ -1,14 +1,12 @@
 [Unit]
-Description=Apogeo: fuera los programas repetidos y los restos de CachyOS (una vez)
-ConditionPathExists=!/var/lib/apogeo/limpieza-6
+Description=Órbita: sugiere apps repetidas (no quita nada)
+Documentation=file:///var/lib/apogeo/limpieza.txt
+After=local-fs.target
 
 [Service]
 Type=oneshot
 ExecStart=/usr/lib/apogeo/apogeo-limpieza
-# (si el apagado llega a media limpieza, pacman acaba lo que está haciendo)
-TimeoutStopSec=10min
-KillSignal=SIGINT
-TimeoutStartSec=45min
+TimeoutStartSec=2min
 Nice=10
 
 [Install]

@@ -1,14 +1,15 @@
-# Apogeo encima de CachyOS (KDE): pisos, isla, consola de juegos, Ágape, ventanas, arranque, inicio de sesión y estética.
+# Apogeo encima de CachyOS (KDE) con la identidad Órbita: los tres modos (pisos), isla, consola de juegos, Ágape,
+# ventanas, arranque, inicio de sesión y estética (grafito, Geist y un acento por modo).
 # Se construye en GitHub Actions (.github/workflows/paquetes.yml) a partir de las carpetas sistema/ y herramientas/.
 pkgbase=apogeo
 pkgname=(apogeo apogeo-programas)
 pkgver=1.r0
 pkgrel=1
-pkgdesc='Apogeo: el sistema de Ares sobre CachyOS'
+pkgdesc='Apogeo: el sistema de Ares sobre CachyOS (identidad Órbita)'
 arch=('any')
 url='https://github.com/4R3S10/apogeo'
 license=('MIT')
-makedepends=(git python-gobject python-cairo librsvg breeze papirus-icon-theme python-fonttools qt6-shadertools)
+makedepends=(git python-gobject python-cairo python-pillow librsvg breeze papirus-icon-theme python-fonttools qt6-shadertools)
 _raiz="$startdir/../.."
 
 pkgver() {
@@ -20,7 +21,7 @@ package_apogeo() {
     apogeo-programas                                          # los programas de serie (abajo)
     plasma-workspace kwin sddm plymouth                       # escritorio, inicio de sesión y arranque
     scx-scheds scx-tools pacman-contrib                       # planificador para escritorio y juegos, caché de paquetes
-    papirus-icon-theme ttf-nunito kvantum                     # iconos, letra y el estilo de las apps
+    papirus-icon-theme ttf-nunito kvantum                     # iconos, letra de respaldo y el estilo de las apps
     python python-dbus python-gobject python-evdev            # los pisos, la consola (el mando) y apogeo-meta
     python-pyqt6 qt6-declarative milou kirigami plocate       # la bienvenida, los ajustes y el buscador (y tus archivos)
     layer-shell-qt                                            # la guía de atajos (encima de todo, sin quitar el teclado)
@@ -38,11 +39,16 @@ package_apogeo() {
   install=apogeo.install
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"
   local h="$_raiz/herramientas"
-  # Lo que se genera con la estética de Ágape: colores, letra (Bricolage Grotesque), ventanas, estilo de Plasma
-  # (cristal y tarjetas), carpetas en su rosa, el cursor berenjena y el sombreador de sus fondos animados
+  # Lo que se genera con la identidad de Órbita: colores (grafito y cian), Geist y Geist Mono, ventanas, estilo de
+  # Plasma (cristal y tarjetas), las carpetas del acento, el cursor y el sombreador de los fondos animados. Bricolage se
+  # queda instalada para la identidad clásica (Ajustes → Identidad → Clásico).
   python "$h/colores.py" "$pkgdir/usr/share/color-schemes/Apogeo.colors"
+  python "$h/letra.py" "$h/fuentes/Geist[wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
+  python "$h/letra.py" "$h/fuentes/GeistMono[wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
   python "$h/letra.py" "$h/fuentes/BricolageGrotesque[opsz,wdth,wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
-  install -Dm644 "$h/fuentes/Bricolage-OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/Bricolage-OFL.txt"
+  for f in Geist GeistMono Bricolage; do
+    install -Dm644 "$h/fuentes/$f-OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/$f-OFL.txt"
+  done
   python "$h/ventanas.py" "$pkgdir/usr/share/aurorae/themes"
   python "$h/plasma.py" "$pkgdir/usr/share/plasma/desktoptheme"
   python "$h/kvantum.py" "$pkgdir/usr/share/Kvantum"
@@ -53,7 +59,8 @@ package_apogeo() {
   # Los generadores de temas, también para «Aspecto» (apogeo-aspecto los usa con tus colores)
   install -d "$pkgdir/usr/lib/apogeo/temas"
   install -m644 "$h"/{fichas,colores,kvantum,plasma,ventanas,iconos}.py "$pkgdir/usr/lib/apogeo/temas/"
-  # El logo (el búho batiendo las alas) y sus copias para el arranque, el inicio de sesión, el menú y la terminal
+  # El símbolo de Órbita («Núcleo»: el punto y las tres órbitas) y sus copias para el arranque, el inicio de sesión,
+  # el menú y la terminal. Los fotogramas se siguen llamando aleteo-* para no tocar Plymouth.
   local logo="$srcdir/logo"
   install -d "$logo"
   python "$h/logo.py" "$logo"
@@ -64,12 +71,16 @@ package_apogeo() {
   rsvg-convert -w 150 -h 150 "$logo/logo.svg" -o "$logo/150.png"
   install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plymouth/themes/apogeo/logo.png"
   install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/logo.png"
-  # El aleteo del búho para el arranque y el apagado (Plymouth) y la entrada en la sesión (splash de Plasma)
+  # Las órbitas girando para el arranque y el apagado (Plymouth) y la entrada en la sesión (splash de Plasma)
   for f in "$logo"/aleteo-*.svg; do
     rsvg-convert -w 150 -h 150 "$f" -o "${f%.svg}.png"
     install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plymouth/themes/apogeo/$(basename "${f%.svg}.png")"
     install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/$(basename "${f%.svg}.png")"
   done
+  # El fondo grafito con sus órbitas y la barra cian (Plymouth y el splash de Plasma)
+  python "$h/arranque.py" "$pkgdir/usr/share/plymouth/themes/apogeo"
+  install -Dm644 "$pkgdir/usr/share/plymouth/themes/apogeo/fondo.png" \
+    "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/fondo.png"
   rsvg-convert -w 360 -h 360 "$logo/logo.svg" -o "$logo/360.png"
   install -Dm644 "$logo/360.png" "$pkgdir/usr/share/apogeo/logo.png"
   # Lo que va al Windows escondido: el logo y la letra de Apogeo para su pantalla de carga
@@ -84,7 +95,7 @@ package_apogeo() {
 # Los programas de serie de Apogeo (todos de los repositorios de Arch y CachyOS; ONLYOFFICE y Stremio no están, y los
 # instala apogeo-flatpaks de Flathub al arrancar con internet)
 package_apogeo-programas() {
-  pkgdesc='Apogeo: los programas de serie'
+  pkgdesc='Apogeo: los programas de serie (Órbita)'
   depends=(
     spotify-launcher discord                                        # música y chat
     ghostty starship fastfetch ttf-jetbrains-mono-nerd flatpak      # la terminal de Apogeo y Flathub

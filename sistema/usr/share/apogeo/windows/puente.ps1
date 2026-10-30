@@ -1,5 +1,5 @@
 ﻿# Apogeo · Windows escondido · lo que ves al entrar en Windows (es el «escritorio» de tu cuenta: lo pone instalar.ps1).
-#  - Con un juego en la nota de Apogeo: la pantalla de carga de Apogeo, se abre el juego y, cuando lo cierras, «Volviendo
+#  - Con un juego en la nota de Apogeo: la pantalla de carga de Órbita, se abre el juego y, cuando lo cierras, «Volviendo
 #    a Apogeo» y de vuelta (lo hace la tarea Apogeo-Arranque).
 #  - Para instalar juegos (o si enciendes Windows a mano): el escritorio de Windows de siempre con una pastilla «Volver a
 #    Apogeo» abajo.
@@ -12,8 +12,8 @@ Start-Transcript -Path (Join-Path $env:LOCALAPPDATA 'apogeo-puente.log') -Force 
 
 # La letra de Apogeo si está instalada (la pone instalar.ps1); si no, la de Windows
 $Fuente = 'Segoe UI'
-if ((New-Object System.Drawing.Text.InstalledFontCollection).Families | Where-Object { $_.Name -eq 'Bricolage Grotesque' }) {
-    $Fuente = 'Bricolage Grotesque'
+if ((New-Object System.Drawing.Text.InstalledFontCollection).Families | Where-Object { $_.Name -eq 'Geist' }) {
+    $Fuente = 'Geist'
 }
 
 function Volver {
@@ -24,13 +24,13 @@ function Ventana([string]$titulo, [string]$detalle) {
     # La pantalla de carga de Apogeo: a pantalla completa, encima de todo
     [xml]$x = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" WindowStyle="None" ResizeMode="NoResize"
-        WindowState="Maximized" Topmost="True" Background="#0B080D" ShowInTaskbar="False" Cursor="None">
+        WindowState="Maximized" Topmost="True" Background="#080A0F" ShowInTaskbar="False" Cursor="None">
   <Grid>
     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
       <Image Source="$Base\logo.png" Width="96" Height="96" Margin="0,0,0,24"/>
-      <TextBlock Name="Titulo" Foreground="#F1E6EA" FontFamily="$Fuente" FontSize="34" FontWeight="Bold" HorizontalAlignment="Center"/>
-      <TextBlock Name="Detalle" Foreground="#9E9499" FontFamily="$Fuente" FontSize="16" Margin="0,10,0,22" HorizontalAlignment="Center"/>
-      <ProgressBar IsIndeterminate="True" Width="260" Height="4" Foreground="#E0A9B4" Background="#1A1A1D" BorderThickness="0"/>
+      <TextBlock Name="Titulo" Foreground="#E9EDF5" FontFamily="$Fuente" FontSize="34" FontWeight="Bold" HorizontalAlignment="Center"/>
+      <TextBlock Name="Detalle" Foreground="#8B94A7" FontFamily="$Fuente" FontSize="16" Margin="0,10,0,22" HorizontalAlignment="Center"/>
+      <ProgressBar IsIndeterminate="True" Width="260" Height="4" Foreground="#B79CFF" Background="#1A1F29" BorderThickness="0"/>
       <StackPanel Name="Botones" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,28,0,0" Visibility="Collapsed">
         <Button Name="Escritorio" Content="  Abrir el escritorio  " Margin="6" Padding="14,8" FontFamily="$Fuente" FontSize="15"/>
         <Button Name="Atras" Content="  Volver a Apogeo  " Margin="6" Padding="14,8" FontFamily="$Fuente" FontSize="15"/>
@@ -71,7 +71,7 @@ function Escritorio {
   <Border Background="#E6211924" CornerRadius="22" Padding="6" BorderBrush="#33F1E6EA" BorderThickness="1">
     <StackPanel Orientation="Horizontal">
       <Image Source="$Base\logo.png" Width="30" Height="30" Margin="6,0,8,0"/>
-      <Button Name="Atras" Content="  Volver a Apogeo  " Background="#E0A9B4" Foreground="#2A1C26" BorderThickness="0"
+      <Button Name="Atras" Content="  Volver a Apogeo  " Background="#B79CFF" Foreground="#140F24" BorderThickness="0"
               FontFamily="$Fuente" FontSize="14" FontWeight="Bold" Padding="12,6" Cursor="Hand"/>
     </StackPanel>
   </Border>
@@ -96,7 +96,15 @@ $nota = $null
 $listo = Join-Path $Estado 'listo'
 for ($i = 0; $i -lt 40 -and -not (Test-Path $listo); $i++) { Start-Sleep -Milliseconds 500 }
 $f = Join-Path $Estado 'puente.json'
-if (Test-Path $f) { $nota = Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json }
+if (Test-Path $f) {
+    try {
+        $nota = Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json
+        $edad = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [int64]$nota.creado
+        $valida = ([int]$nota.version -ge 2) -and ([string]$nota.nonce).Length -ge 8 -and
+                  ($edad -ge -50400) -and ($edad -le 54000) -and ([string]$nota.lanzar).Length -gt 0
+        if (-not $valida) { $nota = $null }
+    } catch { $nota = $null }
+}
 
 if (-not $nota -or $nota.modo -ne 'juego') {
     Escritorio

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Cursor de Apogeo («Berenjena»): el cursor de KDE (Breeze, GPL) con el cuerpo berenjena y el borde rosa. Se genera al
+Cursor de Órbita: el cursor de KDE (Breeze, GPL) con el cuerpo grafito y el borde cian (el acento de Navegar). Se genera al
 construir el paquete a partir del Breeze que trae el sistema: las versiones SVG (Plasma las usa a cualquier tamaño) y las
 de siempre (Xcursor, en imágenes) para las apps que no entienden SVG.
 
@@ -21,8 +21,8 @@ from gi.repository import Rsvg  # noqa: E402
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/icons/breeze_cursors'
 DST = sys.argv[2] if len(sys.argv) > 2 else '/usr/share/icons/Apogeo-cursor'
-BODY = '#241a28'  # berenjena (el cuerpo, que en Breeze es negro)
-EDGE = '#e0a9b4'  # rosa de Ágape (el borde, que en Breeze es blanco)
+BODY = '#0b0e14'  # grafito (el cuerpo, que en Breeze es negro)
+EDGE = '#45d6ff'  # cian de Órbita (el borde, que en Breeze es blanco)
 SIZES = list(range(12, 73, 6))  # los mismos que Breeze
 
 
@@ -30,7 +30,7 @@ def recolor(svg):
     svg = re.sub(r'#(?:fff|ffffff|fcfcfc)\b', EDGE, svg, flags=re.I)
     svg = re.sub(r'#(?:000|000000|232629|31363b)\b', BODY, svg, flags=re.I)
 
-    # Los trazos sin color son negros: se les pone el berenjena (menos la sombra, que va con opacidad, y el punto de
+    # Los trazos sin color son negros: se les pone el grafito (menos la sombra, que va con opacidad, y el punto de
     # anclaje, que está oculto)
     def fill(m):
         tag = m.group(0)
@@ -116,7 +116,7 @@ def main():
     print(f'{made} cursores generados')
 
     with open(os.path.join(DST, 'index.theme'), 'w') as fh:
-        fh.write('[Icon Theme]\nName=Apogeo\nComment=Cursor de Apogeo (berenjena con borde rosa), basado en Breeze de KDE\n')
+        fh.write('[Icon Theme]\nName=Apogeo\nComment=Cursor de Órbita (grafito con borde cian), basado en Breeze de KDE\n')
 
 
 if __name__ == '__main__':

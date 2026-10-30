@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 $Origen = $PSScriptRoot
 $Base = 'C:\Apogeo'
 
-Write-Host "`n  Apogeo · preparando el Windows escondido`n" -ForegroundColor Magenta
+Write-Host "`n  Órbita · preparando el Windows escondido`n" -ForegroundColor Cyan
 
 # ---------- Los archivos ----------
 New-Item -ItemType Directory -Force -Path $Base, "$Base\estado" | Out-Null

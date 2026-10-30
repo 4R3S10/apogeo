@@ -30,7 +30,7 @@ AbstractButton {
                  : b.tipo === "plano" ? (b.hovered ? Tema.encima : "transparent")
                  : (b.hovered || b.down ? Tema.pulsado : Tema.encima)
             border.width: b.tipo === "normal" ? 1 : 0
-            border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.14)
+            border.color: Tema.tinte(0.14)
             Behavior on color { ColorAnimation { duration: 150 } }
         }
     }

@@ -25,6 +25,7 @@ import time
 import dbus
 import dbus.bus
 import dbus.mainloop.glib
+import dbus.service
 from gi.repository import Gio, GLib
 
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
@@ -34,6 +35,8 @@ import apogeo_aspecto as aspecto  # noqa: E402
 FLOORS = [{'name': 'Jugar', 'key': 'jugar'}, {'name': 'Navegar', 'key': 'navegar'}, {'name': 'Estudiar', 'key': 'estudiar'}]
 HOME = os.path.expanduser('~')
 STATE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'pisos.json')
+MODE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'modo.json')
+MODE_KEYS = ('jugar', 'navegar', 'estudiar')
 WELCOME_DONE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'bienvenida-hecha')
 WELCOME = '/usr/lib/apogeo/apogeo-bienvenida'
 
@@ -79,6 +82,73 @@ def save_state(st):
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
     with open(STATE, 'w') as f:
         json.dump(st, f)
+
+
+def write_mode(index):
+    """Publica el modo actual para quien no hable D-Bus (apps, scripts, la consola): ~/.config/apogeo/modo.json."""
+    index = max(0, min(int(index), len(FLOORS) - 1))
+    data = {'modo': FLOORS[index]['key'], 'piso': index, 'desde': int(time.time()), 'version': 1}
+    try:
+        os.makedirs(os.path.dirname(MODE), exist_ok=True)
+        tmp = MODE + '.nuevo'
+        with open(tmp, 'w') as f:
+            json.dump(data, f)
+        os.replace(tmp, MODE)
+    except OSError as e:
+        log('modo:', e)
+    return data
+
+
+_modos = None
+
+
+class Modos(dbus.service.Object):
+    """org.apogeo.Modos1: el modo actual, cambiar de modo y una señal cuando cambia. apogeo-pisos es su dueño."""
+
+    def __init__(self, bus, name):
+        super().__init__(bus, '/Modos')
+        self.bus = bus
+        self.name = name
+        self.actual = write_mode(current_index(bus))['modo']
+
+    def publish(self, index):
+        data = write_mode(index)
+        if data['modo'] != self.actual:
+            self.actual = data['modo']
+            self.Cambiado(data['modo'])
+        return data
+
+    @dbus.service.method('org.apogeo.Modos1', in_signature='', out_signature='s')
+    def Actual(self):
+        return self.actual
+
+    @dbus.service.method('org.apogeo.Modos1', in_signature='', out_signature='i')
+    def Piso(self):
+        return FLOORS.index(next((f for f in FLOORS if f['key'] == self.actual), FLOORS[1]))
+
+    @dbus.service.method('org.apogeo.Modos1', in_signature='s', out_signature='b')
+    def Cambiar(self, modo):
+        modo = str(modo)
+        if modo not in MODE_KEYS:
+            return False
+        go(self.bus, MODE_KEYS.index(modo))
+        return True
+
+    @dbus.service.method('org.apogeo.Modos1', in_signature='', out_signature='s')
+    def Siguiente(self):
+        i = (self.Piso() + 1) % len(FLOORS)
+        self.Cambiar(FLOORS[i]['key'])
+        return FLOORS[i]['key']
+
+    @dbus.service.method('org.apogeo.Modos1', in_signature='', out_signature='s')
+    def Anterior(self):
+        i = (self.Piso() - 1) % len(FLOORS)
+        self.Cambiar(FLOORS[i]['key'])
+        return FLOORS[i]['key']
+
+    @dbus.service.signal('org.apogeo.Modos1', signature='s')
+    def Cambiado(self, modo):
+        pass
 
 
 def plasma_script(bus, js):
@@ -225,14 +295,14 @@ def setup(bus):
         """ % json.dumps(TRAY_HIDDEN))
         st['bandeja'] = TRAY
     if st.get('reloj', 0) < CLOCK:
-        # La hora de la isla con la letra de Ágape (en negrita, como el reloj de su nueva pestaña)
+        # La hora de la isla con la letra de Órbita (en negrita)
         plasma_script(bus, """
             panels().forEach(function (p) {
                 p.widgets().forEach(function (w) {
                     if (w.type != 'org.kde.plasma.digitalclock') return;
                     w.currentConfigGroup = ['Appearance'];
                     w.writeConfig('autoFontAndSize', false);
-                    w.writeConfig('fontFamily', 'Bricolage Grotesque');
+                    w.writeConfig('fontFamily', 'Geist');
                     w.writeConfig('boldText', true);
                     w.writeConfig('fontSize', 11);
                     w.writeConfig('use24hFormat', 2);
@@ -306,7 +376,7 @@ def setup(bus):
                 f.write(f'[Desktop Entry]\nType=Application\nName={name}\nHidden=true\n')
         st['ligero'] = LIGHTER
     if st.get('cristal', 0) < CRYSTAL:
-        # B1 · Cristal de Ágape: la isla y la columna de pisos un poco más altas (56) para sus botones de 38-40
+        # B1 · Cristal: la isla y la columna de modos un poco más altas (56) para sus botones de 38-40
         plasma_script(bus, """
             panels().forEach(function (p) {
                 if (p.widgets().some(function (w) { return w.type == 'org.apogeo.isla' || w.type == 'org.apogeo.pisos'; })) p.height = 56;
@@ -382,13 +452,13 @@ DESKTOP = 2  # igual, para el escritorio (sin iconos y con el widget de Apogeo a
 MANGOHUD = 1  # igual, para MangoHud en los juegos
 LIGHTER = 2  # igual, para quitar de en medio lo que no se usa al entrar (menú global, accesibilidad)
 ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
-CRYSTAL = 1  # igual, para el tamaño de la isla y de los pisos con el cristal de Ágape (B1)
+CRYSTAL = 1  # igual, para el tamaño de la isla y de los modos con el cristal (B1)
 PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la columna de pisos)
 PANEL_WIDTH = 376  # su ancho
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
-AESTHETICS = 16  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen
-FONT = 'Bricolage Grotesque,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Ágape
-DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Ágape (herramientas/ventanas.py)
+AESTHETICS = 17  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita)
+FONT = 'Geist,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Órbita
+DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Órbita (herramientas/ventanas.py)
 
 
 def run(*c):
@@ -453,17 +523,17 @@ def aesthetics():
     """La estética de Apogeo para cada usuario (CachyOS copia su propia configuración a las cuentas nuevas)."""
     run('plasma-apply-colorscheme', 'Apogeo')
     run('plasma-apply-cursortheme', 'Apogeo-cursor')
-    run('/usr/lib/plasma-changeicons', 'Apogeo')  # Papirus con las carpetas en el rosa de Ágape
-    plasma_theme()                                # la isla, los menús y los avisos con el cristal de Ágape
+    run('/usr/lib/plasma-changeicons', 'Apogeo')  # Papirus con las carpetas del acento
+    plasma_theme()                                # la isla, los menús y los avisos con el cristal
     for key in ('font', 'menuFont', 'toolBarFont'):
         kw('kdeglobals', 'General', key, FONT)
     kw('kdeglobals', 'General', 'smallestReadableFont', FONT.replace(',10,', ',8,', 1))
     kw('kdeglobals', 'WM', 'activeFont', FONT.replace(',400,', ',600,', 1))
     kw('kdeglobals', 'Sounds', 'Theme', 'apogeo')
-    # Las apps con las formas de Ágape (tema de Kvantum «Apogeo»)
+    # Las apps con las formas de Órbita (tema de Kvantum «Apogeo»)
     kw('Kvantum/kvantum.kvconfig', 'General', 'theme', 'Apogeo')
     kw('kdeglobals', 'KDE', 'widgetStyle', 'kvantum')
-    # Ventanas con la barra de Ágape
+    # Ventanas con la barra de Órbita
     kw('kwinrc', 'org.kde.kdecoration2', 'library', 'org.kde.kwin.aurorae')
     kw('kwinrc', 'org.kde.kdecoration2', 'theme', DECORATION)
     kw('kwinrc', 'org.kde.kdecoration2', 'ButtonsOnLeft', '')
@@ -471,7 +541,7 @@ def aesthetics():
     kw('kwinrc', 'Plugins', 'apogeo-ventanasEnabled', 'true')
     kw('kwinrc', 'Plugins', 'apogeo-bordesEnabled', 'true')  # la isla y los pisos salen con una franja ancha del borde
     kw('kwinrc', 'Plugins', 'apogeo-partidaEnabled', 'true')  # Meta+Tab en un juego: el juego al lado de Discord
-    # La terminal de Apogeo (Ghostty con el cristal de Ágape), la de siempre para Dolphin y los atajos
+    # La terminal de Apogeo (Ghostty con el cristal de Órbita), la de siempre para Dolphin y los atajos
     kw('kdeglobals', 'General', 'TerminalApplication', 'ghostty')
     kw('kdeglobals', 'General', 'TerminalService', 'com.mitchellh.ghostty.desktop')
     ghostty = os.path.expanduser('~/.config/ghostty/config')
@@ -738,9 +808,10 @@ class Missed:
 
 
 class Floors:
-    def __init__(self, bus, system):
+    def __init__(self, bus, system, modos=None):
         self.bus = bus
         self.system = system
+        self.modos = modos
         self.cookie = None
         self.light_on = None       # la luz nocturna de KWin encendida (solo en Estudiar)
         self.light_conf = None     # el calor que se escribió en kwinrc (para no reescribirlo en cada piso)
@@ -762,6 +833,10 @@ class Floors:
         st = ajustes.load()
         mine = st['pisos'][f['key']]
         log('piso', f['name'])
+        if self.modos:
+            self.modos.publish(index)
+        else:
+            write_mode(index)
         self.wallpaper(self.pick_wallpaper(st, f['key'], entering=not force), st['animar'], f['key'])
         self.schedule_rotation(st, f['key'])
         self.quiet(st['silencio'] or not mine['avisos'], f['key'])
@@ -981,7 +1056,7 @@ class Floors:
             subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
                               f'--unit=app-apogeo-{exe or "app"}-{os.getpid()}-{len(self.visited)}', 'gio', 'launch', path],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
-                             env=dict(os.environ, APOGEO_AUTO='1'))  # (la abre el piso, no tú)
+                             env=dict(os.environ, APOGEO_AUTO='1', APOGEO_MODO=self.floor_key()))  # (la abre el piso, no tú)
 
 
 def island(bus, st):
@@ -1049,7 +1124,7 @@ def switch_look(st, floor, shown):
 def light_effects():
     """Sin gráfica de verdad (una máquina virtual sin 3D), KWin lo dibuja todo con el procesador y el desenfoque del
     cristal (la isla, los menús, los avisos) lo deja al límite: cambiar de piso iba a tirones. Ahí se quita el desenfoque
-    (y el contraste que va con él); con gráfica, el cristal de Ágape se queda. Se mira al entrar en cada sesión."""
+    (y el contraste que va con él); con gráfica, el cristal se queda. Se mira al entrar en cada sesión."""
     want = 'true' if real_gpu() else 'false'
     changed = False
     for effect in ('blur', 'contrast'):
@@ -1124,7 +1199,13 @@ def main():
     carousel(ajustes.load())
     import apogeo_datos
     datos = apogeo_datos.Datos(bus)  # noqa: F841 (los datos de los widgets: el tiempo, el estudio… por D-Bus)
-    floors = Floors(bus, dbus.SystemBus())
+    global _modos
+    try:
+        _modos = Modos(bus, dbus.service.BusName('org.apogeo.Modos', bus))
+        log('modos: org.apogeo.Modos1')
+    except dbus.DBusException as e:
+        log('modos:', e.get_dbus_message())
+    floors = Floors(bus, dbus.SystemBus(), _modos)
     bus.add_signal_receiver(lambda _id: floors.apply(current_index(bus)), signal_name='currentChanged',
                             dbus_interface='org.kde.KWin.VirtualDesktopManager', path='/VirtualDesktopManager')
     go(bus, start_floor())

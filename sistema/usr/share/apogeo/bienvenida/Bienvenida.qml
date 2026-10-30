@@ -4,8 +4,8 @@ import QtQuick.Effects
 import QtQuick.Dialogs
 import Apogeo
 
-// Bienvenida de Apogeo («A · Tarjeta central»): como la bienvenida de Ágape, una tarjeta de cristal en el centro sobre el
-// fondo animado del piso Navegar, con puntos abajo que marcan por dónde vas. La parte de dentro (red, cuentas, descarga
+// Bienvenida de Órbita («A · Tarjeta central»): una tarjeta de cristal en el centro sobre el fondo animado de Navegar,
+// con puntos abajo que marcan por dónde vas. La parte de dentro (red, cuentas, descarga
 // de Ágape, copia) es apogeo-bienvenida, que se ve aquí como «apogeo».
 ApplicationWindow {
     id: win
@@ -15,7 +15,7 @@ ApplicationWindow {
     title: "Bienvenida de Apogeo"
     color: bg
 
-    // Colores y letra de Ágape (tema Berenjena oscuro)
+    // Los colores y la letra del modo (de serie, Órbita)
     readonly property color bg: Tema.fondo
     readonly property color text: Tema.texto
     readonly property color muted: Tema.apagado
@@ -27,7 +27,7 @@ ApplicationWindow {
     readonly property color accentSoft: Tema.rosaSuave
     readonly property color accentText: Tema.sobreRosa
     readonly property color chrome: Tema.cromo
-    readonly property string fontName: "Bricolage Grotesque"
+    readonly property string fontName: Tema.letra
     font.family: fontName
 
     readonly property int steps: 7
@@ -70,7 +70,7 @@ ApplicationWindow {
         }
     }
 
-    // ---------- Fondo: el animado de Ágape del piso Navegar («Tinta»), a un tercio de resolución y 30 imágenes/s ----------
+    // ---------- Fondo: el animado de Navegar («Tinta»), a un tercio de resolución y 30 imágenes/s ----------
 
     Binding { target: Tema; property: "animar"; value: apogeo.animate && win.active }
     Fondo { anchors.fill: parent; tipo: 0 }
@@ -542,8 +542,8 @@ ApplicationWindow {
         Column {
             spacing: 0
             Header_ {
-                title: "Tres pisos"
-                lead: "Cada piso tiene sus apps y sus ventanas. Cambia con la barra de la derecha o con la rueda del ratón en el borde derecho."
+                title: "Tres modos"
+                lead: "Cada modo tiene sus apps y sus ventanas. Cambia con la barra de la derecha o con la rueda del ratón en el borde derecho."
             }
             Row {
                 spacing: 10
@@ -616,7 +616,7 @@ ApplicationWindow {
             spacing: 0
             Header_ {
                 title: "La isla"
-                lead: "Tu barra, abajo en el centro. Cambia en cada piso y se esconde sola."
+                lead: "Tu barra, abajo en el centro. Cambia en cada modo y se esconde sola."
             }
             // Una isla de muestra
             Rectangle {
@@ -689,7 +689,7 @@ ApplicationWindow {
                 Check_ { ok: win.profileSaved; text: win.profileSaved ? "Tu nombre y tu foto puestos" : "Tu nombre y tu foto: para luego" }
                 Check_ { ok: apogeo.agapeInstalled; text: apogeo.agapeInstalled ? "Ágape instalado" : "Ágape: para luego" }
                 Check_ { visible: apogeo.agapeInstalled; ok: win.restored; text: win.restored ? "Tus cosas de Ágape, traídas" : "Ágape empieza de cero" }
-                Check_ { text: "Ya sabes moverte por los pisos" }
+                Check_ { text: "Ya sabes moverte por los modos" }
             }
             Actions_ { back: "Atrás"; next: "Empezar a usar Apogeo"; arrow: false; onBackClicked: win.go(5); onNextClicked: apogeo.finish(true) }
         }

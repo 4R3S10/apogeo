@@ -1,8 +1,8 @@
-# Arranque (y apagado) de Apogeo: el búho batiendo las alas sobre un brillo berenjena, flotando un poco, y debajo una
-# barra finita de progreso. Si el disco está cifrado, la contraseña se pide debajo del logo (con puntos).
+# Arranque (y apagado) de Órbita: el Núcleo (el punto y sus tres órbitas) sobre el grafito, flotando un poco, y debajo
+# una barra fina cian. Si el disco está cifrado, la contraseña se pide debajo (con puntos).
 
-Window.SetBackgroundTopColor(0.07, 0.05, 0.08);
-Window.SetBackgroundBottomColor(0.07, 0.05, 0.08);
+Window.SetBackgroundTopColor(0.024, 0.031, 0.047);
+Window.SetBackgroundBottomColor(0.051, 0.067, 0.094);
 
 W = Window.GetWidth();
 H = Window.GetHeight();
@@ -18,7 +18,7 @@ logo_x = X + W / 2 - logo_img.GetWidth() / 2;
 logo_y = Y + H / 2 - logo_img.GetHeight() / 2 - 20;
 logo.SetPosition(logo_x, logo_y, 1);
 
-# El aleteo: 24 fotogramas (aleteo-00.png … aleteo-23.png, del logo), uno cada 3 refrescos (unos 16 por segundo)
+# El giro: 24 fotogramas (aleteo-00.png … aleteo-23.png, del Núcleo), uno cada 3 refrescos (unos 16 por segundo)
 aleteo = [];
 for (i = 0; i < 24; i++) {
   if (i < 10) aleteo[i] = Image("aleteo-0" + i + ".png");
@@ -30,7 +30,7 @@ fun refrescar() {
   f = Math.Int(tic / 3);
   f = f - Math.Int(f / 24) * 24;
   if (aleteo[f]) logo.SetImage(aleteo[f]);
-  # sube un poco al bajar las alas y cae al subirlas, como al volar de verdad
+  # sube y baja muy despacio, como si la órbita respirara
   logo.SetY(logo_y + Math.Cos(2 * 3.14159 * f / 24) * 5);
 }
 Plymouth.SetRefreshFunction(refrescar);
@@ -59,7 +59,7 @@ texto = Sprite();
 fun pedir_contrasena(pregunta, cuantos) {
   barra.SetOpacity(0);
   barra_fondo.SetOpacity(0);
-  texto_img = Image.Text(pregunta, 0.88, 0.8, 0.83);
+  texto_img = Image.Text(pregunta, 0.913, 0.929, 0.961);
   texto.SetImage(texto_img);
   texto.SetOpacity(1);
   texto.SetPosition(X + W / 2 - texto_img.GetWidth() / 2, barra_y - 6, 3);
@@ -82,7 +82,7 @@ Plymouth.SetDisplayNormalFunction(normal);
 # Mensajes del sistema (p. ej. «Comprobando el disco…»), pequeños y abajo
 mensaje = Sprite();
 fun mostrar_mensaje(t) {
-  mensaje_img = Image.Text(t, 0.66, 0.58, 0.62);
+  mensaje_img = Image.Text(t, 0.545, 0.580, 0.640);
   mensaje.SetImage(mensaje_img);
   mensaje.SetPosition(X + W / 2 - mensaje_img.GetWidth() / 2, Y + H - 60, 3);
 }

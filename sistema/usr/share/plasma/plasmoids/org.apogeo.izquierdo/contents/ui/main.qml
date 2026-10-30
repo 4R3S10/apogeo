@@ -226,7 +226,7 @@ PlasmoidItem {
         scale: pressed ? 0.9 : 1
         Behavior on scale { NumberAnimation { duration: 100 } }
         background: Rectangle { radius: width / 2; color: bm.relleno ? bm.lleno : bm.hovered ? Qt.rgba(1, 1, 1, 0.14) : "transparent" }
-        contentItem: Item { Icono { anchors.centerIn: parent; nombre: bm.icono; width: 16; height: 16; color: bm.relleno ? "#1b1420" : "white" } }
+        contentItem: Item { Icono { anchors.centerIn: parent; nombre: bm.icono; width: 16; height: 16; color: bm.relleno ? Tema.sobreAcento : "white" } }
     }
     component Quitar: QQC2.AbstractButton {
         id: q

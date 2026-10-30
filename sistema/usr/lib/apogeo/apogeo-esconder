@@ -1,18 +1,37 @@
 #!/bin/sh
-# Fuera del menú y del buscador lo que no pinta nada en Apogeo: las apps de CachyOS (si no las ha quitado ya
-# apogeo-limpieza) y las piezas de otros programas que no son apps (herramientas de Qt, de Avahi, de cámaras…). Siguen
-# instaladas: se abren con su nombre desde una terminal. Lo lanza un gancho de pacman: si una actualización las vuelve
-# a poner, se vuelven a esconder.
+# Lo que no es una app no pinta nada en el menú ni en el buscador: las piezas de otros programas (herramientas de Qt,
+# de Avahi, de cámaras, de Bluetooth…). Siguen instaladas y se abren con su nombre desde una terminal.
+# Las apps de verdad nunca se esconden (las de CachyOS incluidas: se instalaron y se quedan a mano); las que en alguna
+# versión anterior se escondieron (cachyos-hello, arch-update, KWrite, Kvantum, KDE Connect…) se vuelven a mostrar.
+# Lo lanza un gancho de pacman tras cada actualización y apogeo-revision, así que si algo vuelve a su sitio, aquí vuelve
+# el menú.
 set -e
-for f in cachyos-hello cachyos-pi org.cachyos.KernelManager org.cachyos.scx-manager arch-update arch-update-tray \
-         avahi-discover bssh bvnc assistant designer linguist qdbusviewer qv4l2 qvidcap lstopo kvantummanager \
-         org.kde.kwrite org.kde.kdeconnect.nonplasma org.kde.kdeconnect.sms; do
-  p="/usr/share/applications/$f.desktop"
-  [ -f "$p" ] || continue
-  grep -q '^NoDisplay=true' "$p" && continue
+
+esconder() {
+  p="/usr/share/applications/$1.desktop"
+  [ -f "$p" ] || return 0
+  grep -q '^NoDisplay=true' "$p" && return 0
   if grep -q '^NoDisplay=' "$p"; then
     sed -i 's/^NoDisplay=.*/NoDisplay=true/' "$p"
   else
     sed -i '0,/^\[Desktop Entry\]/s//[Desktop Entry]\nNoDisplay=true/' "$p"
   fi
+}
+
+mostrar() {
+  p="/usr/share/applications/$1.desktop"
+  [ -f "$p" ] || return 0
+  grep -q '^NoDisplay=' "$p" || return 0
+  sed -i 's/^NoDisplay=.*/NoDisplay=false/' "$p"
+}
+
+# Piezas que no son apps
+for f in avahi-discover bssh bvnc assistant designer linguist qdbusviewer qv4l2 qvidcap lstopo; do
+  esconder "$f"
+done
+
+# Apps que antes estaban fuera del menú y vuelven a entrar
+for f in cachyos-hello cachyos-pi org.cachyos.KernelManager org.cachyos.scx-manager arch-update arch-update-tray \
+         kvantummanager org.kde.kwrite org.kde.kdeconnect.nonplasma org.kde.kdeconnect.sms; do
+  mostrar "$f"
 done

@@ -25,7 +25,7 @@ Item {
     implicitWidth: 800
     implicitHeight: 600
 
-    // Colores y letra de Ágape (tema Berenjena oscuro)
+    // Los colores y la letra del modo (de serie, Órbita)
     readonly property color text: Tema.texto
     readonly property color muted: Tema.apagado
     readonly property color hover: Tema.encima
@@ -220,12 +220,12 @@ Item {
         id: ink
         anchors.fill: parent
         property var pts: []
-        property color tint: "#ff8fc6"
+        property color tint: Tema.acento
         opacity: 0
-        function begin() { pts = []; tint = "#ff8fc6"; fade.stop(); opacity = 1; }
+        function begin() { pts = []; tint = Tema.acento; fade.stop(); opacity = 1; }
         function add(x, y, all) { pts = all; requestPaint(); }
         function done() { fade.start(); }
-        function fail() { tint = "#ff8f9a"; requestPaint(); fade.restart(); }
+        function fail() { tint = Tema.error; requestPaint(); fade.restart(); }
         NumberAnimation on opacity { id: fade; running: false; to: 0; duration: 900; easing.type: Easing.InQuad }
         onPaint: {
             const c = getContext("2d");
@@ -320,12 +320,12 @@ Item {
                 }
             }
             Text {
-                text: "¿A qué piso vuelves?"
+                text: "¿A qué modo vuelves?"
                 color: root.muted
                 font { family: root.font; pixelSize: 15 }
             }
 
-            // Pisos: el control segmentado de Ágape (la pastilla rosa con brillo es el elegido)
+            // Pisos: el control segmentado (la pastilla de acento con brillo es la elegida)
             Rectangle {
                 width: seg.implicitWidth + 6
                 height: 40
@@ -436,7 +436,7 @@ Item {
             Text {
                 text: root.error
                 visible: root.error !== ""
-                color: "#ff8f9a"
+                color: Tema.error
                 width: parent.width
                 wrapMode: Text.Wrap
                 font { family: root.font; pixelSize: 14 }

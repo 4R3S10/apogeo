@@ -67,7 +67,7 @@ Seccion {
                     : sec.est.fecha ? "En «" + sec.est.donde + "» · " + sec.est.archivo
                     : !sec.est.clave ? "Pon una contraseña y elige dónde guardarla"
                     : sec.cfg.destino.uuid === "" ? "Elige dónde guardarla" : "Pulsa «Hacer copia ahora» (luego se hace sola)"
-                color: sec.fallo && sec.mensaje !== "" ? "#ff8f9a" : Tema.apagado
+                color: sec.fallo && sec.mensaje !== "" ? Tema.error : Tema.apagado
                 font.pixelSize: 13
                 elide: Text.ElideRight; wrapMode: Text.NoWrap
             }
@@ -97,7 +97,7 @@ Seccion {
             spacing: 6
             Repeater {
                 model: [
-                    { clave: "ajustes", texto: "Ajustes y pisos" }, { clave: "fondos", texto: "Tus fondos" },
+                    { clave: "ajustes", texto: "Ajustes y modos" }, { clave: "fondos", texto: "Tus fondos" },
                     { clave: "estudios", texto: "~/Estudios" }, { clave: "tareas", texto: "Tareas y exámenes" },
                     { clave: "documentos", texto: "Documentos" }
                 ]
@@ -200,7 +200,7 @@ Seccion {
             Texto {
                 width: parent.width
                 visible: text !== ""
-                color: "#ff8f9a"
+                color: Tema.error
                 font.weight: Font.DemiBold
                 text: clave.mensaje !== "" ? clave.mensaje
                     : dos.text !== "" && uno.text !== dos.text ? "No son iguales"
@@ -236,7 +236,7 @@ Seccion {
         onOpened: { pass.text = ""; mensaje = ""; bien = false; abriendo = false; pass.forceActiveFocus(); }
         background: Rectangle { radius: Tema.r(22); color: Tema.cromo; border.color: Tema.borde }
         Overlay.modal: Rectangle { color: "#99000000" }
-        readonly property var nombres: ({ ajustes: "tus ajustes y pisos", fondos: "tus fondos", estudios: "~/Estudios", tareas: "tus tareas y exámenes", documentos: "tus Documentos" })
+        readonly property var nombres: ({ ajustes: "tus ajustes y modos", fondos: "tus fondos", estudios: "~/Estudios", tareas: "tus tareas y exámenes", documentos: "tus Documentos" })
         contentItem: Column {
             spacing: 14
             Texto { text: "Recuperar la copia"; font.pixelSize: 20; font.weight: Font.Bold }
@@ -259,7 +259,7 @@ Seccion {
                 width: parent.width
                 visible: abrir.mensaje !== ""
                 text: abrir.mensaje
-                color: abrir.bien ? Tema.rosa : "#ff8f9a"
+                color: abrir.bien ? Tema.acento : Tema.error
                 font.weight: Font.DemiBold
             }
             Row {

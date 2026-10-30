@@ -4,11 +4,16 @@ El Windows escondido, solo para los juegos que no van en Apogeo (anticheat del n
 
 Apogeo y Windows se hablan por una nota en la partición de arranque de Windows (EFI/apogeo/):
   - puente.json   lo que tiene que hacer Windows al encender: abrir un juego (y al cerrarlo volver) o, para instalar
-                  juegos, el escritorio con «Volver a Apogeo». Lo escribe Apogeo; Windows lo lee y lo borra.
+                  juegos, el escritorio con «Volver a Apogeo». Lo escribe Apogeo; Windows lo lee, lo valida y lo borra.
   - juegos.json   tus juegos de Windows, con su nombre, cómo se abren y su portada. Lo escribe Windows al apagarse;
                   Apogeo lo copia al encender a /var/lib/apogeo/windows-juegos.json (la consola los enseña).
 El salto: «arrancar la próxima vez en Windows» (BootNext, una sola vez) y reiniciar. Al reiniciarse Windows, el orden
 de siempre vuelve a Apogeo (y si Windows se ha puesto el primero, al encender Apogeo se pone otra vez él delante).
+
+La nota lleva versión, fecha y un nonce: Windows rechaza las que no valen, y Apogeo borra al encender la que no se
+llegó a usar (si un reinicio no llegó a hacerse). Y Apogeo no
+depende de leer el firmware: al encender, como administrador, deja el estado en /var/lib/apogeo/windows-estado.json
+(sí/no y la entrada de arranque) por si no se puede leer efibootmgr sin permisos.
 
   apogeo-windows estado          (sin permisos) {"windows": bool}: ¿hay un Windows en el PC?
   pkexec apogeo-windows ir       (lee de la entrada {"modo": "juego", "id", "nombre", "lanzar", "proceso"} o
@@ -19,45 +24,133 @@ import glob
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 VAR = '/var/lib/apogeo'
 GAMES = os.path.join(VAR, 'windows-juegos.json')
+STATE = os.path.join(VAR, 'windows-estado.json')
 WINDOWS_LOADER = 'EFI/Microsoft/Boot/bootmgfw.efi'
+NOTE_VERSION = 2
+
+
+def _run(*cmd):
+    try:
+        return subprocess.run(list(cmd), capture_output=True, text=True)
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def efi_entries():
-    """{número: nombre} de las entradas de arranque, el orden y la actual."""
-    out = subprocess.run(['efibootmgr'], capture_output=True, text=True).stdout
+    """({número: nombre}, orden, actual, leído): las entradas de arranque. «leído» es False si efibootmgr no pudo
+    (sin permisos o sin firmware EFI), y entonces se usa el estado guardado."""
+    r = _run('efibootmgr')
+    if r is None or r.returncode != 0:
+        return {}, [], '', False
+    out = r.stdout
+    if not re.search(r'^Boot[0-9A-Fa-f]{4}\*?\s+', out, re.M) and 'BootOrder:' not in out:
+        return {}, [], '', False
     entries = dict(re.findall(r'^Boot([0-9A-Fa-f]{4})\*?\s+(.+?)(?:\t|$)', out, re.M))
     order = (re.search(r'^BootOrder:\s*(\S+)', out, re.M) or [None, ''])[1].split(',')
     current = (re.search(r'^BootCurrent:\s*(\S+)', out, re.M) or [None, ''])[1]
-    return entries, [o for o in order if o], current
+    return entries, [o for o in order if o], current, True
+
+
+def _windows_in(entries):
+    return next((n for n, name in entries.items() if 'windows boot manager' in name.lower()), None)
 
 
 def windows_entry():
-    entries, _order, _cur = efi_entries()
-    return next((n for n, name in entries.items() if 'windows boot manager' in name.lower()), None)
+    """La entrada de Windows: del firmware si se puede leer; si no, del estado que dejó la última vez."""
+    entries, _order, _cur, leido = efi_entries()
+    found = _windows_in(entries)
+    if found:
+        return found
+    saved = read_state().get('entry') or ''
+    if saved and saved in entries:
+        return saved
+    return None
+
+
+def read_state():
+    try:
+        with open(STATE) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def write_state(**data):
+    """El estado que puede leer la consola sin ser administrador (Windows sí/no y su entrada de arranque)."""
+    try:
+        os.makedirs(VAR, exist_ok=True)
+        tmp = STATE + '.nuevo'
+        with open(tmp, 'w') as f:
+            json.dump({'windows': bool(data.get('windows')), 'entry': str(data.get('entry') or ''),
+                       'comprobado': int(time.time()), 'version': 1}, f)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, STATE)
+    except OSError:
+        pass
+
+
+def windows_por_archivos():
+    """Si efibootmgr no se puede leer, la partición montada del arranque dice si hay Windows (sin permisos)."""
+    for root in ('/boot', '/efi', '/boot/efi'):
+        if os.path.exists(os.path.join(root, WINDOWS_LOADER)) or _ci_exists(root, WINDOWS_LOADER):
+            return True
+    return False
+
+
+def estado():
+    """¿Hay Windows? Primero el firmware; si no se deja leer, el estado guardado y la partición de arranque."""
+    entries, _order, _cur, leido = efi_entries()
+    if leido:
+        entry = _windows_in(entries)
+        if os.geteuid() == 0:  # (sin permisos no se puede escribir el estado: el que lo lea, que pregunte aquí)
+            write_state(windows=bool(entry), entry=entry or '')
+        return bool(entry)
+    st = read_state()
+    if 'windows' in st and st.get('comprobado'):
+        return bool(st.get('windows'))
+    return windows_por_archivos()
 
 
 def esps():
     """Las particiones de arranque (EFI) del PC."""
-    r = subprocess.run(['lsblk', '-J', '-o', 'PATH,FSTYPE,PARTTYPE,MOUNTPOINT'], capture_output=True, text=True)
+    r = _run('lsblk', '-J', '-o', 'PATH,FSTYPE,PARTTYPE,MOUNTPOINT')
     out = []
+    try:
+        data = json.loads(r.stdout) if r else {}
+    except ValueError:
+        data = {}
 
     def walk(items):
         for d in items or []:
             if (d.get('parttype') or '').lower() == 'c12a7328-f81f-11d2-ba4b-00a0c93ec93b' and d.get('fstype') == 'vfat':
                 out.append(d)
             walk(d.get('children'))
-    try:
-        walk(json.loads(r.stdout)['blockdevices'])
-    except (ValueError, KeyError):
-        pass
+    walk(data.get('blockdevices'))
     return out
+
+
+def _ci_exists(root, rel):
+    """(en FAT las mayúsculas dan igual, pero la ruta puede venir escrita de otra forma)"""
+    path = root
+    for part in rel.split('/'):
+        try:
+            found = next((n for n in os.listdir(path) if n.lower() == part.lower()), None)
+        except OSError:
+            return False
+        if not found:
+            return False
+        path = os.path.join(path, found)
+    return True
 
 
 class WindowsEsp:
@@ -74,25 +167,11 @@ class WindowsEsp:
                     self.tmp = None
                     continue
                 mnt = self.tmp
-            if os.path.exists(os.path.join(mnt, WINDOWS_LOADER)) or self._ci_exists(mnt, WINDOWS_LOADER):
+            if os.path.exists(os.path.join(mnt, WINDOWS_LOADER)) or _ci_exists(mnt, WINDOWS_LOADER):
                 self.path = os.path.join(mnt, 'EFI', 'apogeo')
                 return self
             self._release()
         raise RuntimeError('No se encuentra el arranque de Windows')
-
-    @staticmethod
-    def _ci_exists(root, rel):
-        """(en FAT las mayúsculas dan igual, pero la ruta puede venir escrita de otra forma)"""
-        path = root
-        for part in rel.split('/'):
-            try:
-                found = next((n for n in os.listdir(path) if n.lower() == part.lower()), None)
-            except OSError:
-                return False
-            if not found:
-                return False
-            path = os.path.join(path, found)
-        return True
 
     def _release(self):
         if self.tmp:
@@ -107,15 +186,42 @@ class WindowsEsp:
 
 def apogeo_first():
     """Apogeo (Limine) el primero del orden de arranque (Windows se pone delante al instalarse o actualizarse)."""
-    entries, order, _cur = efi_entries()
-    limine = next((n for n, name in entries.items() if 'limine' in name.lower()), None)
-    if limine and order and order[0] != limine:
-        new = [limine] + [o for o in order if o != limine]
-        subprocess.run(['efibootmgr', '-q', '-o', ','.join(new)])
+    entries, order, _cur, leido = efi_entries()
+    if not leido:
+        return
+
+    def score(item):
+        name = entries[item].lower()
+        if 'apogeo' in name:
+            return 0
+        if 'limine' in name:
+            return 1
+        if 'cachyos' in name:
+            return 2
+        return 9
+
+    candidates = [n for n in entries if score(n) < 9]
+    if not candidates or not order:
+        return
+    first = min(candidates, key=score)
+    if order[0] != first:
+        new = [first] + [o for o in order if o != first]
+        _run('efibootmgr', '-q', '-o', ','.join(new))
 
 
 def clean(text, n=200):
     return str(text or '')[:n]
+
+
+def write_note(path, note):
+    """La nota, escrita entera o nada (y con fsync: el reinicio sale justo después)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump(note, f, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
 
 
 def go():
@@ -125,54 +231,94 @@ def go():
         return 'Petición rara'
     modo = req.get('modo')
     if modo == 'juego':
-        note = {'modo': 'juego', 'id': clean(req.get('id'), 80), 'nombre': clean(req.get('nombre'), 120),
+        note = {'version': NOTE_VERSION, 'creado': int(time.time()), 'nonce': secrets.token_hex(12),
+                'modo': 'juego', 'id': clean(req.get('id'), 80), 'nombre': clean(req.get('nombre'), 120),
                 'lanzar': clean(req.get('lanzar'), 600), 'proceso': clean(req.get('proceso'), 120)}
         if not note['lanzar']:
             return 'No se sabe cómo abrir ese juego en Windows'
     elif modo == 'escritorio':
-        note = {'modo': 'escritorio'}
+        note = {'version': NOTE_VERSION, 'creado': int(time.time()), 'nonce': secrets.token_hex(12),
+                'modo': 'escritorio'}
     else:
         return 'Petición rara'
     entry = windows_entry()
     if not entry:
         return 'No hay un Windows en este PC'
     with WindowsEsp() as esp:
-        os.makedirs(esp.path, exist_ok=True)
-        with open(os.path.join(esp.path, 'puente.json'), 'w') as f:
-            json.dump(note, f, ensure_ascii=False)
+        note_path = os.path.join(esp.path, 'puente.json')
+        write_note(note_path, note)
+    write_state(windows=True, entry=entry)
     apogeo_first()
-    if subprocess.run(['efibootmgr', '-q', '-n', entry]).returncode:
+    if _run('efibootmgr', '-q', '-n', entry).returncode:
+        try:
+            with WindowsEsp() as esp:
+                os.remove(os.path.join(esp.path, 'puente.json'))
+        except (RuntimeError, OSError):
+            pass
         return 'No se ha podido elegir Windows para el próximo arranque'
     subprocess.Popen(['systemctl', 'reboot'])
     return ''
 
 
+def _game(item):
+    """Un juego del Windows, sin nada raro (lo escribe el agente de Windows en la partición de arranque)."""
+    if not isinstance(item, dict) or not item.get('id') or not item.get('lanzar'):
+        return None
+    gid = clean(item.get('id'), 80)
+    if not re.fullmatch(r'[\w.@+-]{1,80}', gid):
+        return None
+    out = {'id': gid, 'name': clean(item.get('name') or item.get('nombre') or gid, 120),
+           'lanzar': clean(item.get('lanzar'), 600), 'proceso': clean(item.get('proceso'), 160)}
+    for key in ('cover', 'hero'):
+        value = clean(item.get(key), 600)
+        if value.startswith(('http://', 'https://', 'file://')):
+            out[key] = value
+    return out
+
+
 def sync():
     """Al encender: los juegos que apuntó Windows y Apogeo el primero."""
-    if not windows_entry():
+    entries, _order, _cur, leido = efi_entries()
+    entry = _windows_in(entries) if leido else None
+    if leido:
+        write_state(windows=bool(entry), entry=entry or '')
+    if not entry and not windows_por_archivos():
         return
     apogeo_first()
     try:
         with WindowsEsp() as esp:
+            # Si estás en Apogeo, una nota que siga ahí es de un salto que no llegó a hacerse: fuera (así Windows no
+            # abre un juego viejo si lo enciendes a mano)
+            try:
+                os.remove(os.path.join(esp.path, 'puente.json'))
+            except OSError:
+                pass
             src = os.path.join(esp.path, 'juegos.json')
             if os.path.exists(src):
                 with open(src, encoding='utf-8-sig') as f:
-                    games = json.load(f)
-                games = [g for g in games if isinstance(g, dict) and g.get('id') and g.get('lanzar')][:200]
+                    raw = json.load(f)
+                games = []
+                for item in (raw if isinstance(raw, list) else []):
+                    limpio = _game(item)
+                    if limpio:
+                        games.append(limpio)
+                    if len(games) >= 200:
+                        break
                 os.makedirs(VAR, exist_ok=True)
                 tmp = GAMES + '.nuevo'
                 with open(tmp, 'w') as f:
                     json.dump(games, f, ensure_ascii=False)
                 os.chmod(tmp, 0o644)
                 os.replace(tmp, GAMES)
-                # Las portadas que manda Windows (png en EFI/apogeo/portadas), para la consola
+                # Las portadas que manda Windows (png/jpg en EFI/apogeo/portadas), para la consola
                 pics = os.path.join(esp.path, 'portadas')
                 if os.path.isdir(pics):
                     dest = os.path.join(VAR, 'windows-portadas')
                     os.makedirs(dest, exist_ok=True)
-                    for p in glob.glob(os.path.join(pics, '*.png'))[:200]:
-                        shutil.copyfile(p, os.path.join(dest, os.path.basename(p)))
-                        os.chmod(os.path.join(dest, os.path.basename(p)), 0o644)
+                    for p in sorted(glob.glob(os.path.join(pics, '*.png')) + glob.glob(os.path.join(pics, '*.jpg')))[:200]:
+                        name = re.sub(r'[^\w.-]', '_', os.path.basename(p))
+                        shutil.copyfile(p, os.path.join(dest, name))
+                        os.chmod(os.path.join(dest, name), 0o644)
     except (RuntimeError, OSError, ValueError) as e:
         print('apogeo-windows:', e, file=sys.stderr)
 
@@ -180,7 +326,7 @@ def sync():
 def main():
     a = sys.argv[1:]
     if a == ['estado']:
-        print(json.dumps({'windows': bool(windows_entry())}))
+        print(json.dumps({'windows': estado()}))
         return 0
     if os.geteuid() != 0:
         print(__doc__.strip(), file=sys.stderr)

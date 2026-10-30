@@ -53,12 +53,12 @@ Window {
             [["Meta", "V"], "Lo que has copiado"]] }
     })
     readonly property var grupos: [
-        { titulo: "Pisos y paneles", atajos: [
+        { titulo: "Modos y paneles", atajos: [
             [["Meta", "F1 · F2 · F3"], "Jugar · Navegar · Estudiar"],
             [["Meta", "A"], "Panel de widgets (izquierda)"],
             [["Meta", "N"], "Panel rápido y avisos (derecha)"],
-            [["Meta", "Ctrl", "↑ ↓"], "El piso de arriba o de abajo"],
-            [["Meta", "Ctrl", "⇧", "↑ ↓"], "Llevar la ventana a otro piso"]] },
+            [["Meta", "Ctrl", "↑ ↓"], "El modo de arriba o de abajo"],
+            [["Meta", "Ctrl", "⇧", "↑ ↓"], "Llevar la ventana a otro modo"]] },
         { titulo: "Ventanas", atajos: [
             [["Meta", "← →"], "Mitad izquierda o derecha"],
             [["Meta", "↑ ↓"], "Mitad de arriba o de abajo"],

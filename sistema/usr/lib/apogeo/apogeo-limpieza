@@ -1,87 +1,167 @@
-#!/bin/bash
-# Fuera los programas repetidos y los restos de CachyOS (una sola vez: si luego instalas alguno a mano, se queda).
-# Con cada uno se queda el de Apogeo: Ghostty (no Konsole ni Alacritty), las capturas de Apogeo (no Spectacle ni
-# Flameshot), VLC (no Haruna ni mpv), Ágape (no Firefox), Mission Center (no btop, el Monitor del sistema ni Filelight),
-# Kate y fish (no vim, micro ni la zsh de CachyOS). Y lo de CachyOS que Apogeo ya hace a su manera: la bienvenida, el instalador de paquetes,
-# el gestor de núcleos, el actualizador y Shelly.
-# Segunda tanda (2026-10-19): KDE Connect (gastaba memoria y red sin usarse). Tercera (2026-10-20): Stacer (lo hace
-# Mission Center) y VirtualBox (no hace falta en el PC y su módulo frenaba las actualizaciones del núcleo). Cuarta
-# (2026-10-28): Lutris (lo hacen Steam, Heroic y la consola), Pavucontrol (el sonido está en el panel rápido y en
-# EasyEffects) y el gestor de KWallet (las contraseñas ya no las guarda KWallet). Quinta (2026-10-29): Flameshot (las
-# capturas son de Apogeo). Sexta (2026-10-29): Warehouse (lo hace la tienda de Apogeo). De cada tanda solo se quita lo suyo: lo que reinstalaste a mano después de una tanda se queda.
-#
-# Lo lanza la revisión de Apogeo después de una actualización y, si no llegó a acabar (por ejemplo, porque se reinició
-# justo después), al encender (apogeo-limpieza.service). pacman está ocupado hasta que acaba la actualización, así que
-# primero espera a que termine; mientras quita, retrasa el apagado. Lo que quita lo apunta en
-# /var/lib/apogeo/limpieza.json para que la revisión te lo cuente.
-set -u
-MARCA=/var/lib/apogeo/limpieza-6
-INFORME=/var/lib/apogeo/limpieza.json
-[ -e "$MARCA" ] && exit 0
+#!/usr/bin/python3
+"""
+Limpieza de Órbita: solo sugiere, nunca quita nada.
 
-# En este orden: lo que depende de otro, antes
-QUITAR=()
-if [ ! -e /var/lib/apogeo/limpieza-1 ]; then
-QUITAR=(
-  cachyos-hello cachyos-packageinstaller cachyos-kernel-manager scx-manager cachy-update shelly
-  konsole alacritty spectacle
-  haruna mpvqt mpv firefox
-  btop plasma-systemmonitor filelight
-  cachyos-micro-settings micro
+Mira qué programas repetidos o restos de CachyOS siguen instalados y escribe una lista de sugerencias para que tú
+decidas. No llama a pacman para instalar ni quitar, no borra archivos y no toca el candado de pacman: todas las apps
+siguen donde estaban.
+
+  /var/lib/apogeo/limpieza.json   la lista (la lee apogeo-revision para avisarte si cambia)
+  /var/lib/apogeo/limpieza.txt    la misma lista, para leerla a gusto
+
+Lo lanza apogeo-revision después de cada actualización y apogeo-limpieza.service al encender. Si no hay nada que
+sugerir, deja la lista vacía.
+"""
+import json
+import os
+import pwd
+import subprocess
+import sys
+import time
+
+VAR = os.environ.get('APOGEO_VAR', '/var/lib/apogeo')
+INFORME = os.path.join(VAR, 'limpieza.json')
+TEXTO = os.path.join(VAR, 'limpieza.txt')
+VERSION = 2
+
+# (paquete, lo que ya hace esa función en Órbita). Nada de esta lista se quita solo.
+GRUPOS = (
+    ('Lo de CachyOS que Órbita ya hace', (
+        ('cachyos-hello', 'lo hace la bienvenida de Órbita'),
+        ('cachyos-packageinstaller', 'lo hacen Ajustes → Apps y la tienda de Órbita'),
+        ('cachyos-kernel-manager', 'lo hace la revisión y las actualizaciones de Órbita'),
+        ('scx-manager', 'lo hace el planificador de Órbita (scx_loader)'),
+        ('cachy-update', 'lo hacen los avisos de actualización de Órbita'),
+        ('shelly', 'lo hace la tienda de Órbita'),
+    )),
+    ('Programas repetidos', (
+        ('konsole', 'lo hace Ghostty'),
+        ('alacritty', 'lo hace Ghostty'),
+        ('spectacle', 'lo hacen las capturas de Órbita (Meta+Mayús+S)'),
+        ('flameshot', 'lo hacen las capturas de Órbita (Meta+Mayús+S)'),
+        ('haruna', 'lo hace VLC'),
+        ('mpv', 'lo hace VLC'),
+        ('mpvqt', 'lo hace VLC'),
+        ('firefox', 'lo hace Ágape'),
+        ('btop', 'lo hace Mission Center'),
+        ('plasma-systemmonitor', 'lo hace Mission Center'),
+        ('filelight', 'lo hace Mission Center'),
+        ('micro', 'lo hace Kate'),
+        ('vim', 'lo hace Kate'),
+    )),
+    ('Tandas anteriores', (
+        ('kdeconnect', 'lo hacen los avisos y el portapapeles de Órbita'),
+        ('stacer', 'lo hace Mission Center'),
+        ('virtualbox', 'no hace falta en este PC (y su módulo frena las actualizaciones del núcleo)'),
+        ('virtualbox-host-dkms', 'no hace falta en este PC'),
+        ('virtualbox-ext-oracle', 'no hace falta en este PC'),
+        ('lutris', 'lo hacen Steam, Heroic y la consola de Jugar'),
+        ('pavucontrol', 'lo hacen el panel rápido y EasyEffects'),
+        ('kwalletmanager', 'las contraseñas las guarda el sistema, no KWallet'),
+        ('warehouse', 'lo hace la tienda de Órbita'),
+    )),
 )
-# La zsh de CachyOS (con sus complementos), solo si nadie la usa para entrar
-if ! getent passwd | awk -F: '$3 == 0 || ($3 >= 1000 && $3 < 60000)' | cut -d: -f7 | grep -q zsh; then
-  QUITAR+=(cachyos-zsh-config oh-my-zsh-git zsh-autosuggestions zsh-completions zsh-history-substring-search
-           zsh-syntax-highlighting zsh-theme-powerlevel10k vim)
-fi
-fi
-# Segunda tanda
-[ -e /var/lib/apogeo/limpieza-2 ] || QUITAR+=(kdeconnect)
-# Tercera tanda
-[ -e /var/lib/apogeo/limpieza-3 ] || QUITAR+=(stacer virtualbox virtualbox-host-dkms virtualbox-ext-oracle)
-# Cuarta tanda
-[ -e /var/lib/apogeo/limpieza-4 ] || QUITAR+=(lutris pavucontrol kwalletmanager)
-# Quinta tanda
-[ -e /var/lib/apogeo/limpieza-5 ] || QUITAR+=(flameshot)
-# Sexta tanda
-QUITAR+=(warehouse)
 
-# Un candado de pacman de antes de encender el PC no es de nadie (se cortó un pacman al apagar): fuera
-LCK=/var/lib/pacman/db.lck
-if [ -e "$LCK" ] && ! pgrep -x 'pacman|yay|paru|pamac-daemon' >/dev/null; then
-  boot=$(awk '/^btime/ {print $2}' /proc/stat)
-  [ "$(stat -c %Y "$LCK")" -lt "$boot" ] && rm -f "$LCK" && echo "candado de pacman viejo quitado"
-fi
+ZSH = ('cachyos-zsh-config', 'oh-my-zsh-git', 'zsh-autosuggestions', 'zsh-completions',
+       'zsh-history-substring-search', 'zsh-syntax-highlighting', 'zsh-theme-powerlevel10k')
 
-# Espera a que pacman acabe (hasta 30 min)
-for _ in $(seq 900); do
-  [ -e /var/lib/pacman/db.lck ] || break
-  sleep 2
-done
-[ -e /var/lib/pacman/db.lck ] && exit 1  # sigue ocupado: se intenta otra vez al encender o tras la próxima actualización
 
-hay=()
-for p in "${QUITAR[@]}"; do pacman -Qq "$p" >/dev/null 2>&1 && hay+=("$p"); done
-quitados=()
-if [ ${#hay[@]} -gt 0 ]; then
-  # Todos a la vez; si alguno lo necesita otro programa, uno a uno (y ese se queda)
-  quitar() {
-    systemd-inhibit --what=shutdown:sleep --who=Apogeo --why='Quitando programas repetidos' --mode=block \
-      pacman -Rns --noconfirm "$@" >/dev/null 2>&1
-  }
-  if quitar "${hay[@]}"; then
-    quitados=("${hay[@]}")
-  else
-    for p in "${hay[@]}"; do
-      pacman -Qq "$p" >/dev/null 2>&1 || continue
-      quitar "$p" && quitados+=("$p")
-    done
-  fi
-fi
+def run(*cmd):
+    try:
+        r = subprocess.run(list(cmd), capture_output=True, text=True, timeout=20)
+        return r.returncode, r.stdout
+    except (OSError, subprocess.SubprocessError):
+        return 1, ''
 
-mkdir -p /var/lib/apogeo
-python3 - "$INFORME" "${quitados[@]}" <<'PY'
-import json, sys, time
-json.dump({'fecha': int(time.time()), 'quitados': sys.argv[2:]}, open(sys.argv[1], 'w'))
-PY
-touch /var/lib/apogeo/limpieza-1 /var/lib/apogeo/limpieza-2 /var/lib/apogeo/limpieza-3 /var/lib/apogeo/limpieza-4 /var/lib/apogeo/limpieza-5 "$MARCA"
+
+def instalados():
+    code, out = run('pacman', '-Qq')
+    return set(out.split()) if code == 0 else set()
+
+
+def zsh_en_uso():
+    """¿Alguna cuenta entra con zsh? Si sí, no se sugiere tocar su configuración."""
+    try:
+        return any((u.pw_shell or '').endswith('/zsh') for u in pwd.getpwall()
+                   if u.pw_uid == 0 or 1000 <= u.pw_uid < 60000)
+    except (KeyError, OSError):
+        return True  # ante la duda, no sugerir
+
+
+def requerido_por(paquete):
+    """Los paquetes que necesitan este. Si lo necesita algo que no está en la lista, no se sugiere (sería un lío)."""
+    code, out = run('pacman', '-Qi', paquete)
+    if code != 0:
+        return []
+    for line in out.splitlines():
+        if line.startswith('Required By'):
+            value = line.split(':', 1)[1].strip()
+            return [] if value in ('', 'None') else value.split()
+    return []
+
+
+def main():
+    hay = instalados()
+    if not hay:
+        return 1
+    candidatos = []
+    for grupo, items in GRUPOS:
+        for paquete, reemplazo in items:
+            if paquete in hay:
+                candidatos.append({'paquete': paquete, 'grupo': grupo, 'reemplazo': reemplazo})
+    if not zsh_en_uso():
+        for paquete in ZSH:
+            if paquete in hay:
+                candidatos.append({'paquete': paquete, 'grupo': 'La zsh de CachyOS',
+                                   'reemplazo': 'fish y la zsh que ya trae el sistema'})
+    # Solo se sugiere lo que no necesita otra app instalada (así nunca se lleva nada por delante).
+    todos = {c['paquete'] for c in candidatos}
+    sugerencias = []
+    for c in candidatos:
+        deps = [d for d in requerido_por(c['paquete']) if d not in todos]
+        if deps:
+            continue
+        sugerencias.append(c)
+    sugerencias.sort(key=lambda c: (c['grupo'], c['paquete']))
+
+    os.makedirs(VAR, exist_ok=True)
+    antes = {}
+    try:
+        with open(INFORME) as f:
+            antes = json.load(f)
+    except (OSError, ValueError):
+        pass
+    claves = [(c['paquete'], c['grupo']) for c in sugerencias]
+    antes_claves = [(c.get('paquete'), c.get('grupo')) for c in antes.get('sugerencias', [])]
+    fecha = antes.get('fecha', 0) if claves == antes_claves else int(time.time())
+
+    data = {'version': VERSION, 'fecha': fecha, 'comprobado': int(time.time()), 'solo_sugerencias': True,
+            'sugerencias': sugerencias, 'informe': TEXTO}
+    tmp = INFORME + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, INFORME)
+
+    lineas = ['Órbita · limpieza (solo sugerencias)', time.strftime('%d/%m/%Y %H:%M'), '',
+              'No se ha quitado nada: todo sigue instalado. Esto es solo una lista por si quieres hacer sitio.', '']
+    if not sugerencias:
+        lineas.append('No hay nada que sugerir. Todo lo que hay tiene su sitio.')
+    grupo = None
+    for c in sugerencias:
+        if c['grupo'] != grupo:
+            grupo = c['grupo']
+            lineas += ['', grupo, '-' * len(grupo)]
+        lineas.append(f"  · {c['paquete']}: {c['reemplazo']}.")
+    lineas += ['', 'Si quieres quitar alguno: sudo pacman -Rns <paquete>.', '']
+    tmp = TEXTO + '.nuevo'
+    with open(tmp, 'w') as f:
+        f.write('\n'.join(lineas))
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, TEXTO)
+    print(f'Limpieza: {len(sugerencias)} sugerencias (nada quitado)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

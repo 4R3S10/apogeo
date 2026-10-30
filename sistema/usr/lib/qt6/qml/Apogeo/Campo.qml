@@ -17,7 +17,7 @@ TextField {
         radius: Tema.r(12)
         color: Tema.encima
         border.width: 1
-        border.color: f.activeFocus ? Tema.rosa : Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.12)
+        border.color: f.activeFocus ? Tema.rosa : Tema.tinte(0.12)
         Rectangle { // el anillo de foco de Ágape
             anchors.fill: parent
             anchors.margins: -3

@@ -123,7 +123,7 @@ PlasmoidItem {
                                         Rectangle {
                                             visible: !!mini.modelData.video && !!mini.modelData.mini
                                             anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 6
-                                            width: 22; height: 22; radius: Tema.r(7); color: "#cc120d14"
+                                            width: 22; height: 22; radius: Tema.r(7); color: "#cc080a0f"
                                             Icono { anchors.centerIn: parent; nombre: "reproducir"; width: 11; height: 11; color: Tema.texto }
                                         }
                                     }

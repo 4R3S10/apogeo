@@ -1,33 +1,35 @@
-# Apogeo · terminal «T1 · Cristal con píldoras»: el cristal de Ágape (berenjena translúcido con desenfoque), la letra
-# JetBrains Mono y los colores de Apogeo. Lo carga ~/.config/ghostty/config; tus cambios, en ese archivo.
+# Órbita · terminal «T1 · Cristal con píldoras»: el cristal grafito con desenfoque, la letra de datos Geist Mono (y la
+# JetBrains Mono Nerd Font solo de respaldo, para los símbolos del prompt) y el acento cian de Navegar.
+# Lo carga ~/.config/ghostty/config; tus cambios, en ese archivo.
+font-family = Geist Mono
 font-family = JetBrainsMono Nerd Font
 font-size = 11
-background = #1e1621
-foreground = #f1e6ea
-background-opacity = 0.8
+background = #0b0e14
+foreground = #e9edf5
+background-opacity = 0.86
 background-blur = true
-cursor-color = #ff8fc6
+cursor-color = #45d6ff
 cursor-style = block
-selection-background = #7a4458
-selection-foreground = #f1e6ea
+selection-background = #12303d
+selection-foreground = #e9edf5
 window-padding-x = 16
 window-padding-y = 12
 window-padding-balance = true
 window-theme = dark
 confirm-close-surface = false
-palette = 0=#120d14
-palette = 1=#ff8f9a
-palette = 2=#a8d8b0
-palette = 3=#f3c58d
-palette = 4=#b9a3e3
-palette = 5=#ff8fc6
-palette = 6=#8fd0c8
-palette = 7=#e7dde2
-palette = 8=#5a4a5e
-palette = 9=#ffa3ad
-palette = 10=#bfe6c5
-palette = 11=#f7d4a8
-palette = 12=#cdbbf0
-palette = 13=#ffb3d6
-palette = 14=#a9e0d9
-palette = 15=#f1e6ea
+palette = 0=#0b0e14
+palette = 1=#ff6b81
+palette = 2=#57e3b0
+palette = 3=#ffb35c
+palette = 4=#45d6ff
+palette = 5=#b79cff
+palette = 6=#66e0d0
+palette = 7=#c9d2e3
+palette = 8=#5b6475
+palette = 9=#ff8fa0
+palette = 10=#7aefc4
+palette = 11=#ffc98a
+palette = 12=#7fe3ff
+palette = 13=#cbb8ff
+palette = 14=#8ceadd
+palette = 15=#e9edf5

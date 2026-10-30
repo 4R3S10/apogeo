@@ -266,7 +266,7 @@ QtObject {
                         } else if (f.t === "recuadro") {
                             ctx.beginPath(); ctx.roundedRect(Math.min(f.x1, f.x2), Math.min(f.y1, f.y2), Math.abs(f.x2 - f.x1), Math.abs(f.y2 - f.y1), 6, 6); ctx.stroke();
                         } else if (f.t === "tapar") {
-                            ctx.fillStyle = "#1c1420";
+                            ctx.fillStyle = "#0b0e14";
                             ctx.beginPath(); ctx.roundedRect(Math.min(f.x1, f.x2), Math.min(f.y1, f.y2), Math.abs(f.x2 - f.x1), Math.abs(f.y2 - f.y1), 4, 4); ctx.fill();
                         } else if (f.t === "lapiz" && f.p.length > 1) {
                             ctx.beginPath(); ctx.moveTo(f.p[0].x, f.p[0].y);

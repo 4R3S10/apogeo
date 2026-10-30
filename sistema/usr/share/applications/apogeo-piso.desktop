@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Apogeo · cambiar de piso
-Comment=Lo usa la pantalla de bloqueo para volver al piso elegido
+Name=Órbita · cambiar de modo
+Comment=Lo usa la pantalla de bloqueo para volver al modo elegido
 Exec=/usr/lib/apogeo/apogeo-pisos url %u
 MimeType=x-scheme-handler/apogeo-piso;
 NoDisplay=true

@@ -6,7 +6,7 @@ Rectangle {
     property int tipo: 0       // 0 inicial, 1 corazón, 2 mando, 3 música, 4 tu foto
     property url foto: ""
     property string letra: ""
-    readonly property var tonos: [["#e0a9b4", "#7a4458"], ["#8e2e66", "#4a2c4f"], ["#ff8fc6", "#7a4458"], ["#5b3445", "#2a1830"]]
+    readonly property var tonos: [[Tema.acento, Qt.darker(Tema.acento, 2.6)], [Tema.acento, "#12303d"], ["#b79cff", "#2b2147"], ["#ffb35c", "#3a2a17"]]
     gradient: Gradient {
         GradientStop { position: 0; color: c.tonos[Math.min(c.tipo, 3)][0] }
         GradientStop { position: 1; color: c.tonos[Math.min(c.tipo, 3)][1] }

@@ -24,8 +24,8 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
-VERSION = 5  # 2: Jugar pasa de Remolino a Luces (si no lo habías cambiado); 3: Navegar ya no abre Ágape solo;
-# 4: el aspecto pasa a «Como Ágape» (si no lo habías cambiado); 5: y luego a «Del fondo» (igual)
+VERSION = 6  # 2: Jugar pasa de Remolino a Luces; 3: Navegar ya no abre Ágape solo; 4-5: el aspecto pasó por
+# «Como Ágape» y «Del fondo»; 6: Órbita es la identidad de serie (grafito, Geist, un acento por modo).
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
 STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
 # Fondos tuyos (los de Aura): imágenes y vídeos en alta calidad
@@ -42,9 +42,10 @@ import apogeo_paleta as _paleta  # noqa: E402
 
 DEFAULTS = {
     'pisos': {
-        # Un solo rosa (el de Ágape) en todo; cada piso con su fondo animado. Energía: nunca «rendimiento».
+        # Órbita: cada modo con su acento y su carácter. En Jugar solo se abre la consola (las tiendas y herramientas
+        # están dentro, y todas las apps siguen en el menú y en el buscador). Energía: nunca «rendimiento».
         # «carrusel»: las ventanas en columnas que se deslizan, como en niri (Karousel). «color»: el de su fondo animado
-        # (con el aspecto «Del fondo»; '' = el rosa de Apogeo; los de apogeo_paleta.COLORS)
+        # (con el aspecto «Del fondo»; '' = el de Órbita; los de apogeo_paleta.COLORS)
         'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop'],
                   'carrusel': False, 'color': ''},
         'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False,
@@ -124,6 +125,11 @@ def load():
         st['aspecto']['estilo'] = 'agape'  # (si no lo habías cambiado)
     if raw.get('version', 1) < 5 and all(st['aspecto'].get(k) == v for k, v in dict(old, estilo='agape').items()):
         st['aspecto']['estilo'] = 'fondo'
+    # 6: quien tenía el asunto tal como venía (Berenjena, rosa, Bricolage) pasa a Órbita; lo personalizado se respeta
+    old6 = {'estilo': 'fondo', 'acento': '', 'modo': 'oscuro', 'letra': 'Bricolage Grotesque', 'esquinas': 'redondas',
+            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
+    if raw.get('version', 1) < 6 and all(st['aspecto'].get(k) == v for k, v in old6.items()):
+        st['aspecto'].update({'estilo': 'orbita', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves'})
     return st
 
 

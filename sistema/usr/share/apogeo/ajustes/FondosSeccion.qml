@@ -9,7 +9,7 @@ Seccion {
     id: sec
     property string palabras: "fondos fondo de pantalla imagen video animado aura wallhaven bing internet biblioteca cambie solo wallpaper"
     titulo: "Fondos"
-    intro: "Cada piso con el suyo. Lo que elijas se pone al momento; también con el botón derecho en el escritorio."
+    intro: "Cada modo con el suyo. Lo que elijas se pone al momento; también con el botón derecho en el escritorio."
 
     property int floor: 1
     readonly property var floors: [
@@ -61,7 +61,7 @@ Seccion {
                     visible: !!tile.item.video && !!tile.item.mini
                     anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 6
                     width: 24; height: 24; radius: Tema.r(8)
-                    color: "#cc120d14"
+                    color: "#cc080a0f"
                     Icono { anchors.centerIn: parent; nombre: "reproducir"; width: 12; height: 12; color: Tema.texto }
                 }
             }
@@ -109,7 +109,7 @@ Seccion {
 
     Fila {
         linea: false
-        titulo: "Piso"
+        titulo: "Modo"
         detalle: "El que estás cambiando"
         Segmentos { opciones: sec.floors; actual: sec.floor; onElegido: i => sec.floor = i }
     }
@@ -124,7 +124,7 @@ Seccion {
     Fila {
         visible: (apogeo.settings.aspecto || {}).estilo === "fondo"
         titulo: "Color de los animados"
-        detalle: "Los animados de este piso van de este color, y con ellos todo Apogeo mientras estás en él"
+        detalle: "Los animados de este modo van de este color, y con ellos todo Apogeo mientras estás en él"
         Row {
             spacing: 8
             Repeater {
@@ -140,7 +140,7 @@ Seccion {
                     ToolTip.text: modelData.nombre
                     background: Rectangle {
                         radius: 12
-                        color: modelData.valor || "#e0a9b4"
+                        color: modelData.valor || Tema.acento
                         border.width: sw.on ? 2 : 0
                         border.color: Tema.texto
                     }
@@ -151,7 +151,7 @@ Seccion {
 
     Fila {
         titulo: "Con Aura"
-        detalle: "Lo que pones en Aura va solo al piso en el que estás. Los vídeos van en bucle y sin sonido, y se paran si una ventana los tapa"
+        detalle: "Lo que pones en Aura va solo al modo en el que estás. Los vídeos van en bucle y sin sonido, y se paran si una ventana los tapa"
         ancha: true
         Row {
             width: parent.width
@@ -236,7 +236,7 @@ Seccion {
         titulo: "Cada cuánto"
         Segmentos {
             readonly property var claves: ["15min", "hora", "dia", "piso"]
-            opciones: [{ texto: "15 min" }, { texto: "Cada hora" }, { texto: "Cada día" }, { texto: "Al entrar en el piso" }]
+            opciones: [{ texto: "15 min" }, { texto: "Cada hora" }, { texto: "Cada día" }, { texto: "Al entrar en el modo" }]
             actual: Math.max(0, claves.indexOf(sec.rot.cada))
             onElegido: i => apogeo.set("fondos.cambiar." + sec.fk + ".cada", claves[i])
         }

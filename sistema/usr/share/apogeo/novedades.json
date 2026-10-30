@@ -1,5 +1,18 @@
 [
   {
+    "fecha": "2026-10-30",
+    "titulo": "30 de octubre",
+    "cosas": [
+      {"icono": "pisos", "titulo": "Los tres modos, de verdad", "como": "Jugar, Navegar y Estudiar ya no son una capa de pintura: cada modo guarda sus propias apps al llegar, su acento y su fondo. Se cambia desde el conmutador, con Meta+F1/F2/F3 o desde Ajustes → Modos."},
+      {"icono": "jugar", "titulo": "Jugar renacida", "como": "La consola entera nueva sobre grafito con el acento violeta: marcas Núcleo, conmutador centrado con los tres modos, insignias de Proton/Heroic/AnyPS5 y anticheat, y cuántos juegos hay en cada pestaña."},
+      {"icono": "texto", "titulo": "Geist", "como": "Tipografía Geist y Geist Mono en toda la interfaz, la terminal y el arranque. Los títulos quedan más limpios y la monoespaciada encaja con el resto."},
+      {"icono": "novedades", "titulo": "Núcleo", "como": "El nuevo símbolo: un núcleo sólido con tres arcos orbitales abiertos, uno por modo. Sustituye al búho en el arranque, el bloqueo y la bienvenida (el búho sigue en el estilo Clásico)."},
+      {"icono": "salud", "titulo": "Limpieza que solo aconseja", "como": "Apogeo revisa el sistema y escribe sugerencias en /var/lib/apogeo/limpieza.txt: nunca desinstala nada por su cuenta y puedes copiar cada orden tú mismo."},
+      {"icono": "apps", "titulo": "Menú completo", "como": "Vuelven al menú las apps reales que se habían ocultado (KWrite, Arch Update, CachyOS Hello, KDE Connect…); solo se esconden utilidades internas que no se usan solas."},
+      {"icono": "ventana", "titulo": "Windows más seguro", "como": "El puente con Windows lleva una nota con fecha y un código único que Windows comprueba, y Apogeo borra al encender la que no se llegó a usar: Windows nunca abre un juego viejo."}
+    ]
+  },
+  {
     "fecha": "2026-10-29",
     "titulo": "29 de octubre",
     "cosas": [

@@ -36,7 +36,7 @@ PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
 
-    // Colores de Ágape (tema Berenjena oscuro)
+    // Los colores del modo (Tema los lee de Identidad; de serie, Órbita)
     readonly property color accent: Tema.rosa
     readonly property color accentText: Tema.sobreRosa
     readonly property color accentSoft: Tema.rosaSuave
@@ -45,7 +45,7 @@ PlasmoidItem {
     readonly property color hover: Tema.encima
     readonly property color press: Tema.pulsado
     readonly property color border: Tema.borde
-    readonly property color warn: "#ff8f9a"
+    readonly property color warn: Tema.error
     readonly property string font: Tema.letra
 
     TaskManager.VirtualDesktopInfo { id: desktops }
@@ -333,7 +333,7 @@ PlasmoidItem {
 
     function icon(name) { return Qt.resolvedUrl("../icons/" + name + ".svg") }
 
-    // Botón de Ágape (38 × 38, radio 13): sin fondo; al pasar el ratón, el fondo suave. «on» = la pastilla rosa con brillo
+    // Botón (38 × 38, radio 13): sin fondo; al pasar el ratón, el fondo suave. «on» = la pastilla del acento con brillo
     component AgapeButton: Item {
         id: btn
         property string iconName
@@ -478,7 +478,7 @@ PlasmoidItem {
         Layout.minimumWidth: implicitWidth
         Layout.preferredWidth: implicitWidth
 
-        // Tus apps por tipo y, al escribir, el buscador (apps, archivos, calculadora, la web…): la pastilla rosa
+        // Tus apps por tipo y, al escribir, el buscador (apps, archivos, calculadora, la web…): la pastilla del acento
         AgapeButton {
             iconName: "apps"
             on: true
@@ -584,7 +584,7 @@ PlasmoidItem {
                     y: tile.y + tile.height - 5
                     width: tile.width - 8; height: 4; radius: 2
                     color: Qt.rgba(0, 0, 0, 0.5)
-                    Rectangle { width: parent.width * Math.max(0, task.badge.progreso); height: parent.height; radius: 2; color: "#7fd4ff" }
+                    Rectangle { width: parent.width * Math.max(0, task.badge.progreso); height: parent.height; radius: 2; color: root.accent }
                 }
                 // Dónde está su icono (para que la ventana se minimice hacia él)
                 function publish() {
@@ -683,7 +683,7 @@ PlasmoidItem {
                             anchors.right: parent.right
                             y: 156
                             width: 28; height: 28; radius: Tema.r(9)
-                            color: closeArea.containsMouse ? "#e5484d" : "transparent"
+                            color: closeArea.containsMouse ? Tema.error : "transparent"
                             Icono { anchors.centerIn: parent; width: 12; height: 12; nombre: "cerrar"; color: closeArea.containsMouse ? "#ffffff" : Tema.apagado }
                             MouseArea { id: closeArea; anchors.fill: parent; hoverEnabled: true; onClicked: tasks.requestClose(tasks.makeModelIndex(task.index)) }
                         }
@@ -793,13 +793,13 @@ PlasmoidItem {
                     id: downloadRow
                     anchors.centerIn: parent
                     spacing: 9
-                    Icono { Layout.preferredWidth: 16; Layout.preferredHeight: 16; nombre: "descargar"; color: "#7fd4ff" }
+                    Icono { Layout.preferredWidth: 16; Layout.preferredHeight: 16; nombre: "descargar"; color: root.accent }
                     QQC2.Label { text: root.download ? root.download.texto : ""; font.family: root.font; font.weight: Font.DemiBold; font.pixelSize: 13; color: root.text; elide: Text.ElideRight; Layout.maximumWidth: 140 }
                     Rectangle {
                         Layout.preferredWidth: 90; Layout.preferredHeight: 5
                         radius: 2.5
                         color: root.press
-                        Rectangle { width: parent.width * (root.download ? Math.max(0, Math.min(1, root.download.valor)) : 0); height: parent.height; radius: 2.5; color: "#7fd4ff"; Behavior on width { NumberAnimation { duration: 300 } } }
+                        Rectangle { width: parent.width * (root.download ? Math.max(0, Math.min(1, root.download.valor)) : 0); height: parent.height; radius: 2.5; color: root.accent; Behavior on width { NumberAnimation { duration: 300 } } }
                     }
                     QQC2.Label { text: root.download ? Math.round(root.download.valor * 100) + "%" : ""; font.family: root.font; font.pixelSize: 12; color: root.muted }
                 }

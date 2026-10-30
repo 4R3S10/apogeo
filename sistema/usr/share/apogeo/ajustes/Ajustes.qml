@@ -162,11 +162,11 @@ ApplicationWindow {
                 property string palabras: "fondo animado avisos notificaciones energia ahorro apps aplicaciones no molestar jugar navegar estudiar luz calida noche vista nocturna carrusel niri karousel ventanas columnas mosaico tiling huecos"
                 width: parent.width
                 visible: win.shown(pisos)
-                titulo: "Pisos"
-                intro: "Lo que cambia en cada piso. Los avisos que no salen se quedan en el historial."
+                titulo: "Modos"
+                intro: "Lo que cambia en cada modo. Los avisos que no salen se quedan en el historial."
                 Fila {
                     linea: false
-                    titulo: "Piso"
+                    titulo: "Modo"
                     detalle: "El que estás cambiando"
                     Segmentos {
                         opciones: win.floors
@@ -240,7 +240,7 @@ ApplicationWindow {
                     id: anchos
                     visible: win.mine.carrusel
                     titulo: "Anchos"
-                    detalle: "Los que recorre Meta+Alt+R · igual en todos los pisos con carrusel"
+                    detalle: "Los que recorre Meta+Alt+R · igual en todos los modos con carrusel"
                     Row {
                         spacing: 6
                         Repeater {
@@ -271,7 +271,7 @@ ApplicationWindow {
                 }
                 Fila {
                     titulo: "Apps al llegar"
-                    detalle: "Se abren la primera vez que entras en el piso"
+                    detalle: "Se abren la primera vez que entras en el modo"
                     ancha: true
                     Flow {
                         width: parent.width
@@ -320,7 +320,7 @@ ApplicationWindow {
                     }
                 }
                 Item { width: 1; height: 10 }
-                Texto { text: "En todos los pisos"; color: Tema.tenue; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.8; font.capitalization: Font.AllUppercase; bottomPadding: 2 }
+                Texto { text: "En todos los modos"; color: Tema.tenue; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 0.8; font.capitalization: Font.AllUppercase; bottomPadding: 2 }
                 Fila {
                     titulo: "Animar los fondos"
                     detalle: apogeo.animate ? "A 30 imágenes por segundo como mucho, como en Ágape"
@@ -333,7 +333,7 @@ ApplicationWindow {
                 }
                 Fila {
                     titulo: "No molestar"
-                    detalle: "Sin avisos en ningún piso (también desde el panel rápido de la isla)"
+                    detalle: "Sin avisos en ningún modo (también desde el panel rápido de la isla)"
                     Interruptor {
                         checked: win.s.silencio
                         onToggled: apogeo.set("silencio", checked)
@@ -355,7 +355,7 @@ ApplicationWindow {
                 width: parent.width
                 visible: win.shown(isla)
                 titulo: "Isla"
-                intro: "Tu barra de abajo. En cada piso enseña cosas distintas."
+                intro: "Tu barra de abajo. En cada modo enseña cosas distintas."
                 Fila {
                     linea: false
                     titulo: "Isla: esconderse sola"
@@ -406,7 +406,7 @@ ApplicationWindow {
                                 required property var modelData
                                 visible: apogeo.temps[modelData.k] !== undefined
                                 spacing: 6
-                                Icono { nombre: "temperatura"; color: (apogeo.temps[parent.modelData.k] || 0) >= apogeo.limit ? "#ff8f9a" : Tema.rosa; anchors.verticalCenter: parent.verticalCenter }
+                                Icono { nombre: "temperatura"; color: (apogeo.temps[parent.modelData.k] || 0) >= apogeo.limit ? Tema.error : Tema.acento; anchors.verticalCenter: parent.verticalCenter }
                                 Texto { text: parent.modelData.n + " " + apogeo.temps[parent.modelData.k] + " °C"; wrapMode: Text.NoWrap; anchors.verticalCenter: parent.verticalCenter }
                             }
                         }
@@ -541,7 +541,7 @@ ApplicationWindow {
                 }
                 Fila {
                     titulo: "Bienvenida de Apogeo"
-                    detalle: "Tu nombre y tu foto, Ágape y tu copia, y cómo moverte por los pisos"
+                    detalle: "Tu nombre y tu foto, Ágape y tu copia, y cómo moverte por los modos"
                     Boton { text: "Abrir"; onClicked: apogeo.open("bienvenida") }
                 }
             }
@@ -588,7 +588,7 @@ ApplicationWindow {
                                 width: 36; height: 36; radius: Tema.r(18)
                                 color: pickPhoto.containsMouse ? Tema.pulsado : Tema.encima
                                 border.width: win.face === 4 ? 2 : 1.5
-                                border.color: win.face === 4 ? Tema.rosa : Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.2)
+                                border.color: win.face === 4 ? Tema.rosa : Tema.tinte(0.2)
                                 Icono { anchors.centerIn: parent; nombre: "foto"; color: Tema.apagado }
                                 MouseArea { id: pickPhoto; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: photoDialog.open() }
                                 ToolTip.visible: pickPhoto.containsMouse

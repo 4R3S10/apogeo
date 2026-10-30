@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """
-Iconos de Apogeo: Papirus (oscuro) con las carpetas en el rosa de Ágape. En vez de cambiar los archivos de Papirus (se
-perderían en cada actualización), es un tema aparte, «Apogeo», que solo tiene las carpetas (las rosa de Papirus con los
-colores de Ágape) y hereda todo lo demás de Papirus-Dark.
+Iconos de Órbita: Papirus (oscuro) con las carpetas del color de tu acento (de serie, el cian de Navegar). En vez de
+cambiar los archivos de Papirus (se perderían en cada actualización), es un tema aparte, «Apogeo», que solo tiene las
+carpetas (las de Papirus con tu color) y hereda todo lo demás de Papirus-Dark.
 
   iconos.py [destino]    por defecto /usr/share/icons/Apogeo
 """
@@ -24,8 +24,8 @@ def mix(a, b, t):
     return '#' + ''.join(f'{round(x + (y - x) * t):02x}' for x, y in zip(ca, cb))
 
 
-# Colores de las carpetas rosa de Papirus → los de Ágape (Berenjena: rosa #e0a9b4, texto #f1e6ea). Con tu aspecto
-# (Ajustes → Aspecto), las carpetas van del color de tu estilo
+# Colores de las carpetas rosa de Papirus → las del acento. Con el acento rosa (identidad Clásica) se queda el rosa
+# empolvado de siempre, con cualquier otro (Órbita) se mezcla desde ese acento.
 if ACCENT == '#e0a9b4':
     COLORS = {
         '#f06292': '#e0a9b4',  # la carpeta

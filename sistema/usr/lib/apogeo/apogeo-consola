@@ -12,6 +12,7 @@ Con el mando (sin Steam por medio: lo lee este programa) o el teclado:
 D-Bus: org.apogeo.Consola /Consola org.apogeo.Consola.Show
 La parte de los juegos es apogeo_juegos.py.
 """
+import json
 import os
 import subprocess
 import sys
@@ -20,6 +21,7 @@ import threading
 
 SERVICE, PATH, IFACE = 'org.apogeo.Consola', '/Consola', 'org.apogeo.Consola'
 QML = os.environ.get('APOGEO_CONSOLA_QML', '/usr/share/apogeo/consola/Consola.qml')
+MODO = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'modo.json')
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 
 
@@ -193,10 +195,13 @@ def main():
 
         @pyqtSlot(result=bool)
         def fueraDeJugar(self):
-            """¿Estás en otro piso? (Jugar es el primero)"""
-            r = subprocess.run(['qdbus6', 'org.kde.KWin', '/KWin', 'org.kde.KWin.currentDesktop'],
-                               capture_output=True, text=True)
-            return r.stdout.strip() not in ('', '1')
+            """¿Estás en otro modo? Lo dice apogeo-pisos en ~/.config/apogeo/modo.json (el piso no es un número fijo:
+            los escritorios pueden reordenarse). Si aún no hay archivo, no se cierra nada por si acaso."""
+            try:
+                with open(MODO) as f:
+                    return str(json.load(f).get('modo') or '') not in ('', 'jugar')
+            except (OSError, ValueError):
+                return False
 
         @pyqtSlot()
         def dormir(self):

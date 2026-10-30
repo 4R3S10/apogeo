@@ -9,8 +9,8 @@ import org.kde.kirigami as Kirigami
 import org.kde.plasma.core as PlasmaCore
 import Apogeo
 
-// Columna de pisos, como la pastilla de pestañas de Ágape: un botón por piso con su icono de línea; el piso en el que
-// estás es la pastilla rosa con su brillo. La rueda del ratón sube o baja de piso y un clic va directo. El cambio lo
+// Columna de modos: un botón por piso con su icono de línea; el modo en el que estás es la pastilla de su acento con
+// su brillo (cian en Navegar, violeta en Jugar, ámbar en Estudiar). La rueda del ratón sube o baja de piso y un clic va directo. El cambio lo
 // hace apogeo-pisos (que también pone el fondo, los avisos y la energía de cada piso).
 // Cada piso enseña cuántas ventanas tiene y, al pasar el ratón, una vista del piso (sus ventanas en su sitio, con el
 // icono de cada app). Una ventana soltada encima de un piso se va a ese piso (lo hace el script de KWin apogeo-ventanas).
@@ -18,7 +18,7 @@ PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
 
-    // Colores de Ágape (tema Berenjena oscuro)
+    // Los colores del modo (Tema los lee de Identidad; de serie, Órbita)
     readonly property color accent: Tema.rosa
     readonly property color accentText: Tema.sobreRosa
     readonly property color text: Tema.texto
@@ -100,7 +100,7 @@ PlasmoidItem {
                         groupMode: TaskManager.TasksModel.GroupDisabled
                     }
 
-                    // El brillo de la pastilla activa (0 4px 18px -4px el rosa)
+                    // El brillo de la pastilla activa (0 4px 18px -4px, el color del modo)
                     RectangularShadow {
                         anchors.fill: pill
                         visible: floor.current
@@ -140,7 +140,7 @@ PlasmoidItem {
                             anchors.centerIn: parent
                             text: floorTasks.count > 9 ? "9+" : floorTasks.count
                             color: floor.current ? root.accent : root.accentText
-                            font { family: "Bricolage Grotesque"; pixelSize: 9; weight: Font.Black }
+                            font { family: Tema.mono; pixelSize: 9; weight: Font.Bold }
                         }
                     }
 
@@ -154,7 +154,7 @@ PlasmoidItem {
                     // La vista del piso: sus ventanas en su sitio, con el icono de cada app
                     PlasmaCore.ToolTipArea {
                         anchors.fill: parent
-                        location: Tema.posicion === "abajo-izq" ? PlasmaCore.Types.RightEdge : PlasmaCore.Types.LeftEdge
+                        location: Tema.posicion === "arriba-dcha" ? PlasmaCore.Types.BottomEdge : PlasmaCore.Types.TopEdge
                         mainItem: Item {
                             width: 248
                             height: 182
@@ -169,12 +169,12 @@ PlasmoidItem {
                                     isMask: true
                                     color: root.text
                                 }
-                                Text { text: floor.name; color: root.text; font { family: "Bricolage Grotesque"; pixelSize: 15; weight: Font.Bold } }
+                                Text { text: floor.name; color: root.text; font { family: Tema.letra; pixelSize: 15; weight: Font.Bold } }
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: floorTasks.count === 0 ? "vacío" : floorTasks.count === 1 ? "1 ventana" : floorTasks.count + " ventanas"
                                     color: root.muted
-                                    font { family: "Bricolage Grotesque"; pixelSize: 12 }
+                                    font { family: Tema.letra; pixelSize: 12 }
                                 }
                             }
                             Rectangle { // la pantalla en pequeño, con el tono de su fondo
@@ -184,10 +184,10 @@ PlasmoidItem {
                                 radius: Tema.r(10)
                                 clip: true
                                 gradient: Gradient {
-                                    GradientStop { position: 0; color: Qt.lighter(root.tints[floor.name] || "#4a2c4f", 1.25) }
+                                    GradientStop { position: 0; color: Qt.lighter(root.tints[floor.name] || Tema.acento, 1.25) }
                                     GradientStop { position: 1; color: Tema.fondo }
                                 }
-                                border.color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.1)
+                                border.color: Qt.rgba(Tema.texto.r, Tema.texto.g, Tema.texto.b, 0.1)
                                 Repeater {
                                     model: parent.parent.here
                                     delegate: Rectangle {
@@ -198,7 +198,7 @@ PlasmoidItem {
                                         height: Math.max(14, Math.min(1, modelData.h) * mini.height)
                                         radius: 5
                                         color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.94)
-                                        border.color: modelData.activa ? root.accent : Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.14)
+                                        border.color: modelData.activa ? root.accent : Qt.rgba(Tema.texto.r, Tema.texto.g, Tema.texto.b, 0.14)
                                         Kirigami.Icon {
                                             anchors.centerIn: parent
                                             width: Math.min(22, parent.height - 4); height: width
@@ -212,14 +212,14 @@ PlasmoidItem {
                                     visible: parent.parent.here.length === 0
                                     text: "Sin ventanas"
                                     color: root.muted
-                                    font { family: "Bricolage Grotesque"; pixelSize: 12 }
+                                    font { family: Tema.letra; pixelSize: 12 }
                                 }
                             }
                             Text {
                                 x: 4; y: 167
                                 text: floor.current ? "Estás aquí" : "Clic para ir · suelta una ventana aquí para llevarla"
                                 color: root.muted
-                                font { family: "Bricolage Grotesque"; pixelSize: 11 }
+                                font { family: Tema.mono; pixelSize: 11 }
                             }
                         }
                     }

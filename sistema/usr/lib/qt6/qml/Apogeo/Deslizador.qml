@@ -12,7 +12,7 @@ Slider {
         width: d.availableWidth
         height: 4
         radius: 2
-        color: Qt.rgba(241 / 255, 230 / 255, 234 / 255, 0.16)
+        color: Tema.tinte(0.16)
         Rectangle { width: d.visualPosition * parent.width; height: parent.height; radius: 2; color: Tema.rosa }
     }
     handle: Rectangle {

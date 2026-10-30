@@ -5,9 +5,9 @@ import QtMultimedia
 import org.kde.plasma.plasmoid
 import org.kde.taskmanager as TaskManager
 
-// Fondo de Apogeo. Cada piso pone el suyo (apogeo-pisos):
-//  - los fondos animados de Ágape con sus colores (Berenjena): se dibujan a un tercio de la resolución y como mucho a 30
-//    imágenes por segundo, como en Ágape;
+// Fondo de Órbita. Cada modo pone el suyo (apogeo-pisos):
+//  - los fondos animados con los colores del modo (grafito, cian, violeta o ámbar): se dibujan a un tercio de la
+//    resolución y como mucho a 30 imágenes por segundo;
 //  - o una imagen o un vídeo tuyo en alta calidad («Archivo»). El vídeo va en bucle, sin sonido, y se para cuando una
 //    ventana maximizada o a pantalla completa lo tapa (primero la salud del equipo).
 // Al cambiar de fondo, el nuevo aparece fundiéndose sobre el anterior.
@@ -54,7 +54,7 @@ WallpaperItem {
     }
     readonly property bool seen: root.visible && covering <= 0
 
-    Rectangle { anchors.fill: parent; color: "#120d14" }
+    Rectangle { anchors.fill: parent; color: Tema.fondo }
 
     // ----- El animado -----
     Item {

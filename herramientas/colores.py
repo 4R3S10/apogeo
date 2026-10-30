@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
-Colores de Apogeo para las apps de KDE (esquema «Apogeo»), sacados de los de Ágape (tema Berenjena oscuro, theme.js):
-fondo #120d14, superficie #1e1621, texto #f1e6ea y un solo acento, el rosa #e0a9b4 (con texto #2a1c26 encima).
+Colores de Órbita para las apps de KDE (esquema «Apogeo»): grafito (#080a0f de fondo, #0f131a de superficie), texto
+#e9edf5 y el acento del modo (de serie, el cian de Navegar; con APOGEO_TOKENS/APOGEO_MODO, los que elijas).
 
   colores.py [archivo]    por defecto /usr/share/color-schemes/Apogeo.colors
 """
@@ -57,7 +57,7 @@ ForegroundVisited={c(mix(ACCENT, '#9b59b6', 0.5))}
 
 def main():
     parts = [
-        """# Apogeo: los colores de Ágape (Berenjena oscuro) para las apps de KDE. Generado por herramientas/colores.py.
+        """# Órbita: grafito y acento por modo para las apps de KDE. Generado por herramientas/colores.py.
 [ColorEffects:Disabled]
 Color=56,56,56
 ColorAmount=0
@@ -75,7 +75,7 @@ Enable=false
         group('Complementary', BG, SURFACE),
         group('Header', CHROME, SURFACE),
         group('Header][Inactive', SURFACE, CHROME),
-        # La selección es la pastilla de Ágape: rosa con el texto oscuro
+        # La selección es la pastilla del acento: el color con su texto oscuro encima
         group('Selection', ACCENT, ACCENT_HI, fg=ACCENT_TEXT, inactive=mix(ACCENT_TEXT, ACCENT, 0.3), active=ACCENT_TEXT),
         group('Tooltip', CHROME, SURFACE),
         group('View', VIEW, mix(VIEW, TEXT, 0.03)),
@@ -100,7 +100,7 @@ inactiveForeground={c(MUTED)}
     os.makedirs(os.path.dirname(DST), exist_ok=True)
     with open(DST, 'w') as f:
         f.write('\n'.join(parts))
-    print('Colores: esquema Apogeo')
+    print('Colores: esquema Apogeo (Órbita)')
 
 
 if __name__ == '__main__':
