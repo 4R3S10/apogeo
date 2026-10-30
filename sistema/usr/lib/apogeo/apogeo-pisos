@@ -496,7 +496,8 @@ PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la 
 PANEL_WIDTH = 376  # su ancho
 ORB = 1  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
-AESTHETICS = 17  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita)
+AESTHETICS = 18  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita;
+# 18: Órbita también para quien se quedó en el aspecto de antes)
 FONT = 'Geist,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'  # la letra de Órbita
 DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Órbita (herramientas/ventanas.py)
 
@@ -616,7 +617,8 @@ def aesthetics():
         f.write('[Desktop Entry]\nType=Application\nName=Arch-Update\nHidden=true\n')
     run('systemctl', '--user', 'disable', '--now', 'arch-update.timer')
     run('pkill', '-f', 'arch-update --tray')
-    aspecto.apply(ajustes.load(), log=log)   # (si has cambiado el aspecto, el tuyo encima de lo de serie)
+    # (si has cambiado el aspecto, el tuyo encima de lo de serie; se guarda, por si ajustes.load() lo ha puesto al día)
+    aspecto.apply(ajustes.save(ajustes.load()), log=log)
     log('estética aplicada')
 
 

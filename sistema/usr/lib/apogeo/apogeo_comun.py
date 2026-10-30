@@ -24,9 +24,9 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
-VERSION = 7  # 2: Jugar pasa de Remolino a Luces; 3: Navegar ya no abre Ágape solo; 4-5: el aspecto pasó por
+VERSION = 8  # 2: Jugar pasa de Remolino a Luces; 3: Navegar ya no abre Ágape solo; 4-5: el aspecto pasó por
 # «Como Ágape» y «Del fondo»; 6: Órbita es la identidad de serie (grafito, Geist, un acento por modo); 7: los fondos
-# animados de Órbita (Órbitas, Nebulosa y Aurora).
+# animados de Órbita (Órbitas, Nebulosa y Aurora); 8: Órbita también para quien se quedó en el aspecto de antes.
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
 STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces', 'orbitas', 'nebulosa', 'aurora')
 # Fondos tuyos (los de Aura): imágenes y vídeos en alta calidad
@@ -121,18 +121,21 @@ def load():
         st['pisos']['jugar']['fondo'] = 'luces'
     if raw.get('version', 1) < 3 and st['pisos']['navegar']['apps'] == ['ares.desktop']:
         st['pisos']['navegar']['apps'] = []  # (si no lo habías cambiado)
-    old = dict(_aspecto.DEFAULT, estilo='apogeo')
+    # (lo que venía de serie antes de Órbita; _aspecto.DEFAULT ya es Órbita y no vale para reconocerlo)
+    old = {'estilo': 'apogeo', 'acento': '', 'modo': 'oscuro', 'letra': 'Bricolage Grotesque', 'esquinas': 'redondas',
+           'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
     if raw.get('version', 1) < 4 and all(st['aspecto'].get(k) == v for k, v in old.items()):
         st['aspecto']['estilo'] = 'agape'  # (si no lo habías cambiado)
     if raw.get('version', 1) < 5 and all(st['aspecto'].get(k) == v for k, v in dict(old, estilo='agape').items()):
         st['aspecto']['estilo'] = 'fondo'
     # 6: quien tenía el asunto tal como venía (Berenjena, rosa, Bricolage) pasa a Órbita; lo personalizado se respeta
-    old6 = {'estilo': 'fondo', 'acento': '', 'modo': 'oscuro', 'letra': 'Bricolage Grotesque', 'esquinas': 'redondas',
-            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
-    if raw.get('version', 1) < 6 and all(st['aspecto'].get(k) == v for k, v in old6.items()):
+    # 8: también si se quedó en «Clásico» o «Como Ágape» tal como venían (la comparación de antes no lo reconocía)
+    old6 = dict(old, estilo='fondo')
+    if raw.get('version', 1) < 8 and st['aspecto'].get('estilo') in ('apogeo', 'agape', 'fondo') and \
+            all(st['aspecto'].get(k) == v for k, v in old6.items() if k != 'estilo'):
         st['aspecto'].update({'estilo': 'orbita', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves'})
     # 7: los fondos animados de Órbita, uno por modo, para quien tenía los de antes tal como venían
-    if raw.get('version', 1) < 7 and st['aspecto'].get('estilo') == 'orbita':
+    if raw.get('version', 1) < 8 and st['aspecto'].get('estilo') == 'orbita':
         for k, old, new in (('jugar', 'luces', 'nebulosa'), ('navegar', 'tinta', 'orbitas'), ('estudiar', 'seda', 'aurora')):
             if st['pisos'][k].get('fondo') == old:
                 st['pisos'][k]['fondo'] = new
