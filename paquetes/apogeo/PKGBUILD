@@ -29,7 +29,7 @@ package_apogeo() {
     kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
     power-profiles-daemon                                     # energía de cada piso
     kwin-effect-rounded-corners                               # ventanas con las esquinas redondeadas
-    qt6-multimedia qt6-multimedia-ffmpeg xdg-user-dirs        # fondos de vídeo y la carpeta de imágenes
+    qt6-multimedia qt6-multimedia-ffmpeg xdg-user-dirs ffmpeg # fondos de vídeo, la carpeta de imágenes y la Tierra del arranque
     steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
     tesseract tesseract-data-spa tesseract-data-eng           # capturas: sacar el texto de una imagen
     appstream archlinux-appstream-data kimageformats          # la tienda: el catálogo y sus iconos (.jxl)
@@ -61,7 +61,7 @@ package_apogeo() {
   install -d "$pkgdir/usr/lib/apogeo/temas"
   install -m644 "$h"/{fichas,colores,kvantum,plasma,ventanas,iconos}.py "$pkgdir/usr/lib/apogeo/temas/"
   # El símbolo de Órbita («Núcleo»: el punto y las tres órbitas) y sus copias para el arranque, el inicio de sesión,
-  # el menú y la terminal. Los fotogramas se siguen llamando aleteo-* para no tocar Plymouth.
+  # el menú y la terminal.
   local logo="$srcdir/logo"
   install -d "$logo"
   python "$h/logo.py" "$logo"
@@ -71,12 +71,12 @@ package_apogeo() {
   install -Dm644 "$logo/logo.svg" "$pkgdir/usr/share/sddm/themes/apogeo/logo.svg"
   rsvg-convert -w 150 -h 150 "$logo/logo.svg" -o "$logo/150.png"
   install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plymouth/themes/apogeo/logo.png"
-  install -Dm644 "$logo/150.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/logo.png"
-  # Las órbitas girando para el arranque y el apagado (Plymouth) y la entrada en la sesión (splash de Plasma)
-  for f in "$logo"/aleteo-*.svg; do
-    rsvg-convert -w 150 -h 150 "$f" -o "${f%.svg}.png"
-    install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plymouth/themes/apogeo/$(basename "${f%.svg}.png")"
-    install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/$(basename "${f%.svg}.png")"
+  # Las piezas que giran en el arranque y el apagado (Plymouth) y al entrar en la sesión (splash de Plasma): el disco,
+  # las órbitas (se giran enteras, sin fotogramas) y el halo
+  for f in disco orbitas halo; do
+    rsvg-convert -w 150 -h 150 "$logo/$f.svg" -o "$logo/$f.png"
+    install -Dm644 "$logo/$f.png" "$pkgdir/usr/share/plymouth/themes/apogeo/$f.png"
+    install -Dm644 "$logo/$f.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/$f.png"
   done
   # El orbe formándose, al encender (solo Plymouth)
   for f in "$logo"/forma-*.svg; do

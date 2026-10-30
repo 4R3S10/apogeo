@@ -3,11 +3,11 @@ import Apogeo
 import QtQuick.Controls
 import QtQuick.Effects
 import org.kde.coreaddons as KCoreAddons
-import org.kde.plasma.private.mpris as Mpris
 
-// Pantalla de bloqueo de Apogeo («Tarjeta con piso», como la de inicio de sesión): tu nombre, el piso al que vuelves y
-// la contraseña. A la derecha, la hora bien grande con la fecha y, si suena algo, la canción con sus botones. Sustituye a la de Plasma (la copia apogeo-bloqueo). Si algún día no carga, el bloqueo de KDE pone su
-// pantalla básica y se puede desbloquear igual.
+// Pantalla de bloqueo de Apogeo («N2 · Hora recortada»): la hora gigante, recortada en el fondo de tu modo (dentro de los
+// números se ve nítido; fuera, desenfocado y oscuro), la fecha debajo y una línea para la contraseña. Arriba a la
+// izquierda, los modos: el tuyo en su color (clic, o ↑ ↓, para volver a otro). Sustituye a la de Plasma (la copia
+// apogeo-bloqueo). Si algún día no carga, el bloqueo de KDE pone su pantalla básica y se puede desbloquear igual.
 // «Tu símbolo» (D7): si tienes uno (Ajustes → Bloqueo), lo dibujas con el ratón en cualquier parte de la pantalla y
 // entras. El dibujo va por el mismo camino que la contraseña, con «apogeo-simbolo:» delante: lo comprueba
 // apogeo-simbolo (/etc/pam.d/kde) y, si no es, no llega a la contraseña (no cuenta como contraseña equivocada).
@@ -176,11 +176,44 @@ Item {
         }
     }
 
-    // Oscurece un poco el fondo para que la tarjeta resalte
+    // El fondo de tu modo, si es una foto (lo apunta apogeo-pisos en el del bloqueo): desenfocado y oscuro detrás de todo
+    // y nítido dentro de los números. Con un fondo animado o un vídeo, sobre él, una sombra y los números en blanco
+    readonly property string archivo: {
+        try { return String(wallpaperIntegration.configuration.Archivo || ""); } catch (e) { return ""; }
+    }
+    readonly property bool foto: /\.(jpe?g|png|webp|avif|jxl|bmp)$/i.test(archivo) && fotoImg.status === Image.Ready
+    readonly property color modoColor: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[floors[floor].key]
+    Image {
+        id: fotoImg
+        anchors.fill: parent
+        source: /\.(jpe?g|png|webp|avif|jxl|bmp)$/i.test(root.archivo) ? "file://" + root.archivo : ""
+        sourceSize: Qt.size(width, height)
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        visible: false
+    }
+    MultiEffect {
+        anchors.fill: parent
+        source: fotoImg
+        visible: root.foto
+        blurEnabled: true; blur: 1; blurMax: 64
+        brightness: -0.38
+        saturation: -0.1
+    }
     Rectangle {
         anchors.fill: parent
-        color: "#000000"
-        opacity: 0.25
+        visible: !root.foto
+        color: "#05080c"
+        opacity: 0.55
+    }
+    // (un poco de oscuridad en los bordes, para que la hora flote)
+    Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+            GradientStop { position: 0; color: Qt.rgba(0.02, 0.03, 0.05, 0.35) }
+            GradientStop { position: 0.5; color: "transparent" }
+            GradientStop { position: 1; color: Qt.rgba(0.02, 0.03, 0.05, 0.55) }
+        }
     }
 
     // Mover el ratón o pulsar una tecla lleva a la contraseña; arrastrar (con tu símbolo puesto) dibuja
@@ -243,338 +276,168 @@ Item {
         }
     }
 
-    // La tarjeta de Ágape: el cromo casi opaco, borde del 10 %, brillo arriba y radio 20
-    RectangularShadow {
-        anchors.fill: card
-        offset.y: 16
-        blur: 44
-        radius: card.radius
-        color: Qt.rgba(0, 0, 0, 0.45)
-    }
-    Rectangle {
-        id: card
-        x: 40; y: 40
-        width: Math.min(440, parent.width - 80)
-        height: parent.height - 80
-        radius: Tema.r(20)
-        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.92)
-        border.color: root.border
-        Rectangle { // el brillo de 1 px de arriba
-            x: parent.radius; y: 1
-            width: parent.width - 2 * parent.radius; height: 1
-            color: Qt.rgba(1, 1, 1, 0.06)
+    // ---------- La hora recortada ----------
+    readonly property real tam: Math.min(400, width / 3.2, height / 2.3)
+    property string hora: Qt.formatDateTime(new Date(), "HH:mm")
+    property string fecha: Qt.locale("es_ES").toString(new Date(), "dddd, d 'de' MMMM")
+    Timer {
+        interval: 2000; running: true; repeat: true
+        onTriggered: {
+            root.hora = Qt.formatDateTime(new Date(), "HH:mm");
+            root.fecha = Qt.locale("es_ES").toString(new Date(), "dddd, d 'de' MMMM");
         }
+    }
+    // Los números como máscara (del tamaño de la pantalla, como la foto): dentro, la foto nítida con un brillo del color
+    // del modo; sin foto, en blanco. Encima, su borde fino
+    Item {
+        id: horaCaja
+        width: parent.width
+        height: root.tam * 1.05
+        y: parent.height * 0.38 - height / 2
+    }
+    component Numeros: Text {
+        x: 0; y: horaCaja.y
+        width: root.width; height: horaCaja.height
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        text: root.hora
+        font { family: Tema.letra; pixelSize: root.tam; weight: Font.ExtraBold; letterSpacing: -root.tam * 0.05 }
+    }
+    Item {
+        id: mascara
+        anchors.fill: parent
+        visible: false
+        layer.enabled: true
+        Numeros { color: "white" }
+    }
+    Item {
+        anchors.fill: parent
+        visible: root.foto
+        MultiEffect {
+            anchors.fill: parent
+            source: fotoImg
+            maskEnabled: true
+            maskSource: mascara
+        }
+        layer.enabled: true
+        layer.effect: MultiEffect { shadowEnabled: true; shadowColor: root.modoColor; shadowBlur: 1; shadowOpacity: 0.35; shadowHorizontalOffset: 0; shadowVerticalOffset: 0 }
+    }
+    Numeros {
+        visible: !root.foto
+        color: Qt.rgba(1, 1, 1, 0.92)
+        layer.enabled: true
+        layer.effect: MultiEffect { shadowEnabled: true; shadowColor: root.modoColor; shadowBlur: 1; shadowOpacity: 0.4; shadowHorizontalOffset: 0; shadowVerticalOffset: 0 }
+    }
+    Numeros {
+        color: "transparent"
+        style: Text.Outline
+        styleColor: Qt.rgba(1, 1, 1, 0.35)
+    }
+    Text {
+        id: fechaTexto
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: horaCaja.y + horaCaja.height + 18
+        text: root.fecha
+        color: "#dfe5ee"
+        font { family: Tema.letra; pixelSize: 26; weight: Font.Light; letterSpacing: 0.5 }
+        layer.enabled: true
+        layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.6); shadowBlur: 0.6; shadowVerticalOffset: 2 }
+    }
 
+    // ---------- Arriba a la izquierda: los modos (el tuyo en su color) ----------
+    Row {
+        x: 48; y: 40
+        spacing: 22
+        Repeater {
+            model: root.floors
+            delegate: Row {
+                id: modoFila
+                required property var modelData
+                required property int index
+                readonly property bool on: index === root.floor
+                readonly property color c: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[modelData.key]
+                spacing: 8
+                opacity: on ? 1 : modoArea.containsMouse ? 0.8 : 0.45
+                Behavior on opacity { NumberAnimation { duration: 160 } }
+                Rectangle { width: 6; height: 6; radius: 3; color: modoFila.c; visible: modoFila.on; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: modoFila.modelData.name.toUpperCase()
+                    color: modoFila.on ? modoFila.c : "#cfd6e0"
+                    font { family: Tema.mono; pixelSize: 12; letterSpacing: 3 }
+                    MouseArea { id: modoArea; anchors.fill: parent; anchors.margins: -8; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.pick(modoFila.index) }
+                }
+            }
+        }
+    }
+
+    // ---------- Abajo: la contraseña, una línea con el cursor del color del modo ----------
+    Item {
+        id: entrada
+        width: Math.min(420, parent.width - 80)
+        height: 40
+        x: (parent.width - width) / 2
+        y: parent.height - 120
         SequentialAnimation {
             id: shake
             loops: 2
-            NumberAnimation { target: card; property: "x"; to: 52; duration: 50 }
-            NumberAnimation { target: card; property: "x"; to: 28; duration: 80 }
-            NumberAnimation { target: card; property: "x"; to: 40; duration: 50 }
+            NumberAnimation { target: entrada; property: "x"; to: (root.width - entrada.width) / 2 + 12; duration: 50 }
+            NumberAnimation { target: entrada; property: "x"; to: (root.width - entrada.width) / 2 - 12; duration: 80 }
+            NumberAnimation { target: entrada; property: "x"; to: (root.width - entrada.width) / 2; duration: 50 }
         }
-
-        Image {
-            x: 40; y: 40
-            width: 44; height: 44
-            source: "file:///usr/share/apogeo/logo.svg"
-            sourceSize: Qt.size(88, 88)
+        Text {
+            id: etiqueta
+            anchors.verticalCenter: parent.verticalCenter
+            text: "CONTRASEÑA"
+            color: Qt.rgba(1, 1, 1, 0.55)
+            font { family: Tema.mono; pixelSize: 11; letterSpacing: 2.5 }
         }
-
-        Column {
-            anchors.left: parent.left
+        TextField {
+            id: password
+            anchors.left: etiqueta.right; anchors.leftMargin: 14
             anchors.right: parent.right
-            anchors.margins: 40
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 12
-
-            Row {
-                width: parent.width
-                spacing: 14
-                Item { // tu foto (la de la bienvenida o Ajustes), en círculo con el borde rosa
-                    id: face
-                    width: 48; height: 48
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: faceImg.status === Image.Ready
-                    Image {
-                        id: faceImg
-                        anchors.fill: parent
-                        source: {
-                            const f = typeof kscreenlocker_userImage !== "undefined" ? String(kscreenlocker_userImage || "") : "";
-                            return f === "" ? "" : f.startsWith("/") ? "file://" + f : f;
-                        }
-                        sourceSize: Qt.size(96, 96)
-                        fillMode: Image.PreserveAspectCrop
-                        visible: false
-                    }
-                    Rectangle { id: faceMask; anchors.fill: parent; radius: width / 2; visible: false; layer.enabled: true }
-                    MultiEffect { anchors.fill: parent; source: faceImg; maskEnabled: true; maskSource: faceMask }
-                    Rectangle { anchors.fill: parent; anchors.margins: -3; radius: width / 2; color: "transparent"; border.width: 2; border.color: root.accent }
-                }
-                Text {
-                    text: "Hola de nuevo, " + (kscreenlocker_userName || "")
-                    color: root.text
-                    width: parent.width - (face.visible ? face.width + parent.spacing : 0)
-                    anchors.verticalCenter: parent.verticalCenter
-                    wrapMode: Text.Wrap
-                    font { family: root.font; pixelSize: 24; weight: Font.Bold }
-                }
+            height: 40
+            echoMode: TextInput.Password
+            passwordCharacter: "●"
+            color: "#eceef3"
+            font { family: Tema.mono; pixelSize: 15; letterSpacing: 4 }
+            leftPadding: 2
+            focus: true
+            enabled: !root.busy && !retry.running
+            cursorDelegate: Rectangle {
+                width: 2
+                color: root.modoColor
+                visible: password.cursorVisible
+                layer.enabled: true
+                layer.effect: MultiEffect { shadowEnabled: true; shadowColor: root.modoColor; shadowBlur: 0.6; shadowHorizontalOffset: 0; shadowVerticalOffset: 0 }
             }
-            Text {
-                text: "¿A qué modo vuelves?"
-                color: root.muted
-                font { family: root.font; pixelSize: 15 }
-            }
-
-            // Pisos: el control segmentado (la pastilla de acento con brillo es la elegida)
-            Rectangle {
-                width: seg.implicitWidth + 6
-                height: 40
-                radius: Tema.r(14)
-                color: root.hover
-                Row {
-                    id: seg
-                    anchors.centerIn: parent
-                    spacing: 3
-                    Repeater {
-                        model: root.floors
-                        delegate: Item {
-                            id: opt
-                            required property var modelData
-                            required property int index
-                            readonly property bool on: index === root.floor
-                            width: optRow.implicitWidth + 26
-                            height: 34
-                            RectangularShadow {
-                                anchors.fill: optBg
-                                visible: opt.on
-                                offset.y: 4; blur: 18; spread: -4
-                                radius: optBg.radius
-                                color: root.accent
-                                opacity: 0.85
-                            }
-                            Rectangle {
-                                id: optBg
-                                anchors.fill: parent
-                                radius: Tema.r(11)
-                                color: opt.on ? root.accent : (optArea.containsMouse ? root.hover : "transparent")
-                                Behavior on color { ColorAnimation { duration: 180 } }
-                            }
-                            Row {
-                                id: optRow
-                                anchors.centerIn: parent
-                                spacing: 7
-                                Item {
-                                    width: 16; height: 16
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    Image {
-                                        id: optIcon
-                                        anchors.fill: parent
-                                        source: "file:///usr/share/plasma/plasmoids/org.apogeo.pisos/contents/icons/" + opt.modelData.key + ".svg"
-                                        sourceSize: Qt.size(32, 32)
-                                        visible: false
-                                    }
-                                    MultiEffect {
-                                        anchors.fill: parent
-                                        source: optIcon
-                                        colorization: 1
-                                        colorizationColor: opt.on ? root.accentText : root.muted
-                                    }
-                                }
-                                Text {
-                                    text: opt.modelData.name
-                                    color: opt.on ? root.accentText : root.muted
-                                    font { family: root.font; pixelSize: 14; weight: opt.on ? Font.Bold : Font.DemiBold }
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                            MouseArea {
-                                id: optArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.pick(opt.index)
-                            }
-                        }
+            background: Item {
+                Rectangle {
+                    anchors.bottom: parent.bottom; anchors.bottomMargin: 8
+                    width: parent.width; height: 1
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0; color: password.activeFocus ? root.modoColor : Qt.rgba(1, 1, 1, 0.45) }
+                        GradientStop { position: 1; color: Qt.rgba(1, 1, 1, 0.12) }
                     }
                 }
             }
-
-            Item { width: 1; height: 6 }
-
-            // La contraseña, como la barra de direcciones de Ágape
-            TextField {
-                id: password
-                width: parent.width
-                height: 44
-                echoMode: TextInput.Password
-                placeholderText: "Contraseña"
-                placeholderTextColor: root.muted
-                color: root.text
-                font { family: root.font; pixelSize: 15 }
-                leftPadding: 14
-                focus: true
-                enabled: !root.busy && !retry.running
-                background: Rectangle {
-                    radius: Tema.r(14)
-                    color: root.hover
-                    border.color: password.activeFocus ? root.accent : "transparent"
-                    border.width: 1
-                }
-                onAccepted: root.unlock()
-                onTextEdited: root.start()
-                Keys.onUpPressed: root.pick(Math.max(0, root.floor - 1))
-                Keys.onDownPressed: root.pick(Math.min(root.floors.length - 1, root.floor + 1))
-                Keys.onEscapePressed: text = ""
-            }
-
-            Text {
-                text: "o dibuja tu símbolo en cualquier parte de la pantalla"
-                visible: root.symbolOn && root.error === ""
-                color: root.muted
-                font { family: root.font; pixelSize: 13 }
-            }
-            Text {
-                text: root.error
-                visible: root.error !== ""
-                color: Tema.error
-                width: parent.width
-                wrapMode: Text.Wrap
-                font { family: root.font; pixelSize: 14 }
-            }
-        }
-
-    }
-
-    // ---------- A la derecha: la hora y lo que suena ----------
-    Column {
-        id: side
-        anchors.left: card.right
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: player.visible ? -60 : 0
-        visible: width > 360
-        spacing: 2
-        Text {
-            id: bigClock
-            anchors.horizontalCenter: parent.horizontalCenter
-            color: root.text
-            font { family: root.font; pixelSize: Math.min(176, side.width / 3.6); weight: Font.ExtraBold; letterSpacing: -4 }
-            layer.enabled: true
-            layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.5); shadowBlur: 0.8; shadowVerticalOffset: 6 }
-            function update() { text = Qt.formatDateTime(new Date(), "HH:mm") }
-            Component.onCompleted: update()
-            Timer { interval: 2000; running: true; repeat: true; onTriggered: bigClock.update() }
-        }
-        Text {
-            id: clock
-            anchors.horizontalCenter: parent.horizontalCenter
-            color: root.text
-            opacity: 0.85
-            font { family: root.font; pixelSize: 22; weight: Font.DemiBold }
-            layer.enabled: true
-            layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Qt.rgba(0, 0, 0, 0.5); shadowBlur: 0.6; shadowVerticalOffset: 3 }
-            function update() {
-                const d = Qt.locale("es_ES").toString(new Date(), "dddd, d 'de' MMMM");
-                text = d.charAt(0).toUpperCase() + d.slice(1);
-            }
-            Component.onCompleted: update()
-            Timer { interval: 60000; running: true; repeat: true; onTriggered: clock.update() }
+            onAccepted: root.unlock()
+            onTextEdited: root.start()
+            Keys.onUpPressed: root.pick(Math.max(0, root.floor - 1))
+            Keys.onDownPressed: root.pick(Math.min(root.floors.length - 1, root.floor + 1))
+            Keys.onEscapePressed: text = ""
         }
     }
-
-    // La canción que suena (Spotify, Ágape, VLC…): carátula, título y sus botones
-    Mpris.Mpris2Model { id: mpris }
-    readonly property var playing: mpris.currentPlayer
-    RectangularShadow {
-        anchors.fill: player
-        visible: player.visible
-        offset.y: 12; blur: 36
-        radius: player.radius
-        color: Qt.rgba(0, 0, 0, 0.4)
-    }
-    Rectangle {
-        id: player
-        visible: side.visible && !!root.playing && root.playing.track !== ""
-        anchors.horizontalCenter: side.horizontalCenter
-        anchors.top: side.bottom
-        anchors.topMargin: 28
-        width: Math.min(420, side.width - 80)
-        height: 92
-        radius: Tema.r(20)
-        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.86)
-        border.color: root.border
-        Rectangle {
-            id: art
-            x: 14; anchors.verticalCenter: parent.verticalCenter
-            width: 64; height: 64
-            radius: Tema.r(12)
-            color: root.hover
-            clip: true
-            Icono { anchors.centerIn: parent; width: 24; height: 24; nombre: "musica"; color: root.muted; visible: cover.status !== Image.Ready }
-            Image {
-                id: cover
-                anchors.fill: parent
-                source: root.playing ? root.playing.artUrl : ""
-                sourceSize: Qt.size(128, 128)
-                fillMode: Image.PreserveAspectCrop
-            }
-        }
-        Column {
-            anchors.left: art.right; anchors.leftMargin: 14
-            anchors.right: buttons.left; anchors.rightMargin: 10
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
-            Text {
-                width: parent.width
-                text: root.playing ? root.playing.track : ""
-                color: root.text
-                elide: Text.ElideRight
-                font { family: root.font; pixelSize: 15; weight: Font.Bold }
-            }
-            Text {
-                width: parent.width
-                text: root.playing ? root.playing.artist : ""
-                color: root.muted
-                elide: Text.ElideRight
-                font { family: root.font; pixelSize: 13 }
-            }
-        }
-        Row {
-            id: buttons
-            anchors.right: parent.right; anchors.rightMargin: 12
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
-            Repeater {
-                model: [
-                    { icon: "anterior", go: () => root.playing.Previous(), on: root.playing && root.playing.canGoPrevious },
-                    { icon: root.playing && root.playing.playbackStatus === Mpris.PlaybackStatus.Playing ? "pausa" : "reproducir",
-                      go: () => root.playing.PlayPause(), on: true, main: true },
-                    { icon: "siguiente", go: () => root.playing.Next(), on: root.playing && root.playing.canGoNext }
-                ]
-                delegate: AbstractButton {
-                    id: mb
-                    required property var modelData
-                    width: modelData.main ? 44 : 36; height: width
-                    anchors.verticalCenter: parent.verticalCenter
-                    enabled: !!modelData.on
-                    opacity: enabled ? 1 : 0.4
-                    hoverEnabled: true
-                    onClicked: modelData.go()
-                    background: Rectangle {
-                        radius: width / 2
-                        color: mb.modelData.main ? root.accent : (mb.hovered ? root.hover : "transparent")
-                    }
-                    contentItem: Item {
-                        Icono {
-                            anchors.centerIn: parent
-                            width: mb.modelData.main ? 18 : 15; height: width
-                            nombre: mb.modelData.icon
-                            color: mb.modelData.main ? root.accentText : root.text
-                        }
-                    }
-                }
-            }
-        }
+    Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: entrada.y + entrada.height + 10
+        width: Math.min(520, parent.width - 80)
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.Wrap
+        text: root.error !== "" ? root.error : root.symbolOn ? "o dibuja tu símbolo en cualquier parte de la pantalla" : ""
+        color: root.error !== "" ? Tema.error : Qt.rgba(1, 1, 1, 0.5)
+        font { family: Tema.letra; pixelSize: 13 }
     }
 
     // Elegir piso: se cambia ya, detrás del bloqueo, para que al desbloquear estés en él

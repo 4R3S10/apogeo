@@ -3,6 +3,13 @@
     "fecha": "2026-10-30",
     "titulo": "30 de octubre",
     "cosas": [
+      {"icono": "buscar", "titulo": "La Órbita, una constelación", "como": "Al abrir la Órbita lo ves todo a la vez: en el centro tus apps fijadas y el buscador, y alrededor, unidos al orbe por hilos de luz, lo que suena (con su portada y sus colores), tus avisos, tu nota (con casillas que se marcan ahí), lo que queda hoy y, en Estudiar, tu estudio. Las apps se fijan buscándolas y pulsando su chincheta."},
+      {"icono": "ventana", "titulo": "Tus ventanas, arriba", "como": "Las apps abiertas salen arriba, en el centro, solo sus iconos (un punto bajo la activa). La pastilla de encima del orbe se va: el volumen y el brillo salen arriba un momento."},
+      {"icono": "imagen", "titulo": "Fondos nuevos", "como": "Navegar estrena una nebulosa azul, Estudiar un atardecer oscuro y Jugar nubes violeta (de Aura, en Wallhaven; se bajan solos). Estudiar va siempre en grafito con su ámbar."},
+      {"icono": "apagar", "titulo": "Arranque sobre la Tierra", "como": "Al encender y apagar, el orbe se forma sobre la Tierra vista desde la Luna, y las órbitas giran ahora suaves, sin saltos."},
+      {"icono": "llave", "titulo": "Bloqueo nuevo", "como": "La hora, enorme y recortada en tu fondo; la fecha debajo; los modos arriba y la contraseña en una línea fina."},
+      {"icono": "jugar", "titulo": "Jugar, solo consola", "como": "En Jugar no hay barra ni orbe: solo la consola."},
+      {"icono": "aspecto", "titulo": "Cristal grafito", "como": "El panel rápido es de cristal neutro y lo encendido va en blanco."},
       {"icono": "apps", "titulo": "Todo en la Órbita", "como": "El panel de widgets de la izquierda se va: la agenda (con el tiempo, recordatorios y temporizadores), tus notas y Estudios están ahora en la Órbita abierta (el orbe o Meta), en pestañas a la derecha."},
       {"icono": "llave", "titulo": "Antes de ir a Windows", "como": "La pestaña Windows de la consola te avisa de lo que conviene saber: Secure Boot, TPM, BitLocker y el sitio en su arranque."},
       {"icono": "imagen", "titulo": "Fondos de Órbita", "como": "Cada modo estrena fondo animado: Navegar «Órbitas» (las órbitas del orbe girando), Jugar «Nebulosa» y Estudiar «Aurora» (de día, sobre papel). Los de antes siguen en Ajustes → Fondos."},

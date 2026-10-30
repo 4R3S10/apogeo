@@ -1,0 +1,22 @@
+#!/bin/sh
+# El fondo del arranque y el apagado («A1 · La Tierra en penumbra»): la Tierra vista desde la Luna, oscurecida, detrás
+# del orbe. La foto es de Wallhaven (como las de Aura) y no se puede repartir con Apogeo: se baja una vez, con internet,
+# la primera vez que arranca (apogeo-tierra.service), se oscurece y se deja en el tema de Plymouth como tierra.png (no es
+# del paquete: el tema la usa si está y si no, el grafito). Luego se rehace el arranque. Si falla, al siguiente arranque.
+set -eu
+TEMA=/usr/share/plymouth/themes/apogeo
+ID=k7zv97
+[ -s "$TEMA/tierra.png" ] && exit 0
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+UA="Apogeo (https://github.com/4R3S10/apogeo)"
+curl -fsSL -A "$UA" --max-time 60 "https://wallhaven.cc/api/v1/w/$ID" -o "$TMP/w.json"
+URL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["data"]["path"])' "$TMP/w.json")
+case "$URL" in https://w.wallhaven.cc/full/*) ;; *) echo "dirección rara: $URL" >&2; exit 1 ;; esac
+curl -fsSL -A "$UA" --max-time 180 "$URL" -o "$TMP/foto"
+# 1920 × 1080, recortada para llenar, y en penumbra (el orbe y la barra se leen encima)
+ffmpeg -nostdin -loglevel error -i "$TMP/foto" -frames:v 1 \
+  -vf 'scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,eq=brightness=-0.06:saturation=0.9,colorlevels=romax=0.5:gomax=0.5:bomax=0.5' \
+  -y "$TMP/tierra.png"
+install -m644 "$TMP/tierra.png" "$TEMA/tierra.png"
+exec /usr/lib/apogeo/apogeo-arranque

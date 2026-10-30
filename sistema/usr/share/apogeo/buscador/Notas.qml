@@ -115,7 +115,7 @@ Item {
                 font.pixelSize: 15
                 wrapMode: TextEdit.Wrap
                 background: null
-                Keys.onEscapePressed: event => event.accepted = false   // (sigue: cierra la Órbita)
+                Keys.onEscapePressed: event => event.accepted = false   // (sigue: vuelve a la Órbita)
                 onTextChanged: if (text !== nota.texto) { modelo.setProperty(nota.index, "texto", text); guardarLuego.restart(); }
             }
             // Arriba a la derecha, al pasar el ratón: el color y quitar

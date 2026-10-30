@@ -6,10 +6,11 @@ izquierda). Geométrico,
 legible a 16 px y a 512 px, y a gusto en el grafito de Órbita. La identidad clásica (el búho) se conserva en
 logo-clasico.py.
 
-  logo.py <carpeta> [acento]    escribe logo.svg, logo-silueta.svg, aleteo-00.svg … aleteo-23.svg (las órbitas girando
-                                despacio para el arranque; el nombre de los fotogramas se queda para no romper Plymouth)
-                                y forma-00.svg … forma-29.svg (el orbe formándose al encender: el punto se enciende y
-                                las tres órbitas entran girando hasta su sitio; el último es igual que aleteo-00)
+  logo.py <carpeta> [acento]    escribe logo.svg, logo-silueta.svg, las piezas del arranque —disco.svg (el disco y el
+                                punto), orbitas.svg (solo las tres órbitas, que Plymouth y el splash giran enteras, sin
+                                saltos) y halo.svg (el brillo del punto, que respira)— y forma-00.svg … forma-89.svg (el
+                                orbe formándose al encender, uno por refresco: el punto se enciende y las tres órbitas
+                                entran girando hasta su sitio; el último es igual que disco + orbitas)
 """
 import math
 import os
@@ -21,8 +22,7 @@ DISC = '#0b0e14'
 RING = '#1c2430'
 TEXT = '#e9edf5'
 MUTED = '#8b94a7'
-FRAMES = 24
-FORM = 30           # fotogramas del orbe formándose (casi 2 s a 16 por segundo)
+FORM = 90           # fotogramas del orbe formándose (1,8 s a los 50 por segundo de Plymouth)
 
 # Los tres arcos: (rotación, color, opacidad), uno por modo
 ARCS = ((0, ACCENT, 1.0), (120, AMBER, 1.0), (240, VIOLET, 1.0))
@@ -90,6 +90,18 @@ def forma(t):
             f'  <!-- Núcleo formándose -->\n  {body}<g>{arcs}</g>\n</svg>\n')
 
 
+def pieza(body, nota):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n'
+            f'  <!-- {nota} -->\n  {body}\n</svg>\n')
+
+
+def halo():
+    """El brillo del punto, que respira encima del disco (solo su opacidad cambia: sin saltos)."""
+    return pieza(f'<defs><radialGradient id="h"><stop offset="0.3" stop-color="{TEXT}" stop-opacity="0.22"/>'
+                 f'<stop offset="1" stop-color="{TEXT}" stop-opacity="0"/></radialGradient></defs>'
+                 f'<circle cx="50" cy="50" r="19" fill="url(#h)"/>', 'El brillo del Núcleo')
+
+
 def svg(rot=0, pulse=0.0, disc=True):
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n'
             f'  <!-- Núcleo: un punto y tres órbitas abiertas -->\n  {nucleo(rot, pulse, disc)}\n</svg>\n')
@@ -100,8 +112,10 @@ if __name__ == '__main__':
     os.makedirs(M, exist_ok=True)
     open(f'{M}/logo.svg', 'w').write(svg())
     open(f'{M}/logo-silueta.svg', 'w').write(svg(disc=False))
-    for i in range(FRAMES):
-        angle = i * (360 / FRAMES)  # (una vuelta entera: cada órbita tiene su color)
-        open(f'{M}/aleteo-{i:02d}.svg', 'w').write(svg(rot=angle, pulse=0.45 * math.sin(2 * math.pi * i / FRAMES)))
+    # Las piezas del arranque (el último fotograma de «forma» es disco + orbitas, sin el halo)
+    nucleo_solo = nucleo().split('<g>')[0]
+    open(f'{M}/disco.svg', 'w').write(pieza(nucleo_solo, 'El disco y el punto del Núcleo'))
+    open(f'{M}/orbitas.svg', 'w').write(pieza(''.join(arc(r, c, o) for r, c, o in ARCS), 'Las tres órbitas'))
+    open(f'{M}/halo.svg', 'w').write(halo())
     for i in range(FORM):
         open(f'{M}/forma-{i:02d}.svg', 'w').write(forma(i / (FORM - 1)))

@@ -6,10 +6,12 @@ y el carrusel del escritorio se elige también de tu biblioteca.
 Los vídeos llevan una miniatura (un fotograma, con ffmpeg) en ~/.cache/apogeo/miniaturas.
 """
 import hashlib
+import json
 import os
 import subprocess
 import threading
 import urllib.parse
+import urllib.request
 
 import apogeo_comun as comun
 
@@ -18,6 +20,48 @@ NAMES = {'tinta': 'Tinta', 'humo': 'Humo', 'seda': 'Seda', 'marmol': 'Mármol', 
          'orbitas': 'Órbitas', 'nebulosa': 'Nebulosa', 'aurora': 'Aurora'}
 _busy = threading.Lock()  # (una tanda de miniaturas a la vez)
 THUMBS = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(comun.HOME, '.cache')), 'apogeo', 'miniaturas')
+
+
+# Los fondos de serie de Órbita, de Wallhaven (como lo que bajas con Aura): Navegar, la nebulosa azul; Estudiar, el
+# atardecer mínimo; Jugar, las nubes violeta. No se pueden repartir con Apogeo: se bajan a tu biblioteca de Aura la
+# primera vez que entras con internet (apogeo-pisos) y van a su modo si aún tenía el animado de serie (el de antes).
+DE_SERIE = {'navegar': ('4ddk8g', 'orbitas'), 'estudiar': ('mdjrqy', 'aurora'), 'jugar': ('k88m2m', 'nebulosa')}
+_AGENTE = 'Apogeo (https://github.com/4R3S10/apogeo)'
+
+
+def _bajar(url, timeout):
+    req = urllib.request.Request(url, headers={'User-Agent': _AGENTE})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def bajar_de_serie(st):
+    """Baja los fondos de serie que falten a Imágenes/Wallpapers/Aura: {modo: ruta} de los que están (los que ya
+    estaban también). Lo que no se pudo bajar (sin internet…) no sale."""
+    pics = comun._user_dir('PICTURES') or os.path.join(comun.HOME, 'Pictures')
+    folder = os.path.join(pics, 'Wallpapers', 'Aura')
+    out = {}
+    for floor, (wid, _old) in DE_SERIE.items():
+        have = [os.path.join(folder, n) for n in (os.listdir(folder) if os.path.isdir(folder) else [])
+                if n.startswith(f'wallhaven-{wid}.')]
+        if have:
+            out[floor] = have[0]
+            continue
+        try:
+            path = json.loads(_bajar(f'https://wallhaven.cc/api/v1/w/{wid}', 30))['data']['path']
+            if not path.startswith('https://w.wallhaven.cc/full/'):
+                continue
+            data = _bajar(path, 120)
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+        os.makedirs(folder, exist_ok=True)
+        dest = os.path.join(folder, os.path.basename(path))
+        tmp = dest + '.part'
+        with open(tmp, 'wb') as f:
+            f.write(data)
+        os.replace(tmp, dest)
+        out[floor] = dest
+    return out
 
 
 def _url(path):

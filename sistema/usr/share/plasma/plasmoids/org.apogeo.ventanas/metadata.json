@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Category": "Windows and Tasks",
+        "Description": "En la barra fina de arriba de Órbita, en el centro: tus ventanas abiertas en el modo",
+        "Icon": "apogeo",
+        "Id": "org.apogeo.ventanas",
+        "License": "MIT",
+        "Name": "Ventanas",
+        "Version": "0.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

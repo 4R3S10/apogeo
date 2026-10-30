@@ -34,10 +34,10 @@ import Apogeo
 // La hora, el sonido, la red y los avisos son los widgets de Plasma que van a su lado en el mismo panel.
 //
 // Con Órbita («C · Orbe central») la isla es el orbe: en el centro, el orbe del color del modo en el que estás (un clic,
-// o Meta, abre la Órbita: la paleta, tus apps del modo y el inspector) y a sus lados los otros dos modos en bolitas
-// (un clic te lleva; el tuyo siempre va en el centro). Al pasar el ratón salen a los lados tus ventanas abiertas. Lo que
-// pasa ahora (volumen, avisos, descargas, el temporizador, la música) sale en una pastilla encima del orbe. La hora, la
-// red y los avisos van arriba, en la barra fina (org.apogeo.modo y el panel rápido). Con Clásico, la isla de siempre.
+// o Meta, abre la Órbita: tus apps, el buscador y lo que pasa ahora) y a sus lados los otros dos modos en bolitas
+// (un clic te lleva; el tuyo siempre va en el centro). Nada más: tus ventanas, el volumen y el brillo van arriba, en el
+// centro de la barra fina (org.apogeo.ventanas), y la hora, la red y los avisos a su derecha. Con Clásico, la isla de
+// siempre.
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
@@ -76,11 +76,6 @@ PlasmoidItem {
     function abrirOrbita() {
         run("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle");
     }
-    // Las ventanas salen al pasar el ratón (y se quedan un momento al salir, para poder llegar a ellas)
-    property bool orbeHover: false
-    readonly property bool ventanasFuera: orbeHover || quedate.running
-    Timer { id: quedate; interval: 450 }
-    onOrbeHoverChanged: if (!orbeHover) quedate.restart()
 
     P5Support.DataSource {
         id: runner
@@ -149,7 +144,7 @@ PlasmoidItem {
     onSinkChanged: { osdReady = false; osdArm.restart(); }
     Timer { id: osdArm; interval: 1500; onTriggered: root.osdReady = true }
     function showOsd(kind, value, muted) {
-        if (!osdReady) return;
+        if (!osdReady || orbita) return;
         osd = kind; osdValue = value; osdMuted = !!muted;
         osdEnd.restart();
         reveal("osd", true);
@@ -198,7 +193,7 @@ PlasmoidItem {
                 if (nid === root.seenNotice) return;
                 root.seenNotice = nid;
                 // (los que ya estaban al empezar, los urgentes, en silencio y los de hace rato, no)
-                if (!root.osdReady || m.urgency === NotificationManager.Notifications.CriticalUrgency || root.quiet
+                if (root.orbita || !root.osdReady || m.urgency === NotificationManager.Notifications.CriticalUrgency || root.quiet
                     || m.wasAddedDuringInhibition || !m.created || Date.now() - m.created.getTime() > 15000) return;
                 const names = m.actionNames || [], labels = m.actionLabels || [];
                 root.notice = {
@@ -302,7 +297,7 @@ PlasmoidItem {
     // Lo que se ve ahora, de más a menos importante
     readonly property bool timerShown: Plasmoid.configuration.extraEstudiar && (focusRunning || floor === "Estudiar")
     readonly property bool musicShown: !!player && (player.track || "") !== "" && (playing || (floor === "Navegar" && Plasmoid.configuration.extraNavegar))
-    readonly property string moment: osd !== "" ? "osd" : notice ? "aviso" : download ? "descarga" : timerShown ? "temporizador" : musicShown ? "musica" : ""
+    readonly property string moment: orbita ? "" : osd !== "" ? "osd" : notice ? "aviso" : download ? "descarga" : timerShown ? "temporizador" : musicShown ? "musica" : ""
 
     // ---------- Tus apps del piso: las fijadas y las ventanas abiertas ----------
     TaskManager.TasksModel {
@@ -504,9 +499,12 @@ PlasmoidItem {
     fullRepresentation: RowLayout {
         id: fila
         spacing: 6
+        // Jugar es solo la consola: aquí no se ve nada (apogeo-pisos además esconde el panel)
+        opacity: root.orbita && Tema.modo === "jugar" ? 0 : 1
+        enabled: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
         Layout.minimumWidth: implicitWidth
         Layout.preferredWidth: implicitWidth
-        HoverHandler { onHoveredChanged: root.orbeHover = hovered }
 
         // Tus apps por tipo y, al escribir, el buscador (apps, archivos, calculadora, la web…): la pastilla del acento
         AgapeButton {
@@ -552,12 +550,8 @@ PlasmoidItem {
 
         Separator { visible: tasks.count > 0 && root.floor === "Jugar" && !root.orbita }
 
-        // ----- Órbita: a la izquierda, la mitad de tus ventanas; la bolita del modo de antes; el orbe; la del de después y
-        // la otra mitad de tus ventanas -----
-        Repeater {
-            model: root.orbita ? tasks : null
-            delegate: TaskTile { lado: "izq" }
-        }
+        // ----- Órbita: la bolita del modo de antes, el orbe y la del de después (tus ventanas van arriba, en el centro de
+        // la barra fina: org.apogeo.ventanas) -----
         Bolita { visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 2) % 3] }
         Item {
             id: orbe
@@ -587,19 +581,20 @@ PlasmoidItem {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.abrirOrbita()
             }
-            QQC2.ToolTip.visible: orbeArea.containsMouse && !root.ventanasFuera
+            QQC2.ToolTip.visible: orbeArea.containsMouse
             QQC2.ToolTip.text: root.nombreModo(root.modo) + " · apps, buscar y lo que pasa (Meta)"
             QQC2.ToolTip.delay: 700
         }
         Bolita { visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 1) % 3] }
 
-        // ----- Tus apps del piso: fijadas y abiertas (con Órbita, la otra mitad de tus ventanas) -----
+        // ----- Tus apps del piso: fijadas y abiertas (con Órbita no: van arriba) -----
         Repeater {
-            model: tasks
-            delegate: TaskTile { lado: root.orbita ? "der" : "" }
+            model: root.orbita ? null : tasks
+            delegate: TaskTile {}
         }
 
-        // ----- Isla dinámica: lo que pasa ahora (la isla se estira con ello; con Órbita, en la pastilla de encima) -----
+        // ----- Isla dinámica: lo que pasa ahora (la isla se estira con ello; con Órbita no hay: lo de ahora está en la
+        // Órbita abierta y el volumen y el brillo salen arriba, en la barra fina) -----
         Separator { visible: !root.orbita && moment.Layout.preferredWidth > 1 }
         Item {
             id: momentSlot   // (su sitio en la isla clásica)
@@ -609,10 +604,7 @@ PlasmoidItem {
         }
         Item {
             id: moment
-            // En la isla clásica, en su sitio; con Órbita, dentro de la pastilla de encima del orbe
-            parent: root.orbita ? pillBox : momentSlot
-            x: root.orbita ? 8 : 0
-            y: root.orbita ? 8 : 0
+            parent: momentSlot
             width: Layout.preferredWidth
             height: 40
             readonly property string kind: root.moment
@@ -836,48 +828,19 @@ PlasmoidItem {
                 tintTo: Qt.darker(cover.vivo, 2.4)
             }
         }
-        Binding { target: root; property: "momentoAncho"; value: moment.Layout.preferredWidth }
-        Component.onCompleted: root.orbePara = orbe
         Separator { visible: !root.orbita }
     }
 
-    // La pastilla de encima del orbe (Órbita): lo que pasa ahora
-    PlasmaCore.Dialog {
-        id: pastilla
-        visible: root.orbita && root.moment !== "" && root.orbePara !== null
-        visualParent: root.orbita ? orbePara : null
-        location: Tema.posicion === "arriba-dcha" ? PlasmaCore.Types.TopEdge : PlasmaCore.Types.BottomEdge
-        type: PlasmaCore.Dialog.Tooltip
-        flags: Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint
-        hideOnWindowDeactivate: false
-        backgroundHints: PlasmaCore.Dialog.NoBackground
-        mainItem: Rectangle {
-            id: pillBox
-            width: Math.max(56, root.momentoAncho + 16)
-            height: 56
-            radius: 28
-            color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.96)
-            border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
-        }
-    }
-    property Item orbePara: null
-    property real momentoAncho: 0
-
-    // Una app de la isla (fijada o abierta). Con Órbita, solo ventanas, a un lado u otro del orbe y al pasar el ratón
+    // Una app de la isla (fijada o abierta; con Órbita no hay: van arriba)
     component TaskTile: Item {
                 id: task
                 required property var model
                 required property int index
-                property string lado: ""
                 readonly property bool launcher: !!model.IsLauncher
                 readonly property string url: model.LauncherUrlWithoutIcon ? model.LauncherUrlWithoutIcon.toString() : ""
                 readonly property bool pinned: Plasmoid.configuration["fijadas" + root.floor].indexOf(url) >= 0
-                readonly property bool aqui: lado === "" || (lado === "izq") === (index % 2 === 0)
-                visible: !root.hiddenApp(model.AppId) && aqui && (lado === "" || Layout.preferredWidth > 0.5)
-                Layout.preferredWidth: !root.hiddenApp(model.AppId) && aqui && (lado === "" || root.ventanasFuera) ? 40 : 0
-                Behavior on Layout.preferredWidth { enabled: task.lado !== ""; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                opacity: lado === "" || root.ventanasFuera ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: 180 } }
+                visible: !root.hiddenApp(model.AppId)
+                Layout.preferredWidth: visible ? 40 : 0
                 Layout.preferredHeight: 40
                 Rectangle {
                     anchors.fill: parent

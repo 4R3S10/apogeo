@@ -16,7 +16,8 @@ import Apogeo
 // abajo: cuánto lleva encendido el PC con «Aspecto», «Todos los ajustes» y apagar; los pisos; la red, el sonido y el
 // micro en pastillas; lo de todos los días en botones redondos (bluetooth, fondo animado, no molestar, ahorro del piso,
 // luz nocturna); el volumen y el brillo; tus avisos (juntos por app, con sus botones y «Responder») y, abajo, el tiempo
-// de las próximas horas y días con el color del cielo a esta hora. El fondo es «Cristal con tu fondo» (Cristal).
+// de las próximas horas y días con el color del cielo a esta hora. El fondo es «Cristal con tu fondo» (Cristal); en
+// Órbita, «cristal grafito» (W1): neutro, sin el brillo del modo, y lo encendido en blanco.
 // Lo de los botones lo lee y lo cambia «apogeo-ajustes rapido», solo con el panel abierto («abierto», lo pone el script).
 // No coge el teclado, salvo mientras respondes a un aviso.
 PlasmoidItem {
@@ -147,17 +148,17 @@ PlasmoidItem {
         hoverEnabled: true
         background: Rectangle {
             radius: height / 2
-            color: pa.on ? (pa.hovered ? Qt.lighter(Tema.rosa, 1.06) : Tema.rosa) : (pa.hovered ? Tema.pulsado : Tema.encima)
+            color: pa.on ? (pa.hovered ? Qt.darker(Tema.encendido, 1.06) : Tema.encendido) : (pa.hovered ? Tema.pulsado : Tema.encima)
             Behavior on color { ColorAnimation { duration: 160 } }
         }
         contentItem: Item {
-            Icono { id: pIco; x: 14; anchors.verticalCenter: parent.verticalCenter; nombre: pa.icono; color: pa.on ? Tema.sobreRosa : Tema.texto }
+            Icono { id: pIco; x: 14; anchors.verticalCenter: parent.verticalCenter; nombre: pa.icono; color: pa.on ? Tema.sobreEncendido : Tema.texto }
             Column {
                 x: pIco.x + pIco.width + 9
                 width: parent.width - x - 10
                 anchors.verticalCenter: parent.verticalCenter
-                Texto { width: parent.width; text: pa.text; font.pixelSize: 13; font.weight: Font.Bold; color: pa.on ? Tema.sobreRosa : Tema.texto; elide: Text.ElideRight; wrapMode: Text.NoWrap }
-                Texto { width: parent.width; text: pa.sub; font.pixelSize: 11; color: pa.on ? Qt.rgba(Tema.sobreRosa.r, Tema.sobreRosa.g, Tema.sobreRosa.b, 0.7) : Tema.apagado; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                Texto { width: parent.width; text: pa.text; font.pixelSize: 13; font.weight: Font.Bold; color: pa.on ? Tema.sobreEncendido : Tema.texto; elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                Texto { width: parent.width; text: pa.sub; font.pixelSize: 11; color: pa.on ? Qt.rgba(Tema.sobreEncendido.r, Tema.sobreEncendido.g, Tema.sobreEncendido.b, 0.7) : Tema.apagado; elide: Text.ElideRight; wrapMode: Text.NoWrap }
             }
         }
     }
@@ -173,15 +174,15 @@ PlasmoidItem {
         ToolTip.text: text
         ToolTip.delay: 400
         background: Item {
-            RectangularShadow { anchors.fill: parent; visible: re.on; radius: width / 2; blur: 14; spread: -4; offset.y: 4; color: Tema.rosa }
+            RectangularShadow { anchors.fill: parent; visible: re.on; radius: width / 2; blur: 14; spread: -4; offset.y: 4; color: Qt.rgba(1, 1, 1, 0.22) }
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: re.on ? Tema.rosa : re.hovered ? Tema.pulsado : Tema.encima
+                color: re.on ? Tema.encendido : re.hovered ? Tema.pulsado : Tema.encima
                 Behavior on color { ColorAnimation { duration: 160 } }
             }
         }
-        contentItem: Item { Icono { anchors.centerIn: parent; width: 18; height: 18; nombre: re.icono; color: re.on ? Tema.sobreRosa : Tema.texto } }
+        contentItem: Item { Icono { anchors.centerIn: parent; width: 18; height: 18; nombre: re.icono; color: re.on ? Tema.sobreEncendido : Tema.texto } }
     }
     // Un botón pequeño de un aviso (los de la app y «Responder», lleno)
     component Chico: AbstractButton {
@@ -193,13 +194,13 @@ PlasmoidItem {
         hoverEnabled: true
         background: Rectangle {
             radius: height / 2
-            color: ch.lleno ? (ch.hovered ? Qt.lighter(Tema.rosa, 1.08) : Tema.rosa) : (ch.hovered ? Tema.pulsado : Tema.encima)
+            color: ch.lleno ? (ch.hovered ? Qt.darker(Tema.encendido, 1.08) : Tema.encendido) : (ch.hovered ? Tema.pulsado : Tema.encima)
             border.width: ch.lleno ? 0 : 1
             border.color: Tema.borde
         }
         contentItem: Item {
-            Texto { id: chTexto; visible: !ch.icono; anchors.centerIn: parent; text: ch.text; font.pixelSize: 12; font.weight: Font.Bold; color: ch.lleno ? Tema.sobreRosa : Tema.texto; wrapMode: Text.NoWrap }
-            Icono { visible: !!ch.icono; anchors.centerIn: parent; width: 14; height: 14; nombre: ch.icono || "cerrar"; color: ch.lleno ? Tema.sobreRosa : Tema.texto }
+            Texto { id: chTexto; visible: !ch.icono; anchors.centerIn: parent; text: ch.text; font.pixelSize: 12; font.weight: Font.Bold; color: ch.lleno ? Tema.sobreEncendido : Tema.texto; wrapMode: Text.NoWrap }
+            Icono { visible: !!ch.icono; anchors.centerIn: parent; width: 14; height: 14; nombre: ch.icono || "cerrar"; color: ch.lleno ? Tema.sobreEncendido : Tema.texto }
         }
     }
     component Level: Rectangle {
@@ -244,7 +245,7 @@ PlasmoidItem {
         Layout.fillHeight: true
 
         // «Cristal con tu fondo»
-        Cristal { anchors.fill: parent; activo: root.abierto }
+        Cristal { anchors.fill: parent; activo: root.abierto; brillo: !Tema._orbita; oscuro: Tema._orbita ? 0.64 : 0.52 }
 
         Column {
             id: arriba

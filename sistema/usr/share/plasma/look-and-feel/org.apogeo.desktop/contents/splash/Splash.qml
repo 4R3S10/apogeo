@@ -3,32 +3,54 @@ import QtQuick.Effects
 import Apogeo
 
 // Pantalla de carga al entrar en la sesión: la misma que al encender (el tema de Plymouth, con sus imágenes y medidas):
-// el Núcleo de Órbita girando sobre el grafito y la barra fina del acento, que avanza con cada etapa del arranque de
-// Plasma. Así no se nota el paso de una a otra.
+// el Núcleo de Órbita sobre la Tierra en penumbra (o el grafito, si aún no se ha bajado), con las órbitas girando
+// despacio y el punto respirando, y la barra fina del acento, que avanza con cada etapa del arranque de Plasma. Así no
+// se nota el paso de una a otra.
 Rectangle {
     id: root
     color: Tema.fondo
     property int stage
 
-    // El brillo de detrás (el de Plymouth); con tu aspecto, del color de tu estilo
-    Image { id: glow; anchors.fill: parent; source: "fondo.png"; fillMode: Image.Stretch; smooth: true; visible: !Tema.f.nombre }
+    // La Tierra de Plymouth (la baja apogeo-tierra; no va en el paquete), recortada para llenar la pantalla
+    Image {
+        id: tierra
+        anchors.fill: parent
+        source: "file:///usr/share/plymouth/themes/apogeo/tierra.png"
+        fillMode: Image.PreserveAspectCrop
+        smooth: true
+        asynchronous: true
+    }
+    // Si no está: el brillo de detrás de siempre; con tu aspecto, del color de tu estilo
+    Image { id: glow; anchors.fill: parent; source: "fondo.png"; fillMode: Image.Stretch; smooth: true; visible: tierra.status !== Image.Ready && !Tema.f.nombre }
     MultiEffect {
         anchors.fill: glow
         source: glow
-        visible: !!Tema.f.nombre
+        visible: tierra.status !== Image.Ready && !!Tema.f.nombre
         colorization: 0.9
         colorizationColor: Tema.wp[1]
     }
-    // El aleteo, igual que en Plymouth: 24 fotogramas a unos 16 por segundo, subiendo y bajando un poco
-    property int frame: 0
-    Timer { interval: 62; running: true; repeat: true; onTriggered: root.frame = (root.frame + 1) % 24 }
-    Image {
-        id: logo
+
+    // El Núcleo, igual que en Plymouth: las órbitas dan una vuelta cada 4 s y el punto respira cada 5 s (sube un poco
+    // y brilla)
+    property real ola
+    SequentialAnimation on ola {
+        loops: Animation.Infinite
+        NumberAnimation { from: 0; to: 1; duration: 2500; easing.type: Easing.InOutSine }
+        NumberAnimation { from: 1; to: 0; duration: 2500; easing.type: Easing.InOutSine }
+    }
+    Item {
+        id: nucleo
         x: (root.width - 150) / 2
-        y: (root.height - 150) / 2 - 20 + Math.cos(2 * Math.PI * root.frame / 24) * 5
+        y: (root.height - 150) / 2 - 20 - 4 * root.ola
         width: 150; height: 150
-        source: "aleteo-" + String(root.frame).padStart(2, "0") + ".png"
-        cache: true
+        Image { anchors.fill: parent; source: "disco.png"; smooth: true }
+        Image { anchors.fill: parent; source: "halo.png"; smooth: true; opacity: 0.35 + 0.65 * root.ola }
+        Image {
+            anchors.fill: parent
+            source: "orbitas.png"
+            smooth: true
+            RotationAnimator on rotation { from: 0; to: 360; duration: 4000; loops: Animation.Infinite }
+        }
     }
     Rectangle {
         x: (root.width - 240) / 2

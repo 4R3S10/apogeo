@@ -55,7 +55,7 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
 - **Letra:** **Geist** en todo el sistema y **Geist Mono** para datos, rutas, compatibilidad y la consola (las dos,
   con licencia OFL, se instalan con el paquete). Bricolage Grotesque sigue instalada para la identidad «Clásico».
 - **Colores:** fondo `#080A0F`, superficie `#0F131A`, texto `#E9EDF5` y un acento por modo (cian en Navegar, ámbar en
-  Estudiar, violeta en Jugar); en Estudiar, papel cálido de serie. La identidad antigua (berenjena y rosa de Ágape) es
+  Estudiar, violeta en Jugar), los tres sobre grafito (Estudiar ya no va en papel de día). La identidad antigua (berenjena y rosa de Ágape) es
   el estilo «Clásico» y sigue ahí, a un clic.
 - **Fondos:** los fondos animados de Órbita, uno por modo y con sus tres colores: Navegar «Órbitas» (abajo en el
   centro, donde está el orbe, sus órbitas abiertas girando despacio, cada una con su nodo, y unas estrellas), Jugar
@@ -81,13 +81,20 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
 - **Sonidos:** propios y suaves (marimba de madera con un poco de sala) para avisos, errores, USB, volumen, capturas y lo
   hecho; al entrar, dos notas suaves que bajan un poco, sobre un acorde cálido. Se sintetizan al construir el paquete
   (`herramientas/sonidos.py`).
-- **Arranque y apagado:** al encender, el orbe se forma (el punto se enciende y las tres órbitas entran girando hasta
-  su sitio, `forma-*.png`) y luego gira sobre el grafito con una barra fina cian (Plymouth y la pantalla de carga al
-  entrar; se dibujan con `herramientas/arranque.py` y `herramientas/logo.py`).
+- **Fondos de serie (de Aura, Wallhaven):** Navegar una nebulosa azul (`4ddk8g`), Estudiar un atardecer mínimo oscuro
+  (`mdjrqy`) y Jugar nubes violeta (`k88m2m`). No van en el paquete (son de sus autores): `apogeo_fondos.bajar_de_serie`
+  los baja una vez al entrar a `Imágenes/Wallpapers/Aura` y los pone donde seguía el animado de serie; si no hay
+  internet, siguen los animados.
+- **Arranque y apagado:** el Núcleo sobre **la Tierra vista desde la Luna** (Wallhaven `k7zv97`, oscurecida; la baja
+  `apogeo-tierra.service` la primera vez que hay internet, y mientras tanto va el grafito). Al encender la Tierra
+  aparece poco a poco y el orbe se forma (90 fotogramas `forma-*.png`, uno por refresco); luego las órbitas giran
+  enteras (Plymouth gira `orbitas.png` en cada refresco, a 50 por segundo, sin fotogramas sueltos) y el punto respira
+  (`halo.png`). Debajo, una barra fina cian. La pantalla de carga al entrar es la misma (en QML). Se dibujan con
+  `herramientas/arranque.py` y `herramientas/logo.py`.
 
 ### Tu identidad (Ajustes → Identidad, «K2 con vista previa»)
 
-**De serie es Órbita**: grafito con el acento de cada modo, y Estudiar en papel cálido. Con «Del fondo», en cambio,
+**De serie es Órbita**: grafito con el acento de cada modo. Con «Del fondo», en cambio,
 cada modo coge los colores de su foto o su vídeo (`apogeo_paleta`: el
 tono que más se ve, con su viveza, y con él el acento, el fondo y la superficie oscuros, el texto y los colores de los
 animados, como Material You pero con la forma de las tarjetas de Órbita). A los fondos animados de Apogeo les das tú el color (Ajustes →
@@ -118,21 +125,30 @@ arriba), con una vista en pequeño de cómo queda.
 
 Casi vacío, como en la bienvenida de una consola:
 - **Arriba, una barra fina sin fondo:** a la izquierda el modo en el que estás, pequeño y en su color
-  (`org.apogeo.modo`; un clic abre la Órbita); a la derecha la hora, los iconos de tus apps (bandeja), la red, el
-  sonido y la campana (el panel rápido: un clic abre el de la derecha).
+  (`org.apogeo.modo`; un clic abre la Órbita); **en el centro, tus ventanas abiertas** en el modo, solo sus iconos y
+  un punto bajo la activa (`org.apogeo.ventanas`: clic ir o minimizar, clic central otra, clic derecho cerrar); al
+  cambiar el volumen o el brillo, su barrita sale ahí un momento. A la derecha la hora, los iconos de tus apps
+  (bandeja), la red, el sonido y la campana (el panel rápido: un clic abre el de la derecha).
 - **Abajo, el orbe** (la isla, sin cristal detrás): el del modo en el que estás en el centro y, a sus lados, los otros
   dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo siempre queda
-  en el centro). Al pasar el ratón salen a los lados tus ventanas abiertas (su vista en vivo, ✕, clic derecho). Lo que
-  pasa ahora (volumen, avisos, descargas, el temporizador, la música) sale en una pastilla encima del orbe. Se aparta
-  de las ventanas (con el escritorio a la vista, se ve) y sale al acercar el ratón al borde.
-- **La Órbita abierta** (clic en el orbe o Meta; sustituye al buscador, `apogeo-buscador`): arriba la paleta;
-  debajo, a la izquierda **tus apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza
-  vacío; Estudiar con Obsidian, Okular, Xournal++, Anki, ONLYOFFICE, Ágape y Spotify; en «Todas», la chincheta fija
-  una) y a la derecha el **inspector** (lo que suena con sus botones, los números de tus apps, lo que se baja y lo
-  próximo de tu calendario; en pestañas, la **agenda** con el mes, el tiempo y tu ciudad, recordatorios y
-  temporizadores, tus **notas** y, en Estudiar, **Estudios**: el 25/5, los exámenes, las tareas de hoy y tus
-  asignaturas). Al escribir: la cuenta, las **órdenes** (Jugar, Navegar, Estudiar, apagar, reiniciar,
-  suspender, bloquear, cerrar sesión, ajustes, atajos), apps y ajustes de KDE, tus archivos y la web con Ágape.
+  en el centro). Nada encima ni a los lados: tus ventanas van arriba. Se aparta de las ventanas (con el escritorio a
+  la vista, se ve) y sale al acercar el ratón al borde.
+- **Jugar es solo la consola:** en Jugar no hay barra ni orbe (sus widgets no se pintan y `apogeo-pisos` esconde sus
+  paneles sin guardar sitio); al salir de Jugar, vuelven.
+- **La Órbita abierta** («G3 · Constelación»; clic en el orbe o Meta; sustituye al buscador, `apogeo-buscador`):
+  todo a la vista nada más entrar, sin pestañas. En el centro, unida al orbe por un haz de luz, la cubierta con **tus
+  apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza vacío; Estudiar con Obsidian,
+  Okular, Xournal++, Anki, ONLYOFFICE, Ágape y Spotify) y el buscador. Las demás apps solo se encuentran buscando: su
+  chincheta (o Ctrl+Intro) las fija; en la cubierta, su chincheta o el clic derecho las quitan. Alrededor, unidos al
+  orbe por hilos de luz con una chispa que viaja, los **satélites**: lo que suena (su portada, sus colores en el
+  cristal y las barritas, y sus botones), tus **avisos** (los últimos 12 los apunta `apogeo-pisos` en
+  `$XDG_RUNTIME_DIR/apogeo-avisos.json`; «Abrir» su app o «Quitar»; arriba lo que se baja), **tu nota** (la primera
+  del modo; las líneas `- [ ]` son casillas que se marcan ahí), lo que queda **hoy** en tu calendario y lo próximo y,
+  en Estudiar, **tu estudio** (el 25/5 con su botón). Un clic en la nota, el calendario o el estudio los abre enteros
+  (tus **notas**, la **agenda** con el mes, el tiempo y tu ciudad, recordatorios y temporizadores, y **Estudios**: el
+  25/5, los exámenes, las tareas de hoy y tus asignaturas); Esc vuelve. Al escribir, encima del campo: tus apps, la
+  cuenta, las **órdenes** (Jugar, Navegar, Estudiar, apagar, reiniciar, suspender, bloquear, cerrar sesión, ajustes,
+  atajos), lo de KDE (sin repetir las apps), tus archivos y la web con Ágape. A los lados del orbe, los otros modos.
 - Las barras y el orbe sin fondo son del estilo de Plasma de Órbita (`herramientas/plasma.py`: los trozos «north-…» y
   «south-…» de `panel-background`, vacíos, y sin sombra de panel). Con Clásico, la isla de cristal de siempre.
 
@@ -326,7 +342,8 @@ El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de
 arriba; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo). Sale con Meta+N, desde la
 barra de arriba o empujando el ratón contra el borde, **hace sitio** (las ventanas se estrechan y vuelven al cerrarlo) y
 se queda hasta que vuelves a pulsar la tecla. El panel de widgets de la izquierda ya no está: la agenda (con el tiempo y
-tu ciudad, recordatorios y temporizadores), tus notas y Estudios van en la Órbita abierta, en pestañas a la derecha.
+tu ciudad, recordatorios y temporizadores), tus notas y Estudios van en la Órbita abierta, como satélites.
+En Órbita, el panel es de **«cristal grafito» (W1)**: neutro, sin el brillo del modo, y lo encendido en blanco.
 - **Panel rápido** (derecha, Meta+N o pulsando la red, el sonido o la hora de la isla; `org.apogeo.derecho`): cuánto
   lleva encendido el PC con Identidad, Todos los ajustes y apagar; **los modos**; la red, el sonido y el micro en
   pastillas; bluetooth, fondo animado, no molestar, ahorro del modo y luz nocturna en botones redondos; volumen y brillo;
@@ -383,7 +400,7 @@ delante (que enseña la suya) ni con algo a pantalla completa.
   servicio `apogeo-actualizar-al-apagar` antes de apagarse, con su aviso en la pantalla de arranque; si algo falla no
   toca nada y avisa al volver). Desde Plasma 6.8 vive en el escritorio de Plasma: `apogeo-bloqueo` la pone, como la de
   bloqueo.
-- **Pantalla de carga** al entrar: la misma que al encender (el Núcleo girando sobre el grafito y la barra cian).
+- **Pantalla de carga** al entrar: la misma que al encender (el Núcleo girando sobre la Tierra y la barra cian).
 - **Menú de arranque:** no sale; mantén pulsada una tecla al encender para verlo (con los colores de Apogeo).
 - **Nada se quita solo: `apogeo-limpieza` solo sugiere.** Después de cada actualización mira qué programas repetidos o
   restos de CachyOS siguen ahí y escribe la lista en `/var/lib/apogeo/limpieza.json` (con su porqué) y en
@@ -406,6 +423,9 @@ de Limine y Snapper de CachyOS al arrancar, fuera (los sustituye este).
 
 ## Bloqueo: tu símbolo
 
+La pantalla («N2 · Hora recortada»): la hora enorme y recortada, con tu fondo nítido dentro de sus números y
+desenfocado fuera, con un brillo del color del modo; debajo, la fecha. Arriba a la izquierda los tres modos (el tuyo
+en su color; un clic o ↑↓ eligen en cuál entras) y abajo la contraseña, una línea fina con el cursor del modo.
 En Ajustes → Bloqueo dibujas tu símbolo tres veces (de un solo trazo) y, en la pantalla de bloqueo, lo dibujas con el
 ratón en cualquier parte y entras. Se reconoce la forma y el sentido (no el sitio ni el tamaño). La contraseña sigue
 igual y siempre sirve: al encender y al iniciar sesión se pide ella.

@@ -1,0 +1,15 @@
+[Unit]
+Description=Apogeo: el fondo del arranque (la Tierra en penumbra), una vez, con internet
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/usr/share/plymouth/themes/apogeo/tierra.png
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apogeo/apogeo-tierra
+Restart=on-failure
+RestartSec=15min
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

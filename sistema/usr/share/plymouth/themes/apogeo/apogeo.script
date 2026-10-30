@@ -1,6 +1,8 @@
-# Arranque (y apagado) de Órbita: el Núcleo (el punto y sus tres órbitas) sobre el grafito, flotando un poco, y debajo
-# una barra fina cian. Al encender, el orbe se forma primero: el punto se enciende y las órbitas entran hasta su sitio.
-# Si el disco está cifrado, la contraseña se pide debajo (con puntos).
+# Arranque (y apagado) de Órbita: el Núcleo (el punto y sus tres órbitas) sobre la Tierra en penumbra (o el grafito),
+# flotando un poco, y debajo una barra fina cian. Al encender, la Tierra aparece poco a poco y el orbe se forma: el
+# punto se enciende y las órbitas entran hasta su sitio. Luego las órbitas giran despacio y el punto respira. Todo se
+# mueve en cada refresco (50 por segundo): las órbitas se giran enteras, sin fotogramas sueltos. Si el disco está
+# cifrado, la contraseña se pide debajo (con puntos).
 
 Window.SetBackgroundTopColor(0.024, 0.031, 0.047);
 Window.SetBackgroundBottomColor(0.051, 0.067, 0.094);
@@ -9,44 +11,84 @@ W = Window.GetWidth();
 H = Window.GetHeight();
 X = Window.GetX();
 Y = Window.GetY();
+arranque = Plymouth.GetMode() == "boot";
 
-fondo = Sprite(Image("fondo.png").Scale(W, H));
-fondo.SetPosition(X, Y, -10);
+# Detrás, la Tierra en penumbra (tierra.png: la baja apogeo-tierra la primera vez que arranca con internet; no va en el
+# paquete) recortada para llenar la pantalla; si aún no está, el grafito de siempre
+tierra_img = Image("tierra.png");
+if (tierra_img) {
+  escala = W / tierra_img.GetWidth();
+  if (H / tierra_img.GetHeight() > escala) escala = H / tierra_img.GetHeight();
+  tw = Math.Int(tierra_img.GetWidth() * escala);
+  th = Math.Int(tierra_img.GetHeight() * escala);
+  fondo = Sprite(tierra_img.Scale(tw, th));
+  fondo.SetPosition(X + (W - tw) / 2, Y + (H - th) / 2, -10);
+} else {
+  fondo = Sprite(Image("fondo.png").Scale(W, H));
+  fondo.SetPosition(X, Y, -10);
+}
+if (arranque) fondo.SetOpacity(0);
 
+# El Núcleo, en piezas: el disco con el punto, el halo del punto y las órbitas (giradas en cada refresco)
 logo_img = Image("logo.png");
-logo = Sprite(logo_img);
 logo_x = X + W / 2 - logo_img.GetWidth() / 2;
 logo_y = Y + H / 2 - logo_img.GetHeight() / 2 - 20;
-logo.SetPosition(logo_x, logo_y, 1);
+disco = Sprite(Image("disco.png"));
+halo = Sprite(Image("halo.png"));
+orbitas_img = Image("orbitas.png");
+orbitas = Sprite(orbitas_img);
+disco.SetPosition(logo_x, logo_y, 1);
+halo.SetPosition(logo_x, logo_y, 2);
+orbitas.SetPosition(logo_x, logo_y, 3);
 
-# El giro: 24 fotogramas (aleteo-00.png … aleteo-23.png, del Núcleo), uno cada 3 refrescos (unos 16 por segundo)
-aleteo = [];
-for (i = 0; i < 24; i++) {
-  if (i < 10) aleteo[i] = Image("aleteo-0" + i + ".png");
-  else aleteo[i] = Image("aleteo-" + i + ".png");
-}
-# Al encender, antes: el orbe formándose (forma-00.png … forma-29.png; el último es igual que aleteo-00)
+# Al encender, antes: el orbe formándose (forma-00.png … forma-89.png, uno por refresco; el último es igual que el
+# disco con las órbitas)
+FORMA = 90;
 forma = [];
-if (Plymouth.GetMode() == "boot") {
-  for (i = 0; i < 30; i++) {
+forma_spr = Sprite();
+forma_spr.SetPosition(logo_x, logo_y, 4);
+if (arranque) {
+  for (i = 0; i < FORMA; i++) {
     if (i < 10) forma[i] = Image("forma-0" + i + ".png");
     else forma[i] = Image("forma-" + i + ".png");
   }
-  logo.SetImage(forma[0]);
+  forma_spr.SetImage(forma[0]);
+  disco.SetOpacity(0);
+  halo.SetOpacity(0);
+  orbitas.SetOpacity(0);
 }
+
+PI = 3.14159265;
+VUELTA = 200;      # refrescos por vuelta de las órbitas (4 s)
+RESPIRO = 250;     # refrescos por respiración (5 s: el punto brilla y el orbe sube y baja un poco)
 tic = 0;
 fun refrescar() {
   tic++;
-  f = Math.Int(tic / 3);
-  if (forma[0] && f < 30) {
-    if (forma[f]) logo.SetImage(forma[f]);
+  # La Tierra aparece en algo menos de un segundo
+  if (arranque && tic <= 40) fondo.SetOpacity(tic / 40);
+  if (forma[0] && tic < FORMA) {
+    forma_spr.SetImage(forma[tic]);
     return;
   }
-  if (forma[0]) f = f - 30;
-  f = f - Math.Int(f / 24) * 24;
-  if (aleteo[f]) logo.SetImage(aleteo[f]);
-  # sube y baja muy despacio, como si la órbita respirara
-  logo.SetY(logo_y + Math.Cos(2 * 3.14159 * f / 24) * 5);
+  if (forma[0] && tic == FORMA) {
+    forma_spr.SetOpacity(0);
+    disco.SetOpacity(1);
+    orbitas.SetOpacity(1);
+  }
+  t = tic;
+  if (forma[0]) t = tic - FORMA;
+  vuelta = t - Math.Int(t / VUELTA) * VUELTA;
+  orbitas.SetImage(orbitas_img.Rotate(2 * PI * vuelta / VUELTA));
+  respiro = t - Math.Int(t / RESPIRO) * RESPIRO;
+  ola = (1 - Math.Cos(2 * PI * respiro / RESPIRO)) / 2;
+  # (el halo entra despacio tras formarse, para que no salte)
+  entra = t / 50;
+  if (entra > 1) entra = 1;
+  halo.SetOpacity((0.35 + 0.65 * ola) * entra);
+  dy = Math.Int(-4 * ola + 0.5);
+  disco.SetY(logo_y + dy);
+  halo.SetY(logo_y + dy);
+  orbitas.SetY(logo_y + dy);
 }
 Plymouth.SetRefreshFunction(refrescar);
 

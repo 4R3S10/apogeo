@@ -41,6 +41,11 @@ QtObject {
     readonly property color sobreAcento: c("sobreAcento", "#041318")
     readonly property color sobreRosa: sobreAcento
     readonly property color vivo: c("vivo", acento)
+    // Lo encendido (los botones y las pastillas del panel rápido): en Órbita, blanco sobre el cristal grafito («W1»); con
+    // otro estilo, su acento
+    readonly property bool _orbita: !f.nombre || f.nombre === "Órbita"
+    readonly property color encendido: c("encendido", _orbita ? "#eef0f4" : acento)
+    readonly property color sobreEncendido: c("sobreEncendido", _orbita ? "#0b0e14" : sobreAcento)
     readonly property color exito: "#57e3b0"
     readonly property color error: "#ff6b81"
     readonly property color aviso: Qt.rgba(255 / 255, 200 / 255, 87 / 255, 0.14)

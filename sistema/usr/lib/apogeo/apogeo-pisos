@@ -439,9 +439,14 @@ def setup(bus):
             log('Alt+Tab: %s' % e)
         st['dinamica'] = DYNAMIC
     if st.get('orbe', 0) < ORB:
-        # «C · Orbe central»: arriba, una barra fina sin fondo con el modo a la izquierda y, a la derecha, los iconos de
-        # tus apps (bandeja) y el panel rápido (la hora, la red, los avisos); abajo, solo el orbe (la isla)
+        # «C · Orbe central»: arriba, una barra fina sin fondo con el modo a la izquierda, tus ventanas en el centro y, a
+        # la derecha, los iconos de tus apps (bandeja) y el panel rápido (la hora, la red, los avisos); abajo, solo el orbe
+        # (la isla). (3) Las ventanas, que iban a los lados del orbe, pasan arriba: la barra se rehace en su orden
         plasma_script(bus, """
+            panels().forEach(function (p) {
+                var types = p.widgets().map(function (w) { return w.type; });
+                if (types.indexOf('org.apogeo.modo') >= 0 && types.indexOf('org.apogeo.ventanas') < 0) p.remove();
+            });
             var bar = panels().filter(function (p) {
                 return p.widgets().some(function (w) { return w.type == 'org.apogeo.modo'; });
             })[0];
@@ -453,7 +458,7 @@ def setup(bus):
                 bar.lengthMode = 'fill';
                 bar.hiding = 'none';
                 bar.addWidget('org.apogeo.modo');
-                bar.addWidget('org.kde.plasma.panelspacer');
+                bar.addWidget('org.apogeo.ventanas');
                 var tray = bar.addWidget('org.kde.plasma.systemtray');
                 tray.currentConfigGroup = ['General'];
                 tray.writeConfig('extraItems', []);
@@ -499,7 +504,9 @@ ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos d
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los modos con el cristal (B1)
 PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la columna de pisos)
 PANEL_WIDTH = 376  # su ancho
-ORB = 2  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo; 2: sin el panel de widgets)
+ORB = 3  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo; 2: sin el panel de widgets;
+# 3: tus ventanas arriba, en el centro)
+DEFAULT_WALLPAPERS = 1  # igual, para los fondos de serie de Órbita de Wallhaven (se bajan una vez)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
 AESTHETICS = 18  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita;
 # 18: Órbita también para quien se quedó en el aspecto de antes)
@@ -845,13 +852,17 @@ def dms(text):
 class Missed:
     """Los avisos que llegan mientras no salen (en Jugar y Estudiar, o con «No molestar»). Se escuchan en el bus (como
     dbus-monitor, sin quitárselos a Plasma, que los guarda en su historial) y, al volver a un piso con avisos, si llegó
-    alguno, apogeo-resumen enseña el resumen encima de la isla."""
+    alguno, apogeo-resumen enseña el resumen encima de la isla. Los últimos (siempre, en cualquier piso) quedan además en
+    $XDG_RUNTIME_DIR/apogeo-avisos.json para el satélite de avisos de la Órbita abierta (solo en memoria: se borra al
+    apagar)."""
     RESUMEN = '/usr/lib/apogeo/apogeo-resumen'
+    RECIENTES = os.path.join(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'), 'apogeo-avisos.json')
 
     def __init__(self, bus):
         self.since = None        # desde cuándo no salen
         self.floors = []         # los pisos en los que has estado mientras tanto
         self.items = []
+        self.recent = []
         try:
             self.mon = dbus.bus.BusConnection(dbus.bus.BUS_SESSION)
             self.mon.call_blocking('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus.Monitoring',
@@ -870,19 +881,36 @@ class Missed:
 
     def heard(self, _conn, msg):
         try:
-            if self.since is None or msg.get_member() != 'Notify':
+            if msg.get_member() != 'Notify':
                 return
             app, _rid, icon, title, body, _actions, hints, _timeout = msg.get_args_list()[:8]
             if hints.get('transient') or not (str(title).strip() or str(body).strip()):
                 return
-            self.items.append({
+            item = {
                 'app': str(app), 'icono': str(icon or hints.get('image-path', '') or ''), 'titulo': str(title)[:140],
                 'texto': ' '.join(str(body).split())[:240], 'hora': time.strftime('%H:%M'),
                 'urgencia': int(hints.get('urgency', 1)), 'desktop': str(hints.get('desktop-entry', '')),
-            })
+            }
+            self.remember(dict(item, cuando=int(time.time())))
+            if self.since is None:
+                return
+            self.items.append(item)
             del self.items[:-200]
         except Exception as e:  # un aviso raro no tumba los pisos
             log('resumen:', e)
+
+    def remember(self, item):
+        """Los 12 últimos, para la Órbita abierta (de uno en uno, en un archivo nuevo para que no se lea a medias)."""
+        if item['app'] in ('apogeo-pisos', 'Apogeo') and not item['texto']:
+            return
+        self.recent = (self.recent + [item])[-12:]
+        try:
+            tmp = self.RECIENTES + '.tmp'
+            with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as f:
+                json.dump(self.recent, f, ensure_ascii=False)
+            os.replace(tmp, self.RECIENTES)
+        except OSError as e:
+            log('avisos:', e)
 
     def finish(self):
         if self.since is None:
@@ -939,6 +967,7 @@ class Floors:
         self.light(st, f['key'])
         self.power(mine['energia'])
         self.colours_later()
+        console_only(self.bus, f['key'] == 'jugar', st)
         if force:
             return
         if index not in self.visited:
@@ -1155,6 +1184,32 @@ class Floors:
                              env=dict(os.environ, APOGEO_AUTO='1', APOGEO_MODO=self.floor_key()))  # (la abre el piso, no tú)
 
 
+CONSOLA = {'on': None}   # (Jugar, solo la consola: si ya se han escondido la barra y el orbe)
+
+
+def console_only(bus, on, st=None):
+    """Jugar es solo la consola («full modo consola»): ni la barra fina de arriba ni el orbe. Sus widgets no pintan nada
+    en Jugar (miran el modo) y aquí sus paneles se esconden solos, sin guardar sitio; al salir, vuelven como estaban."""
+    if CONSOLA['on'] == on:
+        return
+    cfg = (st or ajustes.load())['isla']
+    done = plasma_script(bus, """
+        panels().forEach(function (p) {
+            var types = p.widgets().map(function (w) { return w.type; });
+            if (types.indexOf('org.apogeo.modo') >= 0) p.hiding = %s;
+            else if (types.indexOf('org.apogeo.isla') >= 0) p.hiding = %s;
+        });
+    """ % (json.dumps('autohide' if on else 'none'), json.dumps(island_hiding(cfg, on))))
+    if done is not None:   # (con Plasma aún sin arrancar, se vuelve a probar en el siguiente cambio de modo)
+        CONSOLA['on'] = on
+
+
+def island_hiding(cfg, jugar=None):
+    if jugar is None:
+        jugar = bool(CONSOLA['on'])
+    return 'autohide' if jugar else 'dodgewindows' if cfg['esconder'] else 'none'
+
+
 def island(bus, st):
     """La isla como en los ajustes: si se esconde sola, lo de cada piso (temperatura y FPS, música, temporizador) y los
     números de la salud del PC que enseña en Jugar."""
@@ -1192,7 +1247,7 @@ def island(bus, st):
         });
     """ % (json.dumps('bottom' if top else 'top'), json.dumps('bottom' if top else 'top'),
            json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
-           json.dumps('dodgewindows' if cfg['esconder'] else 'none'),
+           json.dumps(island_hiding(cfg)),
            json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 
@@ -1270,6 +1325,37 @@ def real_gpu():
     return False
 
 
+def default_wallpapers():
+    """Los fondos de serie de Órbita (apogeo_fondos.DE_SERIE): se bajan una vez a tu biblioteca de Aura y van a su modo
+    si aún tenía el animado de serie. Al guardar los ajustes se ponen solos. Sin internet, en la próxima sesión."""
+    if load_state().get('fondos_serie', 0) >= DEFAULT_WALLPAPERS:
+        return False
+
+    def work():
+        import apogeo_fondos
+        got = apogeo_fondos.bajar_de_serie(ajustes.load())
+        if len(got) < len(apogeo_fondos.DE_SERIE):
+            log('fondos de serie: faltan', ', '.join(k for k in apogeo_fondos.DE_SERIE if k not in got))
+            return
+
+        def put():
+            st = ajustes.load()
+            changed = False
+            for floor, path in got.items():
+                if st['pisos'][floor]['fondo'] == apogeo_fondos.DE_SERIE[floor][1]:
+                    st['pisos'][floor]['fondo'] = path
+                    changed = True
+            if changed:
+                ajustes.save(st)
+            state = load_state()
+            state['fondos_serie'] = DEFAULT_WALLPAPERS
+            save_state(state)
+            return False
+        GLib.idle_add(put)
+    threading.Thread(target=work, daemon=True).start()
+    return False
+
+
 def start_floor():
     """El piso elegido en la pantalla de inicio de sesión (lo apunta apogeo-sesion); si no, Navegar. Se borra al leerlo:
     si este programa se reinicia a media sesión, no te cambia de piso."""
@@ -1338,6 +1424,7 @@ def main():
     floors.look()
     GLib.timeout_add_seconds(600, lambda: (floors.look(), True)[-1])
     GLib.timeout_add_seconds(3, floors.prepare_wallpapers)
+    GLib.timeout_add_seconds(20, default_wallpapers)
     GLib.timeout_add_seconds(6, lambda: desktop_fill(bus))
     # Los ajustes: al guardarlos (de golpe, con un archivo nuevo) se aplican
     monitor = Gio.File.new_for_path(os.path.dirname(ajustes.SETTINGS)).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES,
