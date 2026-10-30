@@ -10,7 +10,7 @@ Lo sirve apogeo-pisos, que ya está siempre en marcha. Todo se devuelve como tex
   Marcas(mes)         los días de ese mes (AAAA-MM) que tienen algo
   Recordar(json)      un recordatorio {texto, fecha, hora} · Temporizador(json) {minutos, texto} · Quitar(id)
                       (cuando llega la hora: un aviso que suena, con «Posponer 10 min»; sale aunque estés en Jugar)
-  Notas() · PonerNotas(json)   las notas del escritorio (post-its): su piso, sitio, color y texto
+  Notas() · PonerNotas(json)   tus notas (en la Órbita abierta): su piso, color y texto
   Pc()                temperatura, uso del procesador y de la memoria
   Estudio()           el temporizador de estudio (25 min / 5 de descanso; cada 4, uno largo de 15), lo de hoy y la semana
   EstudioAccion(a, v) alternar · saltar · reiniciar · asignatura (v = el nombre)
@@ -342,37 +342,6 @@ class Datos(dbus.service.Object):
                   if r['tipo'] == 'temporizador']
         return json.dumps({'cosas': things, 'temporizadores': timers}, ensure_ascii=False)
 
-    @dbus.service.method(IFACE, out_signature='s')
-    def Semana(self):
-        """Esta semana (de lunes a domingo) para la tarjeta del panel: {dias: [{eventos, examenes}] ×7, proximo}.
-        proximo: lo siguiente que toca (un plan de Ágape, un recordatorio o un examen, en los próximos 30 días):
-        {texto, dias (0 hoy), hora, examen} o null."""
-        now = datetime.datetime.now()
-        today = now.date()
-        monday = today - datetime.timedelta(days=today.weekday())
-        week = [{'eventos': 0, 'examenes': 0} for _ in range(7)]
-        upcoming = []
-        def add(day, text, hour, exam):
-            i = (day - monday).days
-            if 0 <= i < 7:
-                week[i]['examenes' if exam else 'eventos'] += 1
-            days = (day - today).days
-            if 0 <= days <= 30 and not (days == 0 and hour and hour < now.strftime('%H:%M')):
-                upcoming.append((day, hour or '99', {'texto': text, 'dias': days, 'hora': hour, 'examen': exam}))
-        for e in self._agape_events():
-            add(datetime.date.fromisoformat(e['date']), str(e.get('text', '')), str(e.get('time') or ''), False)
-        for r in self.reminders:
-            if r['tipo'] == 'recordatorio':
-                when = datetime.datetime.fromtimestamp(r['cuando'])
-                add(when.date(), r['texto'], when.strftime('%H:%M'), False)
-        for e in self.study['examenes']:
-            try:
-                add(datetime.date.fromisoformat(e['fecha']), 'Examen de ' + e['asignatura'], '', True)
-            except (KeyError, ValueError):
-                pass
-        upcoming.sort(key=lambda u: (u[0], u[1]))
-        return json.dumps({'dias': week, 'proximo': upcoming[0][2] if upcoming else None}, ensure_ascii=False)
-
     @dbus.service.method(IFACE, in_signature='s', out_signature='s')
     def Marcas(self, month):
         days = {int(e['date'][8:10]) for e in self._agape_events() if e['date'].startswith(month)}
@@ -504,30 +473,6 @@ class Datos(dbus.service.Object):
         except (OSError, ValueError, IndexError):
             up = 0
         return json.dumps({'temp': round(temp), 'cpu': cpu, 'mem': used, 'gpu': gpu, 'encendido': up})
-
-    @dbus.service.method(IFACE, out_signature='s')
-    def Relojes(self):
-        """Los relojes del mundo del panel de widgets: el de aquí y los tuyos (ajustes «relojes»)."""
-        import zoneinfo
-        import apogeo_comun as comun
-        days, months = 'LMXJVSD', ('ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic')
-        here = datetime.datetime.now().astimezone()
-        try:  # (el de aquí, con el nombre de tu zona: «Madrid»)
-            local = os.readlink('/etc/localtime').split('zoneinfo/', 1)[1]
-        except (OSError, IndexError):
-            local = ''
-        out = []
-        for zone in [''] + comun.load()['relojes']:
-            try:
-                t = here if not zone else here.astimezone(zoneinfo.ZoneInfo(zone))
-            except (zoneinfo.ZoneInfoNotFoundError, ValueError):
-                continue
-            diff = round((t.utcoffset() - here.utcoffset()).total_seconds() / 3600, 1)
-            name = comun.CLOCK_NAMES.get(zone or local) or (zone or local).split('/')[-1].replace('_', ' ') or 'Aquí'
-            out.append({'nombre': name, 'zona': zone, 'hora': t.strftime('%H:%M'), 'aqui': not zone,
-                        'dia': f'{days[t.weekday()]} {t.day} {months[t.month - 1]}',
-                        'dif': '' if not zone else ('igual' if diff == 0 else f'{diff:+g} h'.replace('.', ','))})
-        return json.dumps(out, ensure_ascii=False)
 
     # ---------- Estudio ----------
 

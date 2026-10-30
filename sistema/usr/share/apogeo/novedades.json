@@ -3,6 +3,7 @@
     "fecha": "2026-10-30",
     "titulo": "30 de octubre",
     "cosas": [
+      {"icono": "apps", "titulo": "Todo en la Órbita", "como": "El panel de widgets de la izquierda se va: la agenda (con el tiempo, recordatorios y temporizadores), tus notas y Estudios están ahora en la Órbita abierta (el orbe o Meta), en pestañas a la derecha."},
       {"icono": "llave", "titulo": "Antes de ir a Windows", "como": "La pestaña Windows de la consola te avisa de lo que conviene saber: Secure Boot, TPM, BitLocker y el sitio en su arranque."},
       {"icono": "imagen", "titulo": "Fondos de Órbita", "como": "Cada modo estrena fondo animado: Navegar «Órbitas» (las órbitas del orbe girando), Jugar «Nebulosa» y Estudiar «Aurora» (de día, sobre papel). Los de antes siguen en Ajustes → Fondos."},
       {"icono": "jugar", "titulo": "La consola, viva", "como": "El arte del juego elegido se mueve despacio y sus colores tiñen la consola."},

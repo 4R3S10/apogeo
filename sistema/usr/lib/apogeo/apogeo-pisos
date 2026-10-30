@@ -392,14 +392,14 @@ def setup(bus):
         """)
         st['cristal'] = CRYSTAL
     if st.get('paneles', 0) < PANELS:
-        # «Nivel pro»: fuera la columna de pisos (los pisos van arriba del panel rápido) y, a los lados, los dos paneles
-        # altos: el de widgets a la izquierda y el rápido a la derecha. Escondidos: los saca el script apogeo-bordes
-        # (Meta+A, Meta+N o el ratón contra el borde) y, abiertos, hacen sitio
+        # «Nivel pro»: fuera la columna de pisos (los pisos van arriba del panel rápido) y, a la derecha, el panel rápido
+        # alto. Escondido: lo saca el script apogeo-bordes (Meta+N, la barra de arriba o el ratón contra el borde) y,
+        # abierto, hace sitio. (El de widgets de la izquierda ya no está: lo suyo va en la Órbita abierta.)
         plasma_script(bus, """
             panels().forEach(function (p) {
                 if (p.widgets().some(function (w) { return w.type == 'org.apogeo.pisos'; })) p.remove();
             });
-            [['left', 'org.apogeo.izquierdo'], ['right', 'org.apogeo.derecho']].forEach(function (s) {
+            [['right', 'org.apogeo.derecho']].forEach(function (s) {
                 var has = panels().some(function (p) {
                     return p.widgets().some(function (w) { return w.type == s[1]; });
                 });
@@ -467,7 +467,12 @@ def setup(bus):
                     if (w.type == 'org.kde.plasma.systemtray' || w.type == 'org.apogeo.rapido') w.remove();
                 });
             });
+            // (2) Fuera el panel de widgets de la izquierda: la agenda, tus notas y Estudios están en la Órbita abierta
+            panels().forEach(function (p) {
+                if (p.widgets().some(function (w) { return w.type == 'org.apogeo.izquierdo'; })) p.remove();
+            });
         """)
+        panel_shortcuts()
         st['orbe'] = ORB
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
@@ -494,7 +499,7 @@ ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos d
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los modos con el cristal (B1)
 PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la columna de pisos)
 PANEL_WIDTH = 376  # su ancho
-ORB = 1  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo)
+ORB = 2  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo; 2: sin el panel de widgets)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
 AESTHETICS = 18  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita;
 # 18: Órbita también para quien se quedó en el aspecto de antes)
@@ -669,18 +674,20 @@ def search_shortcuts():
 
 
 def panel_shortcuts():
-    """Meta+A y Meta+N: los dos paneles (los registra el script de KWin apogeo-bordes; Meta+A era «siguiente actividad»
-    en Plasma, y con él cogido el script se quedaba sin atajo)."""
+    """Meta+N: el panel rápido (lo registra el script de KWin apogeo-bordes). Meta+A, que era el del panel de widgets,
+    se suelta."""
     keys = _keys
-    meta_a, meta_n = 0x10000041, 0x1000004E
+    meta_n = 0x1000004E
     try:
         g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
         try:
             g.setForeignShortcutKeys(['plasmashell', 'next activity', '', ''], keys())
         except dbus.DBusException:
             pass
-        g.doRegister(['kwin', 'apogeo-panel-izquierdo', 'KWin', 'Apogeo: panel de widgets'])
-        g.setForeignShortcutKeys(['kwin', 'apogeo-panel-izquierdo', '', ''], keys(meta_a))
+        try:
+            g.unregister('kwin', 'apogeo-panel-izquierdo')
+        except dbus.DBusException:
+            pass
         g.doRegister(['kwin', 'apogeo-panel-derecho', 'KWin', 'Apogeo: panel rápido'])
         g.setForeignShortcutKeys(['kwin', 'apogeo-panel-derecho', '', ''], keys(meta_n))
     except dbus.DBusException as e:

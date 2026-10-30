@@ -113,18 +113,6 @@ Seccion {
                 font.pixelSize: Math.round((sec.t.letraPt || 10) * 1.3)
             }
         }
-        // el panel de widgets, asomando por la izquierda (Meta+A)
-        Rectangle {
-            x: 8; y: 10
-            width: 34; height: parent.height - 20; radius: preview.r(12)
-            color: sec.t.fondo || Tema.fondo
-            border.color: Qt.rgba(0.5, 0.5, 0.5, 0.2)
-            Column {
-                x: 6; y: 8; spacing: 6
-                Rectangle { width: 22; height: 22; radius: 11; color: sec.t.acento || Tema.rosa }
-                Repeater { model: 4; delegate: Rectangle { width: 22; height: 18; radius: preview.r(6); color: Qt.rgba(0.5, 0.5, 0.5, 0.2) } }
-            }
-        }
         // la isla
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter

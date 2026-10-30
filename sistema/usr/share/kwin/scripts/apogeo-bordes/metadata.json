@@ -2,7 +2,7 @@
     "KPackageStructure": "KWin/Script",
     "KPlugin": {
         "Authors": [{ "Name": "Ares" }],
-        "Description": "La isla sale al acercar el ratón al borde (o cuando tiene algo que enseñar) y los paneles de los lados con Meta+A, Meta+N o empujando el ratón",
+        "Description": "La isla sale al acercar el ratón al borde (o cuando tiene algo que enseñar) y el panel rápido con Meta+N o empujando el ratón",
         "EnabledByDefault": true,
         "Icon": "window",
         "Id": "apogeo-bordes",

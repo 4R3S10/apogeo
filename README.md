@@ -129,7 +129,9 @@ Casi vacío, como en la bienvenida de una consola:
   debajo, a la izquierda **tus apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza
   vacío; Estudiar con Obsidian, Okular, Xournal++, Anki, ONLYOFFICE, Ágape y Spotify; en «Todas», la chincheta fija
   una) y a la derecha el **inspector** (lo que suena con sus botones, los números de tus apps, lo que se baja y lo
-  próximo de tu calendario). Al escribir: la cuenta, las **órdenes** (Jugar, Navegar, Estudiar, apagar, reiniciar,
+  próximo de tu calendario; en pestañas, la **agenda** con el mes, el tiempo y tu ciudad, recordatorios y
+  temporizadores, tus **notas** y, en Estudiar, **Estudios**: el 25/5, los exámenes, las tareas de hoy y tus
+  asignaturas). Al escribir: la cuenta, las **órdenes** (Jugar, Navegar, Estudiar, apagar, reiniciar,
   suspender, bloquear, cerrar sesión, ajustes, atajos), apps y ajustes de KDE, tus archivos y la web con Ágape.
 - Las barras y el orbe sin fondo son del estilo de Plasma de Órbita (`herramientas/plasma.py`: los trozos «north-…» y
   «south-…» de `panel-background`, vacíos, y sin sombra de panel). Con Clásico, la isla de cristal de siempre.
@@ -317,24 +319,14 @@ publicada tal cual). Apagado de serie.
 Lo pone `apogeo-pisos` (`carousel()`): Karousel solo trabaja en los escritorios con el nombre de esos modos
 (`tiledDesktops`).
 
-## Paneles («nivel pro»: «2 · Dos paneles altos»)
+## El panel rápido
 
-El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). Lo demás va en dos paneles altos,
-uno a cada lado, **de cristal** («1 · Cristal con tu fondo»: detrás, tu fondo difuminado y oscurecido, con un brillo del
-color del modo arriba; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo). Salen con su tecla o empujando el ratón contra su borde, **hacen
-sitio** (las ventanas se estrechan y vuelven al cerrarlos) y se quedan hasta que vuelves a pulsar la tecla.
-- **Panel de widgets** (izquierda, Meta+A; `org.apogeo.izquierdo`): tu foto y «Buenos días/Buenas tardes/Buenas
-  noches», y tres pestañas. Abierto, coge el teclado (para escribir) y al cerrarlo lo devuelve.
-  - **Widgets:** lo que suena (la portada, sus colores en toda la tarjeta, una barra para avanzar y los botones), la
-    semana (puntitos en los días con exámenes o planes y «Próximo: …» (al pulsarla sale la **agenda** a su lado: el mes, el
-    tiempo de tu ciudad, tus planes de Ágape, **recordatorios** y **temporizadores**, que suenan con «Posponer 10
-    min»), el tiempo (del color del cielo: amanecer, día, atardecer o noche, y gris si llueve), tu PC en anillos
-    (procesador, memoria, temperatura y gráfica si es AMD; el procesador con su gráfica del último minuto), los **relojes del mundo**
-    (el de aquí, Nueva York y Tokio; ajuste `relojes`) y tus fondos de Aura y los animados para este modo.
-  - **Estudios** (solo en Estudiar, y se abre sola al llegar): el temporizador 25/5, los exámenes con lo que falta, las
-    tareas de hoy y tus asignaturas de `~/Estudios` (un clic abre su carpeta).
-  - **Notas:** tarjetas con su color; «Nueva» pone una y se escribe ahí mismo, se ordenan arrastrándolas por los
-    puntitos y, al pasar el ratón, otro color o quitar. Se guardan en `~/.config/apogeo/notas.json`.
+El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). A la derecha, un panel alto
+**de cristal** («1 · Cristal con tu fondo»: detrás, tu fondo difuminado y oscurecido, con un brillo del color del modo
+arriba; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo). Sale con Meta+N, desde la
+barra de arriba o empujando el ratón contra el borde, **hace sitio** (las ventanas se estrechan y vuelven al cerrarlo) y
+se queda hasta que vuelves a pulsar la tecla. El panel de widgets de la izquierda ya no está: la agenda (con el tiempo y
+tu ciudad, recordatorios y temporizadores), tus notas y Estudios van en la Órbita abierta, en pestañas a la derecha.
 - **Panel rápido** (derecha, Meta+N o pulsando la red, el sonido o la hora de la isla; `org.apogeo.derecho`): cuánto
   lleva encendido el PC con Identidad, Todos los ajustes y apagar; **los modos**; la red, el sonido y el micro en
   pastillas; bluetooth, fondo animado, no molestar, ahorro del modo y luz nocturna en botones redondos; volumen y brillo;
@@ -342,7 +334,7 @@ sitio** (las ventanas se estrechan y vuelven al cerrarlos) y se quedan hasta que
   todo») y abajo el tiempo de las próximas horas (en barras) y días.
   Al abrirlo, los avisos cuentan como vistos.
 
-Los abre el script de KWin `apogeo-bordes` (cambia el panel de «se esconde» a «siempre visible», que es lo que hace sitio,
+Lo abre el script de KWin `apogeo-bordes` (cambia el panel de «se esconde» a «siempre visible», que es lo que hace sitio,
 y le dice si está abierto: cerrado no pide nada). Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). En el
 tema de Plasma, la raya del foco no sale en los paneles de los lados (cruzaba el panel junto a lo que escribías).
 

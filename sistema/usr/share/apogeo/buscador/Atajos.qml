@@ -57,7 +57,6 @@ Window {
     readonly property var grupos: [
         { titulo: "Modos y paneles", atajos: [
             [["Meta", "F1 · F2 · F3"], "Jugar · Navegar · Estudiar"],
-            [["Meta", "A"], "Panel de widgets (izquierda)"],
             [["Meta", "N"], "Panel rápido y avisos (derecha)"],
             [["Meta", "Ctrl", "↑ ↓"], "El modo de arriba o de abajo"],
             [["Meta", "Ctrl", "⇧", "↑ ↓"], "Llevar la ventana a otro modo"]] },

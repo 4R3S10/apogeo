@@ -138,9 +138,9 @@ def user():
             var o = {isla: false, paneles: 0, fondo: true};
             panels().forEach(function (p) { p.widgets().forEach(function (w) {
                 if (w.type == 'org.apogeo.isla') o.isla = true;
-                if (w.type == 'org.apogeo.izquierdo' || w.type == 'org.apogeo.derecho') o.paneles++;
+                if (w.type == 'org.apogeo.derecho') o.paneles++;
             }); });
-            o.paneles = o.paneles == 2;
+            o.paneles = o.paneles == 1;
             desktops().forEach(function (d) { if (d.wallpaperPlugin != 'org.apogeo.fondo') o.fondo = false; });
             print(JSON.stringify(o));
         """)
@@ -190,7 +190,7 @@ def user():
         sh('systemctl', '--user', 'restart', 'apogeo-pisos.service')
         time.sleep(12)
         lay2 = layout() or {}
-        names = {'isla': 'la isla', 'paneles': 'los paneles de los lados', 'fondo': 'el fondo'}
+        names = {'isla': 'la isla', 'paneles': 'el panel rápido', 'fondo': 'el fondo'}
         for k, name in names.items():
             if not lay[k]:
                 (fixed if lay2.get(k) else failed).append(name)

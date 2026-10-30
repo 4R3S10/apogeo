@@ -80,17 +80,10 @@ DEFAULTS = {
     'fps': 60,
     'pantallaFluida': True,  # FreeSync/VRR: la pantalla va al ritmo del juego (si el monitor lo tiene)
     'juegos_fps': {},    # el límite de FPS de cada juego («steam:123»: 45), si no es el de todos (la consola)
-    'relojes': ['America/New_York', 'Asia/Tokyo'],  # los relojes del mundo del panel de widgets (zonas horarias)
     # Ajustes → Aspecto (apogeo_aspecto): lo de serie es la estética de Ágape
     'aspecto': dict(_aspecto.DEFAULT),
     'version': VERSION,
 }
-# Cómo se llaman en el panel las zonas de los relojes del mundo (las demás, por su ciudad en inglés)
-CLOCK_NAMES = {'America/New_York': 'Nueva York', 'Asia/Tokyo': 'Tokio', 'Europe/London': 'Londres',
-               'America/Mexico_City': 'Ciudad de México', 'America/Bogota': 'Bogotá', 'America/Sao_Paulo': 'São Paulo',
-               'America/Los_Angeles': 'Los Ángeles', 'Europe/Paris': 'París', 'Europe/Berlin': 'Berlín',
-               'Asia/Seoul': 'Seúl', 'Asia/Shanghai': 'Shanghái', 'Australia/Sydney': 'Sídney',
-               'Europe/Madrid': 'Madrid', 'America/Argentina/Buenos_Aires': 'Buenos Aires', 'Asia/Dubai': 'Dubái'}
 WARMTH = (4500, 3700, 3000)  # luz cálida: suave, media, fuerte (kelvin)
 COPY_PARTS = ('ajustes', 'fondos', 'estudios', 'tareas', 'documentos')
 COPY_KEEP = (1, 4, 8)
@@ -158,9 +151,6 @@ def valid(st):
     if st.get('fps') not in FPS_CHOICES:
         st['fps'] = 60
     st['juegos_fps'] = {k: v for k, v in (st.get('juegos_fps') or {}).items() if v in FPS_CHOICES}
-    zones = st.get('relojes')
-    st['relojes'] = [z for z in zones if isinstance(z, str) and os.path.isfile(os.path.join('/usr/share/zoneinfo', z))
-                     and '..' not in z][:6] if isinstance(zones, list) else list(DEFAULTS['relojes'])
     fondos = st['fondos']
     fondos['tuyos'] = list(dict.fromkeys(x for x in fondos.get('tuyos', []) if is_wallpaper_file(x)))
     if not isinstance(fondos.get('carpeta'), str):

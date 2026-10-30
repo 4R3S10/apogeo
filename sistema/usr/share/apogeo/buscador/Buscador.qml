@@ -5,7 +5,8 @@ import Apogeo
 
 // La Órbita abierta («C · Orbe central»): al pulsar el orbe o Meta. Arriba la paleta; debajo, a la izquierda, tus apps
 // del modo (las que fijas tú; «Todas», con todas por tipo, y desde ahí la chincheta para fijarlas) y a la derecha el
-// inspector (lo que suena, los avisos de tus apps, lo que se baja y lo próximo). Al escribir, en una sola lista: la
+// inspector, en pestañas: «Ahora» (lo que suena, los avisos de tus apps, lo que se baja y lo próximo), «Agenda» (el mes,
+// el tiempo y tu ciudad, recordatorios y temporizadores), «Notas» y, en Estudiar (y la primera allí), «Estudios». Al escribir, en una sola lista: la
 // cuenta, si es una (Intro la copia), las órdenes (los modos, apagar, reiniciar, bloquear, ajustes…), lo que encuentran
 // los buscadores de KDE (Milou) agrupado, tus archivos por su nombre y al final «Buscar en la web con Ágape».
 // Flechas elegir · Tab fijadas o todas · Intro abrir (Mayús+Intro: la carpeta de un archivo) · Esc, un clic fuera o el
@@ -24,6 +25,9 @@ Window {
     property bool todas: false                     // la izquierda: tus apps fijadas o todas
     property var fijadas: []
     property var insp: ({ musica: {}, avisos: [], bajando: [], proximo: [] })
+    // La pestaña de la derecha
+    readonly property var pestanas: modo === "estudiar" ? ["ahora", "agenda", "notas", "estudios"] : ["ahora", "agenda", "notas"]
+    property string pestana: "ahora"
 
     // Sin escribir: la rejilla de la izquierda (las fijadas y «Añadir», o todas por tipo)
     readonly property var flat: {
@@ -54,6 +58,7 @@ Window {
         field.text = "";
         todas = false;
         leer();
+        pestana = modo === "estudiar" ? "estudios" : "ahora";
         sel = 0;
         showFullScreen();
         requestActivate();
@@ -419,24 +424,56 @@ Window {
             }
         }
 
-        // El inspector: lo que pasa ahora
+        // El inspector, en pestañas: lo que pasa ahora, la agenda, tus notas y (en Estudiar) tus estudios
         Rectangle {
             id: der
             x: izq.width + 28
             width: izq.width
-            height: Math.min(parent.height, derCol.implicitHeight + 36)
+            height: win.pestana === "ahora" ? Math.min(parent.height, derTabs.height + 16 + derCol.implicitHeight + 36) : parent.height
             radius: Tema.r(22)
             color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.96)
             border.color: Tema.borde
             clip: true
-            MouseArea { anchors.fill: parent }
+            MouseArea { anchors.fill: parent; onClicked: field.forceActiveFocus() }
+            // (Esc en una nota, un campo vacío o la agenda sin nada a medias: se cierra la Órbita)
+            Keys.onEscapePressed: win.close()
             readonly property bool suena: !!(win.insp.musica && win.insp.musica.titulo)
+            Row {
+                id: derTabs
+                x: 18; y: 16
+                spacing: 6
+                Repeater {
+                    model: win.pestanas
+                    delegate: Pestana {
+                        required property string modelData
+                        text: ({ ahora: "Ahora", agenda: "Agenda", notas: "Notas", estudios: "Estudios" })[modelData]
+                        on: win.pestana === modelData
+                        onClicked: win.pestana = modelData
+                    }
+                }
+            }
+            Agenda {
+                x: 18; y: derTabs.y + derTabs.height + 16
+                width: parent.width - 36; height: parent.height - y - 16
+                visible: win.pestana === "agenda" && win.visible
+            }
+            Notas {
+                x: 18; y: derTabs.y + derTabs.height + 16
+                width: parent.width - 36; height: parent.height - y - 16
+                visible: win.pestana === "notas" && win.visible
+                modo: win.modo
+            }
+            Estudios {
+                x: 18; y: derTabs.y + derTabs.height + 16
+                width: parent.width - 36; height: parent.height - y - 16
+                visible: win.pestana === "estudios" && win.visible
+            }
             Column {
                 id: derCol
-                x: 18; y: 16
+                visible: win.pestana === "ahora"
+                x: 18; y: derTabs.y + derTabs.height + 16
                 width: parent.width - 36
                 spacing: 14
-                Etiqueta { text: "Ahora" }
                 Texto {
                     visible: !der.suena && !win.insp.avisos.length && !win.insp.bajando.length && !win.insp.proximo.length
                     text: "Todo tranquilo"
@@ -541,10 +578,6 @@ Window {
         x: 12
         topPadding: 10
         bottomPadding: 4
-        color: Tema.tenue
-        font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 1.6; capitalization: Font.AllUppercase }
-    }
-    component Etiqueta: Texto {
         color: Tema.tenue
         font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 1.6; capitalization: Font.AllUppercase }
     }

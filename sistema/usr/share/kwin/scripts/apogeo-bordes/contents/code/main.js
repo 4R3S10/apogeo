@@ -2,8 +2,8 @@
 // el ratón entra en una franja ancha del borde (no hace falta llegar al último píxel). Mientras el ratón esté encima, se queda; al alejarse, se vuelve a
 // esconder sola (la esconde Plasma). Con una ventana a pantalla completa (un juego, la consola) no sale.
 //
-// Los dos paneles («nivel pro»): el de widgets a la izquierda (Meta+A) y el rápido a la derecha (Meta+N, o la red, el
-// sonido y la hora de la isla). También salen empujando el ratón contra su borde. Al abrirse hacen sitio (las ventanas
+// El panel rápido, a la derecha (Meta+N, o la red, el sonido y la hora de la barra de arriba). También sale empujando
+// el ratón contra el borde. Al abrirse hacen sitio (las ventanas
 // se estrechan) y se quedan hasta que vuelves a pulsar su tecla.
 //
 // La isla también sale sola cuando tiene algo que enseñar (un aviso, el volumen…: «isla dinámica»): la isla llama al
@@ -16,10 +16,10 @@
 const BAND = 26;          // alto (abajo) o ancho (derecha) de la franja que saca la isla, en píxeles
 const KEEP = 110;         // mientras el ratón esté a esta distancia del borde, sigue fuera
 const ISLAND = 0.3;       // la isla sale en el 40 % central del borde de abajo (de 0.3 a 0.7)
-const PANELS = { left: "org.apogeo.izquierdo", right: "org.apogeo.derecho" };
+const PANELS = { right: "org.apogeo.derecho" };
 
 const shown = { island: false, forced: false };
-const open = { left: false, right: false };
+const open = { right: false };
 
 function plasma(script) {
     callDBus("org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", script);
@@ -94,13 +94,10 @@ registerShortcut("apogeo-isla-soltar", "Apogeo: la isla ya no enseña nada", "",
     if ((top ? pos.y - g.y : g.y + g.height - pos.y) > KEEP) { shown.island = false; setHiding(islandAt(), REST); }
 });
 
-registerShortcut("apogeo-panel-izquierdo", "Apogeo: panel de widgets", "Meta+A", function () { setPanel("left", !open.left); });
 registerShortcut("apogeo-panel-derecho", "Apogeo: panel rápido", "Meta+N", function () { setPanel("right", !open.right); });
 // Empujando el ratón contra el borde (KWin espera un momento: pasar rozando no lo abre). Con un juego a pantalla
 // completa, KWin no lo hace.
-registerScreenEdge(KWin.ElectricLeft, function () { if (!open.left) setPanel("left", true); return true; });
 registerScreenEdge(KWin.ElectricRight, function () { if (!open.right) setPanel("right", true); return true; });
 
-// Al empezar, los dos cerrados (por si la sesión anterior acabó con alguno abierto)
-setPanel("left", false);
+// Al empezar, cerrado (por si la sesión anterior acabó con él abierto)
 setPanel("right", false);

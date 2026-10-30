@@ -626,7 +626,7 @@ PlasmoidItem {
                 Texto {
                     visible: tiempo.w.temp === undefined
                     width: parent.width
-                    text: tiempo.w.sinCiudad ? "Elige tu ciudad en la agenda (panel de widgets) para ver el tiempo" : "Mirando el tiempo…"
+                    text: tiempo.w.sinCiudad ? "Elige tu ciudad en la agenda (Meta → Agenda) para ver el tiempo" : "Mirando el tiempo…"
                     color: Tema.apagado; font.pixelSize: 13
                 }
                 Item {

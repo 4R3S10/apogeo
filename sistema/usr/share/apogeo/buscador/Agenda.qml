@@ -1,29 +1,17 @@
 import QtQuick
 import QtQuick.Controls
-import org.kde.plasma.core as PlasmaCore
 import Apogeo
 
-// La agenda («T2 · Tarjeta ancha»): al pulsar la semana o el tiempo del panel de widgets sale, a su lado, con el mes (los
-// días con algo llevan un punto), el tiempo de tu ciudad (ahora, las próximas horas y 3 días) y lo del día elegido: tus
-// planes de Ágape y tus recordatorios, y los temporizadores en marcha. «+ Recordatorio» y «Temporizador» los crean
-// (apogeo_datos.py los guarda y, cuando toca, suena un aviso con «Posponer 10 min»).
-PlasmaCore.Dialog {
+// La agenda, en la Órbita abierta (pestaña «Agenda»): el mes (los días con algo llevan un punto), el tiempo de tu ciudad
+// (ahora, las próximas horas y 3 días; ahí se elige la ciudad) y lo del día elegido: tus planes de Ágape y tus
+// recordatorios, y los temporizadores en marcha. «+ Recordatorio» y «Temporizador» los crean (apogeo_datos.py los guarda
+// y, cuando toca, suena un aviso con «Posponer 10 min»). Si no cabe a lo ancho, las tres columnas bajan una tras otra.
+Flickable {
     id: agenda
-    // Suelta (con sus cuatro esquinas), a la derecha del panel, a la altura de lo que la abrió («ancla»)
-    location: PlasmaCore.Types.Floating
-    property Item ancla
-    property Item panel
-    function place() {
-        if (!ancla || !panel) return;
-        const p = panel.mapToGlobal(0, 0), a = ancla.mapToGlobal(0, 0);
-        x = p.x + panel.width + 14;
-        y = Math.max(p.y, Math.min(a.y - 12, p.y + panel.height - height));
-    }
-    onHeightChanged: if (visible) place()
-    hideOnWindowDeactivate: true
-    flags: Qt.WindowStaysOnTopHint
+    contentHeight: body.height
+    clip: true
+    boundsBehavior: Flickable.StopAtBounds
 
-    // (en un Dialog solo caben Items: lo demás va en propiedades)
     readonly property Datos datos: Datos {}
 
     // El mes que se ve y el día elegido (AAAA-MM-DD)
@@ -64,12 +52,8 @@ PlasmaCore.Dialog {
         error = "";
         loadWeather();
         loadDay();
-        place();
-        visible = true;
-        requestActivate();
-        body.forceActiveFocus();
     }
-    onVisibleChanged: if (!visible) form = ""
+    onVisibleChanged: if (visible) open(); else form = ""
     onSelectedChanged: if (visible) loadDay()
     onMonthChanged: if (visible) loadDay()
 
@@ -103,7 +87,7 @@ PlasmaCore.Dialog {
         return "Lluvia";
     }
     // Lo que le queda a un temporizador: «24 min», «1 h 5 min» o, al final, los segundos
-    function left(t) {
+    function queda(t) {
         const s = Math.max(0, Math.round(t - now));
         if (s < 60) return s + " s";
         const m = Math.ceil(s / 60);
@@ -124,15 +108,20 @@ PlasmaCore.Dialog {
         form = "";
     }
 
-    mainItem: FocusScope {
+    FocusScope {
         id: body
-        width: 762
-        height: Math.max(calendar.implicitHeight, weatherCol.implicitHeight, dayCol.implicitHeight) + 8
-        Keys.onEscapePressed: { if (agenda.form) agenda.form = ""; else agenda.visible = false; }
+        width: agenda.width
+        height: cols.implicitHeight + 8
+        // (Esc con algo a medias lo cancela; si no, sigue: cierra la Órbita)
+        Keys.onEscapePressed: event => { if (agenda.form) agenda.form = ""; else event.accepted = false; }
+        readonly property bool ancha: width >= 762
+        readonly property real alto: Math.max(calendar.implicitHeight, weatherCol.implicitHeight, dayCol.implicitHeight)
 
-        Row {
+        Flow {
+            id: cols
             y: 4
-            spacing: 0
+            width: parent.width
+            spacing: body.ancha ? 0 : 22
 
             // ---------- El mes ----------
             Column {
@@ -373,7 +362,7 @@ PlasmaCore.Dialog {
                         required property var modelData
                         icono: "reloj"
                         destacada: true
-                        hora: agenda.left(modelData.termina)
+                        hora: agenda.queda(modelData.termina)
                         texto: modelData.texto
                         quitable: true
                         onQuitar: { datos.pedir("Quitar", [modelData.id], () => agenda.loadDay()); }
@@ -487,8 +476,9 @@ PlasmaCore.Dialog {
     }
 
     component Raya: Item {
+        visible: body.ancha
         width: 25
-        height: body.height - 8
+        height: body.alto
         Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 1; height: parent.height; color: Tema.linea }
     }
     component Flechita: AbstractButton {

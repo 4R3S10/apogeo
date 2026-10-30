@@ -5,9 +5,8 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.taskmanager as TaskManager
 import Apogeo
 
-// El escritorio de Apogeo: limpio, solo el fondo («nivel pro»: lo que había aquí, la hora, tus widgets, lo de estudiar
-// y las notas, está ahora en el panel de widgets de la izquierda, Meta+A). Con el botón derecho sale el carrusel de
-// fondos de este piso.
+// El escritorio de Apogeo: limpio, solo el fondo (lo que había aquí, la agenda, lo de estudiar y las notas, está en la
+// Órbita abierta: el orbe o Meta). Con el botón derecho sale el carrusel de fondos de este piso.
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
