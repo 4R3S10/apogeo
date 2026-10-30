@@ -78,6 +78,11 @@ package_apogeo() {
     install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plymouth/themes/apogeo/$(basename "${f%.svg}.png")"
     install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plasma/look-and-feel/org.apogeo.desktop/contents/splash/$(basename "${f%.svg}.png")"
   done
+  # El orbe formándose, al encender (solo Plymouth)
+  for f in "$logo"/forma-*.svg; do
+    rsvg-convert -w 150 -h 150 "$f" -o "${f%.svg}.png"
+    install -Dm644 "${f%.svg}.png" "$pkgdir/usr/share/plymouth/themes/apogeo/$(basename "${f%.svg}.png")"
+  done
   # El fondo grafito con sus órbitas y la barra cian (Plymouth y el splash de Plasma)
   python "$h/arranque.py" "$pkgdir/usr/share/plymouth/themes/apogeo"
   install -Dm644 "$pkgdir/usr/share/plymouth/themes/apogeo/fondo.png" \

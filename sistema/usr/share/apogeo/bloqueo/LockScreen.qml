@@ -34,9 +34,9 @@ Item {
     readonly property color accentText: Tema.sobreRosa
     readonly property string font: Tema.letra
     readonly property var floors: [
-        { key: "jugar", name: "Jugar", fondo: "luces" },
-        { key: "navegar", name: "Navegar", fondo: "tinta" },
-        { key: "estudiar", name: "Estudiar", fondo: "seda" }
+        { key: "jugar", name: "Jugar", fondo: "nebulosa" },
+        { key: "navegar", name: "Navegar", fondo: "orbitas" },
+        { key: "estudiar", name: "Estudiar", fondo: "aurora" }
     ]
     // El piso en el que estabas: el fondo del bloqueo es el suyo (lo pone apogeo-pisos)
     property int floor: {

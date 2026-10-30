@@ -57,9 +57,11 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
 - **Colores:** fondo `#080A0F`, superficie `#0F131A`, texto `#E9EDF5` y un acento por modo (cian en Navegar, ámbar en
   Estudiar, violeta en Jugar); en Estudiar, papel cálido de serie. La identidad antigua (berenjena y rosa de Ágape) es
   el estilo «Clásico» y sigue ahí, a un clic.
-- **Fondos:** los fondos animados, uno por modo (Jugar «Luces», Navegar «Tinta», Estudiar «Seda»), con los tres
-  colores del modo. Se
-  dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica (máquina virtual) se quedan
+- **Fondos:** los fondos animados de Órbita, uno por modo y con sus tres colores: Navegar «Órbitas» (abajo en el
+  centro, donde está el orbe, sus órbitas abiertas girando despacio, cada una con su nodo, y unas estrellas), Jugar
+  «Nebulosa» (una nube violeta que se deforma despacio y ondas que salen del orbe) y Estudiar «Aurora» (cortinas de luz
+  ámbar que se mecen; de día, sobre papel y casi sin color). Siguen los de antes (Tinta, Humo, Seda, Mármol, Relieve,
+  Remolino, Dunas, Luces) para elegir. Se dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica (máquina virtual) se quedan
   quietos.
 - **Isla («B1 · Cristal»):** una sola isla de cristal (radio 22). Las apps abiertas llevan un puntito con el color del
   modo (la activa, una rayita). El buscador y el modo activo son la pastilla de su acento con brillo, y todo usa los
@@ -68,8 +70,9 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
 - **Ventanas:** la barra de ventanas con el título en el centro y sus botones planos (la ✕ se pone roja), del color
   del modo.
 - **Menús y avisos:** tarjetas de cristal del modo.
-- **Inicio de sesión** («8 · Inicio de sesión»): arriba la hora grande y la fecha; en el centro una tarjeta de cristal
-  con tu foto, «Hola, …», en qué modo entras y la contraseña. Detrás, el fondo animado de ese modo moviéndose, con sus
+- **Inicio de sesión** («8 · Inicio de sesión», con el orbe): arriba la hora grande y la fecha; en el centro una
+  tarjeta de cristal con tu foto, «Hola, …», en qué modo entras y la contraseña. El modo se elige con el orbe, como en
+  el escritorio: el elegido en el centro, con su color, y los otros dos en bolitas a sus lados (← → o un clic). Detrás, el fondo animado de ese modo moviéndose, con sus
   colores (con «Del fondo», los de cada modo): al elegir otro modo, cambia. Esa pantalla no puede leer tus ajustes, así
   que `apogeo-aspecto-login` le deja en `/var/lib/apogeo/aspecto-login.json` solo los colores (también por modo) y qué
   fondo animado lleva cada uno. El bloqueo: tu símbolo (ver abajo).
@@ -78,8 +81,9 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
 - **Sonidos:** propios y suaves (marimba de madera con un poco de sala) para avisos, errores, USB, volumen, capturas y lo
   hecho; al entrar, dos notas suaves que bajan un poco, sobre un acorde cálido. Se sintetizan al construir el paquete
   (`herramientas/sonidos.py`).
-- **Arranque y apagado:** el Núcleo girando sobre el grafito con sus tres órbitas y una barra fina cian (Plymouth y la
-  pantalla de carga al entrar; se dibujan con `herramientas/arranque.py` y `herramientas/logo.py`).
+- **Arranque y apagado:** al encender, el orbe se forma (el punto se enciende y las tres órbitas entran girando hasta
+  su sitio, `forma-*.png`) y luego gira sobre el grafito con una barra fina cian (Plymouth y la pantalla de carga al
+  entrar; se dibujan con `herramientas/arranque.py` y `herramientas/logo.py`).
 
 ### Tu identidad (Ajustes → Identidad, «K2 con vista previa»)
 
@@ -194,8 +198,9 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
 ## Jugar
 
 - **Consola («C8 · Cinta panorámica»):** al entrar en el modo Jugar se abre a pantalla completa. Abajo, una cinta con las
-  portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte,
-  con cuándo jugaste y **cuántas horas llevas** (las de Steam y Heroic; en emuladores y PS5 las cuenta Apogeo).
+  portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte
+  (un **fondo vivo**: se acerca y se aleja muy despacio, se queda un poco atrás al pasar de un juego a otro, y sus
+  colores, mezclados con el violeta, tiñen el grafito), con cuándo jugaste y **cuántas horas llevas** (las de Steam y Heroic; en emuladores y PS5 las cuenta Apogeo).
   Arriba, **Inicio** y una pestaña por tienda o plataforma con toda tu biblioteca para **descargar y quitar**:
   - **Steam:** los descargados y el resto de tu biblioteca (descargar y quitar los hace Steam).
   - **Epic:** tu biblioteca de Heroic; descargar (con su progreso) y quitar con legendary, el de Heroic.

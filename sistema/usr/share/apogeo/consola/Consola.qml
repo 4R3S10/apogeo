@@ -180,50 +180,125 @@ Window {
     // Un color por juego (para cuando no hay portada)
     function tint(name) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return Qt.hsla(h / 360, 0.45, 0.32, 1) }
 
-    // ---------- El fondo: el arte del elegido ----------
+    // ---------- El fondo vivo: el arte del elegido ----------
+    // El arte se mueve muy despacio (se acerca y se aleja) y, al pasar de un juego a otro, se queda un poco atrás, como
+    // si estuviera más lejos que la cinta (paralaje). Sus colores, mezclados con el violeta de Jugar, tiñen el grafito.
+    property color artColor: win.game ? win.tint(win.game.name) : Tema.acento
+    // (los colores del arte, más vivos, y un poco de violeta)
+    property color mood: {
+        const c = win.artColor;
+        const v = Qt.hsla(c.hslHue < 0 ? 0.73 : c.hslHue, Math.max(0.45, c.hslSaturation), Math.min(0.55, Math.max(0.4, c.hslLightness)), 1);
+        return Qt.tint(v, Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, 0.4));
+    }
+    Behavior on mood { ColorAnimation { duration: 900 } }
+    // La muestra: el arte a 4×4 píxeles, para sacar su color medio
+    Canvas {
+        id: muestra
+        width: 4; height: 4
+        opacity: 0.01
+        property string src: ""
+        onImageLoaded: requestPaint()
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.clearRect(0, 0, 4, 4);
+            if (!src || !isImageLoaded(src)) return;
+            ctx.drawImage(src, 0, 0, 4, 4);
+            const d = ctx.getImageData(0, 0, 4, 4).data;
+            let r = 0, g = 0, b = 0;
+            for (let i = 0; i < 64; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+            win.artColor = Qt.rgba(r / 4080, g / 4080, b / 4080, 1);
+        }
+        function sample(url) {
+            if (src) unloadImage(src);
+            src = url;
+            if (!url) return;
+            if (isImageLoaded(url)) requestPaint(); else loadImage(url);
+        }
+    }
+    property int lastSel: 0
+    onSelChanged: { fondo.deriva = (sel > lastSel ? 1 : -1) * 34; lastSel = sel; deriva.restart(); }
+    NumberAnimation { id: deriva; target: fondo; property: "deriva"; to: 0; duration: 1100; easing.type: Easing.OutCubic }
     Item {
         id: fondo
         anchors.fill: parent
         property string src: win.game ? (win.game.hero || win.game.cover) : ""
         property bool flip: false
+        property real deriva: 0
         onSrcChanged: reload()
-        function reload() { if (!win.despierta) return; flip = !flip; (flip ? b : a).source = src; }
-        // Sin arte (o mientras llega): el fondo animado de Jugar, «Luces»
-        Fondo { anchors.fill: parent; tipo: 7; visible: a.status !== Image.Ready && b.status !== Image.Ready }
+        function reload() {
+            if (!win.despierta) return;
+            flip = !flip; (flip ? b : a).source = src;
+            if (!src && win.game) win.artColor = win.tint(win.game.name);
+            muestra.sample(src);
+        }
+        // Sin arte (o mientras llega): el fondo animado de Jugar, «Nebulosa»
+        Fondo { anchors.fill: parent; tipo: 9; visible: a.status !== Image.Ready && b.status !== Image.Ready }
         Rectangle { anchors.fill: parent; visible: !!win.game; color: win.game ? win.tint(win.game.name) : "transparent"; opacity: 0.35 }
-        Image {
-            id: a
+        Item {
+            id: arte
             anchors.fill: parent
-            fillMode: Image.PreserveAspectCrop
-            sourceSize.height: win.height   // (el arte, al tamaño de la pantalla: no más grande)
-            asynchronous: true
-            opacity: !fondo.flip && status === Image.Ready ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 450 } }
+            // Acercarse y alejarse muy despacio (solo con gráfica de verdad y la consola delante)
+            property real zoom: 0
+            SequentialAnimation on zoom {
+                running: Tema.animar
+                loops: Animation.Infinite
+                NumberAnimation { to: 1; duration: 22000; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 0; duration: 22000; easing.type: Easing.InOutSine }
+            }
+            scale: 1.06 + 0.04 * zoom
+            transform: Translate { x: fondo.deriva - 18 * arte.zoom; y: -8 * arte.zoom }
+            Image {
+                id: a
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
+                sourceSize.height: win.height   // (el arte, al tamaño de la pantalla: no más grande)
+                asynchronous: true
+                opacity: !fondo.flip && status === Image.Ready ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 450 } }
+            }
+            Image {
+                id: b
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
+                sourceSize.height: win.height
+                asynchronous: true
+                opacity: fondo.flip && status === Image.Ready ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 450 } }
+            }
         }
-        Image {
-            id: b
-            anchors.fill: parent
-            fillMode: Image.PreserveAspectCrop
-            sourceSize.height: win.height
-            asynchronous: true
-            opacity: fondo.flip && status === Image.Ready ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 450 } }
-        }
-        // Oscuro a la izquierda y abajo (para leer encima), en el grafito de Órbita
+        // Oscuro a la izquierda y abajo (para leer encima), en el grafito de Órbita teñido con los colores del arte
+        readonly property color sombra: Qt.tint("#080a0f", Qt.rgba(win.mood.r, win.mood.g, win.mood.b, 0.1))
         Rectangle {
             anchors.fill: parent
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: "#f0080a0f" }
-                GradientStop { position: 0.45; color: "#99080a0f" }
-                GradientStop { position: 0.8; color: "#33080a0f" }
+                GradientStop { position: 0; color: Qt.rgba(fondo.sombra.r, fondo.sombra.g, fondo.sombra.b, 0.94) }
+                GradientStop { position: 0.45; color: Qt.rgba(fondo.sombra.r, fondo.sombra.g, fondo.sombra.b, 0.6) }
+                GradientStop { position: 0.8; color: Qt.rgba(fondo.sombra.r, fondo.sombra.g, fondo.sombra.b, 0.2) }
             }
         }
         Rectangle {
             anchors.fill: parent
             gradient: Gradient {
                 GradientStop { position: 0.35; color: "transparent" }
-                GradientStop { position: 0.8; color: "#f0080a0f" }
+                GradientStop { position: 0.8; color: Qt.rgba(fondo.sombra.r, fondo.sombra.g, fondo.sombra.b, 0.94) }
+            }
+        }
+        // Un resplandor de esos colores abajo, detrás de la cinta, y otro más leve arriba a la derecha
+        Rectangle {
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+            height: parent.height * 0.42
+            gradient: Gradient {
+                GradientStop { position: 0; color: "transparent" }
+                GradientStop { position: 1; color: Qt.rgba(win.mood.r, win.mood.g, win.mood.b, 0.16) }
+            }
+        }
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.6; color: "transparent" }
+                GradientStop { position: 1; color: Qt.rgba(win.mood.r, win.mood.g, win.mood.b, 0.08) }
             }
         }
     }

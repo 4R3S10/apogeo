@@ -15,7 +15,7 @@ WallpaperItem {
     id: root
 
     TaskManager.VirtualDesktopInfo { id: desktops }
-    readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces"]
+    readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces", "orbitas", "nebulosa", "aurora"]
     // El piso en el que estás (por el nombre del escritorio) y su fondo; en la pantalla de bloqueo, el de «Estilo»/«Archivo»
     readonly property string floorName: {
         const i = desktops.desktopIds.indexOf(desktops.currentDesktop);
@@ -69,7 +69,7 @@ WallpaperItem {
             height: Math.max(2, Math.round(root.height / 3))
             property real t: root.time
             property real kind: root.kind
-            property real light: 0
+            property real light: Tema.claro ? 1 : 0   // (Estudiar en papel, de día)
             property size res: Qt.size(root.width, root.height)
             property color base: Tema.fondo
             property color c1: Tema.wp[0]

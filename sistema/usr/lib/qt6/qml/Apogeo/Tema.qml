@@ -95,8 +95,8 @@ QtObject {
         return gris ? c.map(x => Qt.tint(x, Qt.rgba(0.35, 0.38, 0.45, gris))) : c;
     }
 
-    readonly property var fondos: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces"]
-    readonly property var nombresFondos: ["Tinta", "Humo", "Seda", "Mármol", "Relieve", "Remolino", "Dunas", "Luces"]
+    readonly property var fondos: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces", "orbitas", "nebulosa", "aurora"]
+    readonly property var nombresFondos: ["Tinta", "Humo", "Seda", "Mármol", "Relieve", "Remolino", "Dunas", "Luces", "Órbitas", "Nebulosa", "Aurora"]
 
     // ---------- Leer tus fichas ----------
     readonly property url archivo: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/apogeo/aspecto.json"

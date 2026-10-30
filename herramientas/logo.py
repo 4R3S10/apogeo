@@ -6,8 +6,10 @@ izquierda). Geométrico,
 legible a 16 px y a 512 px, y a gusto en el grafito de Órbita. La identidad clásica (el búho) se conserva en
 logo-clasico.py.
 
-  logo.py <carpeta> [acento]    escribe logo.svg, logo-silueta.svg y aleteo-00.svg … aleteo-23.svg (las órbitas girando
+  logo.py <carpeta> [acento]    escribe logo.svg, logo-silueta.svg, aleteo-00.svg … aleteo-23.svg (las órbitas girando
                                 despacio para el arranque; el nombre de los fotogramas se queda para no romper Plymouth)
+                                y forma-00.svg … forma-29.svg (el orbe formándose al encender: el punto se enciende y
+                                las tres órbitas entran girando hasta su sitio; el último es igual que aleteo-00)
 """
 import math
 import os
@@ -20,6 +22,7 @@ RING = '#1c2430'
 TEXT = '#e9edf5'
 MUTED = '#8b94a7'
 FRAMES = 24
+FORM = 30           # fotogramas del orbe formándose (casi 2 s a 16 por segundo)
 
 # Los tres arcos: (rotación, color, opacidad), uno por modo
 ARCS = ((0, ACCENT, 1.0), (120, AMBER, 1.0), (240, VIOLET, 1.0))
@@ -36,9 +39,11 @@ def f2(x, y):
     return f'{x:.2f} {y:.2f}'
 
 
-def arc(rot, color, opacity):
+def arc(rot, color, opacity, span=SPAN):
     """Un arco abierto, con un nodo en su punta."""
-    a0, a1 = -SPAN / 2, SPAN / 2
+    if span < 1 or opacity <= 0:
+        return ''
+    a0, a1 = -SPAN / 2, -SPAN / 2 + span
     p0, p1 = pt(a0 + rot), pt(a1 + rot)
     n = pt(a1 + rot, RADIUS, 50, 50)
     # (una vuelta casi completa: el hueco queda entre el final de un arco y el principio del siguiente)
@@ -61,6 +66,30 @@ def nucleo(rot=0, pulse=0.0, disc=True):
     return body
 
 
+def ease(t):
+    t = min(1.0, max(0.0, t))
+    return 1 - (1 - t) ** 3
+
+
+def forma(t):
+    """El orbe formándose (t de 0 a 1): primero el disco y el punto, que se enciende con un pequeño rebote, y luego cada
+    órbita, una tras otra, entra girando desde atrás mientras se alarga hasta su sitio."""
+    d = ease(t / 0.25)
+    body = (f'<circle cx="50" cy="50" r="48" fill="{DISC}" opacity="{d:.3f}"/>'
+            f'<circle cx="50" cy="50" r="47.25" fill="none" stroke="{RING}" stroke-width="1.5" opacity="{d:.3f}"/>')
+    c = min(1.0, max(0.0, (t - 0.05) / 0.3))
+    core_r = 7.4 * (1 + 0.35 * math.sin(math.pi * c)) * ease(c * 1.6) if c > 0 else 0
+    if core_r > 0.1:
+        body += (f'<circle cx="50" cy="50" r="{core_r + 5.6 * c:.2f}" fill="{TEXT}" opacity="{0.07 + 0.18 * (1 - c):.3f}"/>'
+                 f'<circle cx="50" cy="50" r="{core_r:.2f}" fill="{TEXT}"/>')
+    arcs = ''
+    for i, (r, col, o) in enumerate(ARCS):
+        a = ease((t - 0.25 - 0.12 * i) / 0.45)
+        arcs += arc(r - 70 * (1 - a), col, o * min(1.0, a * 2.5), SPAN * a)
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n'
+            f'  <!-- Núcleo formándose -->\n  {body}<g>{arcs}</g>\n</svg>\n')
+
+
 def svg(rot=0, pulse=0.0, disc=True):
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n'
             f'  <!-- Núcleo: un punto y tres órbitas abiertas -->\n  {nucleo(rot, pulse, disc)}\n</svg>\n')
@@ -74,3 +103,5 @@ if __name__ == '__main__':
     for i in range(FRAMES):
         angle = i * (360 / FRAMES)  # (una vuelta entera: cada órbita tiene su color)
         open(f'{M}/aleteo-{i:02d}.svg', 'w').write(svg(rot=angle, pulse=0.45 * math.sin(2 * math.pi * i / FRAMES)))
+    for i in range(FORM):
+        open(f'{M}/forma-{i:02d}.svg', 'w').write(forma(i / (FORM - 1)))

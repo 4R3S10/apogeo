@@ -24,10 +24,11 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
-VERSION = 6  # 2: Jugar pasa de Remolino a Luces; 3: Navegar ya no abre Ágape solo; 4-5: el aspecto pasó por
-# «Como Ágape» y «Del fondo»; 6: Órbita es la identidad de serie (grafito, Geist, un acento por modo).
+VERSION = 7  # 2: Jugar pasa de Remolino a Luces; 3: Navegar ya no abre Ágape solo; 4-5: el aspecto pasó por
+# «Como Ágape» y «Del fondo»; 6: Órbita es la identidad de serie (grafito, Geist, un acento por modo); 7: los fondos
+# animados de Órbita (Órbitas, Nebulosa y Aurora).
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
-STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces')
+STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces', 'orbitas', 'nebulosa', 'aurora')
 # Fondos tuyos (los de Aura): imágenes y vídeos en alta calidad
 IMAGES = ('.jpg', '.jpeg', '.png', '.webp', '.avif', '.jxl', '.bmp', '.tif', '.tiff')
 VIDEOS = ('.mp4', '.webm', '.mkv', '.mov', '.m4v', '.avi')
@@ -46,11 +47,11 @@ DEFAULTS = {
         # están dentro, y todas las apps siguen en el menú y en el buscador). Energía: nunca «rendimiento».
         # «carrusel»: las ventanas en columnas que se deslizan, como en niri (Karousel). «color»: el de su fondo animado
         # (con el aspecto «Del fondo»; '' = el de Órbita; los de apogeo_paleta.COLORS)
-        'jugar': {'fondo': 'luces', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop'],
+        'jugar': {'fondo': 'nebulosa', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop'],
                   'carrusel': False, 'color': ''},
-        'navegar': {'fondo': 'tinta', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False,
+        'navegar': {'fondo': 'orbitas', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False,
                     'color': ''},
-        'estudiar': {'fondo': 'seda', 'avisos': False, 'energia': 'power-saver', 'apps': [], 'carrusel': False,
+        'estudiar': {'fondo': 'aurora', 'avisos': False, 'energia': 'power-saver', 'apps': [], 'carrusel': False,
                      'color': ''},
     },
     # El carrusel, igual en todos los pisos que lo tienen: los huecos entre ventanas (px) y los anchos que recorre
@@ -130,6 +131,11 @@ def load():
             'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
     if raw.get('version', 1) < 6 and all(st['aspecto'].get(k) == v for k, v in old6.items()):
         st['aspecto'].update({'estilo': 'orbita', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves'})
+    # 7: los fondos animados de Órbita, uno por modo, para quien tenía los de antes tal como venían
+    if raw.get('version', 1) < 7 and st['aspecto'].get('estilo') == 'orbita':
+        for k, old, new in (('jugar', 'luces', 'nebulosa'), ('navegar', 'tinta', 'orbitas'), ('estudiar', 'seda', 'aurora')):
+            if st['pisos'][k].get('fondo') == old:
+                st['pisos'][k]['fondo'] = new
     return st
 
 

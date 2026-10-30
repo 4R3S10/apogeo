@@ -43,7 +43,7 @@ def main():
     for k in FLOORS:
         x = pisos.get(k) if isinstance(pisos.get(k), dict) else {}
         style = x.get('estilo', -1)
-        out['pisos'][k] = dict(colors(x), estilo=style if isinstance(style, int) and 0 <= style < 8 else -1)
+        out['pisos'][k] = dict(colors(x), estilo=style if isinstance(style, int) and 0 <= style < 11 else -1)
     font = str(t.get('letra', ''))
     if re.fullmatch(r"[\w .'-]{1,40}", font):
         out['letra'] = font

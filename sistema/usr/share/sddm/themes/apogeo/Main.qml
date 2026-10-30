@@ -4,7 +4,8 @@ import QtQuick.Effects
 
 // Inicio de sesión de Órbita («8 · Inicio de sesión»): detrás, el fondo animado del modo que eliges, moviéndose y con sus
 // colores (cambian al elegir otro); arriba la hora grande y la fecha; en el centro, una tarjeta de cristal con tu foto,
-// tu nombre, la contraseña y en qué modo entras. Cada modo es una sesión («Apogeo · Jugar», etc.): así la elección llega
+// tu nombre, la contraseña y en qué modo entras: el orbe, como en el escritorio (el modo elegido en el centro y los otros
+// dos en bolitas a sus lados; ← → o un clic en una bolita). Cada modo es una sesión («Apogeo · Jugar», etc.): así la elección llega
 // a la sesión sin que esta pantalla toque tus archivos.
 Rectangle {
     id: root
@@ -32,14 +33,19 @@ Rectangle {
     // Los del piso elegido (con «Del fondo», cada piso tiene los suyos), si los hay
     readonly property var p: f.pisos && f.pisos[floors[floor].key] ? f.pisos[floors[floor].key] : ({})
     function cp(k, d) { return p[k] !== undefined ? p[k] : c(k, d) }
-    readonly property color accent: cp("acento", "#45d6ff")
+    readonly property color accent: modeColor(floor)
+    // El color de cada modo (el tuyo, si lo has cambiado; si no, el de Órbita)
+    function modeColor(i) {
+        const x = f.pisos && f.pisos[floors[i].key] ? f.pisos[floors[i].key] : {};
+        return x.acento !== undefined ? x.acento : c("acento", floors[i].color);
+    }
     readonly property color accentText: cp("sobreAcento", "#041318")
     readonly property string font: c("letra", "Geist")
     readonly property var wp: cp("wp", ["#0b1118", "#12303d", "#45d6ff"])
     readonly property var floors: [
-        { key: "jugar", name: "Jugar", kind: 7 },      // Luces
-        { key: "navegar", name: "Navegar", kind: 0 },  // Tinta
-        { key: "estudiar", name: "Estudiar", kind: 2 } // Seda
+        { key: "jugar", name: "Jugar", kind: 9, color: "#b79cff" },      // Nebulosa
+        { key: "navegar", name: "Navegar", kind: 8, color: "#45d6ff" },  // Órbitas
+        { key: "estudiar", name: "Estudiar", kind: 10, color: "#ffb35c" } // Aurora
     ]
     // El fondo animado de ese piso (el suyo, si es uno de Apogeo; si es una foto o un vídeo tuyo, el de serie del piso
     // con sus colores: esos esta pantalla no los puede leer)
@@ -143,6 +149,7 @@ Rectangle {
 
     // La hora grande y la fecha, arriba en el centro
     Column {
+        id: clockCol
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height * 0.1
         spacing: 2
@@ -181,7 +188,7 @@ Rectangle {
     Rectangle {
         id: card
         anchors.horizontalCenter: parent.horizontalCenter
-        y: Math.round(parent.height * 0.56 - height / 2)
+        y: Math.max(clockCol.y + clockCol.height + 28, Math.round(parent.height * 0.56 - height / 2))
         width: 440
         height: inner.implicitHeight + 72
         radius: 26
@@ -248,7 +255,7 @@ Rectangle {
                 }
             }
             Text {
-                text: userModel.count > 1 ? "¿En qué modo entras? (pulsa tu nombre para cambiar de usuario)" : "¿En qué modo entras?"
+                text: userModel.count > 1 ? "¿En qué modo entras? ← → (pulsa tu nombre para cambiar de usuario)" : "¿En qué modo entras?  ← →"
                 color: root.muted
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
@@ -256,76 +263,71 @@ Rectangle {
                 font { family: root.font; pixelSize: 15 }
             }
 
-            // Pisos: el control segmentado de Ágape
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: seg.implicitWidth + 6
-                height: 40
-                radius: 14
-                color: root.hover
-                Row {
-                    id: seg
-                    anchors.centerIn: parent
-                    spacing: 3
-                    Repeater {
-                        model: root.floors
-                        delegate: Item {
-                            id: opt
-                            required property var modelData
-                            required property int index
-                            readonly property bool on: index === root.floor
-                            width: optRow.implicitWidth + 26
-                            height: 34
-                            RectangularShadow {
-                                anchors.fill: optBg
-                                visible: opt.on
-                                offset.y: 4; blur: 18; spread: -4
-                                radius: optBg.radius
-                                color: root.accent
-                                opacity: 0.85
-                            }
-                            Rectangle {
-                                id: optBg
-                                anchors.fill: parent
-                                radius: 11
-                                color: opt.on ? root.accent : (optArea.containsMouse ? root.hover : "transparent")
-                                Behavior on color { ColorAnimation { duration: 180 } }
-                            }
-                            Row {
-                                id: optRow
+            // Los modos: el orbe del elegido en el centro y los otros dos en bolitas a sus lados (Jugar, Navegar y
+            // Estudiar dan la vuelta: ← a la izquierda, → a la derecha). Igual que abajo en el escritorio.
+            Item {
+                id: orbs
+                width: parent.width
+                height: 104
+                Repeater {
+                    model: root.floors
+                    delegate: Item {
+                        id: orb
+                        required property var modelData
+                        required property int index
+                        // -1 a la izquierda, 0 en el centro, 1 a la derecha
+                        readonly property int slot: ((index - root.floor + 4) % 3) - 1
+                        readonly property bool on: slot === 0
+                        readonly property color tint: root.modeColor(index)
+                        readonly property real size: on ? 58 : 28
+                        width: 120; height: orbs.height
+                        x: orbs.width / 2 - width / 2 + slot * 118
+                        z: on ? 2 : 1
+                        Behavior on x { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
+                        RectangularShadow { // el halo del elegido
+                            anchors.fill: disc
+                            radius: width / 2
+                            blur: 26; spread: -2
+                            color: orb.tint
+                            opacity: orb.on ? 0.55 : 0
+                            Behavior on opacity { NumberAnimation { duration: 300 } }
+                        }
+                        Rectangle {
+                            id: disc
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: orb.on ? 4 : 19
+                            width: orb.size; height: width; radius: width / 2
+                            color: orb.on ? "#0b0e14" : "#151b24"
+                            border.width: orb.on ? 2 : 1.5
+                            border.color: orb.on || orbArea.containsMouse ? orb.tint : Qt.rgba(orb.tint.r, orb.tint.g, orb.tint.b, 0.6)
+                            Behavior on width { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
+                            Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
+                            Rectangle { // el núcleo
                                 anchors.centerIn: parent
-                                spacing: 7
-                                Item {
-                                    width: 16; height: 16
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    Image {
-                                        id: optIcon
-                                        anchors.fill: parent
-                                        source: "file:///usr/share/plasma/plasmoids/org.apogeo.pisos/contents/icons/" + opt.modelData.key + ".svg"
-                                        sourceSize: Qt.size(32, 32)
-                                        visible: false
-                                    }
-                                    MultiEffect {
-                                        anchors.fill: parent
-                                        source: optIcon
-                                        colorization: 1
-                                        colorizationColor: opt.on ? root.accentText : root.muted
-                                    }
-                                }
-                                Text {
-                                    text: opt.modelData.name
-                                    color: opt.on ? root.accentText : root.muted
-                                    font { family: root.font; pixelSize: 14; weight: opt.on ? Font.Bold : Font.DemiBold }
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
+                                width: orb.on ? 16 : 0; height: width; radius: width / 2
+                                color: "#e9edf5"
+                                Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
                             }
-                            MouseArea {
-                                id: optArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: { root.floor = opt.index; password.forceActiveFocus(); }
+                        }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: 72
+                            text: orb.modelData.name
+                            color: orb.on ? orb.tint : root.muted
+                            font {
+                                family: "Geist Mono"; pixelSize: orb.on ? 13 : 11
+                                weight: orb.on ? Font.Bold : Font.DemiBold
+                                letterSpacing: orb.on ? 2.6 : 1.4
+                                capitalization: Font.AllUppercase
                             }
+                        }
+                        MouseArea {
+                            id: orbArea
+                            anchors.fill: disc
+                            anchors.margins: -10
+                            hoverEnabled: true
+                            cursorShape: orb.on ? Qt.ArrowCursor : Qt.PointingHandCursor
+                            onClicked: { root.floor = orb.index; password.forceActiveFocus(); }
                         }
                     }
                 }
@@ -351,8 +353,11 @@ Rectangle {
                     border.width: 1
                 }
                 onAccepted: root.login()
-                Keys.onUpPressed: root.floor = Math.max(0, root.floor - 1)
-                Keys.onDownPressed: root.floor = Math.min(root.floors.length - 1, root.floor + 1)
+                // ← → giran los modos (en una contraseña con puntos, mover el cursor no sirve de mucho)
+                Keys.onLeftPressed: root.floor = (root.floor + 2) % 3
+                Keys.onRightPressed: root.floor = (root.floor + 1) % 3
+                Keys.onUpPressed: root.floor = (root.floor + 2) % 3
+                Keys.onDownPressed: root.floor = (root.floor + 1) % 3
             }
 
             Text {

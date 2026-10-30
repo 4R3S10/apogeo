@@ -4,8 +4,8 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
-    <!-- tinta, humo, seda, marmol, relieve, remolino, dunas, luces -->
-    <entry name="Estilo" type="String"><default>tinta</default></entry>
+    <!-- tinta, humo, seda, marmol, relieve, remolino, dunas, luces, orbitas, nebulosa, aurora -->
+    <entry name="Estilo" type="String"><default>orbitas</default></entry>
     <!-- Animado (como en Ágape); sin gráfica de verdad se queda quieto -->
     <entry name="Animar" type="Bool"><default>true</default></entry>
     <!-- Una imagen o un vídeo tuyo (ruta); vacío: el fondo animado de «Estilo» -->
@@ -13,9 +13,9 @@
     <!-- El de cada piso (lo escribe apogeo-pisos solo cuando cambia): así, al cambiar de piso, el fondo lo elige él solo,
          sin reescribir nada (lo de arriba queda para la pantalla de bloqueo, que no sabe en qué piso estás) -->
     <entry name="PorPiso" type="Bool"><default>false</default></entry>
-    <entry name="EstiloJugar" type="String"><default>luces</default></entry>
-    <entry name="EstiloNavegar" type="String"><default>tinta</default></entry>
-    <entry name="EstiloEstudiar" type="String"><default>seda</default></entry>
+    <entry name="EstiloJugar" type="String"><default>nebulosa</default></entry>
+    <entry name="EstiloNavegar" type="String"><default>orbitas</default></entry>
+    <entry name="EstiloEstudiar" type="String"><default>aurora</default></entry>
     <entry name="ArchivoJugar" type="String"><default></default></entry>
     <entry name="ArchivoNavegar" type="String"><default></default></entry>
     <entry name="ArchivoEstudiar" type="String"><default></default></entry>

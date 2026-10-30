@@ -1,5 +1,6 @@
 # Arranque (y apagado) de Órbita: el Núcleo (el punto y sus tres órbitas) sobre el grafito, flotando un poco, y debajo
-# una barra fina cian. Si el disco está cifrado, la contraseña se pide debajo (con puntos).
+# una barra fina cian. Al encender, el orbe se forma primero: el punto se enciende y las órbitas entran hasta su sitio.
+# Si el disco está cifrado, la contraseña se pide debajo (con puntos).
 
 Window.SetBackgroundTopColor(0.024, 0.031, 0.047);
 Window.SetBackgroundBottomColor(0.051, 0.067, 0.094);
@@ -24,10 +25,24 @@ for (i = 0; i < 24; i++) {
   if (i < 10) aleteo[i] = Image("aleteo-0" + i + ".png");
   else aleteo[i] = Image("aleteo-" + i + ".png");
 }
+# Al encender, antes: el orbe formándose (forma-00.png … forma-29.png; el último es igual que aleteo-00)
+forma = [];
+if (Plymouth.GetMode() == "boot") {
+  for (i = 0; i < 30; i++) {
+    if (i < 10) forma[i] = Image("forma-0" + i + ".png");
+    else forma[i] = Image("forma-" + i + ".png");
+  }
+  logo.SetImage(forma[0]);
+}
 tic = 0;
 fun refrescar() {
   tic++;
   f = Math.Int(tic / 3);
+  if (forma[0] && f < 30) {
+    if (forma[f]) logo.SetImage(forma[f]);
+    return;
+  }
+  if (forma[0]) f = f - 30;
   f = f - Math.Int(f / 24) * 24;
   if (aleteo[f]) logo.SetImage(aleteo[f]);
   # sube y baja muy despacio, como si la órbita respirara
