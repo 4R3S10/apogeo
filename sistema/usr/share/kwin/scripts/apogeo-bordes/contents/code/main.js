@@ -2,9 +2,9 @@
 // el ratón entra en una franja ancha del borde (no hace falta llegar al último píxel). Mientras el ratón esté encima, se queda; al alejarse, se vuelve a
 // esconder sola (la esconde Plasma). Con una ventana a pantalla completa (un juego, la consola) no sale.
 //
-// El panel rápido, a la derecha (Meta+N, o la red, el sonido y la hora de la barra de arriba). También sale empujando
-// el ratón contra el borde. Al abrirse hacen sitio (las ventanas
-// se estrechan) y se quedan hasta que vuelves a pulsar su tecla.
+// El panel rápido, a la derecha: solo con Meta+N o pulsando la red, el sonido y la hora de la barra de arriba (el borde
+// de la pantalla no hace nada ni brilla). Al abrirse hace sitio (las ventanas se estrechan) y se queda hasta que vuelves
+// a pulsar.
 //
 // La isla también sale sola cuando tiene algo que enseñar (un aviso, el volumen…: «isla dinámica»): la isla llama al
 // atajo «apogeo-isla-mostrar» y, al acabar, a «apogeo-isla-soltar» (sin teclas; los invoca por D-Bus).
@@ -95,9 +95,6 @@ registerShortcut("apogeo-isla-soltar", "Apogeo: la isla ya no enseña nada", "",
 });
 
 registerShortcut("apogeo-panel-derecho", "Apogeo: panel rápido", "Meta+N", function () { setPanel("right", !open.right); });
-// Empujando el ratón contra el borde (KWin espera un momento: pasar rozando no lo abre). Con un juego a pantalla
-// completa, KWin no lo hace.
-registerScreenEdge(KWin.ElectricRight, function () { if (!open.right) setPanel("right", true); return true; });
 
 // Al empezar, cerrado (por si la sesión anterior acabó con él abierto)
 setPanel("right", false);

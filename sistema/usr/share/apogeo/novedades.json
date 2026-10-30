@@ -3,6 +3,9 @@
     "fecha": "2026-10-30",
     "titulo": "30 de octubre",
     "cosas": [
+      {"icono": "buscar", "titulo": "La Órbita sale del orbe", "como": "Al pulsar el orbe ya no se ve doble: el orbe se enciende en su sitio y la Órbita sale de él poco a poco; al cerrarla, todo vuelve al orbe y se apaga."},
+      {"icono": "imagen", "titulo": "Cambiar de modo, sin tirones", "como": "Cada modo tiene su fondo preparado: al cambiar se funden suavemente, sin pasar por el del modo anterior ni pedir la contraseña. Y Jugar vuelve a abrir la consola."},
+      {"icono": "ventana", "titulo": "El panel rápido, solo con un clic", "como": "El panel de la derecha sale al pulsar la esquina de la barra de arriba (o Meta+N). Empujar el ratón contra el borde ya no lo abre ni hace brillar el lateral."},
       {"icono": "buscar", "titulo": "La Órbita, una constelación", "como": "Al abrir la Órbita lo ves todo a la vez: en el centro tus apps fijadas y el buscador, y alrededor, unidos al orbe por hilos de luz, lo que suena (con su portada y sus colores), tus avisos, tu nota (con casillas que se marcan ahí), lo que queda hoy y, en Estudiar, tu estudio. Las apps se fijan buscándolas y pulsando su chincheta."},
       {"icono": "ventana", "titulo": "Tus ventanas, arriba", "como": "Las apps abiertas salen arriba, en el centro, solo sus iconos (un punto bajo la activa). La pastilla de encima del orbe se va: el volumen y el brillo salen arriba un momento."},
       {"icono": "imagen", "titulo": "Fondos nuevos", "como": "Navegar estrena una nebulosa azul, Estudiar un atardecer oscuro y Jugar nubes violeta (de Aura, en Wallhaven; se bajan solos). Estudiar va siempre en grafito con su ámbar."},

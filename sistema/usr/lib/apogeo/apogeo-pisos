@@ -220,11 +220,10 @@ def desktop_fill(bus):
         items = json.loads(out) if out else []
     except ValueError:
         items = []
-    # Plasma le quita el hueco de la isla cuando la isla no se esconde: eso vale
-    # (Plasma le quita al widget el hueco de una barra que no se esconde: la isla abajo o la columna de pisos a la derecha,
-    # hasta 120 px; eso vale)
-    bad = [i for i in items if round(i[4]) != 0 or round(i[5]) != 0 or not i[2] - 120 <= round(i[6]) <= i[2]
-           or not i[3] - 120 <= round(i[7]) <= i[3]]
+    # (Plasma le quita al widget el hueco de una barra que no se esconde —la barra fina de arriba, la isla abajo o la
+    # columna de la derecha, hasta 120 px— y lo mueve a su lado: eso vale)
+    bad = [i for i in items if not 0 <= round(i[4]) <= 120 or not 0 <= round(i[5]) <= 120
+           or not i[2] - 120 <= round(i[6]) <= i[2] or not i[3] - 120 <= round(i[7]) <= i[3]]
     if not bad and not restart_plasma['pending']:
         desktop_fill.seen = None
         return False
@@ -967,7 +966,6 @@ class Floors:
         self.light(st, f['key'])
         self.power(mine['energia'])
         self.colours_later()
-        console_only(self.bus, f['key'] == 'jugar', st)
         if force:
             return
         if index not in self.visited:
@@ -1184,32 +1182,6 @@ class Floors:
                              env=dict(os.environ, APOGEO_AUTO='1', APOGEO_MODO=self.floor_key()))  # (la abre el piso, no tú)
 
 
-CONSOLA = {'on': None}   # (Jugar, solo la consola: si ya se han escondido la barra y el orbe)
-
-
-def console_only(bus, on, st=None):
-    """Jugar es solo la consola («full modo consola»): ni la barra fina de arriba ni el orbe. Sus widgets no pintan nada
-    en Jugar (miran el modo) y aquí sus paneles se esconden solos, sin guardar sitio; al salir, vuelven como estaban."""
-    if CONSOLA['on'] == on:
-        return
-    cfg = (st or ajustes.load())['isla']
-    done = plasma_script(bus, """
-        panels().forEach(function (p) {
-            var types = p.widgets().map(function (w) { return w.type; });
-            if (types.indexOf('org.apogeo.modo') >= 0) p.hiding = %s;
-            else if (types.indexOf('org.apogeo.isla') >= 0) p.hiding = %s;
-        });
-    """ % (json.dumps('autohide' if on else 'none'), json.dumps(island_hiding(cfg, on))))
-    if done is not None:   # (con Plasma aún sin arrancar, se vuelve a probar en el siguiente cambio de modo)
-        CONSOLA['on'] = on
-
-
-def island_hiding(cfg, jugar=None):
-    if jugar is None:
-        jugar = bool(CONSOLA['on'])
-    return 'autohide' if jugar else 'dodgewindows' if cfg['esconder'] else 'none'
-
-
 def island(bus, st):
     """La isla como en los ajustes: si se esconde sola, lo de cada piso (temperatura y FPS, música, temporizador) y los
     números de la salud del PC que enseña en Jugar."""
@@ -1247,7 +1219,7 @@ def island(bus, st):
         });
     """ % (json.dumps('bottom' if top else 'top'), json.dumps('bottom' if top else 'top'),
            json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
-           json.dumps(island_hiding(cfg)),
+           json.dumps('dodgewindows' if cfg['esconder'] else 'none'),
            json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 

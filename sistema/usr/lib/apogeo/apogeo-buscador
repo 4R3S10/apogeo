@@ -16,12 +16,13 @@ Meta+/ (entonces Esc o un clic la cierran).
   apogeo-buscador           lo enseña (o lo esconde, si ya se ve)
   apogeo-buscador --fondo   lo deja preparado, sin enseñarlo
   apogeo-buscador --atajos  la guía de atajos
-D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (el botón rosa de la isla y la tecla Meta) y .Atajos
-(Meta+/: apogeo-atajos.desktop)
+D-Bus: org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle (la tecla Meta), .AbrirDesde(«x,y,…») (el orbe de la isla:
+dónde está él y sus bolitas, para salir de él), .Orbe(«x,y,…») (solo dónde está) y .Atajos (Meta+/: apogeo-atajos.desktop)
 """
 import json
 import os
 import subprocess
+import time
 import sys
 
 SERVICE, PATH, IFACE = 'org.apogeo.Buscador', '/Buscador', 'org.apogeo.Buscador'
@@ -217,25 +218,44 @@ def main():
         def __init__(self):
             super().__init__()
             self._apps = []
-            # Al soltar Meta después de la guía, KWin abre igualmente el buscador (Meta sola): esa vez no se hace caso
-            self.swallow = False
-            self.forget = QTimer(self, singleShot=True, interval=1500, timeout=lambda: setattr(self, 'swallow', False))
+            # Al soltar Meta después de la guía, KWin abre igualmente el buscador (Meta sola): esa vez no se hace caso. Solo
+            # justo al soltarla (o mientras sigue pulsada, como mucho medio minuto): si no, se perdía la siguiente vez que
+            # lo abrías con el orbe
+            self.swallow_until = 0.0
+            self.orbe = ''   # dónde está el orbe de la isla («x,y» del orbe y de sus dos bolitas, en la pantalla)
 
         def toggle(self):
-            if self.swallow:
-                self.swallow = False
+            if time.monotonic() < self.swallow_until:
+                self.swallow_until = 0.0
             else:
                 self.toggled.emit()
 
+        def abrir_desde(self, where):
+            """Un clic en el orbe (no es la tecla Meta: nunca se ignora)."""
+            self.poner_orbe(where)
+            self.swallow_until = 0.0
+            self.toggled.emit()
+
+        def poner_orbe(self, where):
+            try:
+                n = [int(v) for v in where.split(',')]
+            except ValueError:
+                return
+            if len(n) == 6 and all(-20000 < v < 20000 for v in n):
+                self.orbe = where
+
+        @pyqtSlot(result=str)
+        def donde(self):
+            return self.orbe
+
         @pyqtSlot()
         def mantenida(self):
-            self.swallow = True
-            self.forget.stop()
+            self.swallow_until = time.monotonic() + 30
             self.atajos.emit(True)
 
         @pyqtSlot()
         def suelta(self):
-            self.forget.start()
+            self.swallow_until = time.monotonic() + 1.0
             self.soltada.emit()
 
         @pyqtSlot(result=str)
@@ -443,6 +463,14 @@ def main():
         @pyqtSlot()
         def Toggle(self):
             self.parent().toggle()
+
+        @pyqtSlot(str)
+        def AbrirDesde(self, where):
+            self.parent().abrir_desde(where)
+
+        @pyqtSlot(str)
+        def Orbe(self, where):
+            self.parent().poner_orbe(where)
 
         @pyqtSlot()
         def Atajos(self):

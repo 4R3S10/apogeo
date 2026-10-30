@@ -133,8 +133,12 @@ Casi vacío, como en la bienvenida de una consola:
   dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo siempre queda
   en el centro). Nada encima ni a los lados: tus ventanas van arriba. Se aparta de las ventanas (con el escritorio a
   la vista, se ve) y sale al acercar el ratón al borde.
-- **Jugar es solo la consola:** en Jugar no hay barra ni orbe (sus widgets no se pintan y `apogeo-pisos` esconde sus
-  paneles sin guardar sitio); al salir de Jugar, vuelven.
+- **Jugar es solo la consola:** en Jugar no hay barra ni orbe (sus widgets no se pintan y la consola, a pantalla
+  completa, va encima); al salir de Jugar, vuelven. Cada modo tiene su fondo ya cargado: al cambiar, se funden sin
+  pasar por el del modo anterior.
+- **Al abrir la Órbita**, el orbe no se duplica: la Órbita pinta el suyo justo encima del de la isla (la isla le dice
+  dónde está por D-Bus, `AbrirDesde`/`Orbe` de `apogeo-buscador`), se enciende y los satélites salen de él; al
+  cerrarla, vuelven a él y se apaga.
 - **La Órbita abierta** («G3 · Constelación»; clic en el orbe o Meta; sustituye al buscador, `apogeo-buscador`):
   todo a la vista nada más entrar, sin pestañas. En el centro, unida al orbe por un haz de luz, la cubierta con **tus
   apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza vacío; Estudiar con Obsidian,
@@ -340,7 +344,7 @@ Lo pone `apogeo-pisos` (`carousel()`): Karousel solo trabaja en los escritorios 
 El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). A la derecha, un panel alto
 **de cristal** («1 · Cristal con tu fondo»: detrás, tu fondo difuminado y oscurecido, con un brillo del color del modo
 arriba; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo). Sale con Meta+N, desde la
-barra de arriba o empujando el ratón contra el borde, **hace sitio** (las ventanas se estrechan y vuelven al cerrarlo) y
+barra de arriba (el borde de la pantalla no hace nada ni brilla), **hace sitio** (las ventanas se estrechan y vuelven al cerrarlo) y
 se queda hasta que vuelves a pulsar la tecla. El panel de widgets de la izquierda ya no está: la agenda (con el tiempo y
 tu ciudad, recordatorios y temporizadores), tus notas y Estudios van en la Órbita abierta, como satélites.
 En Órbita, el panel es de **«cristal grafito» (W1)**: neutro, sin el brillo del modo, y lo encendido en blanco.

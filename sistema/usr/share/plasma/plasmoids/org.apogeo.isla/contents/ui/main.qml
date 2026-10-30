@@ -14,6 +14,7 @@ import org.kde.pipewire as PipeWire
 import org.kde.notificationmanager as NotificationManager
 import org.kde.plasma.private.volume as PulseAudio
 import org.kde.plasma.private.brightnesscontrolplugin as Brillo
+import org.kde.plasma.workspace.dbus as DBus
 import Apogeo
 
 // La isla de Apogeo (abajo, se esconde sola), con los botones y chips de Ágape. Siempre: tus apps y el buscador en uno (el
@@ -74,7 +75,31 @@ PlasmoidItem {
         run("dbus-send --session --type=method_call --dest=org.apogeo.Modos /Modos org.apogeo.Modos1.Cambiar string:" + m);
     }
     function abrirOrbita() {
-        run("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle");
+        // Con Órbita, la Órbita abierta sale de este mismo orbe: se le dice dónde está (y sus bolitas) para que dibuje el
+        // suyo justo encima, igual, y lo encienda (sin verse dos)
+        if (orbita && orbeItem) {
+            llamar("AbrirDesde", dondeOrbe(), () => run(toggleCmd));
+            return;
+        }
+        run(toggleCmd);
+    }
+    // (al empezar, con el escritorio a la vista: dónde está el orbe, para cuando la Órbita se abra con Meta)
+    Timer { interval: 4000; running: root.orbita; onTriggered: if (root.orbeItem) root.llamar("Orbe", root.dondeOrbe(), null) }
+    readonly property string toggleCmd: "dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle"
+    property Item orbeItem: null
+    property Item bolitaAntes: null
+    property Item bolitaDespues: null
+    function dondeOrbe() {
+        const c = orbeItem.mapToGlobal(orbeItem.width / 2, orbeItem.height / 2);
+        const a = bolitaAntes ? bolitaAntes.mapToGlobal(bolitaAntes.width / 2, 17) : c;
+        const d = bolitaDespues ? bolitaDespues.mapToGlobal(bolitaDespues.width / 2, 17) : c;
+        return [c.x, c.y, a.x, a.y, d.x, d.y].map(Math.round).join(",");
+    }
+    function llamar(metodo, texto, mal) {
+        DBus.SessionBus.asyncCall({
+            service: "org.apogeo.Buscador", path: "/Buscador", iface: "org.apogeo.Buscador", member: metodo,
+            arguments: [new DBus.string(texto)], signature: "(s)"
+        }, () => {}, () => { if (mal) mal(); });
     }
 
     P5Support.DataSource {
@@ -499,7 +524,7 @@ PlasmoidItem {
     fullRepresentation: RowLayout {
         id: fila
         spacing: 6
-        // Jugar es solo la consola: aquí no se ve nada (apogeo-pisos además esconde el panel)
+        // Jugar es solo la consola (a pantalla completa): aquí no se ve nada
         opacity: root.orbita && Tema.modo === "jugar" ? 0 : 1
         enabled: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -552,10 +577,11 @@ PlasmoidItem {
 
         // ----- Órbita: la bolita del modo de antes, el orbe y la del de después (tus ventanas van arriba, en el centro de
         // la barra fina: org.apogeo.ventanas) -----
-        Bolita { visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 2) % 3] }
+        Bolita { id: antes; visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 2) % 3]; Component.onCompleted: root.bolitaAntes = antes }
         Item {
             id: orbe
             visible: root.orbita
+            Component.onCompleted: root.orbeItem = orbe
             Layout.preferredWidth: 48
             Layout.preferredHeight: 48
             Rectangle {   // al pasar el ratón, un halo del color del modo
@@ -580,12 +606,14 @@ PlasmoidItem {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.abrirOrbita()
+                // (al pasar por él, el orbe está a la vista: se apunta dónde, para cuando la Órbita se abra con Meta)
+                onEntered: root.llamar("Orbe", root.dondeOrbe(), null)
             }
             QQC2.ToolTip.visible: orbeArea.containsMouse
             QQC2.ToolTip.text: root.nombreModo(root.modo) + " · apps, buscar y lo que pasa (Meta)"
             QQC2.ToolTip.delay: 700
         }
-        Bolita { visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 1) % 3] }
+        Bolita { id: despues; visible: root.orbita; m: root.modos[(root.modos.indexOf(root.modo) + 1) % 3]; Component.onCompleted: root.bolitaDespues = despues }
 
         // ----- Tus apps del piso: fijadas y abiertas (con Órbita no: van arriba) -----
         Repeater {

@@ -94,39 +94,40 @@ WallpaperItem {
         onTriggered: root.time += 0.033
     }
 
-    // ----- Imagen tuya: la nueva se funde sobre la anterior -----
-    property bool front: false
-    Image {
-        id: imgA
-        anchors.fill: parent
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        cache: false
-        smooth: true
-        mipmap: true
-        sourceSize: Qt.size(root.width * Screen.devicePixelRatio, root.height * Screen.devicePixelRatio)
-        opacity: 0
-        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
-        onStatusChanged: if (status === Image.Ready && !root.front) { opacity = 1; imgB.opacity = 0 }
-    }
-    Image {
-        id: imgB
-        anchors.fill: parent
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        cache: false
-        smooth: true
-        mipmap: true
-        sourceSize: imgA.sourceSize
-        opacity: 0
-        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
-        onStatusChanged: if (status === Image.Ready && root.front) { opacity = 1; imgA.opacity = 0 }
+    // ----- Imagen tuya: una por modo, cargada una sola vez (cambiar de modo no la vuelve a leer del disco) y la del modo
+    // al que llegas se funde encima de la anterior -----
+    Repeater {
+        model: root.porPiso ? ["Jugar", "Navegar", "Estudiar"] : [""]
+        delegate: Image {
+            id: foto
+            required property string modelData
+            readonly property string archivo: (modelData ? root.configuration["Archivo" + modelData] : root.configuration.Archivo) || ""
+            readonly property bool esta: modelData === "" || modelData === root.floorName
+            anchors.fill: parent
+            z: esta ? 2 : 1
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: false
+            smooth: true
+            mipmap: true
+            sourceSize: Qt.size(root.width * Screen.devicePixelRatio, root.height * Screen.devicePixelRatio)
+            source: archivo !== "" && !root.videoFile(archivo) ? "file://" + archivo.split("/").map(encodeURIComponent).join("/") : ""
+            opacity: esta && status === Image.Ready ? 1 : 0
+            // (la que se va espera a que la nueva esté encima: sin ver el fondo vacío en medio)
+            Behavior on opacity {
+                SequentialAnimation {
+                    PauseAnimation { duration: foto.esta ? 0 : 520 }
+                    NumberAnimation { duration: foto.esta ? 500 : 0; easing.type: Easing.InOutQuad }
+                }
+            }
+        }
     }
 
     // ----- Vídeo tuyo: en bucle y sin sonido -----
     Video {
         id: video
         anchors.fill: parent
+        z: 3
         fillMode: VideoOutput.PreserveAspectCrop
         loops: MediaPlayer.Infinite
         muted: true
@@ -136,21 +137,13 @@ WallpaperItem {
     }
 
     function show() {
-        if (root.file === "") {
+        if (!videoFile(root.file)) {
             video.stop(); video.source = ""; video.opacity = 0;
-            imgA.opacity = 0; imgB.opacity = 0;
             return;
         }
         const url = "file://" + root.file.split("/").map(encodeURIComponent).join("/");
-        if (videoFile(root.file)) {
-            imgA.opacity = 0; imgB.opacity = 0;
-            if (video.source.toString() !== url) { video.opacity = 0; video.source = url; }
-            if (root.seen) video.play();
-            return;
-        }
-        video.stop(); video.source = ""; video.opacity = 0;
-        root.front = !root.front;
-        (root.front ? imgB : imgA).source = url;
+        if (video.source.toString() !== url) { video.opacity = 0; video.source = url; }
+        if (root.seen) video.play();
     }
     onFileChanged: show()
     onSeenChanged: if (videoFile(root.file)) { if (root.seen) video.play(); else video.pause(); }

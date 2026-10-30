@@ -656,7 +656,6 @@ Window {
         width: 280; height: 280
         opacity: 0.06
         disco: false
-        acento: Tema.acento
     }
 
     // ---------- La cinta de portadas ----------

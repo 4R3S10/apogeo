@@ -71,7 +71,7 @@ PlasmoidItem {
     readonly property bool fina: Plasmoid.location === PlasmaCore.Types.TopEdge || (root.height > 0 && root.height < 34)
     compactRepresentation: Item {
         id: compact
-        // Jugar es solo la consola: aquí no se ve nada (apogeo-pisos además esconde el panel)
+        // Jugar es solo la consola (a pantalla completa): aquí no se ve nada
         opacity: (Tema.f.estilo || "orbita") === "orbita" && Tema.modo === "jugar" ? 0 : 1
         enabled: opacity > 0
         readonly property int unread: notifs.unreadNotificationsCount

@@ -33,7 +33,8 @@ Window {
     readonly property string query: field.text.trim()
     property string detalle: ""                    // «», «agenda», «notas» o «estudios»: un satélite abierto entero
     readonly property bool verSatelites: query === "" && detalle === ""
-    property real llegada: 0                       // 0 → 1 al abrir
+    property real llegada: 0                       // 0 → 1 al abrir: todo sale del orbe
+    property real encendido: 0                     // el orbe: 0 como el de la isla, 1 encendido
     property int sel: 0
     property bool pista: false                     // tras «+»: cómo se fija una app
     property var fijadas: []
@@ -79,7 +80,22 @@ Window {
         datos.pedir("Agenda", [Qt.formatDate(new Date(), "yyyy-MM-dd")], d => { if (d) win.hoy = d.cosas || []; });
         if (modo === "estudiar") datos.pedir("Estudio", [], d => { if (d) win.estudio = d; });
     }
+    // Dónde está el orbe de la isla (y sus bolitas), en esta ventana: la Órbita sale de él. Sin saberlo, abajo en el centro
+    property point orbeEn: Qt.point(width / 2, height - 37)
+    property var bolasEn: [Qt.point(width / 2 - 47, height - 44), Qt.point(width / 2 + 47, height - 44)]
+    function leerOrbe() {
+        const n = String(buscador.donde() || "").split(",").map(Number);
+        const sx = win.screen ? win.screen.virtualX : 0, sy = win.screen ? win.screen.virtualY : 0;
+        if (n.length === 6 && n.every(v => !isNaN(v)) && n[1] - sy > height / 2 && n[1] - sy < height) {
+            orbeEn = Qt.point(n[0] - sx, n[1] - sy);
+            bolasEn = [Qt.point(n[2] - sx, n[3] - sy), Qt.point(n[4] - sx, n[5] - sy)];
+        } else {
+            orbeEn = Qt.point(width / 2, height - 37);
+            bolasEn = [Qt.point(width / 2 - 47, height - 44), Qt.point(width / 2 + 47, height - 44)];
+        }
+    }
     function open() {
+        cierre.stop();
         buscador.refresh();
         field.text = "";
         detalle = "";
@@ -87,11 +103,18 @@ Window {
         leer();
         sel = 0;
         showFullScreen();
+        leerOrbe();
         requestActivate();
         field.forceActiveFocus();
         appear.restart();
     }
+    // Se cierra al revés de como se abre (todo vuelve al orbe) y luego se esconde
     function close() {
+        if (!visible || cierre.running) return;
+        appear.stop();
+        cierre.start();
+    }
+    function cerrado() {
         hide();
         field.text = "";
         detalle = "";
@@ -240,8 +263,18 @@ Window {
     }
     ParallelAnimation {
         id: appear
-        NumberAnimation { target: dim; property: "opacity"; from: 0; to: 1; duration: 180 }
-        NumberAnimation { target: win; property: "llegada"; from: 0; to: 1; duration: 420; easing.type: Easing.OutCubic }
+        NumberAnimation { target: dim; property: "opacity"; from: 0; to: 1; duration: 260; easing.type: Easing.OutQuad }
+        NumberAnimation { target: win; property: "encendido"; from: 0; to: 1; duration: 320; easing.type: Easing.OutCubic }
+        NumberAnimation { target: win; property: "llegada"; from: 0; to: 1; duration: 520; easing.type: Easing.OutQuint }
+    }
+    SequentialAnimation {
+        id: cierre
+        ParallelAnimation {
+            NumberAnimation { target: win; property: "llegada"; to: 0; duration: 220; easing.type: Easing.InCubic }
+            NumberAnimation { target: dim; property: "opacity"; to: 0; duration: 240; easing.type: Easing.InQuad }
+            NumberAnimation { target: win; property: "encendido"; to: 0; duration: 240; easing.type: Easing.InOutQuad }
+        }
+        ScriptAction { script: win.cerrado() }
     }
 
     // ---------- Los hilos de luz, del orbe a cada satélite (y el haz hasta la cubierta) ----------
@@ -896,50 +929,63 @@ Window {
         Component { id: cEstudios; Estudios {} }
     }
 
-    // ---------- El orbe, abierto: un clic lo cierra; a sus lados, los otros dos modos ----------
+    // ---------- El orbe: justo encima del de la isla e igual que él (que se aparta por debajo), y se enciende: el anillo
+    // crece, el punto toma el color del modo y brilla. Un clic lo cierra; a sus lados, las bolitas de los otros modos,
+    // también donde están las de la isla ----------
     Item {
         id: orbe
-        width: win.u(40); height: width
-        x: (win.width - width) / 2
-        y: win.height - win.u(64)
+        width: 40; height: 40
+        x: win.orbeEn.x - 20
+        y: win.orbeEn.y - 20
+        Rectangle {   // el brillo
+            anchors.centerIn: parent
+            width: 40 + 52 * win.encendido; height: width; radius: width / 2
+            color: Tema.acento
+            opacity: (orbeArea.containsMouse ? 0.2 : 0.13) * win.encendido
+        }
         Rectangle {
             anchors.centerIn: parent
-            width: parent.width * 2; height: width; radius: width / 2
-            color: Tema.acento
-            opacity: orbeArea.containsMouse ? 0.2 : 0.12
-        }
-        Rectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: Qt.rgba(0, 0, 0, 0.4)
+            width: 40; height: 40; radius: 20
+            scale: (1 + 0.1 * win.encendido) * (orbeArea.pressed ? 0.92 : 1)
+            color: Tema.claro ? Tema.superficie : "#0b0e14"
             border.width: 2
             border.color: Tema.acento
+            Rectangle {
+                anchors.centerIn: parent
+                width: 11 + 3 * win.encendido; height: width; radius: width / 2
+                color: Qt.tint(Tema.texto, Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, win.encendido))
+            }
         }
-        Rectangle { anchors.centerIn: parent; width: win.u(14); height: width; radius: width / 2; color: Tema.acento }
         MouseArea { id: orbeArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.close() }
     }
     Repeater {
-        model: ["jugar", "navegar", "estudiar"].filter(m => m !== win.modo)
+        // (en el mismo orden que en la isla: el modo de antes a la izquierda y el de después a la derecha)
+        model: { const m = ["jugar", "navegar", "estudiar"], i = Math.max(0, m.indexOf(win.modo)); return [m[(i + 2) % 3], m[(i + 1) % 3]]; }
         delegate: Item {
             id: bola
             required property string modelData
             required property int index
-            width: win.u(28); height: width
-            x: orbe.x + orbe.width / 2 + (index === 0 ? -1 : 1) * win.u(52) - width / 2
-            y: orbe.y + orbe.height / 2 - height / 2
+            readonly property color c: win.colorModo[modelData]
+            width: 50; height: 48
+            x: win.bolasEn[index].x - width / 2
+            y: win.bolasEn[index].y - 17
             Rectangle {
-                anchors.centerIn: parent
-                width: bolaArea.containsMouse ? win.u(16) : win.u(12); height: width; radius: width / 2
-                color: win.colorModo[bola.modelData]
-                Behavior on width { NumberAnimation { duration: 120 } }
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 5
+                width: 24; height: 24; radius: 12
+                color: bolaArea.containsMouse ? Qt.rgba(bola.c.r, bola.c.g, bola.c.b, 0.25) : (Tema.claro ? Tema.superficie : "#151b24")
+                border.width: 1.5
+                border.color: bola.c
+                scale: bolaArea.pressed ? 0.88 : bolaArea.containsMouse ? 1.08 : 1
+                Behavior on scale { NumberAnimation { duration: 140 } }
             }
             Texto {
                 anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.top
-                visible: bolaArea.containsMouse
+                y: 32
                 text: win.nombreModo[bola.modelData]
-                color: win.colorModo[bola.modelData]
-                font { family: Tema.mono; pixelSize: win.u(11); capitalization: Font.AllUppercase; letterSpacing: 1.5 }
+                color: bola.c
+                wrapMode: Text.NoWrap
+                font { pixelSize: 10; weight: Font.DemiBold }
             }
             MouseArea {
                 id: bolaArea
@@ -968,7 +1014,9 @@ Window {
         Behavior on ver { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         visible: opacity > 0.01
         opacity: win.llegada * ver
-        transform: Translate { y: (1 - win.llegada) * win.u(16) }
+        // (sale del orbe: crece un poco y sube hacia su sitio)
+        scale: 0.92 + 0.08 * win.llegada
+        transform: Translate { y: (1 - win.llegada) * win.u(24) }
         height: cuerpo.y + cuerpo.height + pad
         radius: Tema.r(win.u(18))
         color: Qt.rgba(0.07, 0.08, 0.105, 0.84)

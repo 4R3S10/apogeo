@@ -399,7 +399,8 @@ def switch(st, floor, shown=None, log=print):
     después del cambio (no en medio de la animación) y en segundo plano: si su tema aún no está hecho, se hace."""
     t, per = all_tokens(st, floor, shown)
     write_tokens(t)
-    _login_copy(st, t, per)
+    # (la copia para el inicio de sesión no: lleva los tres pisos y no cambia al cambiar de piso; la pone apply. Antes se
+    # escribía en cada cambio, con pkexec, y lo hacía lento)
     if t['nombre']:
         _generate(t)
     _kde(t)

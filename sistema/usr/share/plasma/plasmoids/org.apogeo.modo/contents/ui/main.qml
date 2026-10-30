@@ -16,7 +16,7 @@ PlasmoidItem {
     P5Support.DataSource { id: runner; engine: "executable"; onNewData: source => disconnectSource(source) }
 
     fullRepresentation: Item {
-        // Jugar es solo la consola: aquí no se ve nada (apogeo-pisos además esconde el panel)
+        // Jugar es solo la consola (a pantalla completa): aquí no se ve nada
         opacity: root.modo === "jugar" ? 0 : 1
         enabled: opacity > 0
         Layout.minimumWidth: fila.implicitWidth + 16
