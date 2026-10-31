@@ -28,7 +28,7 @@ package_apogeo() {
     pacman-contrib polkit gnupg                               # ajustes: actualizaciones; la copia de Apogeo
     kdialog libnotify libpulse xdg-utils curl fuse2           # avisos, sonidos, Ágape (AppImage)
     power-profiles-daemon                                     # energía de cada piso
-    kwin-effect-rounded-corners                               # ventanas con las esquinas redondeadas
+    apogeo-esquinas                                           # ventanas con las esquinas redondeadas (para tu KWin)
     qt6-multimedia qt6-multimedia-ffmpeg xdg-user-dirs ffmpeg # fondos de vídeo, la carpeta de imágenes y la Tierra del arranque
     steam heroic-games-launcher umu-launcher apogeo-hydra     # juegos: Steam, Epic/GOG, lanzador de Epic y Hydra
     tesseract tesseract-data-spa tesseract-data-eng           # capturas: sacar el texto de una imagen

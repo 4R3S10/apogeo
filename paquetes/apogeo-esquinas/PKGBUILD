@@ -1,0 +1,35 @@
+# KDE-Rounded-Corners (matinlotfali/KDE-Rounded-Corners), las esquinas redondeadas y la sombra suave de las ventanas.
+# Tal cual su versión publicada (revisada: solo dibuja en KWin, sin red ni programas). Es un efecto de KWin compilado:
+# solo carga con la misma versión de KWin con la que se compiló, y el de CachyOS (kwin-effect-rounded-corners) se
+# quedaba atrás al subir KWin (ventanas cuadradas). Este se compila cada día contra la KWin de Arch: el flujo pone en
+# pkgver la versión del efecto y la de KWin (0.11.0_6.8.2), así que al subir KWin llega uno nuevo.
+# Para subir de versión el efecto: revisar el código nuevo y cambiar _efecto y la suma.
+pkgname=apogeo-esquinas
+_efecto=0.11.0
+pkgver=0.11.0_6.8.2
+pkgrel=1
+pkgdesc='Esquinas redondeadas para las ventanas de Apogeo (KDE-Rounded-Corners, compilado para tu KWin)'
+arch=('x86_64')
+url='https://github.com/matinlotfali/KDE-Rounded-Corners'
+license=('GPL-3.0-only')
+depends=(kwin)  # (sin «=versión»: si no, frenaría la subida de KWin hasta el día siguiente)
+makedepends=(cmake extra-cmake-modules ninja vulkan-headers)
+provides=(kwin-effect-rounded-corners)
+conflicts=(kwin-effect-rounded-corners)
+replaces=(kwin-effect-rounded-corners)
+source=("KDE-Rounded-Corners-${_efecto}.tar.gz::https://github.com/matinlotfali/KDE-Rounded-Corners/archive/v${_efecto}.tar.gz")
+sha256sums=('73833c9835262ad212075539edad771af75adc5be62ef027e55e09da2b97f0cb')
+
+prepare() {
+  # (solo Qt 6)
+  sed -E -e 's&\bQUIET\b&REQUIRED&' -i "KDE-Rounded-Corners-${_efecto}/cmake/qtversion.cmake"
+}
+
+build() {
+  cmake -B build -S "KDE-Rounded-Corners-${_efecto}" -G Ninja -Wno-dev -DCMAKE_BUILD_TYPE=Release
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

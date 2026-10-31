@@ -1,5 +1,5 @@
 name: paquetes
-# Construye los paquetes de Apogeo (apogeo, apogeo-hydra, apogeo-aura y apogeo-karousel), los firma y los publica como repositorio de pacman en la
+# Construye los paquetes de Apogeo (apogeo, apogeo-hydra, apogeo-aura, apogeo-karousel y apogeo-esquinas), los firma y los publica como repositorio de pacman en la
 # versión «repo» de GitHub: https://github.com/4R3S10/apogeo/releases/download/repo
 on:
   schedule:
@@ -64,9 +64,17 @@ jobs:
             pacman -S --noconfirm --needed rust libxkbcommon wayland  # (lo que pide para compilar)
             (cd paquetes/apogeo-aura && runuser -u constructor -- makepkg --nodeps --sign --noconfirm --cleanbuild)
           fi
+      - name: Esquinas (para la KWin de hoy)
+        run: |
+          # El efecto solo carga con la KWin con la que se compila: se compila contra la de hoy y su versión va en pkgver
+          pacman -S --noconfirm --needed kwin cmake extra-cmake-modules ninja vulkan-headers
+          k=$(pacman -Q kwin | awk '{print $2}'); k=${k%-*}; k=${k#*:}
+          e=$(grep '^_efecto=' paquetes/apogeo-esquinas/PKGBUILD | cut -d= -f2)
+          echo "Esquinas $e para KWin $k"
+          sed -i "s/^pkgver=.*/pkgver=${e}_${k}/" paquetes/apogeo-esquinas/PKGBUILD
       - name: Construir
         run: |
-          for p in apogeo-hydra apogeo-karousel apogeo; do
+          for p in apogeo-hydra apogeo-karousel apogeo-esquinas apogeo; do
             (cd "paquetes/$p" && runuser -u constructor -- makepkg --nodeps --sign --noconfirm --cleanbuild)
           done
       - name: Repositorio
