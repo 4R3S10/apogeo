@@ -1,0 +1,214 @@
+#!/usr/bin/python3
+"""
+El instalador de Apogeo (en el USB): una tarjeta de Órbita en el centro, como la bienvenida, con cuatro pasos —hola
+(y la red), tú, dónde va y listo— y la instalación con su progreso. La parte de dentro (los discos, la red, lanzar el
+motor y reiniciar) es esto; lo que se ve es Instalador.qml («instalador» en QML). La instalación la hace motor.py
+(como root), que recibe lo elegido por su entrada: tu contraseña no se escribe en ningún archivo.
+
+  apogeo-instalador                lo abre (el USB lo abre solo al arrancar, a pantalla completa)
+  APOGEO_PRUEBA=1 apogeo-instalador  sin instalar nada: el progreso es de mentira (para probar cómo se ve)
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
+
+from PyQt6.QtCore import QObject, QUrl, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt6.QtGui import QGuiApplication, QIcon
+from PyQt6.QtQml import QQmlApplicationEngine
+
+AQUI = os.path.dirname(os.path.abspath(__file__))
+QML = os.environ.get('APOGEO_INSTALADOR_QML', os.path.join(AQUI, 'Instalador.qml'))
+MOTOR = os.path.join(AQUI, 'motor.py')
+PRUEBA = bool(os.environ.get('APOGEO_PRUEBA'))
+
+
+def sh(*cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+class Instalador(QObject):
+    changed = pyqtSignal()
+    avance = pyqtSignal(str, str, str, float, arguments=['paso', 'texto', 'detalle', 'progreso'])
+    terminado = pyqtSignal(bool, str, arguments=['bien', 'mensaje'])
+    _linea = pyqtSignal(dict)
+    _wifis = pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
+        self._online = False
+        self._redes = []
+        self._discos = []
+        self._instalando = False
+        self._linea.connect(self._en_linea)
+        self._wifis.connect(self._poner_redes)
+        self.refrescar()
+
+    # ---------- La red ----------
+
+    @pyqtProperty(bool, notify=changed)
+    def online(self):
+        return self._online
+
+    @pyqtProperty('QVariantList', notify=changed)
+    def redes(self):
+        return self._redes
+
+    @pyqtSlot()
+    def refrescar(self):
+        """¿Hay internet? (lo que dice NetworkManager) y los discos; las redes Wi-Fi, en segundo plano."""
+        estado = sh('nmcli', '-t', '-f', 'CONNECTIVITY', 'general').strip()
+        online = estado == 'full' or (PRUEBA and estado != 'none')
+        discos = self._leer_discos()
+        if online != self._online or discos != self._discos:
+            self._online, self._discos = online, discos
+            self.changed.emit()
+        threading.Thread(target=self._buscar_wifis, daemon=True).start()
+
+    def _buscar_wifis(self):
+        out = sh('nmcli', '-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY', 'device', 'wifi', 'list')
+        vistas, redes = set(), []
+        for l in out.splitlines():
+            partes = re.split(r'(?<!\\):', l)
+            if len(partes) < 4 or not partes[1] or partes[1] in vistas:
+                continue
+            vistas.add(partes[1])
+            redes.append({'nombre': partes[1].replace('\\:', ':'), 'senal': int(partes[2] or 0),
+                          'cerrada': partes[3] not in ('', '--'), 'usada': partes[0] == '*'})
+        redes.sort(key=lambda r: (not r['usada'], -r['senal']))
+        self._wifis.emit(redes[:8])
+
+    def _poner_redes(self, redes):
+        if redes != self._redes:
+            self._redes = redes
+            self.changed.emit()
+
+    @pyqtSlot(str, str, result=bool)
+    def conectar(self, red, clave):
+        """Conecta a una Wi-Fi (la clave la escribes tú; va directa a NetworkManager)."""
+        cmd = ['nmcli', 'device', 'wifi', 'connect', red] + (['password', clave] if clave else [])
+        ok = subprocess.run(cmd, capture_output=True, timeout=60).returncode == 0
+        self.refrescar()
+        return ok
+
+    # ---------- Los discos ----------
+
+    def _leer_discos(self):
+        try:
+            return json.loads(subprocess.run([sys.executable, MOTOR, '--discos'], capture_output=True, text=True,
+                                             timeout=30).stdout or '[]')
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return []
+
+    @pyqtProperty('QVariantList', notify=changed)
+    def discos(self):
+        return self._discos
+
+    @pyqtSlot(str, result=str)
+    def usuarioDe(self, nombre):
+        """Tu nombre de usuario a partir de tu nombre: «Ares Pérez» → «ares»."""
+        import unicodedata
+        s = unicodedata.normalize('NFD', nombre.strip().split(' ')[0].lower() if nombre.strip() else '')
+        s = re.sub(r'[^a-z0-9_-]', '', ''.join(c for c in s if unicodedata.category(c) != 'Mn'))
+        return (s if s and not s[0].isdigit() else 'u' + s)[:32] if s else ''
+
+    # ---------- Instalar ----------
+
+    @pyqtProperty(bool, notify=changed)
+    def instalando(self):
+        return self._instalando
+
+    @pyqtSlot('QVariantMap')
+    def instalar(self, eleccion):
+        if self._instalando:
+            return
+        self._instalando = True
+        self.changed.emit()
+        e = dict(eleccion)
+        threading.Thread(target=self._prueba if PRUEBA else self._motor, args=(e,), daemon=True).start()
+
+    def _motor(self, e):
+        p = subprocess.Popen([sys.executable, MOTOR], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        p.stdin.write(json.dumps(e))
+        p.stdin.close()
+        e.clear()   # (la contraseña, fuera de aquí cuanto antes)
+        fin = False
+        for l in p.stdout:
+            try:
+                d = json.loads(l)
+            except ValueError:
+                continue
+            fin = fin or 'fin' in d or 'error' in d
+            self._linea.emit(d)
+        p.wait()
+        if not fin:
+            self._linea.emit({'error': 'El instalador se ha parado sin terminar. El detalle está en '
+                                       '/tmp/apogeo-instalador.log.'})
+
+    def _prueba(self, e):
+        pasos = [('disco', 'Preparando el disco', ''), ('disco', 'Cifrando el disco', '')]
+        pasos += [('apogeo', 'Instalando Apogeo', f'{i * 40} de 1200') for i in range(30)]
+        pasos += [('sistema', 'Dejando Apogeo a tu gusto', ''), ('sistema', 'Preparando el arranque', '')]
+        pasos += [('windows', 'Descargando Windows de Microsoft', f'{i * 0.25:.1f} de 4.7 GB · quedan {20 - i} min')
+                  for i in range(19)]
+        pasos += [('windows', 'Instalando Windows', ''), ('windows', 'Preparando el primer arranque de Windows', '')]
+        for i, (paso, texto, detalle) in enumerate(pasos):
+            self._linea.emit({'paso': paso, 'texto': texto, 'detalle': detalle, 'progreso': (i + 1) / len(pasos)})
+            time.sleep(0.25)
+        self._linea.emit({'fin': True})
+
+    def _en_linea(self, d):
+        if 'error' in d or 'fin' in d:
+            self._instalando = False
+            self.changed.emit()
+            self.terminado.emit('fin' in d, d.get('error', ''))
+        else:
+            self.avance.emit(d.get('paso', ''), d.get('texto', ''), d.get('detalle', ''), float(d.get('progreso', 0)))
+
+    # ---------- Al acabar ----------
+
+    @pyqtSlot()
+    def reiniciar(self):
+        if not PRUEBA:
+            subprocess.Popen(['systemctl', 'reboot'])
+        QGuiApplication.quit()
+
+    @pyqtSlot()
+    def apagar(self):
+        if not PRUEBA:
+            subprocess.Popen(['systemctl', 'poweroff'])
+        QGuiApplication.quit()
+
+    @pyqtSlot(result=str)
+    def registro(self):
+        """Las últimas líneas del registro (para ver qué ha fallado)."""
+        try:
+            with open('/tmp/apogeo-instalador.log', errors='replace') as f:
+                return ''.join(f.readlines()[-40:])
+        except OSError:
+            return ''
+
+
+def main():
+    os.environ.setdefault('QT_QUICK_CONTROLS_STYLE', 'Basic')
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName('Instalar Apogeo')
+    app.setDesktopFileName('apogeo-instalador')
+    app.setWindowIcon(QIcon.fromTheme('apogeo'))
+    motor = Instalador()
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty('instalador', motor)
+    engine.load(QUrl.fromLocalFile(QML))
+    if not engine.rootObjects():
+        return 1
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

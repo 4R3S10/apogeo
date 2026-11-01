@@ -1,0 +1,55 @@
+name: iso
+# Construye el USB de Apogeo (instalador/construir-iso.sh) con el último paquete de Apogeo del repositorio y lo publica
+# en la versión «iso» de GitHub, con su suma SHA-256. Se lanza a mano (o al cambiar el instalador).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "instalador/**"
+      - ".github/workflows/iso.yml"
+concurrency:
+  group: iso
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  iso:
+    name: Construir el USB
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - name: Herramientas
+        run: |
+          pacman -Syu --noconfirm --needed archiso github-cli git libarchive
+          # La llave de CachyOS (su repositorio va en el USB para sus llaves y espejos)
+          pacman-key --init
+          pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+          pacman-key --lsign-key F3B607488DB35A47
+          # (el perfil la incluye; en el USB la pone su paquete)
+          echo 'Server = https://mirror.cachyos.org/repo/$arch/$repo' > /etc/pacman.d/cachyos-mirrorlist
+      - uses: actions/checkout@v4
+      - name: El paquete de Apogeo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          mkdir -p /tmp/paquete
+          gh release download repo -R "$GITHUB_REPOSITORY" -p 'apogeo-[0-9]*-x86_64.pkg.tar.zst' -D /tmp/paquete
+          ls /tmp/paquete
+      - name: Construir
+        run: instalador/construir-iso.sh /tmp/paquete/apogeo-*.pkg.tar.zst /tmp/salida
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd /tmp/salida
+          iso=$(ls apogeo-*.iso)
+          mv "$iso" apogeo.iso
+          sha256sum apogeo.iso > apogeo.iso.sha256
+          R="$GITHUB_REPOSITORY"
+          gh release view iso -R "$R" >/dev/null 2>&1 || gh release create iso -R "$R" --title "USB de Apogeo" \
+            --notes "El instalador de Apogeo. Grábalo en un USB (con Impression, Ventoy o «dd») y arranca el PC desde él."
+          gh release upload iso -R "$R" --clobber apogeo.iso apogeo.iso.sha256

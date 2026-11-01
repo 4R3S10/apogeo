@@ -1,0 +1,53 @@
+# Lo justo para arrancar, conectarse y dejar instalados Apogeo y Windows (lo de Apogeo se baja al instalar)
+base
+linux
+linux-firmware
+linux-firmware-marvell
+sof-firmware
+amd-ucode
+intel-ucode
+mkinitcpio
+mkinitcpio-archiso
+# la pantalla: el instalador a pantalla completa (cage) con Qt
+cage
+mesa
+vulkan-swrast
+python
+python-pyqt6
+qt6-declarative
+qt6-wayland
+qt6-svg
+noto-fonts
+adwaita-cursors
+# la red
+networkmanager
+wpa_supplicant
+iwd
+wireless-regdb
+usb_modeswitch
+# los discos y el arranque
+arch-install-scripts
+gptfdisk
+parted
+cryptsetup
+btrfs-progs
+dosfstools
+ntfs-3g
+e2fsprogs
+efibootmgr
+tpm2-tss
+pciutils
+usbutils
+# Windows: su descarga (bsdtar abre el catálogo de Microsoft) y aplicar su imagen
+curl
+libarchive
+wimlib
+# las llaves y los espejos de CachyOS (para instalar desde sus repositorios)
+cachyos-keyring
+cachyos-mirrorlist
+cachyos-v3-mirrorlist
+# para probar en una máquina virtual
+virtualbox-guest-utils-nox
+# por si hay que mirar algo a mano (Ctrl+Alt+F2)
+nano
+less

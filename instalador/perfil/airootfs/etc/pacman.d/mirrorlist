@@ -1,0 +1,4 @@
+# Apogeo: los espejos de Arch para instalar (el de reparto por zonas y dos en Europa)
+Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
+Server = https://mirror.rackspace.com/archlinux/$repo/os/$arch
+Server = https://ftp.halifax.rwth-aachen.de/archlinux/$repo/os/$arch
