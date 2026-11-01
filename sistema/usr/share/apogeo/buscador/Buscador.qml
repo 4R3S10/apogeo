@@ -859,11 +859,14 @@ Window {
                         visible: count > 0
                         model: results
                         section.property: "category"
-                        section.delegate: Titulo {
+                        // (la ListView vuelve visible su título a la fuerza: se esconde lo de dentro)
+                        section.delegate: Item {
+                            id: grupo
                             required property string section
-                            visible: win.kdeGrupos.indexOf(section) >= 0
-                            height: visible ? implicitHeight : 0
-                            text: section
+                            readonly property bool sale: win.kdeGrupos.indexOf(section) >= 0
+                            width: list.width
+                            height: sale ? titulo.implicitHeight : 0
+                            Titulo { id: titulo; visible: grupo.sale; text: grupo.section }
                         }
                         delegate: Row_ {
                             required property var model
@@ -1266,7 +1269,7 @@ Window {
         property bool fuera: false                  // (ya sale en «Apps»)
         readonly property bool on: win.sel === pos
         readonly property bool fija: fijarId !== "" && win.pinned(fijarId)
-        onOnChanged: if (on && !fuera) Qt.callLater(() => win.asegura(r))
+        onOnChanged: if (on && !fuera) Qt.callLater(() => { if (win) win.asegura(r) })  // (si la fila ya no existe, nada)
         visible: !fuera
         width: ListView.view ? ListView.view.width : parent.width
         height: fuera ? 0 : win.u(46)

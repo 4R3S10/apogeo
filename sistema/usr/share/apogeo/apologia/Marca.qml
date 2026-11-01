@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 import Apogeo
 
-// La marca de Apología: una A hecha de nodos y conexiones (una red neuronal). Arriba violeta, el travesaño azul y los
+// La marca de apologIA: una A hecha de nodos y conexiones (una red neuronal). Arriba violeta, el travesaño azul y los
 // pies del color del texto. «vivo» la hace latir (mientras piensa).
 Item {
     id: m

@@ -207,14 +207,14 @@ Jugar, Estudiar, Internet, Crear y Sistema, Instalados y Actualizaciones; arriba
 Lo hacen `apogeo-tienda` (el catálogo de AppStream: `archlinux-appstream-data` y Flathub), `apogeo-tienda-root` (pacman,
 con pkexec y la regla de polkit `org.apogeo.tienda`) y `/usr/share/apogeo/tienda/Tienda.qml`.
 
-## Apología (la IA en tu PC)
+## apologIA (la IA en tu PC)
 
 Habla con modelos de IA que corren en tu propio PC, sin cuentas ni nube. A la izquierda los chats (se guardan, se
 renombran con doble clic y se borran con dos clics en la ×), en el centro la conversación y arriba el modelo; abajo, la
 velocidad, la RAM que usa y cuánta memoria de la conversación lleva.
 - **Motor:** `llama-server` de llama.cpp (paquetes `llama-cpp` y `ggml-vulkan`), solo en 127.0.0.1 y con una llave
   nueva en cada arranque (ninguna web puede usarlo desde el navegador). Reparte el modelo solo: lo que cabe en la GPU
-  (Vulkan), el resto en la RAM y, si no cabe, lo lee del disco (mmap). Se apaga al cerrar Apología.
+  (Vulkan), el resto en la RAM y, si no cabe, lo lee del disco (mmap). Se apaga al cerrar apologIA.
 - **Memoria de cada chat:** la caché KV se guarda en `~/.cache/apologia/memoria` al acabar cada respuesta y se recupera
   al volver a ese chat (sin volver a leer toda la conversación); de cada modelo se guardan hasta 3 GB.
 - **Cambiar de modelo** a mitad de un chat no pierde el hilo: al nuevo se le pasa la conversación entera. Si ya no cabe

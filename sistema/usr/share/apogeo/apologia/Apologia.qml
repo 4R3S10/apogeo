@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Apogeo
 
-// Apología, la IA de Apogeo en tu PC. A la izquierda los chats (y abajo Modelos y Modificador); en el centro la
+// apologIA, la IA de Apogeo en tu PC. A la izquierda los chats (y abajo Modelos y Modificador); en el centro la
 // conversación, arriba el modelo y abajo lo que escribes, con lo que va gastando (velocidad, RAM, memoria). Lo de dentro
 // es apogeo-apologia («apogeo»).
 ApplicationWindow {
@@ -12,7 +12,7 @@ ApplicationWindow {
     height: 780
     minimumWidth: 860
     minimumHeight: 560
-    title: "Apología"
+    title: "apologIA"
     color: Tema.superficie
     font.family: Tema.letra
 
@@ -67,7 +67,7 @@ ApplicationWindow {
                 leftPadding: 6
                 spacing: 10
                 Marca { width: 28; height: 28; vivo: apogeo.generando; anchors.verticalCenter: parent.verticalCenter }
-                Texto { text: "Apología"; font.pixelSize: 19; font.weight: Font.ExtraBold; anchors.verticalCenter: parent.verticalCenter }
+                Texto { text: "apologIA"; font.pixelSize: 19; font.weight: Font.ExtraBold; anchors.verticalCenter: parent.verticalCenter }
             }
             Boton {
                 width: parent.width
@@ -493,7 +493,7 @@ ApplicationWindow {
                 boundsBehavior: Flickable.StopAtBounds
                 TextArea.flickable: TextArea {
                     id: entrada
-                    placeholderText: "Escribe a Apología…"
+                    placeholderText: "Escribe a apologIA…"
                     placeholderTextColor: Tema.tenue
                     color: Tema.texto
                     selectionColor: Tema.rosa
@@ -601,7 +601,7 @@ ApplicationWindow {
             }
         }
 
-        // Lo de Apología: la marca a la izquierda, lo que pensó (plegado) y la respuesta
+        // Lo de apologIA: la marca a la izquierda, lo que pensó (plegado) y la respuesta
         Row {
             id: cuerpo
             visible: !msg.tuyo
@@ -1268,7 +1268,7 @@ ApplicationWindow {
                     width: parent.width - 160
                     spacing: 4
                     Texto { text: "Modificador"; font.pixelSize: 26; font.weight: Font.ExtraBold }
-                    Texto { width: parent.width; text: "Cómo responde Apología, en todos los chats (y en el cuaderno de Colab)."; color: Tema.apagado }
+                    Texto { width: parent.width; text: "Cómo responde apologIA, en todos los chats (y en el cuaderno de Colab)."; color: Tema.apagado }
                 }
                 Boton { anchors.right: parent.right; tipo: "plano"; icono: "deshacer"; text: "Como venía"; onClicked: apogeo.restablecer() }
             }

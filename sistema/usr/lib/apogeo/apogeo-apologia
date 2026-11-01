@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Apología, la IA de Apogeo en tu PC (Apologia.qml). Chats a la izquierda, la conversación en el centro y arriba el
+apologIA, la IA de Apogeo en tu PC (Apologia.qml). Chats a la izquierda, la conversación en el centro y arriba el
 modelo; «Modelos» busca y baja modelos (Hugging Face, GitHub o cualquier enlace) y «Modificador» cambia cómo responde.
 Lo de dentro (el motor llama.cpp, los modelos, los chats, Colab) está en apogeo_apologia.py.
 
@@ -619,7 +619,7 @@ def main():
             bus.registerService(SERVICE)
             bus.registerObject(PATH, self)
 
-    return apogeo_qt.run('Apología', 'apogeo-apologia', QML, Backend)
+    return apogeo_qt.run('apologIA', 'apogeo-apologia', QML, Backend)
 
 
 if __name__ == '__main__':

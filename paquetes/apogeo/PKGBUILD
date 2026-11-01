@@ -35,7 +35,7 @@ package_apogeo() {
     appstream archlinux-appstream-data kimageformats          # la tienda: el catálogo y sus iconos (.jxl)
     apogeo-aura                                               # fondos de internet y tu biblioteca (a cada piso)
     apogeo-karousel                                           # ventanas en carrusel (como niri), en los pisos que elijas
-    llama-cpp ggml-vulkan                                     # Apología: el motor de los modelos (y su GPU)
+    llama-cpp ggml-vulkan                                     # apologIA: el motor de los modelos (y su GPU)
   )
   install=apogeo.install
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"

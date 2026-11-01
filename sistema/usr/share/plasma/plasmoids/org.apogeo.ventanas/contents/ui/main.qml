@@ -150,6 +150,7 @@ PlasmoidItem {
                     }
                     // Dónde está su icono (para que la ventana se minimice hacia él)
                     function publica() {
+                        if (typeof tasks === "undefined" || !tasks) return;   // (la tarea ya se ha ido)
                         const g = tarea.mapToGlobal(0, 0);
                         tasks.requestPublishDelegateGeometry(tasks.makeModelIndex(tarea.index), Qt.rect(g.x, g.y, tarea.width, tarea.height), tarea);
                     }

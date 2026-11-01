@@ -1,5 +1,5 @@
 """
-Apología, la IA de Apogeo que corre en tu PC. Aquí está todo lo que no es la ventana (esa es apogeo-apologia con
+apologIA, la IA de Apogeo que corre en tu PC. Aquí está todo lo que no es la ventana (esa es apogeo-apologia con
 Apologia.qml):
   Motor     llama-server (llama.cpp), solo en 127.0.0.1, con el modelo que elijas. El modelo se reparte solo: lo que cabe
             en la GPU (Vulkan), el resto en la RAM y, si tampoco cabe, se lee del disco (mmap). La memoria de cada chat
@@ -186,6 +186,8 @@ SPLIT = re.compile(r'-(\d{5})-of-(\d{5})\.gguf$')
 # Lo que viene en los repositorios junto a los modelos y no es uno: proyectores de visión, datos de calibración,
 # cabezas de predicción (MTP), borradores y adaptadores
 NOT_MODEL = re.compile(r'mmproj|imatrix|(^|[-_.])(mtp|draft|lora)([-_.]|$)', re.I)
+# Los que traen quitadas las protecciones del modelo no salen en «Lo más bajado» (sí si los buscas por su nombre)
+UNSAFE = re.compile(r'abliterat|uncensor|heretic|decensor', re.I)
 # Los tipos de Hugging Face que no son para conversar (voz, imágenes, búsquedas…)
 NOT_CHAT = {'text-to-speech', 'automatic-speech-recognition', 'text-to-audio', 'audio-to-audio', 'text-to-image',
             'image-to-image', 'feature-extraction', 'sentence-similarity', 'text-classification', 'token-classification',
@@ -416,7 +418,7 @@ def kv_dir(model):
 def _die_with_parent():
     try:
         import ctypes
-        ctypes.CDLL('libc.so.6').prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG: si se cierra Apología, se apaga
+        ctypes.CDLL('libc.so.6').prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG: si se cierra apologIA, se apaga
     except OSError:
         pass
 
@@ -741,7 +743,8 @@ def hf_search(query):
     return [{'repo': m['id'], 'autor': m['id'].split('/')[0], 'nombre': m['id'].split('/')[-1],
              'descargas': m.get('downloads', 0), 'likes': m.get('likes', 0), 'origen': 'hf'}
             for m in get_json('https://huggingface.co/api/models?' + q)
-            if '/' in m.get('id', '') and m.get('pipeline_tag') not in NOT_CHAT]
+            if '/' in m.get('id', '') and m.get('pipeline_tag') not in NOT_CHAT
+            and (query.strip() or not UNSAFE.search(m['id']))]
 
 
 def hf_files(repo):
@@ -921,7 +924,7 @@ def colab_notebook(info, file, st, folder):
     if st['largo']:
         gen['max_tokens'] = int(st['largo'])
     cells = [
-        md(f'# Apología en Colab\n**{repo}** · `{names[0]}` ({human(file["tamano"])})\n\n'
+        md(f'# apologIA en Colab\n**{repo}** · `{names[0]}` ({human(file["tamano"])})\n\n'
            '1. **Entorno de ejecución → Cambiar tipo de entorno → GPU T4**.\n'
            '2. **Entorno de ejecución → Ejecutar todo**. La primera vez tarda unos minutos (compila llama.cpp y baja '
            'el modelo).\n3. Escribe abajo, en el chat del final. Todo pasa dentro de este cuaderno.'),
@@ -969,10 +972,10 @@ def colab_notebook(info, file, st, folder):
              'boton.on_click(enviar)\ndisplay(chat, entrada, boton)'),
     ]
     nb = {'nbformat': 4, 'nbformat_minor': 5, 'cells': cells,
-          'metadata': {'accelerator': 'GPU', 'colab': {'gpuType': 'T4', 'name': f'Apología · {repo}'},
+          'metadata': {'accelerator': 'GPU', 'colab': {'gpuType': 'T4', 'name': f'apologIA · {repo}'},
                        'kernelspec': {'name': 'python3', 'display_name': 'Python 3'}}}
     os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, 'Apología · ' + re.sub(r'[^\w.-]+', ' ', repo.split('/')[-1]).strip() + '.ipynb')
+    path = os.path.join(folder, 'apologIA · ' + re.sub(r'[^\w.-]+', ' ', repo.split('/')[-1]).strip() + '.ipynb')
     with open(path, 'w') as f:
         json.dump(nb, f, ensure_ascii=False, indent=1)
     return path

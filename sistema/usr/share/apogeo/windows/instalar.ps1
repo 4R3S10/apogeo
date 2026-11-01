@@ -42,8 +42,16 @@ Register-ScheduledTask -TaskName 'Apogeo-Arranque' -Action $accion -Trigger $cua
 $usuario = (Get-CimInstance Win32_ComputerSystem).UserName
 $sid = (New-Object System.Security.Principal.NTAccount($usuario)).Translate([System.Security.Principal.SecurityIdentifier]).Value
 $clave = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
-New-Item -Path $clave -Force | Out-Null
+# (New-Item -Force sobre una clave que ya existe la vacía: solo se crea si falta)
+if (-not (Test-Path $clave)) { New-Item -Path $clave -Force | Out-Null }
 Set-ItemProperty -Path $clave -Name Shell -Value "wscript.exe `"$Base\puente.vbs`""
+# Sin «Terminemos de configurar tu dispositivo» ni sugerencias al entrar (taparían el juego)
+$cv = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion"
+foreach ($k in "$cv\UserProfileEngagement", "$cv\ContentDeliveryManager") {
+    if (-not (Test-Path $k)) { New-Item -Path $k -Force | Out-Null }
+}
+Set-ItemProperty "$cv\UserProfileEngagement" -Name ScoobeSystemSettingEnabled -Value 0 -Type DWord
+Set-ItemProperty "$cv\ContentDeliveryManager" -Name 'SubscribedContent-310093Enabled' -Value 0 -Type DWord
 
 # ---------- Windows apagado del todo (sin inicio rápido ni hibernación) ----------
 powercfg /h off | Out-Null

@@ -29,6 +29,9 @@ DisableRoundMaximize=true
 DisableRoundFullScreen=true
 DisableOutlineMaximize=true
 DisableOutlineFullScreen=true
+# Las tarjetas sin barra (portapapeles, música, avisos, miniatura de la captura, atajos…) dibujan su propio borde y
+# traen un margen transparente para la sombra: sin esto, la raya de la ventana activa salía suelta alrededor
+Exclusions=apogeo-portapapeles,apogeo-musica,apogeo-resumen,apogeo-captura,apogeo-buscador,apogeo-consola
 
 # La esquina de arriba a la izquierda no abre la Vista general de KDE (ahí está el modo, en la barra fina; la Órbita
 # sale del orbe o con Meta). 9 = ningún borde

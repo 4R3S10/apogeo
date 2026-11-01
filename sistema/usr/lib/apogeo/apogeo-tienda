@@ -42,6 +42,21 @@ GROUPS = [
 FEATURED = ['com.obsproject.Studio', 'org.kde.krita', 'org.kde.kdenlive', 'org.gimp.GIMP', 'org.blender.Blender',
             'com.spotify.Client', 'org.libreoffice.LibreOffice', 'net.ankiweb.Anki', 'org.prismlauncher.PrismLauncher',
             'com.usebottles.bottles', 'org.inkscape.Inkscape', 'org.audacityteam.Audacity']
+# Su nombre corto y una frase en español (muchas fichas solo vienen en inglés)
+EN_ESPANOL = {
+    'com.obsproject.studio': ('OBS Studio', 'Graba la pantalla y emite en directo'),
+    'org.kde.krita': ('Krita', 'Pintura digital, libertad creativa'),
+    'org.kde.kdenlive': ('Kdenlive', 'Editor de vídeo'),
+    'org.gimp.gimp': ('GIMP', 'Retoca fotos y crea imágenes'),
+    'org.blender.blender': ('Blender', 'Modelado, animación y render en 3D'),
+    'com.spotify.client': ('Spotify', 'Música y pódcast en streaming'),
+    'org.libreoffice.libreoffice': ('LibreOffice', 'Documentos, hojas de cálculo y presentaciones'),
+    'net.ankiweb.anki': ('Anki', 'Tarjetas para estudiar y memorizar'),
+    'org.prismlauncher.prismlauncher': ('Prism Launcher', 'Instala y organiza Minecraft, con mods'),
+    'com.usebottles.bottles': ('Botellas', 'Programas de Windows en Linux'),
+    'org.inkscape.inkscape': ('Inkscape', 'Editor de gráficos vectoriales'),
+    'org.audacityteam.audacity': ('Audacity', 'Graba y edita audio'),
+}
 
 
 def norm(cid):
@@ -145,12 +160,14 @@ class Catalog:
         group = next(k for k, _t, wanted in GROUPS if cats & wanted or not wanted)
         desktop = next((e for c in cs for l in c.get_launchables() if l.get_kind() == AS.LaunchableKind.DESKTOP_ID
                         for e in l.get_entries()), cid + '.desktop')
+        nombre, resumen = EN_ESPANOL.get(cid, (main.get_name(), main.get_summary() or ''))
         return {
-            'id': cid, 'nombre': main.get_name(), 'resumen': main.get_summary() or '', 'icono': self._icon(cs),
+            'id': cid, 'nombre': nombre, 'resumen': resumen, 'icono': self._icon(cs),
             'grupo': group, 'paquete': system.get_pkgname() if system else '',
             'ref': ref, 'flatpak': ref.split('/')[1] if ref.count('/') >= 2 else '',
             'desktop': desktop, 'pop': self.pop.get(cid, 0), 'instalado': '',
-            'buscar': plain(' '.join([main.get_name(), main.get_summary() or ''] + list(main.get_keywords() or []))),
+            'buscar': plain(' '.join([nombre, resumen, main.get_name(), main.get_summary() or '']
+                                     + list(main.get_keywords() or []))),
         }
 
     def refresh_installed(self):

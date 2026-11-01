@@ -1,12 +1,12 @@
 [
   {
     "fecha": "2026-11-01",
-    "titulo": "Apología, la IA en tu PC",
+    "titulo": "apologIA, la IA en tu PC",
     "cosas": [
-      {"icono": "texto", "titulo": "Apología", "como": "Una app nueva para hablar con modelos de IA que corren en tu propio PC: chats a la izquierda (se guardan y puedes renombrarlos o borrarlos), la conversación en el centro y arriba el modelo. Puedes cambiar de modelo a mitad de un chat sin perder el hilo, y abajo ves la velocidad, la RAM y cuánta memoria de la conversación lleva."},
+      {"icono": "texto", "titulo": "apologIA", "como": "Una app nueva para hablar con modelos de IA que corren en tu propio PC: chats a la izquierda (se guardan y puedes renombrarlos o borrarlos), la conversación en el centro y arriba el modelo. Puedes cambiar de modelo a mitad de un chat sin perder el hilo, y abajo ves la velocidad, la RAM y cuánta memoria de la conversación lleva."},
       {"icono": "descargar", "titulo": "Modelos de donde quieras", "como": "En Modelos buscas en Hugging Face (lo más bajado primero) o en GitHub, pegas el enlace de un repositorio o de cualquier .gguf, o añades uno que ya tengas. Se guardan todos juntos en la carpeta Modelos de tu carpeta personal (con «Cambiar carpeta» los llevas a otra, por ejemplo a otro disco), se comprueba que llegan enteros y cada uno te dice si va bien en tu equipo."},
       {"icono": "ajustes", "titulo": "Modificador", "como": "Tus instrucciones para el modelo (o ninguna), respuestas sin límite de largo, pensar antes de responder, el estilo (Preciso, Equilibrado o Creativo) y su creatividad, la memoria de la conversación, la GPU y los hilos."},
-      {"icono": "nube", "titulo": "Modelos grandes con Colab", "como": "Para los que no caben en tu PC, Apología te prepara un cuaderno de Google Colab que usa su GPU gratis: lo subes a Colab, le das a Ejecutar todo y chateas dentro del propio cuaderno."}
+      {"icono": "nube", "titulo": "Modelos grandes con Colab", "como": "Para los que no caben en tu PC, apologIA te prepara un cuaderno de Google Colab que usa su GPU gratis: lo subes a Colab, le das a Ejecutar todo y chateas dentro del propio cuaderno."}
     ]
   },
   {
