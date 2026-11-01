@@ -10,6 +10,7 @@ mkinitcpio
 mkinitcpio-archiso
 # la pantalla: el instalador a pantalla completa (cage) con Qt
 cage
+zsh
 mesa
 vulkan-swrast
 python
