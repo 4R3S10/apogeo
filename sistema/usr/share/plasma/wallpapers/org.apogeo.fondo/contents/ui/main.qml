@@ -16,10 +16,11 @@ WallpaperItem {
 
     TaskManager.VirtualDesktopInfo { id: desktops }
     readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces", "orbitas", "nebulosa", "aurora"]
-    // El piso en el que estás (por el nombre del escritorio) y su fondo; en la pantalla de bloqueo, el de «Estilo»/«Archivo»
+    // El piso en el que estás (por el nombre del escritorio, sin su número: «Navegar 2» es Navegar) y su fondo; en la
+    // pantalla de bloqueo, el de «Estilo»/«Archivo»
     readonly property string floorName: {
         const i = desktops.desktopIds.indexOf(desktops.currentDesktop);
-        const n = i >= 0 ? String(desktops.desktopNames[i] || "") : "";
+        const n = i >= 0 ? String(desktops.desktopNames[i] || "").split(" ")[0] : "";
         return ["Jugar", "Navegar", "Estudiar"].indexOf(n) >= 0 ? n : "";
     }
     readonly property bool porPiso: root.configuration.PorPiso && floorName !== ""

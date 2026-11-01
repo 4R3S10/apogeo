@@ -1,6 +1,15 @@
 [
   {
     "fecha": "2026-11-01",
+    "titulo": "Escritorios y tarjeta rápida",
+    "cosas": [
+      {"icono": "pisos", "titulo": "Escritorios en cada modo", "como": "En Navegar y Estudiar puedes tener hasta 4 escritorios. Ctrl+Alt+← → pasa de uno a otro y, en el último, Ctrl+Alt+→ abre uno nuevo. Cada app se queda donde la abriste, un escritorio vacío se cierra al irte y, junto al modo de arriba, un punto por escritorio. Con Mayús te llevas la ventana."},
+      {"icono": "reloj", "titulo": "La tarjeta rápida", "como": "Un clic en la hora (o Meta+N) abre debajo una tarjeta con lo justo: Wi-Fi, bluetooth, silencio, volumen, brillo, luz nocturna, no molestar y apagar, reiniciar, cerrar sesión, reposo o bloquear. Se va al pulsar fuera o con Esc. Apagar, reiniciar y salir piden un segundo toque. Ya no hay panel a la derecha."},
+      {"icono": "isla", "titulo": "El orbe, escondido", "como": "Abajo no se ve nada: el orbe sale al acercar el ratón al borde de abajo y se esconde al alejarlo."}
+    ]
+  },
+  {
+    "fecha": "2026-11-01",
     "titulo": "1 de noviembre",
     "cosas": [
       {"icono": "jugar", "titulo": "Herramientas en la consola", "como": "La consola estrena la pestaña Herramientas: Discord, Spotify, OBS, Mission Center, CoolerControl, ProtonPlus e Hydra a un botón, y los FPS en pantalla a la vista o escondidos. Con el botón PS, lo mismo en pequeño: FPS, OBS y «+»."},

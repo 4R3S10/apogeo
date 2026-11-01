@@ -11,7 +11,7 @@
     <entry name="extraJugar" type="Bool"><default>true</default></entry>
     <entry name="extraNavegar" type="Bool"><default>true</default></entry>
     <entry name="extraEstudiar" type="Bool"><default>true</default></entry>
-    <!-- Cuándo miraste los avisos por última vez (lo pone el script de KWin apogeo-bordes al abrir el panel rápido):
+    <!-- Cuándo miraste los avisos por última vez (lo pone la tarjeta rápida de la hora al abrirse):
          los números de los iconos cuentan los de después -->
     <entry name="leidos" type="String"><default></default></entry>
     <entry name="fps" type="Int"><default>60</default></entry>

@@ -59,7 +59,8 @@ PlasmoidItem {
     TaskManager.ActivityInfo { id: activities }
 
     readonly property int floorIndex: Math.max(0, desktops.desktopIds.indexOf(desktops.currentDesktop))
-    readonly property string floor: desktops.desktopNames[floorIndex] || "Navegar"
+    // (el modo: el nombre del escritorio sin su número, «Navegar 2» → Navegar)
+    readonly property string floor: String(desktops.desktopNames[floorIndex] || "Navegar").split(" ")[0]
 
     // ---------- Órbita: el orbe y las bolitas de los otros modos ----------
     readonly property bool orbita: (Tema.f.estilo || "orbita") === "orbita"
@@ -202,7 +203,7 @@ PlasmoidItem {
         sortMode: NotificationManager.Notifications.SortByDate
         sortOrder: Qt.DescendingOrder
     }
-    property var notice: null           // {id, titulo, texto, app, icono, acciones: [[nombre, etiqueta]], responder, abrir}
+    property var notice: null           // {id, titulo, texto, app, icono, acciones: [[nombre, etiqueta]], abrir}
     property bool noticeHover: false
     property var seenNotice: -1
     Repeater {
@@ -226,7 +227,7 @@ PlasmoidItem {
                     texto: m.body ? String(m.body).replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim() : "",
                     app: m.applicationName || "", icono: m.applicationIconName || m.iconName || "apogeo",
                     acciones: names.map((n, k) => [n, labels[k] || ""]).filter(a => a[0] !== "default" && a[0] !== "inline-reply").slice(0, 2),
-                    responder: !!m.hasReplyAction, abrir: !!m.hasDefaultAction
+                    abrir: !!m.hasDefaultAction
                 };
                 arriving.playSoundHint(arriving.index(index, 0));
                 noticeEnd.restart();
@@ -704,13 +705,7 @@ PlasmoidItem {
                         delegate: MomentChip { required property var modelData; text: modelData[1]; onClicked: root.noticeAction(modelData[0]) }
                     }
                     MomentChip {
-                        visible: !!root.notice && root.notice.responder
-                        text: "Responder"
-                        filled: true
-                        onClicked: { root.noticeDone(false); root.run("dbus-send --session --type=method_call --dest=org.kde.kglobalaccel /component/kwin org.kde.kglobalaccel.Component.invokeShortcut string:apogeo-panel-derecho"); }
-                    }
-                    MomentChip {
-                        visible: !!root.notice && root.notice.abrir && !root.notice.responder
+                        visible: !!root.notice && root.notice.abrir
                         text: "Abrir"
                         filled: true
                         onClicked: root.noticeAction("")

@@ -3,7 +3,7 @@
     "KPlugin": {
         "Authors": [{ "Name": "Ares" }],
         "Category": "System Information",
-        "Description": "En la isla de Apogeo: la red, el sonido, los avisos sin leer y la hora (abre el panel rápido)",
+        "Description": "En la barra de Apogeo: la red, el sonido, los avisos sin leer y la hora (abre la tarjeta rápida)",
         "Icon": "apogeo",
         "Id": "org.apogeo.rapido",
         "License": "MIT",

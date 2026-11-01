@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Description": "Hasta 4 escritorios en Navegar y en Estudiar: Ctrl+Alt+← → para ir de uno a otro (o abrir uno nuevo) y cada app en el escritorio en el que la abriste",
+        "EnabledByDefault": true,
+        "Icon": "window",
+        "Id": "apogeo-escritorios",
+        "License": "MIT",
+        "Name": "Apogeo: escritorios"
+    },
+    "X-Plasma-API": "javascript"
+}

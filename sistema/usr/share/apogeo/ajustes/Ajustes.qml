@@ -335,7 +335,7 @@ ApplicationWindow {
                 }
                 Fila {
                     titulo: "No molestar"
-                    detalle: "Sin avisos en ningún modo (también desde el panel rápido de la isla)"
+                    detalle: "Sin avisos en ningún modo (también desde la tarjeta rápida de la hora)"
                     Interruptor {
                         checked: win.s.silencio
                         onToggled: apogeo.set("silencio", checked)
@@ -361,7 +361,7 @@ ApplicationWindow {
                 Fila {
                     linea: false
                     titulo: win.orbita ? "Orbe: esconderse solo" : "Isla: esconderse sola"
-                    detalle: win.s.isla.esconder ? (win.orbita ? "Se aparta cuando una ventana llega abajo; sale al acercar el ratón" : "Sale al acercar el ratón al borde de abajo") : "Siempre a la vista"
+                    detalle: win.s.isla.esconder ? (win.orbita ? "Escondido; sale al acercar el ratón abajo" : "Sale al acercar el ratón al borde de abajo") : "Siempre a la vista"
                     Interruptor { checked: win.s.isla.esconder; onToggled: apogeo.set("isla.esconder", checked) }
                 }
                 Fila {
@@ -558,7 +558,7 @@ ApplicationWindow {
                 width: parent.width
                 visible: win.shown(perfil)
                 titulo: "Tu perfil"
-                intro: "Tu nombre y tu foto salen al iniciar sesión, en la pantalla de bloqueo y en el panel rápido."
+                intro: "Tu nombre y tu foto salen al iniciar sesión y en la pantalla de bloqueo."
                 Item {
                     width: parent.width
                     height: 112

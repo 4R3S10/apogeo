@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 """
-Pisos de Apogeo: Jugar, Navegar y Estudiar son tres escritorios virtuales, uno encima de otro. Al cambiar de piso las
-ventanas se deslizan (efecto Deslizar de KWin) y este programa cambia lo demás: el fondo, los avisos (por defecto solo en
+Pisos de Apogeo: Jugar, Navegar y Estudiar son tres filas de escritorios virtuales, una encima de otra (en Navegar y
+Estudiar, hasta 4 escritorios por fila, «Navegar 2»…: los abre y los cierra el script de KWin apogeo-escritorios). Al
+cambiar de piso las ventanas se deslizan (efecto Deslizar de KWin) y este programa cambia lo demás: el fondo, los avisos (por defecto solo en
 Navegar; los demás se quedan en el historial y, al volver, sale un resumen de lo que llegó: apogeo-resumen), la luz
 (en Estudiar, cálida por la noche) y la energía (nunca «rendimiento»: primero la salud del PC). La primera vez
 que se entra en un piso en la sesión se abren sus apps (Jugar: la consola); después, cada piso guarda sus ventanas.
@@ -58,16 +59,35 @@ def desktops(bus):
     return sorted((int(p), str(i), str(n)) for p, i, n in prop(vdm(bus), 'desktops'))
 
 
+def columns(n):
+    """Cuántos escritorios hay en cada fila de la rejilla (una fila por piso)."""
+    return max(1, -(-n // len(FLOORS)))
+
+
 def go(bus, index):
+    """Al piso index, al escritorio en el que estabas en él: lo hace apogeo-escritorios (su atajo sin tecla); si no está,
+    al primero de la fila."""
+    index = max(0, min(index, len(FLOORS) - 1))
+    name = 'apogeo-ir-' + FLOORS[index]['key']
+    try:
+        comp = dbus.Interface(bus.get_object('org.kde.kglobalaccel', '/component/kwin'), 'org.kde.kglobalaccel.Component')
+        if name in [str(n) for n in comp.shortcutNames()]:
+            comp.invokeShortcut(name)
+            return
+    except dbus.DBusException:
+        pass
     ds = desktops(bus)
-    index = max(0, min(index, len(ds) - 1))
-    vdm(bus).Set('org.kde.KWin.VirtualDesktopManager', 'current', ds[index][1],
+    pos = min(index * columns(len(ds)), len(ds) - 1)
+    vdm(bus).Set('org.kde.KWin.VirtualDesktopManager', 'current', ds[pos][1],
                  dbus_interface='org.freedesktop.DBus.Properties')
 
 
 def current_index(bus):
+    """El piso en el que estás: la fila de la rejilla del escritorio actual."""
     cur = str(prop(vdm(bus), 'current'))
-    return next((k for k, (_, i, _n) in enumerate(desktops(bus)) if i == cur), 0)
+    ds = desktops(bus)
+    k = next((k for k, (_, i, _n) in enumerate(ds) if i == cur), len(FLOORS) // 2 * columns(len(ds)))
+    return min(k // columns(len(ds)), len(FLOORS) - 1)
 
 
 def load_state():
@@ -252,16 +272,20 @@ def desktop_fill(bus):
 
 
 def setup(bus):
-    """La primera vez: tres escritorios en columna con los nombres de los pisos, la isla y los dos paneles de los lados."""
+    """La primera vez: los escritorios en una rejilla, una fila por piso con su nombre (y, si has abierto más en un piso,
+    «Navegar 2»…), la isla y los dos paneles de los lados."""
     st = load_state()
     ds = desktops(bus)
     m = vdm(bus)
-    for k, f in enumerate(FLOORS):
-        if k < len(ds):
-            if ds[k][2] != f['name']:
-                m.setDesktopName(ds[k][1], f['name'], dbus_interface='org.kde.KWin.VirtualDesktopManager')
-        else:
-            m.createDesktop(dbus.UInt32(k), f['name'], dbus_interface='org.kde.KWin.VirtualDesktopManager')
+    for k in range(len(ds), len(FLOORS)):
+        m.createDesktop(dbus.UInt32(k), FLOORS[k]['name'], dbus_interface='org.kde.KWin.VirtualDesktopManager')
+    ds = desktops(bus)
+    cols = columns(len(ds))
+    for k, (_, did, name) in enumerate(ds):
+        row, col = min(k // cols, len(FLOORS) - 1), k % cols
+        want = FLOORS[row]['name'] + (f' {col + 1}' if col else '')
+        if name != want:
+            m.setDesktopName(did, want, dbus_interface='org.kde.KWin.VirtualDesktopManager')
     props = 'org.freedesktop.DBus.Properties'
     m.Set('org.kde.KWin.VirtualDesktopManager', 'rows', dbus.UInt32(len(FLOORS)), dbus_interface=props)
     m.Set('org.kde.KWin.VirtualDesktopManager', 'navigationWrappingAround', False, dbus_interface=props)
@@ -391,29 +415,12 @@ def setup(bus):
         """)
         st['cristal'] = CRYSTAL
     if st.get('paneles', 0) < PANELS:
-        # «Nivel pro»: fuera la columna de pisos (los pisos van arriba del panel rápido) y, a la derecha, el panel rápido
-        # alto. Escondido: lo saca el script apogeo-bordes (Meta+N o un clic en la esquina de la barra de arriba) y,
-        # abierto, hace sitio. (El de widgets de la izquierda ya no está: lo suyo va en la Órbita abierta.)
+        # «Nivel pro»: fuera la columna de pisos (los modos se cambian en la Órbita, la barra fina y con el teclado)
         plasma_script(bus, """
             panels().forEach(function (p) {
                 if (p.widgets().some(function (w) { return w.type == 'org.apogeo.pisos'; })) p.remove();
             });
-            [['right', 'org.apogeo.derecho']].forEach(function (s) {
-                var has = panels().some(function (p) {
-                    return p.widgets().some(function (w) { return w.type == s[1]; });
-                });
-                if (has) return;
-                var p = new Panel;
-                p.location = s[0];
-                p.floating = true;
-                p.height = %d;
-                p.lengthMode = 'fill';
-                p.hiding = 'windowsgobelow';   // (cerrado, apogeo-bordes lo saca de la pantalla)
-                p.addWidget(s[1]);
-            });
-        """ % PANEL_WIDTH)
-        panel_shortcuts()
-        kwin_reconfigure()
+        """)
         st['paneles'] = PANELS
     if st.get('dinamica', 0) < DYNAMIC:
         # Isla dinámica: el volumen sale en la isla (no en la ventanita de KDE); «7 · Animaciones con vida» (abrir con
@@ -478,6 +485,25 @@ def setup(bus):
         """)
         panel_shortcuts()
         st['orbe'] = ORB
+    if st.get('tarjeta', 0) < QUICK_CARD:
+        # La tarjeta rápida de debajo de la hora en vez del panel rápido de la derecha (fuera su barra; la de un widget
+        # que ya no está se queda vacía) y Meta+N para ella: su atajo de widget (antes se suelta el del panel)
+        panel_shortcuts()
+        plasma_script(bus, """
+            panels().forEach(function (p) {
+                var ws = p.widgets();
+                if (ws.some(function (w) { return w.type == 'org.apogeo.derecho'; }) || (p.location == 'right' && ws.length <= 1)) p.remove();
+            });
+            panels().forEach(function (p) {
+                p.widgets().forEach(function (w) {
+                    if (w.type == 'org.apogeo.rapido') w.globalShortcut = 'Meta+N';
+                });
+            });
+        """)
+        st['tarjeta'] = QUICK_CARD
+    if st.get('escritorios', 0) < DESKTOPS:
+        desktop_shortcuts()
+        st['escritorios'] = DESKTOPS
     if st.get('estetica', 0) < AESTHETICS:
         aesthetics()
         st['estetica'] = AESTHETICS
@@ -502,10 +528,11 @@ LIGHTER = 2  # igual, para quitar de en medio lo que no se usa al entrar (menú 
 ISLAND2 = 1  # igual, para «I1 · Una sola isla» (hora, red, sonido y avisos dentro, sin la bandeja de KDE)
 CRYSTAL = 1  # igual, para el tamaño de la isla y de los modos con el cristal (B1)
 PANELS = 1  # igual, para los dos paneles de los lados («nivel pro»; fuera la columna de pisos)
-PANEL_WIDTH = 376  # su ancho
+QUICK_CARD = 1  # igual, para la tarjeta rápida de la hora (fuera el panel rápido de la derecha)
 ORB = 3  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe solo abajo; 2: sin el panel de widgets;
 # 3: tus ventanas arriba, en el centro)
 DEFAULT_WALLPAPERS = 2  # igual, para los fondos de serie de Órbita de Wallhaven (se bajan una vez)
+DESKTOPS = 1  # igual, para los escritorios de cada modo (los atajos de apogeo-escritorios en vez de los de KWin)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
 AESTHETICS = 18  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita;
 # 18: Órbita también para quien se quedó en el aspecto de antes)
@@ -680,24 +707,55 @@ def search_shortcuts():
 
 
 def panel_shortcuts():
-    """Meta+N: el panel rápido (lo registra el script de KWin apogeo-bordes). Meta+A, que era el del panel de widgets,
-    se suelta."""
+    """Fuera los atajos de los paneles de los lados, que ya no están (Meta+N es el de la tarjeta rápida, su atajo de
+    widget; Meta+A, que era el del panel de widgets, se suelta)."""
     keys = _keys
-    meta_n = 0x1000004E
     try:
         g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
         try:
             g.setForeignShortcutKeys(['plasmashell', 'next activity', '', ''], keys())
         except dbus.DBusException:
             pass
-        try:
-            g.unregister('kwin', 'apogeo-panel-izquierdo')
-        except dbus.DBusException:
-            pass
-        g.doRegister(['kwin', 'apogeo-panel-derecho', 'KWin', 'Apogeo: panel rápido'])
-        g.setForeignShortcutKeys(['kwin', 'apogeo-panel-derecho', '', ''], keys(meta_n))
+        for name in ('apogeo-panel-izquierdo', 'apogeo-panel-derecho'):
+            try:
+                g.unregister('kwin', name)
+            except dbus.DBusException:
+                pass
     except dbus.DBusException as e:
         log('atajos de los paneles:', e.get_dbus_message())
+
+
+_CTRL_ALT, _CTRL_ALT_SHIFT = 0x0C000000, 0x0E000000
+_META_CTRL, _META_CTRL_SHIFT = 0x14000000, 0x16000000
+# Los escritorios de cada modo (apogeo-escritorios): sus teclas, y fuera las de KWin que irían a escritorios de la
+# rejilla que no están abiertos (los de Jugar de relleno, los vacíos)
+DESKTOP_KEYS = {
+    'apogeo-escritorio-izquierda': _CTRL_ALT | 0x01000012, 'apogeo-escritorio-derecha': _CTRL_ALT | 0x01000014,
+    'apogeo-ventana-izquierda': _CTRL_ALT_SHIFT | 0x01000012, 'apogeo-ventana-derecha': _CTRL_ALT_SHIFT | 0x01000014,
+    'apogeo-modo-arriba': _META_CTRL | 0x01000013, 'apogeo-modo-abajo': _META_CTRL | 0x01000015,
+    'apogeo-ventana-arriba': _META_CTRL_SHIFT | 0x01000013, 'apogeo-ventana-abajo': _META_CTRL_SHIFT | 0x01000015,
+}
+KWIN_DESKTOP_KEYS = [
+    'Switch One Desktop Up', 'Switch One Desktop Down', 'Switch One Desktop to the Left',
+    'Switch One Desktop to the Right', 'Window One Desktop Up', 'Window One Desktop Down',
+    'Window One Desktop to the Left', 'Window One Desktop to the Right', 'Switch to Next Desktop',
+    'Switch to Previous Desktop',
+] + [f'Switch to Desktop {i}' for i in range(1, 13)] + [f'Window to Desktop {i}' for i in range(1, 13)]
+
+
+def desktop_shortcuts():
+    try:
+        g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'), 'org.kde.KGlobalAccel')
+        for name in KWIN_DESKTOP_KEYS:
+            try:
+                g.setForeignShortcutKeys(['kwin', name, '', ''], _keys())
+            except dbus.DBusException:
+                pass
+        for name, code in DESKTOP_KEYS.items():
+            g.doRegister(['kwin', name, 'KWin', name])
+            g.setForeignShortcutKeys(['kwin', name, '', ''], _keys(code))
+    except dbus.DBusException as e:
+        log('atajos de los escritorios:', e.get_dbus_message())
 
 
 # ---------- El carrusel: las ventanas en columnas que se deslizan, como en niri (Karousel) ----------
@@ -810,7 +868,7 @@ def carousel(st):
                 'gapsInnerVertical'):
         kw('kwinrc', 'Script-karousel', key, gap)
     kw('kwinrc', 'Script-karousel', 'presetWidths', ', '.join(ajustes.WIDTHS[w] for w in car['anchos']))
-    kw('kwinrc', 'Script-karousel', 'tiledDesktops', '^(' + '|'.join(names) + ')$' if on else '^$')
+    kw('kwinrc', 'Script-karousel', 'tiledDesktops', '^(' + '|'.join(names) + ')( [2-4])?$' if on else '^$')
     kw('kwinrc', 'Plugins', 'karouselEnabled', 'true' if on else 'false')
     if reload:  # (Karousel lee su configuración al cargar: fuera y dentro otra vez)
         try:
@@ -1189,10 +1247,12 @@ def island(bus, st):
     # Dónde va y su tamaño (Ajustes → Aspecto): la isla abajo o arriba
     t = aspecto.tokens(aspecto.settings_of(st))
     top = t['posicion'] == 'arriba-dcha'
-    # Se aparta de las ventanas (o no, si lo quitas en los ajustes): con el escritorio a la vista se ve («C · Orbe
-    # central»); el script de KWin «apogeo-bordes» la saca al acercar el ratón a una franja ancha del borde, y tiene que
-    # saber si lo hace (y en qué borde está)
+    # Escondida (o no, si lo quitas en los ajustes): el orbe de Órbita, siempre, sin nada a la vista abajo; la isla de
+    # Clásico se aparta de las ventanas (con el escritorio a la vista se ve). El script de KWin «apogeo-bordes» la saca al
+    # acercar el ratón a una franja ancha del borde, y tiene que saber si lo hace, en qué borde está y cómo se esconde
+    reposo = ('autohide' if t.get('estilo') == 'orbita' else 'dodgewindows') if cfg['esconder'] else 'none'
     kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if cfg['esconder'] else 'false')
+    kw('kwinrc', 'Script-apogeo-bordes', 'reposo', reposo)
     kw('kwinrc', 'Script-apogeo-bordes', 'islaArriba', 'true' if top else 'false')
     kwin_reconfigure()
     plasma_script(bus, """
@@ -1219,7 +1279,7 @@ def island(bus, st):
         });
     """ % (json.dumps('bottom' if top else 'top'), json.dumps('bottom' if top else 'top'),
            json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
-           json.dumps('dodgewindows' if cfg['esconder'] else 'none'),
+           json.dumps(reposo),
            json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
            json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
 

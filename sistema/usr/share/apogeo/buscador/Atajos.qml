@@ -55,11 +55,13 @@ Window {
             [["Meta", "V"], "Lo que has copiado"]] }
     })
     readonly property var grupos: [
-        { titulo: "Modos y paneles", atajos: [
+        { titulo: "Modos y escritorios", atajos: [
             [["Meta", "F1 · F2 · F3"], "Jugar · Navegar · Estudiar"],
-            [["Meta", "N"], "Panel rápido y avisos (derecha)"],
             [["Meta", "Ctrl", "↑ ↓"], "El modo de arriba o de abajo"],
-            [["Meta", "Ctrl", "⇧", "↑ ↓"], "Llevar la ventana a otro modo"]] },
+            [["Meta", "Ctrl", "⇧", "↑ ↓"], "Llevar la ventana a otro modo"],
+            [["Ctrl", "Alt", "← →"], "Otro escritorio (al final, uno nuevo)"],
+            [["Ctrl", "Alt", "⇧", "← →"], "Llevar la ventana a otro escritorio"],
+            [["Meta", "N"], "Tarjeta rápida (bajo la hora)"]] },
         { titulo: "Ventanas", atajos: [
             [["Meta", "← →"], "Mitad izquierda o derecha"],
             [["Meta", "↑ ↓"], "Mitad de arriba o de abajo"],

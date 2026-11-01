@@ -15,8 +15,11 @@ PlasmoidItem {
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
 
     TaskManager.VirtualDesktopInfo { id: desktops }
-    readonly property int floorIndex: Math.max(0, desktops.desktopIds.indexOf(desktops.currentDesktop))
-    readonly property string floor: ["jugar", "navegar", "estudiar"][floorIndex] || "navegar"
+    // El modo: el nombre del escritorio sin su número («Navegar 2» → navegar)
+    readonly property string floor: {
+        const n = String(desktops.desktopNames[desktops.desktopIds.indexOf(desktops.currentDesktop)] || "").split(" ")[0].toLowerCase();
+        return ["jugar", "navegar", "estudiar"].indexOf(n) >= 0 ? n : "navegar";
+    }
 
     Datos { id: datos }
 

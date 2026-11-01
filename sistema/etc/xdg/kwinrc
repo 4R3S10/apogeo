@@ -1,12 +1,14 @@
-# Apogeo: si una ventana de otro piso se pone delante sola, se viene al piso donde estás (nunca cambias de piso sin querer).
+# Apogeo: si una ventana de otro escritorio se pone delante sola, KWin no hace nada y lo decide el script
+# apogeo-escritorios (en el mismo modo vas a su escritorio; de otro modo, se viene aquí: nunca cambias de modo sin querer).
 # Llevar una ventana arriba ya no la maximiza: enseña la rejilla de Apogeo (los lados siguen poniéndola a media pantalla)
 [Windows]
-ActivationDesktopPolicy=BringToCurrentDesktop
+ActivationDesktopPolicy=DoNothing
 ElectricBorderMaximize=false
 
 # La consola del piso Jugar, a pantalla completa; y todas las ventanas con las esquinas redondeadas (como Ágape)
 [Plugins]
 apogeo-ventanasEnabled=true
+apogeo-escritoriosEnabled=true
 kwin4_effect_shapecornersEnabled=true
 
 # Las esquinas: el radio de la barra de las ventanas (lo cambia Ajustes → Aspecto → Esquinas), sin rayas alrededor y

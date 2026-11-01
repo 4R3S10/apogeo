@@ -8,8 +8,8 @@ import org.kde.notificationmanager as NotificationManager
 import org.kde.plasma.private.volume as PulseAudio
 import Apogeo
 
-// Al final de la isla («I1 · Una sola isla»): la red, el sonido, los avisos sin leer y la hora. Al pulsarla sale el panel
-// rápido de la derecha (org.apogeo.derecho, por el atajo del script de KWin apogeo-bordes). Aquí también salen tus avisos
+// Al final de la barra de arriba: la red, el sonido, los avisos sin leer y la hora. Al pulsarla (o con Meta+N, su atajo
+// de widget: lo pone apogeo-pisos) sale debajo la tarjeta rápida (Tarjeta.qml). Aquí también salen tus avisos
 // urgentes en pantalla, con el estilo de Apogeo (Avisos.qml; los demás los enseña la isla dinámica). (Sustituye al reloj y a la bandeja de KDE: en la bandeja solo
 // quedan los iconos de tus apps.)
 PlasmoidItem {
@@ -17,7 +17,11 @@ PlasmoidItem {
     preferredRepresentation: compactRepresentation
     toolTipMainText: ""
     toolTipSubText: ""
-    Plasmoid.status: PlasmaCore.Types.ActiveStatus
+    Plasmoid.status: tarjeta.visible ? PlasmaCore.Types.RequiresAttentionStatus : PlasmaCore.Types.ActiveStatus
+    // (Meta+N no abre el desplegable de Plasma: abre o cierra la tarjeta)
+    activationTogglesExpanded: false
+    onExpandedChanged: if (root.expanded) root.expanded = false   // (por si Plasma lo despliega igual)
+    Connections { target: Plasmoid; function onActivated() { root.panel() } }
 
     // ---------- Lo que se ve en la isla: red, sonido, avisos y hora (en vivo, sin preguntar a nadie) ----------
     // Los avisos urgentes en pantalla, con el estilo de Apogeo (abajo a la derecha)
@@ -60,10 +64,22 @@ PlasmoidItem {
             disconnectSource(source);
         }
     }
-    // Abre (o cierra) el panel rápido de la derecha
+    // La tarjeta rápida: abrirla o cerrarla. Al abrirla, los avisos cuentan como vistos: la campana y los números de los
+    // iconos de la isla dejan de contarlos
+    Tarjeta {
+        id: tarjeta
+        visualParent: root.compactRepresentationItem
+        location: Plasmoid.location
+    }
     function panel() {
-        runner.connectSource("dbus-send --session --type=method_call --dest=org.kde.kglobalaccel /component/kwin "
-                             + "org.kde.kglobalaccel.Component.invokeShortcut string:apogeo-panel-derecho");
+        tarjeta.alternar();
+        if (!tarjeta.visible) return;
+        const visto = new Date().toISOString();
+        Plasmoid.configuration.leidos = visto;
+        runner.connectSource("dbus-send --session --type=method_call --dest=org.kde.plasmashell /PlasmaShell "
+                             + "org.kde.PlasmaShell.evaluateScript string:'panels().forEach(function (p) { p.widgets().forEach("
+                             + "function (w) { if (w.type != \"org.apogeo.isla\") return; w.currentConfigGroup = [\"General\"]; "
+                             + "w.writeConfig(\"leidos\", \"" + visto + "\"); w.reloadConfig(); }); });'");
     }
 
     // En la isla: red · sonido · avisos (con los que no has visto) · la hora, en una sola pastilla. En la barra fina de

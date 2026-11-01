@@ -8,9 +8,9 @@ aplica en el momento.
   apogeo-ajustes                 abre la ventana
   apogeo-ajustes SECCION         la abre en esa sección (pisos, isla, salud, agape, perfil, actualizaciones)
   apogeo-ajustes poner CLAVE V   cambia un ajuste («animar false», «pisos.jugar.energia power-saver»)
-  apogeo-ajustes rapido          el estado del panel rápido de la isla (JSON)
-  apogeo-ajustes rapido ACCION   lo que se toca en el panel rápido (red, bluetooth, volumen N, brillo N, luz, animar,
-                                 silencio, energia PISO, apagar)
+  apogeo-ajustes rapido          el estado de la tarjeta rápida de la hora (JSON)
+  apogeo-ajustes rapido ACCION   lo que se toca en ella (wifi, red, bluetooth, volumen N, brillo N, luz, animar, silencio,
+                                 energia PISO, bloquear, reposo, salir, reiniciar, apagar)
 """
 import json
 import os
@@ -43,7 +43,7 @@ def parse(value):
         return value
 
 
-# ---------- Panel rápido (lo lee y lo toca el panel de la derecha, org.apogeo.derecho) ----------
+# ---------- La tarjeta rápida (la lee y la toca la tarjeta de debajo de la hora, org.apogeo.rapido) ----------
 
 def network():
     for line in run('nmcli', '-t', '-f', 'TYPE,STATE,CONNECTION', 'device').splitlines():
@@ -53,6 +53,12 @@ def network():
         if state == 'connected' and kind == 'wifi':
             return {'on': True, 'texto': name}
     return {'on': False, 'texto': 'Sin conexión'}
+
+
+def wifi():
+    """{'hay': si hay tarjeta de Wi-Fi, 'on': si está encendido}."""
+    hay = any(line.split(':', 1)[0] == 'wifi' for line in run('nmcli', '-t', '-f', 'TYPE', 'device').splitlines())
+    return {'hay': hay, 'on': hay and run('nmcli', 'radio', 'wifi').strip() == 'enabled'}
 
 
 def bluez():
@@ -116,7 +122,7 @@ def quick_state():
     except Exception:
         pass
     return {
-        'red': network(),
+        'red': network(), 'wifi': wifi(),
         'bt': {'hay': bt is not None, 'on': bool(bt and bt[1])},
         'volumen': vol, 'mudo': muted,
         'brillo': brightness(),
@@ -129,8 +135,10 @@ def quick_state():
 
 def quick(action, arg=None):
     import dbus
-    if action == 'red':
+    if action == 'red' or action == 'wifi' and not wifi()['hay']:
         comun.spawn('kcmshell6', 'kcm_networkmanagement')
+    elif action == 'wifi':
+        run('nmcli', 'radio', 'wifi', 'off' if wifi()['on'] else 'on')
     elif action == 'bluetooth':
         bt = bluez()
         if bt:
@@ -159,9 +167,15 @@ def quick(action, arg=None):
         f = st['pisos'][arg]
         f['energia'] = 'balanced' if f['energia'] == 'power-saver' else 'power-saver'
         comun.save(st)
-    elif action == 'apagar':
-        dbus.SessionBus().get_object('org.kde.LogoutPrompt', '/LogoutPrompt').promptAll(
-            dbus_interface='org.kde.LogoutPrompt')
+    elif action == 'bloquear':
+        dbus.SessionBus().get_object('org.freedesktop.ScreenSaver', '/ScreenSaver').Lock(
+            dbus_interface='org.freedesktop.ScreenSaver')
+    elif action == 'reposo':
+        run('systemctl', 'suspend')
+    elif action in ('salir', 'reiniciar', 'apagar'):
+        # Directo, sin la pantalla de apagar (la tarjeta ya ha preguntado «¿Seguro?»): KDE cierra tus apps bien
+        method = {'salir': 'logout', 'reiniciar': 'logoutAndReboot', 'apagar': 'logoutAndShutdown'}[action]
+        getattr(dbus.SessionBus().get_object('org.kde.Shutdown', '/Shutdown'), method)(dbus_interface='org.kde.Shutdown')
     else:
         return 1
     return 0

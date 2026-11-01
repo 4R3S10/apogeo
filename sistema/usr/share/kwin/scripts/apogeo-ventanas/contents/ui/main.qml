@@ -204,7 +204,7 @@ Item {
         const desk = Workspace.currentDesktop;
         const covered = Workspace.windows.some(w => w.normalWindow && !w.minimized && w !== music && !w.skipTaskbar
                                                     && (w.onAllDesktops || w.desktops.indexOf(desk) >= 0));
-        const desktopShown = desk && desk.name === "Navegar" && !covered;
+        const desktopShown = desk && desk.name.split(" ")[0] === "Navegar" && !covered;
         const busy = (a && a !== music && (a.fullScreen || agape)) || desktopShown;
         if (music.minimized !== busy) music.minimized = busy;
     }

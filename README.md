@@ -13,7 +13,7 @@ tres **modos**: Jugar, Navegar y Estudiar.
 ## Los tres modos
 
 El escritorio son tres modos, uno encima de otro: **Jugar**, **Navegar** y **Estudiar**. Se cambia con Meta+F1/F2/F3, con
-la pastilla de los modos (Meta+N), desde la consola y en la pantalla de inicio de sesión (cada modo es una sesión); las
+Meta+Ctrl+↑ ↓, en la Órbita, desde la consola y en la pantalla de inicio de sesión (cada modo es una sesión); las
 ventanas se deslizan como en un ascensor. Cada modo guarda sus ventanas, su fondo y su acento: **violeta `#B79CFF` en
 Jugar, cian `#45D6FF` en Navegar y ámbar `#FFB35C` en Estudiar**, sobre el grafito de Órbita (Estudiar va, además, en
 papel cálido de serie).
@@ -25,6 +25,17 @@ papel cálido de serie).
   emuladores, PS5 y Windows están dentro); en Navegar y Estudiar, nada de serie (ahí eliges tú). **Todas las apps siguen
   disponibles en los tres modos**, en el menú y en el buscador: el modo cambia color, fondo, energía y avisos, nunca tus
   programas.
+- **Escritorios en cada modo** (`apogeo-escritorios`, script de KWin): en Navegar y Estudiar puedes tener hasta 4.
+  Ctrl+Alt+← → pasa al de al lado; en el último, Ctrl+Alt+→ abre uno nuevo («Navegar 2»…; si estás en uno nuevo vacío,
+  no abre otro). Cada app se queda en el escritorio en el que la abriste, y un escritorio que dejas vacío se cierra al
+  irte. Con Mayús te llevas la ventana (Ctrl+Alt+Mayús+← →, y Meta+Ctrl+Mayús+↑ ↓ a otro modo). Al cambiar de modo
+  vuelves al escritorio en el que estabas en él. En la barra de arriba, junto al modo, un punto por escritorio (solo si
+  tienes más de uno; el tuyo encendido, un clic te lleva). Jugar no tiene: es la consola.
+  Por dentro, los escritorios virtuales de KWin son una rejilla: una fila por modo y una columna por escritorio, así el
+  efecto Deslizar sube o baja al cambiar de modo y va de lado al cambiar de escritorio, con el fondo quieto. Las
+  columnas se crean al abrir y se quitan cuando ningún modo las usa. KWin no cambia de escritorio al activar una
+  ventana (`ActivationDesktopPolicy=DoNothing`): lo decide el script (en este modo vas a ella; si es de otro, se viene
+  aquí). `apogeo-pisos` le da las teclas y quita las de KWin para ir a un escritorio por número.
 
 **Rejilla de ventanas** («V2 · Huecos en toda la pantalla»): lleva una ventana hasta arriba y la pantalla enseña sus
 huecos en el color del modo; arriba, una pastilla para cambiar de esquema (mitades, tercios, ⅔ + ⅓, cuartos o «Suelta»). Al soltar,
@@ -132,11 +143,11 @@ Casi vacío, como en la bienvenida de una consola:
   (`org.apogeo.modo`; un clic abre la Órbita); **en el centro, tus ventanas abiertas** en el modo, solo sus iconos y
   un punto bajo la activa (`org.apogeo.ventanas`: clic ir o minimizar, clic central otra, clic derecho cerrar); al
   cambiar el volumen o el brillo, su barrita sale ahí un momento. A la derecha la hora, los iconos de tus apps
-  (bandeja), la red, el sonido y la campana (el panel rápido: un clic abre el de la derecha).
+  (bandeja), la red, el sonido y la campana (un clic, o Meta+N, abre la tarjeta rápida: ver «La tarjeta rápida»).
 - **Abajo, el orbe** (la isla, sin cristal detrás): el del modo en el que estás en el centro y, a sus lados, los otros
   dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo siempre queda
-  en el centro). Nada encima ni a los lados: tus ventanas van arriba. Se aparta de las ventanas (con el escritorio a
-  la vista, se ve) y sale al acercar el ratón al borde.
+  en el centro). Nada encima ni a los lados: tus ventanas van arriba. Está escondido (abajo no se ve nada) y sale al
+  acercar el ratón al borde de abajo; al alejarlo, se vuelve a esconder (`apogeo-bordes`).
 - **Jugar es solo la consola:** en Jugar no hay barra ni orbe (sus widgets no se pintan y la consola, a pantalla
   completa, va encima); al salir de Jugar, vuelven. Cada modo tiene su fondo ya cargado: al cambiar, se funden sin
   pasar por el del modo anterior.
@@ -175,11 +186,11 @@ abiertas; clic derecho para fijar o dejar de fijar, en cada modo las suyas), lo 
 Navegar: la música; Estudiar: el temporizador) y, al final, la red, el sonido, la campana con los avisos sin leer y la
 hora. Al pasar por una app abierta, su vista en vivo (y ✕ para cerrarla). En la bandeja de KDE solo quedan los iconos de
 tus apps (Discord, Steam…).
-- **La red, el sonido, los avisos y la hora:** al pulsarlos sale el panel rápido de la derecha (ver «Paneles»).
+- **La red, el sonido, los avisos y la hora:** al pulsarlos sale la tarjeta rápida (ver «La tarjeta rápida»).
 - **Isla dinámica** (cristal como los paneles): sale sola y crece cuando tiene algo que enseñar, y se esconde al
   acabar (llama a los atajos sin tecla `apogeo-isla-mostrar`/`apogeo-isla-soltar` del script `apogeo-bordes`). Por
   orden: el **volumen y el brillo** (en vez de la ventanita de KDE para el volumen; la del brillo la lleva Plasma
-  dentro y no se puede quitar), un **aviso** nuevo unos segundos (con sus botones; Responder abre el panel rápido;
+  dentro y no se puede quitar), un **aviso** nuevo unos segundos (con sus botones y Abrir;
   luego queda en el historial), una **descarga** o copia (los avisos de trabajos de KDE y las apps que lo cuentan con
   `LauncherEntry`), el **temporizador** de estudio (clic: pausa; derecho: otra vez) y **lo que suena** (portada, los
   colores de la portada, avanzar y, con el ratón encima, los botones).
@@ -303,8 +314,8 @@ esconda sola y lo de cada modo), Salud del PC (temperatura máxima de 70 a 85 °
 abren los Ajustes de KDE. Lo que cambias se guarda en `~/.config/apogeo/ajustes.json` y `apogeo-pisos` lo aplica al
 momento.
 
-Lo de todos los días (red, bluetooth, fondo animado, no molestar, ahorro de energía del modo, luz nocturna, volumen y
-brillo) está en el **panel rápido** de la derecha (Meta+N).
+Lo de un momento (Wi-Fi, bluetooth, silencio, volumen, brillo, luz nocturna, no molestar y apagar) está en la
+**tarjeta rápida** de debajo de la hora (Meta+N).
 
 ## Fondos
 
@@ -357,28 +368,25 @@ publicada tal cual). Apagado de serie.
 Lo pone `apogeo-pisos` (`carousel()`): Karousel solo trabaja en los escritorios con el nombre de esos modos
 (`tiledDesktops`).
 
-## El panel rápido
+## La tarjeta rápida
 
-El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). A la derecha, el panel rápido
-en **módulos de cristal sueltos** («R2 · Módulos», como un centro de control; cada uno «Cristal con tu fondo»: detrás,
-tu fondo difuminado y oscurecido; lo hace `apogeo_fondos.glass`, una vez por fondo, y los animados se dibujan en vivo;
-el panel de Plasma no pinta nada detrás: los trozos «east-…» del estilo de Órbita están vacíos). Sale con Meta+N, desde la
-barra de arriba (el borde de la pantalla no hace nada ni brilla), **hace sitio** (las ventanas se estrechan y vuelven al cerrarlo) y
-se queda hasta que vuelves a pulsar la tecla. El panel de widgets de la izquierda ya no está: la agenda (con el tiempo y
-tu ciudad, recordatorios y temporizadores), tus notas y Estudios van en la Órbita abierta, como satélites.
-En Órbita, el panel es de **«cristal grafito» (W1)**: neutro, sin el brillo del modo, y lo encendido en blanco.
-- **Panel rápido** (derecha, Meta+N o pulsando la red, el sonido o la hora de la barra de arriba; `org.apogeo.derecho`):
-  la red, el bluetooth, el micro y el sonido en botones redondos y, al lado, **lo que suena** (portada, ⏮ ⏯ ⏭);
-  **los modos**; el volumen y el brillo en **barras altas** (se arrastran, se pulsan o con la rueda) junto a luz
-  nocturna, no molestar, el ahorro del modo y el fondo animado; cuánto lleva encendido el PC con Aspecto, Todos los
-  ajustes y apagar; **tus avisos** agrupados por app («Ver todos»), con sus botones y **Responder** ahí mismo (quitarlos o «Borrar
-  todo») y abajo el tiempo de las próximas horas (en barras) y días.
-  Al abrirlo, los avisos cuentan como vistos.
+El escritorio está limpio: solo el fondo (con el botón derecho, el carrusel de fondos). Lo de un momento va en la
+**tarjeta rápida** (`org.apogeo.rapido`, `Tarjeta.qml`): un clic en la hora de la barra de arriba (o Meta+N, el atajo
+de ese widget) y cuelga debajo, flotando sobre las ventanas sin moverlas. Se va al pulsar fuera, con Esc o con otro
+clic. Lleva solo:
+- el **Wi-Fi** (sin tarjeta de Wi-Fi, el cable; entonces abre los ajustes de la red), el **bluetooth** y el
+  **silencio**, en botones redondos con su nombre;
+- el **volumen** y el **brillo** en barras que se arrastran, se pulsan o van con la rueda (el brillo, si la pantalla
+  deja);
+- **luz nocturna** y **no molestar**;
+- abajo, **Bloquear**, **Reposo**, **Salir**, **Reiniciar** y **Apagar**: los dos primeros al momento; los otros tres
+  piden un segundo toque (el botón se pone rojo, «¿Seguro?», y a los 3 s se olvida). Van directos, sin la pantalla de
+  apagar (`org.kde.Shutdown`: KDE cierra tus apps bien).
 
-Lo abre el script de KWin `apogeo-bordes` (cambia el panel a «siempre visible», que es lo que hace sitio, y le dice si
-está abierto: cerrado no pide nada). Cerrado no se «esconde solo» (KWin le guardaría el borde derecho: brillaría y
-saldría al empujar el ratón): queda en «las ventanas van debajo» y el script lo saca fuera de la pantalla. Los datos los da `apogeo-pisos` por D-Bus (`apogeo_datos.py`). En el
-tema de Plasma, la raya del foco no sale en los paneles de los lados (cruzaba el panel junto a lo que escribías).
+La música, los avisos, la agenda y el tiempo están en la Órbita. Al abrir la tarjeta, los avisos cuentan como vistos.
+Es una ventana de Plasma sin marco con «Cristal con tu fondo» detrás (en Órbita, más oscuro). Lo de los botones lo lee
+y lo cambia `apogeo-ajustes rapido`, solo con la tarjeta abierta. (Antes había un panel rápido a la derecha,
+`org.apogeo.derecho`: `apogeo-pisos` lo quita y suelta su atajo.)
 
 El widget del escritorio es `org.apogeo.escritorio`:
 - Se dibuja siempre del tamaño de la pantalla, aunque Plasma lo estreche al quedarse fijos la isla o un panel.
@@ -546,8 +554,8 @@ entras en Apogeo.
   estado del modo en `~/.config/apogeo/modo.json` y en D-Bus `org.apogeo.Modos1`)
 - `sistema/usr/lib/apogeo/apogeo-termico`: la protección de temperatura
 - `sistema/usr/lib/apogeo/apogeo-bienvenida` y `sistema/usr/share/apogeo/bienvenida/`: la bienvenida
-- `sistema/usr/lib/apogeo/apogeo-ajustes` y `sistema/usr/share/apogeo/ajustes/`: los ajustes (y lo del panel rápido,
-  `org.apogeo.derecho`)
+- `sistema/usr/lib/apogeo/apogeo-ajustes` y `sistema/usr/share/apogeo/ajustes/`: los ajustes (y lo de la tarjeta
+  rápida, `org.apogeo.rapido`)
 - `sistema/usr/lib/apogeo/apogeo_comun.py` y `apogeo_qt.py`: lo que comparten (tus ajustes, tu cuenta, Ágape)
 - `sistema/usr/lib/qt6/qml/Apogeo/`: las piezas comunes en QML (botones, campos, interruptores, fondos, el Núcleo…)
 - `apogeo.asc`: la clave pública con la que se firman los paquetes
