@@ -29,13 +29,18 @@ jobs:
     steps:
       - name: Herramientas
         run: |
+          # Varios espejos: si uno falla a mitad (pasa), pacman sigue con el siguiente
+          printf 'Server = %s/$repo/os/$arch\n' https://geo.mirror.pkgbuild.com https://mirror.rackspace.com/archlinux \
+            https://ftp.halifax.rwth-aachen.de/archlinux https://mirrors.kernel.org/archlinux \
+            > /etc/pacman.d/mirrorlist
           pacman -Syu --noconfirm --needed archiso github-cli git libarchive
           # La llave de CachyOS (su repositorio va en el USB para sus llaves y espejos)
           pacman-key --init
           pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
           pacman-key --lsign-key F3B607488DB35A47
           # (el perfil la incluye; en el USB la pone su paquete)
-          echo 'Server = https://mirror.cachyos.org/repo/$arch/$repo' > /etc/pacman.d/cachyos-mirrorlist
+          printf 'Server = %s/repo/$arch/$repo\n' https://mirror.cachyos.org https://cdn77.cachyos.org https://cdn.cachyos.org \\
+            > /etc/pacman.d/cachyos-mirrorlist
       - uses: actions/checkout@v4
       - name: El paquete de Apogeo
         env:
