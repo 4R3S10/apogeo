@@ -272,17 +272,21 @@ ApplicationWindow {
                         width: parent.width
                         height: abierta ? 104 : 46
                         radius: Tema.r(12)
-                        color: zona.containsMouse || abierta ? Tema.encima : "transparent"
+                        color: zona.containsMouse || abierta || activeFocus ? Tema.encima : "transparent"
                         clip: true
+                        activeFocusOnTab: true
+                        function tocar() {
+                            if (!red.modelData.cerrada) instalador.conectar(red.modelData.nombre, "");
+                            else { red.abierta = !red.abierta; if (red.abierta) claveRed.forceActiveFocus(); }
+                        }
+                        Keys.onSpacePressed: tocar()
+                        Keys.onReturnPressed: tocar()
                         Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                         MouseArea {
                             id: zona
                             width: parent.width; height: 46
                             hoverEnabled: true
-                            onClicked: {
-                                if (!red.modelData.cerrada) instalador.conectar(red.modelData.nombre, "");
-                                else red.abierta = !red.abierta;
-                            }
+                            onClicked: red.tocar()
                         }
                         Row {
                             x: 14; height: 46
@@ -411,15 +415,19 @@ ApplicationWindow {
                     width: col.width
                     height: 78
                     radius: Tema.r(14)
-                    color: sel ? Tema.rosaSuave : zona.containsMouse && vale ? Tema.encima : "transparent"
-                    border.color: sel ? Tema.acento : Tema.borde
+                    color: sel ? Tema.rosaSuave : (zona.containsMouse || activeFocus) && vale ? Tema.encima : "transparent"
+                    border.color: sel || activeFocus ? Tema.acento : Tema.borde
                     opacity: vale ? 1 : 0.5
+                    activeFocusOnTab: vale
+                    function elegir() { win.disco = d.modelData.ruta; col.seguro = false; }
+                    Keys.onSpacePressed: elegir()
+                    Keys.onReturnPressed: elegir()
                     MouseArea {
                         id: zona
                         anchors.fill: parent
                         hoverEnabled: true
                         enabled: d.vale
-                        onClicked: { win.disco = d.modelData.ruta; col.seguro = false; }
+                        onClicked: d.elegir()
                     }
                     Column {
                         x: 16; y: 14

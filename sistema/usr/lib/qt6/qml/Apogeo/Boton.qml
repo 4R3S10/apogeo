@@ -33,6 +33,15 @@ AbstractButton {
             border.color: Tema.tinte(0.14)
             Behavior on color { ColorAnimation { duration: 150 } }
         }
+        Rectangle { // el anillo de foco (solo al llegar con el teclado), como el de los campos
+            anchors.fill: caja
+            anchors.margins: -3
+            radius: caja.radius + 3
+            color: "transparent"
+            border.width: 3
+            border.color: Tema.rosaSuave
+            visible: b.visualFocus
+        }
     }
     contentItem: Item {
         Row {

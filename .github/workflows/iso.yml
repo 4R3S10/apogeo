@@ -1,8 +1,13 @@
 name: iso
 # Construye el USB de Apogeo (instalador/construir-iso.sh) con el último paquete de Apogeo del repositorio y lo publica
-# en la versión «iso» de GitHub, con su suma SHA-256. Se lanza a mano (o al cambiar el instalador).
+# en la versión «iso» de GitHub, con su suma SHA-256. Se lanza a mano, al cambiar el instalador o al publicarse un
+# paquete nuevo de Apogeo (el USB usa sus piezas de Órbita).
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: [paquetes]
+    types: [completed]
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -16,6 +21,7 @@ permissions:
 jobs:
   iso:
     name: Construir el USB
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
@@ -37,7 +43,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           mkdir -p /tmp/paquete
-          gh release download repo -R "$GITHUB_REPOSITORY" -p 'apogeo-[0-9]*-x86_64.pkg.tar.zst' -D /tmp/paquete
+          gh release download repo -R "$GITHUB_REPOSITORY" -p 'apogeo-[0-9]*.pkg.tar.zst' -D /tmp/paquete
           ls /tmp/paquete
       - name: Construir
         run: instalador/construir-iso.sh /tmp/paquete/apogeo-*.pkg.tar.zst /tmp/salida

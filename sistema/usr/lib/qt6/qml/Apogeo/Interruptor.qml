@@ -19,6 +19,15 @@ AbstractButton {
             color: "#ffffff"
             Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         }
+        Rectangle { // el anillo de foco (con el teclado)
+            anchors.fill: parent
+            anchors.margins: -3
+            radius: height / 2
+            color: "transparent"
+            border.width: 3
+            border.color: Tema.rosaSuave
+            visible: s.visualFocus
+        }
     }
     contentItem: Item {}
 }
