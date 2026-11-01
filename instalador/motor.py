@@ -322,6 +322,8 @@ def configurar(e, efi, apo):
     open(f'{DESTINO}/etc/default/limine', 'w').write(
         f'ESP_PATH="/boot"\nKERNEL_CMDLINE[default]+="{cmdline}"\nBOOT_ORDER="*, *lts, *fallback, Snapshots"\n')
     di(paso='sistema', texto='Preparando el arranque', progreso=0.64)
+    # (el nombre de la entrada de arranque sale de os-release: que diga Apogeo, no CachyOS)
+    chroot('/usr/lib/apogeo/apogeo-marca', ok=(0, 1, 127))
     chroot('limine-install')
     chroot('limine-mkinitcpio')
 

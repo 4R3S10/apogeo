@@ -1,0 +1,19 @@
+# Vuelve a poner el nombre de Apogeo si una actualización reescribe os-release. Va con «zz» para ir después de los
+# ganchos de CachyOS (cachyos-hooks también reescribe /etc/os-release al instalarse o actualizarse).
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/lib/os-release
+Target = usr/lib/apogeo/apogeo-marca
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = cachyos-hooks
+
+[Action]
+Description = Apogeo: nombre del sistema
+When = PostTransaction
+Exec = /usr/lib/apogeo/apogeo-marca
