@@ -521,14 +521,36 @@ Al acabar cada actualización, Apogeo se revisa y arregla lo que pueda (`apogeo-
 sesión, que no falten archivos y, en tu sesión, los modos, el orbe, los paneles de los lados, el fondo, los scripts de KWin,
 el estilo y la música. Solo avisa si ha arreglado algo o si algo no ha podido arreglarlo.
 
-## Instalador (ISO) — decidido para cuando se haga
+## Instalador (el USB)
 
-- **Disco cifrado** (LUKS) de serie, que se abre solo con el chip de seguridad del PC (TPM 2.0, `systemd-cryptenroll`):
-  al encender no hay que escribir dos contraseñas, solo la de tu cuenta. La contraseña del disco se guarda de reserva
-  (por si cambias de placa o el TPM no la da) y se pide solo entonces.
-- **Windows 11 Home** en el Windows escondido (la clave ya viene en el PC y se activa sola).
-- **Sin acceso remoto:** SSH apagado (en la máquina virtual se encendió solo para probar).
-- Particiones, Apogeo y Windows (descargado de Microsoft e instalado sin preguntas, con el puente) en un solo paso.
+El USB de Apogeo está en la versión [«iso»](https://github.com/4R3S10/apogeo/releases/tag/iso) (`apogeo.iso` y su suma
+SHA-256). Se graba en un USB (Impression, Ventoy o `dd`), se arranca el PC desde él (UEFI) y se abre solo el instalador:
+una tarjeta de Órbita con cuatro pasos.
+
+1. **Hola:** comprueba internet (y te deja elegir una Wi-Fi). Hace falta: Apogeo y Windows se descargan al instalar.
+2. **Tú:** tu nombre, tu usuario y tu contraseña (la de entrar y, de reserva, la del disco).
+3. **Dónde va:** el disco entero (se borra; hay que confirmarlo) para Apogeo y, si lo dejas puesto, el Windows escondido
+   (200 GB).
+4. **Instalando:** el progreso por fases; al acabar, reiniciar.
+
+Lo que hace por dentro (`instalador/motor.py`, como root, con lo elegido por su entrada; la contraseña no se escribe en
+ningún archivo):
+
+- **Disco:** GPT con EFI (4 GB) | Windows (200 GB, NTFS) | Apogeo cifrado (LUKS2) con btrfs (`@`, `@home`, `@root`,
+  `@srv`, `@cache`, `@tmp`, `@log`).
+- **Cifrado:** se abre solo con el chip de seguridad del PC (TPM 2.0, PCR 7, `systemd-cryptenroll`): solo escribes tu
+  contraseña al entrar. Si el TPM no la da (cambias de placa…), pide tu contraseña de Apogeo.
+- **Apogeo:** `pacstrap` desde los repositorios de CachyOS (v3 si el procesador puede) y `[apogeo]`, español, Limine,
+  los controladores con `chwd`, sin SSH.
+- **Windows** (`instalador/windows.py`): la imagen oficial en español se descarga de Microsoft (el catálogo de la
+  herramienta de creación de medios, con su suma comprobada). La edición sale de la clave que trae el PC (la tabla MSDM
+  del firmware): Home, Home Single Language o Pro, para que se active sola. Se copia con `wimlib` en su partición y un
+  WinPE de un solo uso hace el arranque (`bcdboot`) y se borra. En el primer arranque Windows te pide tu cuenta de
+  Microsoft y luego instala el puente de Apogeo (sin cifrado de dispositivo, reloj en UTC).
+
+Construirlo: `instalador/construir-iso.sh <paquete apogeo-*.pkg.tar.zst> [salida]` (en Arch, como root, con archiso).
+Lo hace `.github/workflows/iso.yml` al cambiar el instalador o al publicarse un paquete nuevo. Para ver cómo queda sin
+instalar nada: `APOGEO_PRUEBA=1 instalador/apogeo-instalador`.
 
 ## Ágape
 
@@ -568,4 +590,5 @@ entras en Apogeo.
   rápida, `org.apogeo.rapido`)
 - `sistema/usr/lib/apogeo/apogeo_comun.py` y `apogeo_qt.py`: lo que comparten (tus ajustes, tu cuenta, Ágape)
 - `sistema/usr/lib/qt6/qml/Apogeo/`: las piezas comunes en QML (botones, campos, interruptores, fondos, el Núcleo…)
+- `instalador/`: el USB (el perfil de archiso, el instalador y el motor)
 - `apogeo.asc`: la clave pública con la que se firman los paquetes
