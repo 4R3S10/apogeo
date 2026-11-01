@@ -21,14 +21,14 @@ OPTIONS = {
     'timeout': '1',          # un segundo para pulsar una tecla (sin pulsar, ni se ve)
     'quiet': 'yes',          # sin menú ni texto; una tecla lo enseña
     'interface_branding': 'Apogeo',
-    'interface_branding_colour': '5',  # el rosa de la paleta
-    'term_palette': '120d14;e5484d;a6e3a1;f9e2af;7a4458;e0a9b4;94e2d5;f1e6ea',
-    'term_palette_bright': '4a2c4f;ff8f9a;b8f0b3;fbe9b5;b97a8c;ff8fc6;b2ecdf;ffffff',
-    'term_background': '120d14',
-    'term_foreground': 'f1e6ea',
-    'term_background_bright': '4a2c4f',
+    'interface_branding_colour': '6',  # el cian de Órbita (el acento de Navegar)
+    'term_palette': '080a0f;e5484d;7ee0a1;ffb35c;5b8def;b79cff;45d6ff;e9edf5',
+    'term_palette_bright': '1a2130;ff7a85;a6f0c0;ffd08f;8fb3ff;d2c2ff;8be6ff;ffffff',
+    'term_background': '080a0f',
+    'term_foreground': 'e9edf5',
+    'term_background_bright': '1a2130',
     'term_foreground_bright': 'ffffff',
-    'backdrop': '120d14',
+    'backdrop': '080a0f',
 }
 DROP = ('wallpaper', 'wallpaper_style')  # el fondo de CachyOS (se queda comentado)
 ONCE = '/var/lib/apogeo/menu-una-vez'
