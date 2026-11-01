@@ -15,7 +15,7 @@ WallpaperItem {
     id: root
 
     TaskManager.VirtualDesktopInfo { id: desktops }
-    readonly property var styles: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces", "orbitas", "nebulosa", "aurora"]
+    readonly property var styles: ["orbitas", "nebulosa", "aurora"]
     // El piso en el que estás (por el nombre del escritorio, sin su número: «Navegar 2» es Navegar) y su fondo; en la
     // pantalla de bloqueo, el de «Estilo»/«Archivo»
     readonly property string floorName: {
@@ -24,7 +24,7 @@ WallpaperItem {
         return ["Jugar", "Navegar", "Estudiar"].indexOf(n) >= 0 ? n : "";
     }
     readonly property bool porPiso: root.configuration.PorPiso && floorName !== ""
-    // Los colores de este piso (Aspecto «Del fondo»: cada piso con los suyos), al momento: en Plasma, para todo
+    // Los colores de este piso (cada piso con su acento), al momento: en Plasma, para todo
     readonly property string floorKey: (porPiso ? floorName : String(root.configuration.Piso || "")).toLowerCase()
     onFloorKeyChanged: Tema.piso = floorKey
     readonly property string estilo: porPiso ? root.configuration["Estilo" + floorName] : root.configuration.Estilo

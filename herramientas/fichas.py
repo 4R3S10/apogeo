@@ -1,10 +1,8 @@
 """
 Las fichas del aspecto de Apogeo —la identidad «Órbita»— para los generadores de temas (colores, kvantum, plasma,
 ventanas, iconos). De serie: grafito, Geist y un acento por modo (cian en Navegar, ámbar en Estudiar, violeta en
-Jugar). Con APOGEO_TOKENS=<json> (lo hace apogeo-aspecto con lo que eliges en Ajustes → Aspecto), las tuyas, y el
+Jugar). Con APOGEO_TOKENS=<json> (lo hace apogeo-aspecto con lo que eliges en Ajustes → Identidad), las tuyas, y el
 tema sale con otro nombre. Con APOGEO_MODO=jugar|navegar|estudiar se elige el acento de ese modo.
-
-La identidad clásica (Berenjena, rosa de Ágape, Bricolage) sigue disponible como estilo «Clásico».
 """
 import json
 import os
@@ -32,7 +30,7 @@ VIVO = _T.get('vivo', ACCENT)
 RADIO = float(_T.get('radio', 0.7))          # las esquinas: 1 = redondas; 0.7 = suaves (la de Órbita)
 CRISTAL = float(_T.get('cristal', 0.55))     # lo opaco del cristal de la isla y los paneles
 NOMBRE = _T.get('nombre')                    # el nombre del tema generado (None = el de serie)
-ESTILO = _T.get('estilo', 'orbita')          # orbita (de serie), apogeo (Clásico), agape, fondo…
+ESTILO = _T.get('estilo', 'orbita')          # (siempre Órbita)
 CLARO = bool(_T.get('claro', False))
 LETRA = _T.get('letra', 'Geist')
 MONO = _T.get('mono', 'Geist Mono')

@@ -3,8 +3,8 @@ import QtQuick.Controls
 import QtQuick.Effects
 import Apogeo
 
-// Resumen al volver («H3»): la tarjeta de cristal encima de la isla con lo que llegó mientras no salían los avisos. La
-// coloca el script de KWin apogeo-ventanas (abajo, en el centro, encima de la isla). «resumen» es apogeo-resumen.
+// Resumen al volver («H3»): la tarjeta de cristal abajo en el centro con lo que llegó mientras no salían los avisos. La
+// coloca el script de KWin apogeo-ventanas (abajo, en el centro, donde sale el orbe). «resumen» es apogeo-resumen.
 Window {
     id: win
     readonly property var d: resumen.data
@@ -57,7 +57,7 @@ Window {
     Rectangle {
         id: card
         x: 18
-        y: 10 + (1 - win.entrada) * (Tema.posicion === "arriba-dcha" ? -24 : 24)   // (entra desde la isla)
+        y: 10 + (1 - win.entrada) * (Tema.posicion === "arriba-dcha" ? -24 : 24)   // (entra desde abajo)
         opacity: win.entrada
         width: win.width - 36
         height: col.implicitHeight + 44

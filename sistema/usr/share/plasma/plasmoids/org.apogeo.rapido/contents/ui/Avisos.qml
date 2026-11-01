@@ -10,8 +10,8 @@ import Apogeo
 // Los avisos urgentes en pantalla (los recordatorios, los temporizadores…), con el estilo de Apogeo: abajo a la
 // derecha, por encima de todo (también de un juego a pantalla completa), con el icono y el nombre de la app, el título,
 // el texto y sus botones (y, si la app deja, contestar ahí mismo); se quedan hasta que los quitas. Los demás no salen
-// aquí: pasan al historial del panel rápido y los enseña la isla dinámica (org.apogeo.isla) unos segundos; con «No
-// molestar» o en Jugar y Estudiar, ni eso (el resumen de al volver los enseña).
+// aquí: pasan al historial de la tarjeta rápida (con «No molestar» o en Jugar y Estudiar, el resumen de al volver los
+// enseña).
 Item {
     id: avisos
 
@@ -28,7 +28,7 @@ Item {
     }
 
     readonly property bool inhibited: NotificationManager.Server.inhibited
-    // (la pantalla de la isla)
+    // (la pantalla)
     readonly property rect screen: Qt.rect(Screen.virtualX, Screen.virtualY, Screen.width, Screen.height)
     // Apilados: cada uno, encima de los que van por debajo (con su altura de verdad)
     property int layoutRev: 0
@@ -52,7 +52,7 @@ Item {
             required property int index
             readonly property bool urgent: model.urgency === NotificationManager.Notifications.CriticalUrgency
             readonly property int timeout: urgent || model.resident ? 0 : (model.timeout > 0 ? model.timeout : 6000)
-            // Solo los urgentes; los demás se van directos al historial (y de ahí, a la isla)
+            // Solo los urgentes; los demás se van directos al historial
             readonly property bool shown: urgent
             onShownChanged: avisos.layoutRev++
             // Su sonido, si lo trae (como hace Plasma; en silencio no suena)
@@ -86,8 +86,7 @@ Item {
                 HoverHandler { id: hover }
                 Timer { // se va solo (no mientras lo miras)
                     id: life
-                    // (los que no salen aquí: en silencio, al historial ya; los demás, cuando la isla acabe de enseñarlos,
-                    // que es quien los quita: esto es por si no lo hace)
+                    // (los que no salen aquí: en silencio, al historial ya; los demás, al rato)
                     interval: pop.shown ? pop.timeout : avisos.inhibited || pop.model.wasAddedDuringInhibition ? 1 : 30000
                     running: !pop.shown || (pop.timeout > 0 && !hover.hovered && !pop.replying)
                     onTriggered: popups.expire(pop.idx())

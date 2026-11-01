@@ -10,8 +10,8 @@ import Apogeo
 
 // Al final de la barra de arriba: la red, el sonido, los avisos sin leer y la hora. Al pulsarla (o con Meta+N, su atajo
 // de widget: lo pone apogeo-pisos) sale debajo la tarjeta rápida (Tarjeta.qml). Aquí también salen tus avisos
-// urgentes en pantalla, con el estilo de Apogeo (Avisos.qml; los demás los enseña la isla dinámica). (Sustituye al reloj y a la bandeja de KDE: en la bandeja solo
-// quedan los iconos de tus apps.)
+// urgentes en pantalla, con el estilo de Apogeo (Avisos.qml; los demás van a la tarjeta). (Sustituye al reloj y a la
+// bandeja de KDE: en la bandeja solo quedan los iconos de tus apps.)
 PlasmoidItem {
     id: root
     preferredRepresentation: compactRepresentation
@@ -23,7 +23,7 @@ PlasmoidItem {
     onExpandedChanged: if (root.expanded) root.expanded = false   // (por si Plasma lo despliega igual)
     Connections { target: Plasmoid; function onActivated() { root.panel() } }
 
-    // ---------- Lo que se ve en la isla: red, sonido, avisos y hora (en vivo, sin preguntar a nadie) ----------
+    // ---------- Lo que se ve en la barra: red, sonido, avisos y hora (en vivo, sin preguntar a nadie) ----------
     // Los avisos urgentes en pantalla, con el estilo de Apogeo (abajo a la derecha)
     Avisos {}
 
@@ -64,8 +64,7 @@ PlasmoidItem {
             disconnectSource(source);
         }
     }
-    // La tarjeta rápida: abrirla o cerrarla. Al abrirla, los avisos cuentan como vistos: la campana y los números de los
-    // iconos de la isla dejan de contarlos
+    // La tarjeta rápida: abrirla o cerrarla. Al abrirla, los avisos cuentan como vistos: la campana deja de contarlos
     Tarjeta {
         id: tarjeta
         visualParent: root.compactRepresentationItem
@@ -74,21 +73,16 @@ PlasmoidItem {
     function panel() {
         tarjeta.alternar();
         if (!tarjeta.visible) return;
-        const visto = new Date().toISOString();
-        Plasmoid.configuration.leidos = visto;
-        runner.connectSource("dbus-send --session --type=method_call --dest=org.kde.plasmashell /PlasmaShell "
-                             + "org.kde.PlasmaShell.evaluateScript string:'panels().forEach(function (p) { p.widgets().forEach("
-                             + "function (w) { if (w.type != \"org.apogeo.isla\") return; w.currentConfigGroup = [\"General\"]; "
-                             + "w.writeConfig(\"leidos\", \"" + visto + "\"); w.reloadConfig(); }); });'");
+        Plasmoid.configuration.leidos = new Date().toISOString();
     }
 
-    // En la isla: red · sonido · avisos (con los que no has visto) · la hora, en una sola pastilla. En la barra fina de
-    // arriba (Órbita): la hora primero, más pequeño
+    // Red · sonido · avisos (con los que no has visto) · la hora, en una sola pastilla. En la barra fina de arriba: la
+    // hora primero, más pequeño
     readonly property bool fina: Plasmoid.location === PlasmaCore.Types.TopEdge || (root.height > 0 && root.height < 34)
     compactRepresentation: Item {
         id: compact
         // Jugar es solo la consola (a pantalla completa): aquí no se ve nada
-        opacity: (Tema.f.estilo || "orbita") === "orbita" && Tema.modo === "jugar" ? 0 : 1
+        opacity: Tema.modo === "jugar" ? 0 : 1
         enabled: opacity > 0
         readonly property int unread: notifs.unreadNotificationsCount
         readonly property int alto: root.fina ? 26 : 38

@@ -18,8 +18,6 @@ ApplicationWindow {
     font.family: Tema.letra
 
     readonly property var s: apogeo.settings
-    // Con Órbita (lo de serie) abajo va el orbe, no la isla: de la isla solo vale «esconderse sola»
-    readonly property bool orbita: ((s.aspecto || {}).estilo || "orbita") === "orbita"
     readonly property var floors: [
         { clave: "jugar", texto: "Jugar", icono: "jugar" },
         { clave: "navegar", texto: "Navegar", icono: "navegar" },
@@ -350,37 +348,19 @@ ApplicationWindow {
                 visible: win.shown(fondos)
             }
 
-            // ----- Isla -----
+            // ----- Orbe -----
             Seccion {
                 id: isla
-                property string palabras: "barra esconder ocultar temperatura fps musica temporizador estudio"
+                property string palabras: "orbe isla barra esconder ocultar mostrar borde abajo"
                 width: parent.width
                 visible: win.shown(isla)
-                titulo: win.orbita ? "Orbe" : "Isla"
-                intro: win.orbita ? "El orbe de abajo, con los otros dos modos a sus lados." : "Tu barra de abajo. En cada modo enseña cosas distintas."
+                titulo: "Orbe"
+                intro: "El orbe de abajo, con los otros dos modos a sus lados."
                 Fila {
                     linea: false
-                    titulo: win.orbita ? "Orbe: esconderse solo" : "Isla: esconderse sola"
-                    detalle: win.s.isla.esconder ? (win.orbita ? "Escondido; sale al acercar el ratón abajo" : "Sale al acercar el ratón al borde de abajo") : "Siempre a la vista"
+                    titulo: "Esconderse solo"
+                    detalle: win.s.isla.esconder ? "Escondido; sale al tocar el borde de abajo con el ratón" : "Siempre a la vista"
                     Interruptor { checked: win.s.isla.esconder; onToggled: apogeo.set("isla.esconder", checked) }
-                }
-                Fila {
-                    visible: !win.orbita
-                    titulo: "En Jugar: temperatura y FPS"
-                    detalle: "Lo caliente que está el equipo y a cuántos FPS como mucho van los juegos"
-                    Interruptor { checked: win.s.isla.jugar; onToggled: apogeo.set("isla.jugar", checked) }
-                }
-                Fila {
-                    visible: !win.orbita
-                    titulo: "En Navegar: la música"
-                    detalle: "Lo que suena, con sus botones"
-                    Interruptor { checked: win.s.isla.navegar; onToggled: apogeo.set("isla.navegar", checked) }
-                }
-                Fila {
-                    visible: !win.orbita
-                    titulo: "En Estudiar: el temporizador"
-                    detalle: "25 minutos de estudio y 5 de descanso, y lo que llevas hoy"
-                    Interruptor { checked: win.s.isla.estudiar; onToggled: apogeo.set("isla.estudiar", checked) }
                 }
             }
 

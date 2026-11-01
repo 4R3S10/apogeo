@@ -40,14 +40,12 @@ package_apogeo() {
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"
   local h="$_raiz/herramientas"
   # Lo que se genera con la identidad de Órbita: colores (grafito y cian), Geist y Geist Mono, ventanas, estilo de
-  # Plasma (cristal y tarjetas), las carpetas del acento, el cursor y el sombreador de los fondos animados. Bricolage se
-  # queda instalada para la identidad clásica (Ajustes → Identidad → Clásico).
+  # Plasma (cristal y tarjetas), las carpetas del acento, el cursor y el sombreador de los fondos animados.
   python "$h/colores.py" "$pkgdir/usr/share/color-schemes/Apogeo.colors"
   python "$h/letra.py" "$h/fuentes/Geist[wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
   python "$h/letra.py" "$h/fuentes/GeistMono[wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
-  python "$h/letra.py" "$h/fuentes/BricolageGrotesque[opsz,wdth,wght].ttf" "$pkgdir/usr/share/fonts/apogeo"
   python "$h/letra.py" "$h/fuentes/SourceSerif4[opsz,wght].ttf" "$pkgdir/usr/share/fonts/apogeo"   # (los apuntes)
-  for f in Geist GeistMono Bricolage SourceSerif4; do
+  for f in Geist GeistMono SourceSerif4; do
     install -Dm644 "$h/fuentes/$f-OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/$f-OFL.txt"
   done
   python "$h/ventanas.py" "$pkgdir/usr/share/aurorae/themes"
@@ -55,7 +53,7 @@ package_apogeo() {
   python "$h/kvantum.py" "$pkgdir/usr/share/Kvantum"
   python "$h/iconos.py" "$pkgdir/usr/share/icons/Apogeo"
   python "$h/cursor.py" /usr/share/icons/breeze_cursors "$pkgdir/usr/share/icons/Apogeo-cursor"
-  # Los sonidos de Apogeo (sintetizados aquí: marimba suave y el búho al entrar)
+  # Los sonidos de Apogeo (sintetizados aquí: tonos limpios y espaciales, los de Órbita)
   python "$h/sonidos.py" "$pkgdir/usr/share/sounds/apogeo/stereo"
   # La plantilla «Apuntes» (Source Serif 4) para ONLYOFFICE y «Crear nuevo» (la copia apogeo-sesion, una vez)
   install -d "$pkgdir/usr/share/apogeo/plantillas"

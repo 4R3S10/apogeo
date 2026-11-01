@@ -15,18 +15,14 @@ Window {
     color: Tema.fondo
     visible: true
     Component.onCompleted: { Tema.piso = "jugar"; showFullScreen(); }
+    // Siempre con los colores de Jugar, aunque esté abierta (escondida) mientras estás en otro modo: así sale ya en violeta
+    Connections { target: Tema; function onPisoChanged() { if (Tema.piso !== "jugar") Tema.piso = "jugar"; } }
 
     // Dormida: si llevas 2 minutos sin la consola delante, suelta las imágenes (portadas y arte) y deja de mirar tus
     // juegos cada 20 segundos; al volver a ella se despierta al momento
     readonly property bool despierta: win.active || awake.running
     Timer { id: awake; interval: 120000; running: true }
-    // Media hora dormida y fuera de Jugar: se cierra (devuelve toda su memoria); apogeo-pisos la abre al volver a Jugar
-    Timer {
-        interval: 30 * 60000
-        running: !win.despierta
-        repeat: true
-        onTriggered: if (consola.fueraDeJugar()) Qt.quit()
-    }
+    // (no se cierra sola: apogeo-pisos la abre al entrar en la sesión para que Jugar salga al instante)
     onActiveChanged: { if (!active) awake.restart(); }
     onDespiertaChanged: {
         consola.activa(despierta);
@@ -255,7 +251,7 @@ Window {
             muestra.sample(src);
         }
         // Sin arte (o mientras llega): el fondo animado de Jugar, «Nebulosa»
-        Fondo { anchors.fill: parent; tipo: 9; visible: a.status !== Image.Ready && b.status !== Image.Ready }
+        Fondo { anchors.fill: parent; tipo: 1; visible: a.status !== Image.Ready && b.status !== Image.Ready }
         Rectangle { anchors.fill: parent; visible: !!win.game; color: win.game ? win.tint(win.game.name) : "transparent"; opacity: 0.35 }
         Item {
             id: arte

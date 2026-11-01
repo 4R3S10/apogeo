@@ -222,7 +222,7 @@ PlasmaCore.Dialog {
             transform: Translate { y: tarjeta.visible ? 0 : (caja.abajo ? 8 : -8); Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } } }
             Behavior on opacity { NumberAnimation { duration: 160 } }
 
-            Cristal { anchors.fill: parent; activo: tarjeta.visible; brillo: false; oscuro: Tema._orbita ? 0.7 : 0.58; radio: Tema.r(22) }
+            Cristal { anchors.fill: parent; activo: tarjeta.visible; brillo: false; oscuro: 0.7; radio: Tema.r(22) }
             Rectangle { anchors.fill: parent; radius: Tema.r(22); color: "transparent"; border.width: 1; border.color: Tema.borde }
 
             Column {

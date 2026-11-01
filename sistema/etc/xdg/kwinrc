@@ -10,6 +10,8 @@ ElectricBorderMaximize=false
 apogeo-ventanasEnabled=true
 apogeo-escritoriosEnabled=true
 kwin4_effect_shapecornersEnabled=true
+# (sin el brillo de KDE al acercar el ratón a una barra escondida: el orbe sale al tocar el borde, no antes)
+screenedgeEnabled=false
 
 # Las esquinas: el radio de la barra de las ventanas (lo cambia Ajustes → Aspecto → Esquinas), sin rayas alrededor y
 # con la sombra suave de la propia ventana. Maximizada o a pantalla completa, sin redondear

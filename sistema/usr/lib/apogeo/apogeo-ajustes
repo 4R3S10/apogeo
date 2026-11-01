@@ -22,7 +22,6 @@ import threading
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 import apogeo_comun as comun  # noqa: E402
 import apogeo_aspecto as aspecto  # noqa: E402
-import apogeo_paleta as paleta  # noqa: E402
 
 QML = os.environ.get('APOGEO_AJUSTES_QML', '/usr/share/apogeo/ajustes/Ajustes.qml')
 SECTIONS = ('aspecto', 'pisos', 'fondos', 'isla', 'bloqueo', 'salud', 'agape', 'perfil', 'copia', 'actualizaciones',
@@ -270,12 +269,6 @@ def window(section):
             return bool(comun.vrr_outputs())
 
         # ----- Aspecto -----
-        @pyqtProperty('QVariantMap', constant=True)
-        def lookStyles(self):
-            g = aspecto.agape_style() or dict(aspecto.STYLES['apogeo'])
-            f = aspecto.tokens(dict(aspecto.DEFAULT, estilo='fondo'), comun.load(), self._floor())
-            return {**aspecto.STYLES, 'agape': {**g, 'nombre': 'Como Ágape'}, 'fondo': {**f, 'nombre': 'Del fondo'}}
-
         def _floor(self):
             """El piso en el que estás (el que dejó apogeo-pisos con tus colores)."""
             try:
@@ -292,14 +285,10 @@ def window(section):
         @pyqtSlot('QVariant', result='QVariantMap')
         def lookTokens(self, a):
             a = a.toVariant() if hasattr(a, 'toVariant') else a
-            t = aspecto.tokens(aspecto.settings_of({'aspecto': dict(a or {})}), comun.load(), self._floor())
+            t = aspecto.tokens(aspecto.settings_of({'aspecto': dict(a or {})}), self._floor())
             return {k: v for k, v in t.items() if v is not None}
 
         # ----- Fondos: los animados de Apogeo y tu biblioteca de Aura -----
-        @pyqtProperty('QVariantList', constant=True)
-        def animatedColors(self):
-            return [{'valor': k, 'nombre': v} for k, v in paleta.COLORS.items()]
-
         @pyqtProperty('QVariantMap', notify=libraryChanged)
         def library(self):
             return self._library

@@ -1,6 +1,6 @@
-# Pantalla de bloqueo con el fondo animado de Ágape (cada piso pone el suyo)
+# Pantalla de bloqueo con el fondo animado de Apogeo (cada piso pone el suyo)
 [Greeter]
 WallpaperPlugin=org.apogeo.fondo
 
 [Greeter][Wallpaper][org.apogeo.fondo][General]
-Estilo=tinta
+Estilo=orbitas

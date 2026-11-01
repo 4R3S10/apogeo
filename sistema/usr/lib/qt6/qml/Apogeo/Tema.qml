@@ -6,7 +6,7 @@ import QtCore
 // carácter vienen del modo: Navegar (cian), Estudiar (ámbar) y Jugar (violeta). Si cambias el aspecto
 // (Ajustes → Identidad), apogeo-pisos deja tus fichas en ~/.config/apogeo/aspecto.json y aquí se leen (y se vuelven a
 // mirar cada segundo: el cambio se ve solo, sin reiniciar nada).
-// Con «Del fondo» cada piso tiene sus colores: las fichas son las del piso en el que estás y en «pisos» van las de los
+// Cada piso tiene su acento: las fichas son las del piso en el que estás y en «pisos» van las de los
 // tres. Quien sabe en qué piso estás (el fondo de Plasma, o el modo de ~/.config/apogeo/modo.json) pone «piso».
 QtObject {
     id: tema
@@ -41,11 +41,9 @@ QtObject {
     readonly property color sobreAcento: c("sobreAcento", "#041318")
     readonly property color sobreRosa: sobreAcento
     readonly property color vivo: c("vivo", acento)
-    // Lo encendido (los botones y las pastillas del panel rápido): en Órbita, blanco sobre el cristal grafito («W1»); con
-    // otro estilo, su acento
-    readonly property bool _orbita: !f.nombre || f.nombre === "Órbita"
-    readonly property color encendido: c("encendido", _orbita ? "#eef0f4" : acento)
-    readonly property color sobreEncendido: c("sobreEncendido", _orbita ? "#0b0e14" : sobreAcento)
+    // Lo encendido (los botones y las pastillas del panel rápido): blanco sobre el cristal grafito («W1»)
+    readonly property color encendido: c("encendido", "#eef0f4")
+    readonly property color sobreEncendido: c("sobreEncendido", "#0b0e14")
     readonly property color exito: "#57e3b0"
     readonly property color error: "#ff6b81"
     readonly property color aviso: Qt.rgba(255 / 255, 200 / 255, 87 / 255, 0.14)
@@ -100,8 +98,8 @@ QtObject {
         return gris ? c.map(x => Qt.tint(x, Qt.rgba(0.35, 0.38, 0.45, gris))) : c;
     }
 
-    readonly property var fondos: ["tinta", "humo", "seda", "marmol", "relieve", "remolino", "dunas", "luces", "orbitas", "nebulosa", "aurora"]
-    readonly property var nombresFondos: ["Tinta", "Humo", "Seda", "Mármol", "Relieve", "Remolino", "Dunas", "Luces", "Órbitas", "Nebulosa", "Aurora"]
+    readonly property var fondos: ["orbitas", "nebulosa", "aurora"]
+    readonly property var nombresFondos: ["Órbitas", "Nebulosa", "Aurora"]
 
     // ---------- Leer tus fichas ----------
     readonly property url archivo: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/apogeo/aspecto.json"

@@ -15,9 +15,7 @@ import urllib.request
 
 import apogeo_comun as comun
 
-NAMES = {'tinta': 'Tinta', 'humo': 'Humo', 'seda': 'Seda', 'marmol': 'Mármol', 'relieve': 'Relieve',
-         'remolino': 'Remolino', 'dunas': 'Dunas', 'luces': 'Luces',
-         'orbitas': 'Órbitas', 'nebulosa': 'Nebulosa', 'aurora': 'Aurora'}
+NAMES = {'orbitas': 'Órbitas', 'nebulosa': 'Nebulosa', 'aurora': 'Aurora'}
 _busy = threading.Lock()  # (una tanda de miniaturas a la vez)
 THUMBS = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(comun.HOME, '.cache')), 'apogeo', 'miniaturas')
 

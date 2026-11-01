@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 «Actualizar al apagar» (en la pantalla de apagar): si lo marcas, al apagar o reiniciar se instalan las actualizaciones
-antes de que se apague el equipo (como en Windows), con su aviso en la pantalla del búho. Si algo sale mal no se toca
+antes de que se apague el equipo (como en Windows), con su aviso en la pantalla de apagado. Si algo sale mal no se toca
 nada (pacman no deja el sistema a medias por un conflicto: simplemente no instala) y al volver a entrar se avisa.
 
   apogeo-actualizar-al-apagar estado         (tú) {"cuantas": N, "marcado": bool, "lista": […]}

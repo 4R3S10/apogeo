@@ -1,6 +1,16 @@
 [
   {
     "fecha": "2026-11-01",
+    "titulo": "Solo Órbita",
+    "cosas": [
+      {"icono": "isla", "titulo": "El orbe, al tocar el borde", "como": "Ya no sale al acercarte: solo al tocar el borde de abajo con el ratón. Sube desde abajo y se enciende (su anillo coge el color del modo con un destello) y las bolitas le siguen; al alejarte baja y se apaga."},
+      {"icono": "jugar", "titulo": "Jugar, al instante", "como": "La consola se abre al entrar en la sesión y ya no se cierra sola: al pasar a Jugar sale en el momento, sin esperar a que cargue."},
+      {"icono": "aspecto", "titulo": "Fuera la estética de antes", "como": "Solo queda Órbita: se van Clásico, los otros estilos, «Como Ágape», «Del fondo», la isla, los animados de antes (los tuyos pasan al de su modo) y la letra Bricolage. En Identidad eliges el color, claro u oscuro, las esquinas, el cristal, el tamaño y las animaciones. Ágape no cambia."},
+      {"icono": "musica", "titulo": "Sonidos nuevos", "como": "Limpios y espaciales, a juego con Órbita: al entrar, un acorde que se abre y unas notas que suben de un lado al otro. Adiós al búho y a la marimba."}
+    ]
+  },
+  {
+    "fecha": "2026-11-01",
     "titulo": "Escritorios y tarjeta rápida",
     "cosas": [
       {"icono": "pisos", "titulo": "Escritorios en cada modo", "como": "En Navegar y Estudiar puedes tener hasta 4 escritorios. Ctrl+Alt+← → pasa de uno a otro y, en el último, Ctrl+Alt+→ abre uno nuevo. Cada app se queda donde la abriste, un escritorio vacío se cierra al irte y, junto al modo de arriba, un punto por escritorio. Con Mayús te llevas la ventana."},

@@ -2,9 +2,7 @@
 """
 El símbolo de Apogeo —«Núcleo», «N1 · Una órbita por modo»—: un punto sólido rodeado por tres órbitas abiertas, cada
 una con su nodo y del color de su modo (Navegar cian arriba, Estudiar ámbar abajo a la derecha, Jugar violeta abajo a la
-izquierda). Geométrico,
-legible a 16 px y a 512 px, y a gusto en el grafito de Órbita. La identidad clásica (el búho) se conserva en
-logo-clasico.py.
+izquierda). Geométrico, legible a 16 px y a 512 px, y a gusto en el grafito de Órbita.
 
   logo.py <carpeta> [acento]    escribe logo.svg, logo-silueta.svg, las piezas del arranque —disco.svg (el disco y el
                                 punto), orbitas.svg (solo las tres órbitas, que Plymouth y el splash giran enteras, sin

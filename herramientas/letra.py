@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 """
 La letra de Apogeo para todo el sistema. La identidad «Órbita» usa Geist (interfaz) y Geist Mono (datos, rutas,
-compatibilidad) y Source Serif 4 para leer y escribir apuntes; la identidad clásica sigue usando Bricolage Grotesque. Las fuentes variables se instancian en grosores
-fijos, que es lo que KDE elige mejor.
+compatibilidad) y Source Serif 4 para leer y escribir apuntes. Las fuentes variables se instancian en grosores fijos,
+que es lo que KDE elige mejor.
 
   letra.py FUENTE_VARIABLE [destino]    por defecto /usr/share/fonts/apogeo
 
-La familia y los ejes se leen de la propia fuente, así el mismo script vale para Geist, Geist Mono y Bricolage.
+La familia y los ejes se leen de la propia fuente, así el mismo script vale para Geist, Geist Mono y Source Serif 4.
 """
 import os
 import re
@@ -25,8 +25,6 @@ if FAMILY in ('Geist Regular', 'Geist'):
     FAMILY = 'Geist'
 elif FAMILY.startswith('Geist Mono'):
     FAMILY = 'Geist Mono'
-elif FAMILY.startswith('Bricolage'):
-    FAMILY = 'Bricolage Grotesque'
 elif FAMILY.startswith('Source Serif'):
     FAMILY = 'Source Serif 4'
 AXES = {a.axisTag for a in _font['fvar'].axes} if 'fvar' in _font else set()

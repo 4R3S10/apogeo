@@ -4,7 +4,7 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
-    <!-- tinta, humo, seda, marmol, relieve, remolino, dunas, luces, orbitas, nebulosa, aurora -->
+    <!-- orbitas, nebulosa, aurora -->
     <entry name="Estilo" type="String"><default>orbitas</default></entry>
     <!-- Animado (como en Ágape); sin gráfica de verdad se queda quieto -->
     <entry name="Animar" type="Bool"><default>true</default></entry>

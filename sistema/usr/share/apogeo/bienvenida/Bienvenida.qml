@@ -274,7 +274,7 @@ ApplicationWindow {
             Repeater {
                 model: [
                     { title: "Saltar por ahora", sub: "Vuelve a salir en el próximo inicio", done: false },
-                    { title: "No volver a mostrar", sub: Tema._orbita ? "La tienes en la Órbita (escribe «Bienvenida»)" : "La tienes en el botón de apps de la isla («Bienvenida»)", done: true }
+                    { title: "No volver a mostrar", sub: "La tienes en la Órbita (escribe «Bienvenida»)", done: true }
                 ]
                 delegate: AbstractButton {
                     id: opt
@@ -568,23 +568,21 @@ ApplicationWindow {
             spacing: 0
             Header_ {
                 title: "Tres modos"
-                lead: Tema._orbita ? "Cada modo tiene sus apps, sus ventanas y su color. Cambia con las bolitas de al lado del orbe o con Meta+Ctrl+↑ ↓."
-                                   : "Cada modo tiene sus apps y sus ventanas. Cambia con la barra de la derecha o con la rueda del ratón en el borde derecho."
+                lead: "Cada modo tiene sus apps, sus ventanas y su color. Cambia con las bolitas de al lado del orbe o con Meta+Ctrl+↑ ↓."
             }
             Row {
                 spacing: 10
                 anchors.horizontalCenter: parent.horizontalCenter
                 Repeater {
                     model: [
-                        { key: "jugar", name: "Jugar", kind: 7, tono: "#b79cff", fondo: "#2b2147", text: "La consola con todos tus juegos. Sin avisos y a 60 FPS." },
+                        { key: "jugar", name: "Jugar", kind: 1, tono: "#b79cff", fondo: "#2b2147", text: "La consola con todos tus juegos. Sin avisos y a 60 FPS." },
                         { key: "navegar", name: "Navegar", kind: 0, tono: "#45d6ff", fondo: "#12303d", text: "Ágape, música y tus cosas. Aquí llegan los avisos." },
                         { key: "estudiar", name: "Estudiar", kind: 2, tono: "#ffb35c", fondo: "#3a2a17", text: "Temporizador de estudio y nada que distraiga." }
                     ]
                     delegate: Rectangle {
                         id: fl
                         required property var modelData
-                        // (con Órbita, cada modo con su color; con otro estilo, el acento de ese estilo)
-                        readonly property color tono: Tema._orbita ? modelData.tono : win.accent
+                        readonly property color tono: modelData.tono   // (cada modo con su color)
                         width: 178; height: 190
                         radius: 16
                         color: Tema.tinte(0.04)
@@ -600,8 +598,8 @@ ApplicationWindow {
                             property size res: Qt.size(356, 168)
                             property color base: Tema.fondo
                             property color c1: Tema.wp[0]
-                            property color c2: Tema._orbita ? fl.modelData.fondo : Tema.wp[1]
-                            property color c3: Tema._orbita ? fl.tono : Tema.wp[2]
+                            property color c2: fl.modelData.fondo
+                            property color c3: fl.tono
                             fragmentShader: "file:///usr/share/plasma/wallpapers/org.apogeo.fondo/contents/shaders/fondo.frag.qsb"
                             layer.enabled: true
                             layer.effect: MultiEffect { maskEnabled: true; maskSource: miniMask }
@@ -643,14 +641,12 @@ ApplicationWindow {
         Column {
             spacing: 0
             Header_ {
-                title: Tema._orbita ? "El orbe" : "La isla"
-                lead: Tema._orbita ? "Abajo en el centro, del color del modo en el que estás. Arriba, en la barra fina, tus ventanas y la hora."
-                                   : "Tu barra, abajo en el centro. Cambia en cada modo y se esconde sola."
+                title: "El orbe"
+                lead: "Abajo en el centro, del color del modo en el que estás. Arriba, en la barra fina, tus ventanas y la hora."
             }
-            // Con Órbita, un orbe de muestra (como el de verdad: el modo de antes, el tuyo y el de después)
+            // Un orbe de muestra (como el de verdad: el modo de antes, el tuyo y el de después)
             Row {
                 id: orbeMuestra
-                visible: Tema._orbita
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 6
                 readonly property var modos: ["jugar", "navegar", "estudiar"]
@@ -692,55 +688,15 @@ ApplicationWindow {
                     }
                 }
             }
-            // Una isla de muestra
-            Rectangle {
-                visible: !Tema._orbita
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: islandRow.implicitWidth + 16
-                height: 46
-                radius: 20
-                color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.7)
-                border.color: win.border
-                Row {
-                    id: islandRow
-                    anchors.centerIn: parent
-                    spacing: 4
-                    Item {
-                        width: 34; height: 34
-                        RectangularShadow { anchors.fill: parent; radius: 12; blur: 18; spread: -4; offset.y: 4; color: win.accent }
-                        Rectangle { anchors.fill: parent; radius: 12; color: win.accent; Icono { anchors.centerIn: parent; nombre: "buscar"; color: win.accentText } }
-                    }
-                    Rectangle { width: 1; height: 22; color: win.border; anchors.verticalCenter: parent.verticalCenter }
-                    Repeater {
-                        model: ["carpeta", "web", "musica"]
-                        delegate: Item { required property string modelData; width: 34; height: 34; Icono { anchors.centerIn: parent; nombre: parent.modelData; color: win.muted } }
-                    }
-                    Rectangle { width: 1; height: 22; color: win.border; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 34; height: 34; Icono { anchors.centerIn: parent; nombre: "volumen"; color: win.muted } }
-                    Texto {
-                        id: islandClock
-                        anchors.verticalCenter: parent.verticalCenter
-                        rightPadding: 8
-                        leftPadding: 4
-                        font.weight: Font.Bold
-                        text: Qt.formatTime(new Date(), "HH:mm")
-                        Timer { interval: 10000; repeat: true; running: true; onTriggered: islandClock.text = Qt.formatTime(new Date(), "HH:mm") }
-                    }
-                }
-            }
             Item { width: 1; height: 18 }
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 10
                 Repeater {
-                    model: Tema._orbita ? [
+                    model: [
                         { icon: "buscar", text: "Un clic en el orbe, o la tecla Meta: tus apps y el buscador" },
                         { icon: "pisos", text: "Las bolitas de los lados te llevan a los otros modos" },
-                        { icon: "esconder", text: "Se aparta de las ventanas: acerca el ratón abajo y sale" }
-                    ] : [
-                        { icon: "buscar", text: "Busca apps, archivos o en la web" },
-                        { icon: "carpeta", text: "Tus apps abiertas, a un clic" },
-                        { icon: "esconder", text: "Acerca el ratón abajo para que aparezca" }
+                        { icon: "esconder", text: "Se esconde: toca el borde de abajo con el ratón y sale" }
                     ]
                     delegate: Row {
                         required property var modelData
@@ -760,8 +716,7 @@ ApplicationWindow {
             spacing: 0
             Header_ {
                 title: "¡Todo listo!"
-                lead: Tema._orbita ? "Si algo lo dejaste para luego, vuelve a abrir la bienvenida desde la Órbita (el orbe o Meta, y escribe «Bienvenida»)."
-                                   : "Si algo lo dejaste para luego, vuelve a abrir la bienvenida desde el botón de apps de la isla (escribe «Bienvenida»)."
+                lead: "Si algo lo dejaste para luego, vuelve a abrir la bienvenida desde la Órbita (el orbe o Meta, y escribe «Bienvenida»)."
             }
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter

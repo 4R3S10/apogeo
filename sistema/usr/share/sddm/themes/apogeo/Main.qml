@@ -14,7 +14,7 @@ Rectangle {
     height: 1080
     color: c("fondo", "#080a0f")
 
-    // Colores y letra: los de Órbita o tu identidad, si la has cambiado (Ajustes → Identidad, «Clásico» o «Como Ágape»):
+    // Colores y letra: los de Órbita, con tu acento si lo has cambiado (Ajustes → Identidad):
     // Apogeo deja una copia de tus colores en /var/lib/apogeo/aspecto-login.json, que esta pantalla sí puede leer
     property var f: ({})
     function c(k, d) { return f[k] !== undefined ? f[k] : d }
@@ -31,7 +31,7 @@ Rectangle {
     readonly property color muted: Qt.rgba(text.r, text.g, text.b, 0.62)
     readonly property color hover: Qt.rgba(text.r, text.g, text.b, 0.07)
     readonly property color border: Qt.rgba(text.r, text.g, text.b, 0.1)
-    // Los del piso elegido (con «Del fondo», cada piso tiene los suyos), si los hay
+    // Los del piso elegido (cada piso con su acento), si los hay
     readonly property var p: f.pisos && f.pisos[floors[floor].key] ? f.pisos[floors[floor].key] : ({})
     function cp(k, d) { return p[k] !== undefined ? p[k] : c(k, d) }
     readonly property color accent: modeColor(floor)
@@ -44,9 +44,9 @@ Rectangle {
     readonly property string font: c("letra", "Geist")
     readonly property var wp: cp("wp", ["#0b1118", "#12303d", "#45d6ff"])
     readonly property var floors: [
-        { key: "jugar", name: "Jugar", kind: 9, color: "#b79cff" },      // Nebulosa
-        { key: "navegar", name: "Navegar", kind: 8, color: "#45d6ff" },  // Órbitas
-        { key: "estudiar", name: "Estudiar", kind: 10, color: "#ffb35c" } // Aurora
+        { key: "jugar", name: "Jugar", kind: 1, color: "#b79cff" },      // Nebulosa
+        { key: "navegar", name: "Navegar", kind: 0, color: "#45d6ff" },  // Órbitas
+        { key: "estudiar", name: "Estudiar", kind: 2, color: "#ffb35c" } // Aurora
     ]
     // El fondo animado de ese piso (el suyo, si es uno de Apogeo; si es una foto o un vídeo tuyo, el de serie del piso
     // con sus colores: esos esta pantalla no los puede leer)

@@ -1,10 +1,10 @@
 import QtQuick
 import QtQuick.Effects
 
-// Un fondo animado de Ágape (el mismo sombreador que el escritorio), a un tercio de resolución. «radio» redondea.
+// Un fondo animado de Apogeo (el mismo sombreador que el escritorio), a un tercio de resolución. «radio» redondea.
 Item {
     id: f
-    property int tipo: 0            // 0 Tinta, 1 Humo, 2 Seda, 3 Mármol, 4 Relieve, 5 Remolino, 6 Dunas, 7 Luces, 8 Órbitas, 9 Nebulosa, 10 Aurora
+    property int tipo: 0            // 0 Órbitas, 1 Nebulosa, 2 Aurora
     property real radio: 0
     ShaderEffect {
         id: fx

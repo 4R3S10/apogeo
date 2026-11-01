@@ -24,11 +24,12 @@ HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
 
-VERSION = 8  # 2: Jugar pasa de Remolino a Luces; 3: Navegar ya no abre Ágape solo; 4-5: el aspecto pasó por
+VERSION = 9  # 2: Jugar pasa de Remolino a Luces; 3: Navegar ya no abre Ágape solo; 4-5: el aspecto pasó por
 # «Como Ágape» y «Del fondo»; 6: Órbita es la identidad de serie (grafito, Geist, un acento por modo); 7: los fondos
-# animados de Órbita (Órbitas, Nebulosa y Aurora); 8: Órbita también para quien se quedó en el aspecto de antes.
+# animados de Órbita (Órbitas, Nebulosa y Aurora); 8: Órbita también para quien se quedó en el aspecto de antes;
+# 9: solo queda Órbita (fuera los demás estilos y los fondos animados de antes).
 FLOOR_KEYS = ('jugar', 'navegar', 'estudiar')
-STYLES = ('tinta', 'humo', 'seda', 'marmol', 'relieve', 'remolino', 'dunas', 'luces', 'orbitas', 'nebulosa', 'aurora')
+STYLES = ('orbitas', 'nebulosa', 'aurora')   # los fondos animados (su número es el «kind» del sombreador)
 # Fondos tuyos (los de Aura): imágenes y vídeos en alta calidad
 IMAGES = ('.jpg', '.jpeg', '.png', '.webp', '.avif', '.jxl', '.bmp', '.tif', '.tiff')
 VIDEOS = ('.mp4', '.webm', '.mkv', '.mov', '.m4v', '.avi')
@@ -39,20 +40,16 @@ WIDTHS = {'mitad': '50%', 'dostercios': '66.667%', 'entera': '100%'}  # (en este
 EVERY = {'15min': 15 * 60, 'hora': 3600, 'dia': 86400, 'piso': 0}  # «que cambie solo»; «piso»: al entrar en el piso
 FOLDER_DEFAULT = '~/Imágenes/Fondos'
 import apogeo_aspecto as _aspecto  # noqa: E402
-import apogeo_paleta as _paleta  # noqa: E402
 
 DEFAULTS = {
     'pisos': {
         # Órbita: cada modo con su acento y su carácter. En Jugar solo se abre la consola (las tiendas y herramientas
         # están dentro, y todas las apps siguen en el menú y en el buscador). Energía: nunca «rendimiento».
-        # «carrusel»: las ventanas en columnas que se deslizan, como en niri (Karousel). «color»: el de su fondo animado
-        # (con el aspecto «Del fondo»; '' = el de Órbita; los de apogeo_paleta.COLORS)
+        # «carrusel»: las ventanas en columnas que se deslizan, como en niri (Karousel)
         'jugar': {'fondo': 'nebulosa', 'avisos': False, 'energia': 'balanced', 'apps': ['apogeo-consola.desktop'],
-                  'carrusel': False, 'color': ''},
-        'navegar': {'fondo': 'orbitas', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False,
-                    'color': ''},
-        'estudiar': {'fondo': 'aurora', 'avisos': False, 'energia': 'power-saver', 'apps': [], 'carrusel': False,
-                     'color': ''},
+                  'carrusel': False},
+        'navegar': {'fondo': 'orbitas', 'avisos': True, 'energia': 'balanced', 'apps': [], 'carrusel': False},
+        'estudiar': {'fondo': 'aurora', 'avisos': False, 'energia': 'power-saver', 'apps': [], 'carrusel': False},
     },
     # El carrusel, igual en todos los pisos que lo tienen: los huecos entre ventanas (px) y los anchos que recorre
     # Meta+Alt+R
@@ -75,13 +72,13 @@ DEFAULTS = {
     },
     'animar': True,      # fondos animados (solo con gráfica de verdad)
     'silencio': False,   # «No molestar» en todos los pisos
-    # La isla: esconderse sola y lo de cada piso (temperatura/FPS, música, temporizador)
-    'isla': {'esconder': True, 'esconderPisos': True, 'jugar': True, 'navegar': True, 'estudiar': True},
+    # El orbe: escondido hasta tocar el borde de abajo
+    'isla': {'esconder': True},
     'fps': 60,
     'pantallaFluida': True,  # FreeSync/VRR: la pantalla va al ritmo del juego (si el monitor lo tiene)
     'juegos_fps': {},    # el límite de FPS de cada juego («steam:123»: 45), si no es el de todos (la consola)
     'fpsVisibles': True,  # los FPS de MangoHud en los juegos (la consola: Herramientas → FPS en pantalla)
-    # Ajustes → Aspecto (apogeo_aspecto): lo de serie es la estética de Ágape
+    # Ajustes → Identidad (apogeo_aspecto): Órbita, con tu acento, claro u oscuro, esquinas, cristal y tamaño
     'aspecto': dict(_aspecto.DEFAULT),
     'version': VERSION,
 }
@@ -133,6 +130,16 @@ def load():
         for k, old, new in (('jugar', 'luces', 'nebulosa'), ('navegar', 'tinta', 'orbitas'), ('estudiar', 'seda', 'aurora')):
             if st['pisos'][k].get('fondo') == old:
                 st['pisos'][k]['fondo'] = new
+    # 9: solo Órbita (con tu acento y lo demás que hubieras cambiado) y, quien tuviera un fondo animado de antes, el de
+    # su modo
+    if raw.get('version', 1) < 9:
+        if st['aspecto'].get('estilo') != 'orbita':
+            st['aspecto']['acento'] = ''   # (el de otro estilo: mejor el de cada modo)
+        st['aspecto'].update({'estilo': 'orbita', 'letra': 'Geist', 'posicion': 'abajo-dcha'})
+        for k in FLOOR_KEYS:
+            f = st['pisos'][k]
+            if f.get('fondo') not in STYLES and not is_wallpaper_file(f.get('fondo')):
+                f['fondo'] = DEFAULTS['pisos'][k]['fondo']
     return st
 
 
@@ -146,8 +153,7 @@ def valid(st):
             f['energia'] = 'balanced'
         f['avisos'] = bool(f.get('avisos'))
         f['carrusel'] = bool(f.get('carrusel'))
-        if f.get('color') not in _paleta.COLORS:
-            f['color'] = ''
+        f.pop('color', None)
         f['apps'] = [a for a in f.get('apps', []) if isinstance(a, str) and a.endswith('.desktop')]
     if st.get('fps') not in FPS_CHOICES:
         st['fps'] = 60

@@ -42,7 +42,7 @@ huecos en el color del modo; arriba, una pastilla para cambiar de esquema (mitad
 la ventana va al hueco iluminado; si la sueltas luego fuera, vuelve a su tamaño (`apogeo-ventanas`, `Rejilla.qml`).
 
 - **Avisos:** solo en Navegar; en Jugar y Estudiar no sale ninguno (se quedan en el historial). Al volver a un modo
-  con avisos sale el **resumen** («H3»): una tarjeta encima de la isla con lo que llegó («Has jugado 1 h 20 min»), lo
+  con avisos sale el **resumen** («H3»): una tarjeta abajo en el centro con lo que llegó («Has jugado 1 h 20 min»), lo
   importante delante, «Ver todos» y un clic en un aviso abre su app. Se va sola al medio minuto
   (`apogeo-resumen`, `sistema/usr/share/apogeo/resumen/`).
 - **Luz cálida en Estudiar por la noche:** la luz nocturna de KWin, solo en Estudiar: al anochecer en tu zona entra poco
@@ -56,28 +56,25 @@ la ventana va al hueco iluminado; si la sueltas luego fuera, vuelve a su tamaño
 al final. Se dibuja vectorial, así que sale nítido a cualquier tamaño y puede girar sin pixelarse. Es un diseño propio.
 - Se dibuja al construir el paquete con `herramientas/logo.py` (también los 24 fotogramas del giro para el arranque).
 - De ahí salen las copias del arranque, el inicio de sesión, el bloqueo, la bienvenida, el menú, la terminal y el
-  `fastfetch` de la terminal (imagen de verdad, y en letras el Núcleo dibujado). El búho antiguo se queda en
-  `herramientas/logo-clasico.py` por si algún día hace falta.
+  `fastfetch` de la terminal (imagen de verdad, y en letras el Núcleo dibujado).
 
 ## Identidad: Órbita
 
-La piel de serie de todo el sistema (Ajustes → Identidad):
+La piel de todo el sistema, la única (Ajustes → Identidad): la estética de antes (Clásico, los otros estilos, «Como
+Ágape», «Del fondo», la isla, Bricolage, el búho, la marimba y los animados de antes) ya no está. Ágape sigue como es.
 
 - **Letra:** **Geist** en todo el sistema y **Geist Mono** para datos, rutas, compatibilidad y la consola (las dos,
-  con licencia OFL, se instalan con el paquete). Bricolage Grotesque sigue instalada para la identidad «Clásico».
+  con licencia OFL, se instalan con el paquete).
 - **Colores:** fondo `#080A0F`, superficie `#0F131A`, texto `#E9EDF5` y un acento por modo (cian en Navegar, ámbar en
-  Estudiar, violeta en Jugar), los tres sobre grafito (Estudiar ya no va en papel de día). La identidad antigua (berenjena y rosa de Ágape) es
-  el estilo «Clásico» y sigue ahí, a un clic.
+  Estudiar, violeta en Jugar), los tres sobre grafito.
 - **Fondos:** los fondos animados de Órbita, uno por modo y con sus tres colores: Navegar «Órbitas» (abajo en el
   centro, donde está el orbe, sus órbitas abiertas girando despacio, cada una con su nodo, y unas estrellas), Jugar
   «Nebulosa» (una nube violeta que se deforma despacio y ondas que salen del orbe) y Estudiar «Aurora» (cortinas de luz
-  ámbar que se mecen; de día, sobre papel y casi sin color). Siguen los de antes (Tinta, Humo, Seda, Mármol, Relieve,
-  Remolino, Dunas, Luces) para elegir. Se dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica (máquina virtual) se quedan
-  quietos.
-- **Isla («B1 · Cristal»):** una sola isla de cristal (radio 22). Las apps abiertas llevan un puntito con el color del
-  modo (la activa, una rayita). El buscador y el modo activo son la pastilla de su acento con brillo, y todo usa los
-  iconos de línea de Papirus. El estilo de Plasma «apogeo» se escribe en `~/.config/plasmarc`
-  de cada usuario: si solo estaba en `/etc/xdg`, Plasma se quedaba con el gris por defecto.
+  ámbar que se mecen; de día, sobre papel y casi sin color). Son los únicos animados (quien tenía uno de los de antes
+  pasa al de su modo). Se dibujan a un tercio de la resolución y a 30 imágenes por segundo como mucho; sin gráfica
+  (máquina virtual) se quedan quietos.
+- **Iconos y estilo de Plasma:** los iconos de línea de Papirus. El estilo de Plasma «apogeo» se escribe en
+  `~/.config/plasmarc` de cada usuario: si solo estaba en `/etc/xdg`, Plasma se quedaba con el gris por defecto.
 - **Ventanas:** la barra de ventanas con el título en el centro y sus botones planos (la ✕ se pone roja), del color
   del modo.
 - **Menús y avisos:** tarjetas de cristal del modo.
@@ -91,9 +88,10 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
   fondo animado lleva cada uno. El bloqueo: tu símbolo (ver abajo).
 - **Carpetas:** Papirus con las carpetas del acento (un tema de iconos por color que hereda de Papirus). Cursor
   grafito con borde cian y teclado EE. UU. internacional (ñ con AltGr+n).
-- **Sonidos:** propios y suaves (marimba de madera con un poco de sala) para avisos, errores, USB, volumen, capturas y lo
-  hecho; al entrar, dos notas suaves que bajan un poco, sobre un acorde cálido. Se sintetizan al construir el paquete
-  (`herramientas/sonidos.py`).
+- **Sonidos:** propios, limpios y espaciales (tonos puros con un brillo suave, un poco abiertos a los lados, ecos que
+  van de un lado al otro y una sala grande) para avisos, errores, USB, volumen, capturas y lo hecho; al entrar, un
+  acorde que se abre y cuatro notas que suben dando la vuelta de lado a lado, como algo que entra en órbita (al salir,
+  hacia abajo). Se sintetizan al construir el paquete (`herramientas/sonidos.py`).
 - **Fondos de serie (de Aura, Wallhaven), todos del espacio:** Navegar una nebulosa azul (`4ddk8g`), Estudiar una
   nebulosa ámbar (`2eqjpm`, antes el atardecer `mdjrqy`, que se cambia solo si seguía puesto) y Jugar nubes violeta
   (`k88m2m`). No van en el paquete (son de sus autores): `apogeo_fondos.bajar_de_serie`
@@ -106,31 +104,21 @@ La piel de serie de todo el sistema (Ajustes → Identidad):
   (`halo.png`). Debajo, una barra fina cian. La pantalla de carga al entrar es la misma (en QML). Se dibujan con
   `herramientas/arranque.py` y `herramientas/logo.py`.
 
-### Tu identidad (Ajustes → Identidad, «K2 con vista previa»)
+### Tu identidad (Ajustes → Identidad)
 
-**De serie es Órbita**: grafito con el acento de cada modo. Con «Del fondo», en cambio,
-cada modo coge los colores de su foto o su vídeo (`apogeo_paleta`: el
-tono que más se ve, con su viveza, y con él el acento, el fondo y la superficie oscuros, el texto y los colores de los
-animados, como Material You pero con la forma de las tarjetas de Órbita). A los fondos animados de Apogeo les das tú el color (Ajustes →
-Fondos → «Color de los animados»; sin elegir, el del modo). Al cambiar de modo o de fondo cambia todo: lo de
-Apogeo en QML al momento y los temas de KDE un momento después (al acabar la animación). La ventana activa lleva un
-borde del color del modo (el efecto de esquinas redondeadas: `apogeo-esquinas`, KDE-Rounded-Corners compilado cada
-día para la KWin de ese día, porque el efecto solo carga con la versión exacta de KWin para la que se compiló). Las apps de KDE ya abiertas se quedan con el color con el
+Órbita: grafito con el acento de cada modo. Arriba, una vista en pequeño de cómo queda; debajo, cada detalle a mano: el
+color (el de cada modo, que es lo de serie, o uno tuyo para los tres), claro u oscuro (por modo, que es lo de serie, o
+según la hora: claro de 8:00 a 20:00), las esquinas (rectas, suaves o redondas), el cristal, el tamaño (letra y orbe) y
+las animaciones. Al cambiar de modo cambia el acento en todo: lo de Apogeo en QML al momento y los temas de KDE un
+momento después (al acabar la animación). La ventana activa lleva un borde del color del modo (el efecto de esquinas
+redondeadas: `apogeo-esquinas`, KDE-Rounded-Corners compilado cada día para la KWin de ese día, porque el efecto solo
+carga con la versión exacta de KWin para la que se compiló). Las apps de KDE ya abiertas se quedan con el color con el
 que se abrieron (Kvantum no cambia en vivo); las que abras cogen el del modo.
 - Los temas de KDE de cada modo se hacen una vez por colores (`ApogeoTuAspecto-<huella>`, en segundo plano) y al cambiar
-  de modo solo se ponen. Las carpetas usan el más parecido de los colores de los animados (hacer un tema de iconos
-  tarda).
+  de modo solo se ponen. Las carpetas van del acento (un tema de iconos por color, `ApogeoCarpetas-<color>`, que
+  hereda de Papirus).
 - `aspecto.json` lleva las fichas del modo en el que estás y, en `pisos`, las de los tres: el fondo de Plasma dice a
   Tema en qué modo estás y todo lo de Plasma cambia sin esperar.
-
-Con «Como Ágape», lo que elijas en Ágape → Personalizar (sus colores, claro u oscuro, los colores del fondo, la letra, las
-esquinas, el cristal y la velocidad de las animaciones) cambia también Apogeo, al momento (`apogeo-pisos` vigila los
-ajustes de Ágape y solo los lee). En Ajustes → Identidad también hay estilos de un clic (Órbita es el de serie; Clásico,
-Medianoche, Bosque, Arena y Papel) y cada detalle a mano: el color, claro u oscuro (o por modo, que es lo de serie, o
-según la hora: claro de 8:00 a 20:00), la letra, las esquinas
-(rectas, suaves o redondas), el cristal, el tamaño (letra e isla), las animaciones y dónde va la isla (abajo o
-arriba), con una vista en pequeño de cómo queda.
-- Las carpetas van del color de tu estilo (un tema de iconos por color, `ApogeoCarpetas-<color>`, que hereda de Papirus).
 - Con lo de serie se usan los temas del paquete. Con otra cosa, `apogeo_aspecto` genera tus temas (colores de KDE,
   Kvantum, Plasma y barra de ventana, con los mismos generadores de `herramientas/`, instalados en
   `/usr/lib/apogeo/temas`) y los pone; «Volver a lo de serie» los quita.
@@ -144,14 +132,18 @@ Casi vacío, como en la bienvenida de una consola:
   un punto bajo la activa (`org.apogeo.ventanas`: clic ir o minimizar, clic central otra, clic derecho cerrar); al
   cambiar el volumen o el brillo, su barrita sale ahí un momento. A la derecha la hora, los iconos de tus apps
   (bandeja), la red, el sonido y la campana (un clic, o Meta+N, abre la tarjeta rápida: ver «La tarjeta rápida»).
-- **Abajo, el orbe** (la isla, sin cristal detrás): el del modo en el que estás en el centro y, a sus lados, los otros
-  dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo siempre queda
-  en el centro). Nada encima ni a los lados: tus ventanas van arriba. Está escondido (abajo no se ve nada) y sale al
-  acercar el ratón al borde de abajo; al alejarlo, se vuelve a esconder (`apogeo-bordes`).
+- **Abajo, el orbe** (`org.apogeo.isla`, sin cristal detrás): el del modo en el que estás en el centro y, a sus lados,
+  los otros dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo
+  siempre queda en el centro). Nada encima ni a los lados: tus ventanas van arriba. Está escondido (abajo no se ve
+  nada) y solo sale al **tocar** el borde de abajo con el ratón (en el centro, donde está; no antes, al acercarse):
+  sube desde abajo y se enciende (su anillo pasa del gris al color del modo con un destello y el punto de dentro
+  aparece), y las bolitas le siguen un poco después. Al alejar el ratón baja y se apaga, más deprisa. Lo hace
+  `apogeo-bordes`: saca la barra («las ventanas van debajo») y pone «asomado» en el orbe, que se anima solo; al bajar,
+  quita «asomado» y, cuando ya ha bajado, vuelve a esconder la barra. Con una ventana a pantalla completa no sale.
 - **Jugar es solo la consola:** en Jugar no hay barra ni orbe (sus widgets no se pintan y la consola, a pantalla
   completa, va encima); al salir de Jugar, vuelven. Cada modo tiene su fondo ya cargado: al cambiar, se funden sin
   pasar por el del modo anterior.
-- **Al abrir la Órbita**, el orbe no se duplica: la Órbita pinta el suyo justo encima del de la isla (la isla le dice
+- **Al abrir la Órbita**, el orbe no se duplica: la Órbita pinta el suyo justo encima del de abajo (el orbe le dice
   dónde está por D-Bus, `AbrirDesde`/`Orbe` de `apogeo-buscador`), se enciende y los satélites salen de él; al
   cerrarla, vuelven a él y se apaga.
 - **La Órbita abierta** («C2 · Halo»; clic en el orbe o Meta; sustituye al buscador, `apogeo-buscador`):
@@ -177,27 +169,11 @@ Casi vacío, como en la bienvenida de una consola:
   `herramientas/plantilla.py`). La esquina de arriba a la izquierda ya no abre la Vista general de KDE, y el modo de la
   barra fina cambia a la vez que el orbe (lo lee del escritorio virtual).
 - Las barras y el orbe sin fondo son del estilo de Plasma de Órbita (`herramientas/plasma.py`: los trozos «north-…» y
-  «south-…» de `panel-background`, vacíos, y sin sombra de panel). Con Clásico, la isla de cristal de siempre.
+  «south-…» de `panel-background`, vacíos, y sin sombra de panel).
 
-### La isla («I1 · Una sola isla», Clásico)
+### Los avisos
 
-Todo en el mismo cristal: el botón de las apps, **tus apps del modo** (las fijadas, aunque estén cerradas, y las
-abiertas; clic derecho para fijar o dejar de fijar, en cada modo las suyas), lo de cada modo (Jugar: temperatura y FPS;
-Navegar: la música; Estudiar: el temporizador) y, al final, la red, el sonido, la campana con los avisos sin leer y la
-hora. Al pasar por una app abierta, su vista en vivo (y ✕ para cerrarla). En la bandeja de KDE solo quedan los iconos de
-tus apps (Discord, Steam…).
-- **La red, el sonido, los avisos y la hora:** al pulsarlos sale la tarjeta rápida (ver «La tarjeta rápida»).
-- **Isla dinámica** (cristal como los paneles): sale sola y crece cuando tiene algo que enseñar, y se esconde al
-  acabar (llama a los atajos sin tecla `apogeo-isla-mostrar`/`apogeo-isla-soltar` del script `apogeo-bordes`). Por
-  orden: el **volumen y el brillo** (en vez de la ventanita de KDE para el volumen; la del brillo la lleva Plasma
-  dentro y no se puede quitar), un **aviso** nuevo unos segundos (con sus botones y Abrir;
-  luego queda en el historial), una **descarga** o copia (los avisos de trabajos de KDE y las apps que lo cuentan con
-  `LauncherEntry`), el **temporizador** de estudio (clic: pausa; derecho: otra vez) y **lo que suena** (portada, los
-  colores de la portada, avanzar y, con el ratón encima, los botones).
-- **Números en los iconos:** los avisos sin leer de cada app (y los que la app cuenta, con su barra de progreso).
-- **Avisos en pantalla:** los normales salen en la isla; los urgentes, abajo a la derecha, apilados, con sus botones y
-  una rayita con el color del modo y el tiempo que les queda (se paran con el ratón encima). Respetan No molestar y los modos sin
-  avisos (salvo los urgentes).
+- **Avisos en pantalla:** los urgentes, abajo a la derecha, apilados, con sus botones y  avisos (salvo los urgentes). Los demás van directos al historial de la tarjeta rápida.
 
 ## Programas de serie
 
@@ -242,7 +218,8 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
 
 ## Jugar
 
-- **Consola («C8 · Cinta panorámica»):** al entrar en el modo Jugar se abre a pantalla completa. Abajo, una cinta con las
+- **Consola («C8 · Cinta panorámica»):** al entrar en el modo Jugar sale al instante, a pantalla completa (`apogeo-pisos`
+  la abre al entrar en la sesión, en Jugar, y ya no se cierra). Abajo, una cinta con las
   portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte
   (un **fondo vivo**: se acerca y se aleja muy despacio, se queda un poco atrás al pasar de un juego a otro, y sus
   colores, mezclados con el violeta, tiñen el grafito), con cuándo jugaste y **cuántas horas llevas** (las de Steam y Heroic; en emuladores y PS5 las cuenta Apogeo).
@@ -302,14 +279,14 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
 Al entrar por primera vez sale una tarjeta de cristal en el centro, **sobre la Tierra vista desde la Luna («B1»**, la de la
 pantalla de arranque, que se acerca muy despacio), con los pasos: tu nombre y tu foto (para el inicio de sesión y el
 bloqueo), instalar Ágape con tu llave, traer tu copia de Ágape (`.agape`, la contraseña la pide Ágape), los tres modos
-(cada uno con su color) y el orbe (con Clásico, la isla). Todo se puede saltar; si se cierra sin terminar vuelve en el
+(cada uno con su color) y el orbe. Todo se puede saltar; si se cierra sin terminar vuelve en el
 siguiente inicio, hasta acabarla o pulsar «No volver a mostrar». Se abre de nuevo desde la Órbita («Bienvenida»).
 
 ## Ajustes
 
 «Ajustes de Apogeo» es como «Personalizar» de Ágape: el buscador y las secciones a la izquierda y las tarjetas a la
-derecha. Modos (el fondo, los avisos, la energía y las apps de cada uno; animar los fondos; no molestar), Isla (que se
-esconda sola y lo de cada modo), Salud del PC (temperatura máxima de 70 a 85 °C y FPS de los juegos: 30, 45 o 60),
+derecha. Modos (el fondo, los avisos, la energía y las apps de cada uno; animar los fondos; no molestar), Orbe (que se
+esconda solo), Salud del PC (temperatura máxima de 70 a 85 °C y FPS de los juegos: 30, 45 o 60),
 Ágape (la llave, llevar o traer la copia, la bienvenida), Tu perfil y Actualizaciones. La red, el sonido, la pantalla…
 abren los Ajustes de KDE. Lo que cambias se guarda en `~/.config/apogeo/ajustes.json` y `apogeo-pisos` lo aplica al
 momento.
@@ -323,7 +300,7 @@ Cada modo con el suyo; el animado de siempre es el de por defecto. Se cambian en
 derecho en el escritorio: sale un carrusel y el fondo se ve al momento, con «Cancelar» para volver al de antes y «Aura…»
 para buscar más.
 
-- **Animados de Apogeo:** los ocho de siempre (Tinta, Humo, Seda…). Se dibujan a un tercio de la resolución y a 30 imágenes por segundo como
+- **Animados de Apogeo:** los tres de Órbita (Órbitas, Nebulosa y Aurora). Se dibujan a un tercio de la resolución y a 30 imágenes por segundo como
   mucho.
 - **Con Aura:** [Aura](https://github.com/antwny/aura) (de antwny, GPL-3) busca y baja fondos de Wallhaven, vídeos de
   MotionBGS y la imagen del día de Bing, y lleva tu biblioteca. Va en el paquete `apogeo-aura`, construido desde su
@@ -350,7 +327,7 @@ Plasma `org.apogeo.fondo`.
   en grande y en vivo en una tarjeta de cristal, el nombre debajo, ✕ al pasar el ratón y las flechas para moverte.
   Hasta ahora Alt+Tab no hacía nada: `apogeo-pisos` lo guardaba mal en kglobalaccel («Alt+\x01»); se arregla solo.
 - **Animaciones con vida** («7»): el efecto de KWin `apogeo-vida` abre las ventanas con un saltito y las cierra
-  encogiéndose; al minimizar, la lámpara mágica de KWin las lleva a su icono de la isla. KWin no anima nada sin
+  encogiéndose; al minimizar, la lámpara mágica de KWin las lleva a su icono de la barra de arriba. KWin no anima nada sin
   tarjeta gráfica (en una máquina virtual sin aceleración, por ejemplo).
 
 ## Ventanas en carrusel (como niri)
@@ -389,7 +366,7 @@ y lo cambia `apogeo-ajustes rapido`, solo con la tarjeta abierta. (Antes había 
 `org.apogeo.derecho`: `apogeo-pisos` lo quita y suelta su atajo.)
 
 El widget del escritorio es `org.apogeo.escritorio`:
-- Se dibuja siempre del tamaño de la pantalla, aunque Plasma lo estreche al quedarse fijos la isla o un panel.
+- Se dibuja siempre del tamaño de la pantalla, aunque Plasma lo estreche al quedarse fijos el orbe o un panel.
 - Ocupar toda la pantalla lo asegura `apogeo-pisos` en cada inicio de sesión. Plasma guarda el sitio de cada widget por
   resolución y lo pisa al cerrarse, así que, cuando hace falta, lo corrige con Plasma parado un instante.
 
@@ -477,8 +454,8 @@ igual y siempre sirve: al encender y al iniciar sesión se pide ella.
 - **Fuera de en medio** el menú global y el ayudante de accesibilidad (no se usan). KDE Connect se queda instalado
   (solo lo puede quitar tú).
 - **La consola de Jugar duerme** sin estar delante: deja de mirar tus juegos cada 20 segundos y suelta las imágenes; el
-  arte se carga al tamaño de la pantalla. Tras media hora dormida fuera de Jugar se cierra (devuelve su memoria) y
-  `apogeo-pisos` la abre al volver a Jugar.
+  arte se carga al tamaño de la pantalla. Ya no se cierra sola (antes, tras media hora fuera de Jugar, y al volver
+  tardaba en abrirse): así Jugar sale al instante.
 - **MangoHud en los juegos** (Vulkan, también Proton), siempre a la vista y sin estorbar («H2»): solo los FPS,
   pequeños, arriba a la izquierda (Geist Mono 12, sin fondo). La temperatura sale arriba a la derecha, en rojo, solo
   cuando llega al límite de Salud del PC (desde ahí Apogeo lo enfría); las temperaturas y los ventiladores, siempre, en
@@ -508,7 +485,7 @@ privada, protegida con tu contraseña, va dentro de cada copia. Ágape tiene su 
 ## Revisión después de actualizar
 
 Al acabar cada actualización, Apogeo se revisa y arregla lo que pueda (`apogeo-revision`): los servicios, el inicio de
-sesión, que no falten archivos y, en tu sesión, los modos, la isla, los paneles de los lados, el fondo, los scripts de KWin,
+sesión, que no falten archivos y, en tu sesión, los modos, el orbe, los paneles de los lados, el fondo, los scripts de KWin,
 el estilo y la música. Solo avisa si ha arreglado algo o si algo no ha podido arreglarlo.
 
 ## Instalador (ISO) — decidido para cuando se haga

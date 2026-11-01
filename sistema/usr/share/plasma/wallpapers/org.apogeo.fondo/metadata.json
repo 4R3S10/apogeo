@@ -2,7 +2,7 @@
     "KPackageStructure": "Plasma/Wallpaper",
     "KPlugin": {
         "Authors": [{ "Name": "Ares" }],
-        "Description": "Los fondos animados de Ágape: tinta, humo, seda, mármol, relieve, remolino y dunas",
+        "Description": "Los fondos de Apogeo: Órbitas, Nebulosa y Aurora (animados) o tu foto o tu vídeo",
         "Icon": "preferences-desktop-wallpaper",
         "Id": "org.apogeo.fondo",
         "License": "MIT",

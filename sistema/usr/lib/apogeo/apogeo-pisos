@@ -1004,7 +1004,7 @@ class Floors:
         self.wall_written = {}     # piso → lo último que se escribió de su fondo (para no reescribirlo)
         self.lock_written = None   # lo último que se escribió para la pantalla de bloqueo
         self.chosen = {}           # piso → el que elegiste a mano (si cambia, se ve ese aunque cambie solo)
-        self.colours_timer = None  # los colores del piso (Aspecto «Del fondo»): al acabar el cambio de piso
+        self.colours_timer = None  # el acento del piso: al acabar el cambio de piso
 
     def apply(self, index, force=False):
         if index == self.last and not force:
@@ -1031,11 +1031,11 @@ class Floors:
             # le devolvería a este piso)
             GLib.timeout_add(1500, self.first_visit, index)
         elif FLOORS[index]['key'] == 'jugar':
-            GLib.timeout_add(800, self.wake_console, index)
+            GLib.timeout_add(300, self.wake_console, index)
 
     def wake_console(self, index):
-        """La consola se cierra sola tras media hora sin usarla fuera de Jugar (devuelve su memoria): al volver a Jugar,
-        se abre otra vez."""
+        """La consola se abre al entrar en la sesión y ya no se cierra; si se cerró (o falló), al volver a Jugar se abre
+        otra vez."""
         try:
             running = self.bus.name_has_owner('org.apogeo.Consola')
         except dbus.DBusException:
@@ -1049,7 +1049,13 @@ class Floors:
             return True  # con la bienvenida delante no se abre nada (Ágape, por ejemplo, lo instala ella): luego
         if self.last == index and index not in self.visited:
             self.visited.add(index)
-            self.open_apps(ajustes.load()['pisos'][FLOORS[index]['key']]['apps'])
+            apps = ajustes.load()['pisos'][FLOORS[index]['key']]['apps']
+            try:  # (la consola ya está abierta desde el principio de la sesión)
+                if self.bus.name_has_owner('org.apogeo.Consola'):
+                    apps = [a for a in apps if a != 'apogeo-consola.desktop']
+            except dbus.DBusException:
+                pass
+            self.open_apps(apps)
         return False
 
     def settings_changed(self):
@@ -1068,18 +1074,18 @@ class Floors:
 
     def look(self, st=None, force=False):
         """Tu aspecto en todo el sistema (si ha cambiado), con los colores del piso en el que estás."""
-        apply_look(st or ajustes.load(), self.floor_key(), dict(self.shown), force=force)
+        apply_look(st or ajustes.load(), self.floor_key(), force=force)
 
     def colours_later(self):
-        """Con «Del fondo», los colores del piso al que llegas (o del fondo nuevo): un momento después, cuando ya ha
-        acabado la animación del cambio (y si pasas de largo con la rueda, solo los del piso en el que te quedas)."""
+        """El acento del piso al que llegas: un momento después, cuando ya ha acabado la animación del cambio (y si pasas
+        de largo con la rueda, solo el del piso en el que te quedas)."""
         if self.colours_timer:
             GLib.source_remove(self.colours_timer)
         self.colours_timer = GLib.timeout_add(900, self._colours)
 
     def _colours(self):
         self.colours_timer = None
-        switch_look(ajustes.load(), self.floor_key(), dict(self.shown))
+        switch_look(ajustes.load(), self.floor_key())
         return False
 
     # ----- «Que cambie solo» -----
@@ -1139,7 +1145,7 @@ class Floors:
         if style in ajustes.STYLES:
             archivo = ''
         else:
-            archivo, style = style, 'tinta'
+            archivo, style = style, 'orbitas'
         lock = (style, animate, floor, archivo)
         if lock != self.lock_written:
             self.lock_written = lock
@@ -1241,72 +1247,56 @@ class Floors:
 
 
 def island(bus, st):
-    """La isla como en los ajustes: si se esconde sola, lo de cada piso (temperatura y FPS, música, temporizador) y los
-    números de la salud del PC que enseña en Jugar."""
-    cfg = st['isla']
-    # Dónde va y su tamaño (Ajustes → Aspecto): la isla abajo o arriba
+    """El orbe como en los ajustes: abajo en el centro y escondido (o siempre a la vista, si lo quitas en Ajustes → Orbe).
+    El script de KWin «apogeo-bordes» lo saca al tocar el borde de abajo y tiene que saber si lo hace."""
+    hide = st['isla']['esconder']
     t = aspecto.tokens(aspecto.settings_of(st))
-    top = t['posicion'] == 'arriba-dcha'
-    # Escondida (o no, si lo quitas en los ajustes): el orbe de Órbita, siempre, sin nada a la vista abajo; la isla de
-    # Clásico se aparta de las ventanas (con el escritorio a la vista se ve). El script de KWin «apogeo-bordes» la saca al
-    # acercar el ratón a una franja ancha del borde, y tiene que saber si lo hace, en qué borde está y cómo se esconde
-    reposo = ('autohide' if t.get('estilo') == 'orbita' else 'dodgewindows') if cfg['esconder'] else 'none'
-    kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if cfg['esconder'] else 'false')
-    kw('kwinrc', 'Script-apogeo-bordes', 'reposo', reposo)
-    kw('kwinrc', 'Script-apogeo-bordes', 'islaArriba', 'true' if top else 'false')
+    kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if hide else 'false')
     kwin_reconfigure()
     plasma_script(bus, """
         panels().forEach(function (p) {
             var types = p.widgets().map(function (w) { return w.type; });
-            if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, en el borde contrario al de la isla
-                if (p.location != %s) p.location = %s;
+            if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, arriba
+                if (p.location != 'top') p.location = 'top';
                 return;
             }
             if (types.indexOf('org.apogeo.isla') < 0) return;
-            if (p.location != %s) p.location = %s;
+            if (p.location != 'bottom') p.location = 'bottom';
             if (p.height != %d) p.height = %d;
             p.hiding = %s;
             p.widgets().forEach(function (w) {
                 if (w.type != 'org.apogeo.isla') return;
                 w.currentConfigGroup = ['General'];
-                w.writeConfig('extraJugar', %s);
-                w.writeConfig('extraNavegar', %s);
-                w.writeConfig('extraEstudiar', %s);
-                w.writeConfig('fps', %d);
-                w.writeConfig('limite', %d);
+                w.writeConfig('esconder', %s);
+                w.writeConfig('asomado', false);
                 w.reloadConfig();
             });
         });
-    """ % (json.dumps('bottom' if top else 'top'), json.dumps('bottom' if top else 'top'),
-           json.dumps('top' if top else 'bottom'), json.dumps('top' if top else 'bottom'), t['isla'], t['isla'],
-           json.dumps(reposo),
-           json.dumps(cfg['jugar']), json.dumps(cfg['navegar']),
-           json.dumps(cfg['estudiar']), st['fps'], ajustes.health()['limite']))
+    """ % (t['isla'], t['isla'], json.dumps('autohide' if hide else 'none'), json.dumps(hide)))
 
 
 _look = {'ultimo': None, 'cerrojo': threading.Lock()}
 
 
-def apply_look(st, floor, shown, force=False):
-    """Ajustes → Aspecto: solo si ha cambiado (genera temas y los pone: tarda un poco) y en segundo plano. Con «según la
-    hora», también al pasar de día a noche (lo mira el reloj cada 10 minutos). Con «Del fondo», cuentan los colores de
-    los tres pisos (sacarlos de un fondo nuevo también tarda: por eso todo va en segundo plano y de uno en uno)."""
+def apply_look(st, floor, force=False):
+    """Ajustes → Identidad: solo si ha cambiado (genera temas y los pone: tarda un poco) y en segundo plano. Con «según
+    la hora», también al pasar de día a noche (lo mira el reloj cada 10 minutos)."""
     def work():
         with _look['cerrojo']:
-            _t, per = aspecto.all_tokens(st, floor, shown)
+            _t, per = aspecto.all_tokens(st, floor)
             want = json.dumps(per, sort_keys=True)
             if not force and want == _look['ultimo']:
                 return
             _look['ultimo'] = want
-            aspecto.apply(st, floor, shown, log=log)
+            aspecto.apply(st, floor, log=log)
     threading.Thread(target=work, daemon=True).start()
 
 
-def switch_look(st, floor, shown):
-    """Los colores del piso en el que estás (cambio de piso o de fondo), en segundo plano."""
+def switch_look(st, floor):
+    """El acento del piso en el que estás (al cambiar de piso), en segundo plano."""
     def work():
         with _look['cerrojo']:
-            aspecto.switch(st, floor, shown, log=log)
+            aspecto.switch(st, floor, log=log)
     threading.Thread(target=work, daemon=True).start()
 
 
@@ -1445,9 +1435,13 @@ def main():
         if len(reopened) <= 3:
             GLib.timeout_add(1500, floors.wake_console, floors.last)
     bus.add_signal_receiver(console_gone, 'NameOwnerChanged', 'org.freedesktop.DBus', path='/org/freedesktop/DBus')
-    # El buscador, preparado (para que la lupa de la isla y la tecla Meta lo saquen al momento), y la música de abajo a
-    # la izquierda (sale sola cuando suena algo)
-    for name, args in (('buscador', ['--fondo']), ('musica', [])):
+    # El buscador, preparado (para que el orbe y la tecla Meta lo saquen al momento), la música de abajo a la izquierda
+    # (sale sola cuando suena algo) y la consola, ya abierta en Jugar (así al entrar en Jugar está al instante: arrancarla
+    # tarda unos segundos; fuera de Jugar duerme y suelta sus imágenes)
+    preload = [('buscador', ['--fondo']), ('musica', [])]
+    if 'apogeo-consola.desktop' in ajustes.load()['pisos']['jugar']['apps']:
+        preload.append(('consola', []))
+    for name, args in preload:
         subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice',
                           f'--unit=app-apogeo-{name}-{os.getpid()}', f'/usr/lib/apogeo/apogeo-{name}', *args],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
@@ -1473,21 +1467,6 @@ def main():
         pending['id'] = GLib.timeout_add(250, lambda: (pending.update(id=None), floors.settings_changed(), False)[-1])
     os.makedirs(os.path.dirname(ajustes.SETTINGS), exist_ok=True)
     monitor.connect('changed', changed)
-    # «Como Ágape»: cuando Ágape guarda sus ajustes (cambias su aspecto en Personalizar), Apogeo lo sigue (solo hace
-    # algo si lo de su aspecto ha cambiado)
-    os.makedirs(os.path.dirname(aspecto.AGAPE), exist_ok=True)
-    agape_monitor = Gio.File.new_for_path(os.path.dirname(aspecto.AGAPE)).monitor_directory(
-        Gio.FileMonitorFlags.WATCH_MOVES, None)
-    agape_pending = {'id': None}
-
-    def agape_changed(_m, f, other, _event):
-        if os.path.basename(aspecto.AGAPE) not in {x.get_basename() for x in (f, other) if x}:
-            return
-        if agape_pending['id']:
-            GLib.source_remove(agape_pending['id'])
-        agape_pending['id'] = GLib.timeout_add(1500, lambda: (agape_pending.update(id=None),
-                                                              floors.look(), False)[-1])
-    agape_monitor.connect('changed', agape_changed)
     GLib.MainLoop().run()
 
 
