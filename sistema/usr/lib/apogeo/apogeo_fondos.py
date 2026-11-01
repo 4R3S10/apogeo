@@ -28,6 +28,8 @@ THUMBS = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(comun.HOME, 
 # tenía el animado de serie (el de antes) o un fondo de serie anterior (ANTES).
 DE_SERIE = {'navegar': ('4ddk8g', 'orbitas'), 'estudiar': ('2eqjpm', 'aurora'), 'jugar': ('k88m2m', 'nebulosa')}
 ANTES = {'estudiar': ('mdjrqy',)}  # (el atardecer, que no era del espacio)
+# Sus nombres en el carrusel y en Ajustes (y no «wallhaven-4ddk8g»)
+NOMBRES = {'4ddk8g': 'Nebulosa azul', '2eqjpm': 'Nebulosa ámbar', 'k88m2m': 'Nubes violeta', 'mdjrqy': 'Atardecer'}
 _AGENTE = 'Apogeo (https://github.com/4R3S10/apogeo)'
 
 
@@ -91,7 +93,9 @@ def item(path):
     """Un fondo de tu biblioteca: {valor, nombre, tipo, video, url, mini} (mini: '' si el vídeo aún no tiene)."""
     video = comun.is_video(path)
     mini = thumb_path(path) if video else path
-    return {'valor': path, 'nombre': os.path.splitext(os.path.basename(path))[0], 'tipo': 'aura', 'video': video,
+    name = os.path.splitext(os.path.basename(path))[0]
+    name = NOMBRES.get(name.removeprefix('wallhaven-'), name) if name.startswith('wallhaven-') else name
+    return {'valor': path, 'nombre': name, 'tipo': 'aura', 'video': video,
             'url': _url(path), 'mini': _url(mini) if os.path.isfile(mini) else ''}
 
 

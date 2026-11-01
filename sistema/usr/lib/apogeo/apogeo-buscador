@@ -214,6 +214,7 @@ def main():
         filesFound = pyqtSignal(str, 'QVariantList')
         atajos = pyqtSignal(bool)   # la guía: mientras mantienes Meta (True) o con Meta+/ (False)
         soltada = pyqtSignal()
+        escrito = pyqtSignal(str)   # lo que se escribe en el escritorio: abre la Órbita con ello en el buscador
 
         def __init__(self):
             super().__init__()
@@ -235,6 +236,11 @@ def main():
             self.poner_orbe(where)
             self.swallow_until = 0.0
             self.toggled.emit()
+
+        def escribir(self, text):
+            """Lo que escribes con el escritorio delante (en vez de KRunner): a la Órbita, ya buscándolo."""
+            self.swallow_until = 0.0
+            self.escrito.emit(text[:200])
 
         def poner_orbe(self, where):
             try:
@@ -471,6 +477,10 @@ def main():
         @pyqtSlot(str)
         def Orbe(self, where):
             self.parent().poner_orbe(where)
+
+        @pyqtSlot(str)
+        def Escribir(self, text):
+            self.parent().escribir(text)
 
         @pyqtSlot()
         def Atajos(self):

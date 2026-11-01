@@ -17,4 +17,16 @@ if len(keep) < len([g for g in groups if g.strip()]):
         for n, g in enumerate(keep):
             f.write(re.sub(r'^\[\d+\]', f'[{n}]', g.strip()) + '\n\n')
 PY
+# La plantilla «Apuntes» (Source Serif 4): en tus Plantillas (Archivos → Crear nuevo) y en las de ONLYOFFICE. Una sola
+# vez: si la borras, no vuelve
+marca="${XDG_STATE_HOME:-$HOME/.local/state}/apogeo/plantillas-1"
+if [ ! -e "$marca" ] && [ -f /usr/share/apogeo/plantillas/Apuntes.docx ]; then
+    plantillas=$(xdg-user-dir TEMPLATES 2>/dev/null)
+    [ -n "$plantillas" ] && [ "$plantillas" != "$HOME" ] || plantillas="$HOME/Plantillas"
+    oo="$HOME/.var/app/org.onlyoffice.desktopeditors/data/onlyoffice/desktopeditors/templates"
+    for d in "$plantillas" "$oo"; do
+        mkdir -p "$d" && cp -n /usr/share/apogeo/plantillas/Apuntes.docx "$d/"
+    done
+    mkdir -p "${marca%/*}" && : > "$marca"
+fi
 exec /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland

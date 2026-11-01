@@ -5,11 +5,12 @@ import org.kde.coreaddons as KCoreAddons
 import org.kde.plasma.plasma5support as P5Support
 import Apogeo
 
-// Pantalla de apagar de Apogeo («A1 · La isla se abre»): la isla de abajo crece hacia arriba y se convierte en el menú.
-// Arriba tu foto, «¿Hasta luego?» y desde cuándo está encendido; en medio, Apagar, Reiniciar, Reposo, Ir a Windows (si
-// hay un Windows escondido), Salir y Bloquear; abajo, cuántas apps se cierran (Ágape guarda sus pestañas) y «Actualizar
-// al apagar» si hay actualizaciones. Si se ha pedido algo concreto (apagar, reiniciar o salir), solo sale eso con su
-// cuenta atrás de 30 segundos. Esc o un clic fuera cancelan; las flechas eligen e Intro hace.
+// Pantalla de apagar de Órbita («A1 · Tierra y botones»): la Tierra vista desde el espacio (la del arranque y la de
+// entrar), oscura; en el centro el Núcleo, «¿Hasta luego?», desde cuándo está encendido y cuántas apps se cierran (Ágape
+// guarda sus pestañas); tres botones grandes (Apagar, Reiniciar, Reposo) y, debajo, en pequeño, Ir a Windows (si hay un
+// Windows escondido), Cerrar sesión, Bloquear y «Actualizar al apagar» si hay actualizaciones. Si se ha pedido algo
+// concreto (apagar, reiniciar o salir), solo sale eso con su cuenta atrás de 30 segundos. Esc o un clic fuera cancelan;
+// las flechas eligen e Intro hace.
 // Las señales y lo que da ksmserver (sdtype, maysd, canLogout, spdMethods, softwareUpdatePending…) son los de Plasma.
 // Desde Plasma 6.8 la pantalla de apagar es la del escritorio de Plasma (shells/org.kde.plasma.desktop/contents/logout,
 // una por pantalla): apogeo-bloqueo pone esta en su lugar, como la de bloqueo.
@@ -92,12 +93,37 @@ Item {
         return "Encendido desde hace " + (h ? h + " h " : "") + m + " min";
     }
 
-    // ---------- La cortina y la isla que crece ----------
+    // ---------- La Tierra, oscura, que aparece ----------
+    property bool open: false
+    Component.onCompleted: open = true
+    Rectangle { anchors.fill: parent; color: "#05070a"; opacity: root.open ? 1 : 0; Behavior on opacity { NumberAnimation { duration: 320 } } }
+    Image {
+        id: tierra
+        anchors.fill: parent
+        source: "file:///usr/share/plymouth/themes/apogeo/tierra.png"
+        sourceSize: Qt.size(width, height)
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        visible: false
+    }
+    MultiEffect {
+        anchors.fill: parent
+        source: tierra
+        visible: tierra.status === Image.Ready
+        blurEnabled: true; blur: 0.25; blurMax: 32
+        brightness: -0.24
+        opacity: root.open ? 1 : 0
+        scale: root.open ? 1 : 1.05
+        Behavior on opacity { NumberAnimation { duration: 420 } }
+        Behavior on scale { NumberAnimation { duration: 900; easing.type: Easing.OutCubic } }
+    }
     Rectangle {
         anchors.fill: parent
-        color: "#000000"
-        opacity: card.open ? 0.45 : 0
-        Behavior on opacity { NumberAnimation { duration: 260 } }
+        gradient: Gradient {
+            GradientStop { position: 0; color: Qt.rgba(0.02, 0.03, 0.04, 0.25) }
+            GradientStop { position: 0.55; color: Qt.rgba(0.02, 0.03, 0.04, 0.1) }
+            GradientStop { position: 1; color: Qt.rgba(0.02, 0.03, 0.04, 0.6) }
+        }
     }
     MouseArea { anchors.fill: parent; onClicked: root.cancelRequested() }
 
@@ -113,243 +139,207 @@ Item {
               root.run("sh -c 'printf %s \\'{\"modo\":\"escritorio\"}\\' | pkexec /usr/lib/apogeo/apogeo-windows ir'");
               root.cancelRequested();
           } },
-        { key: "logout", texto: "Salir", icono: "salir",
+        { key: "logout", texto: root.showAllOptions ? "Cerrar sesión" : "Salir", icono: "salir",
           ver: canLogout && (showAllOptions || sdtype === ShutdownType.ShutdownTypeNone), run: () => root.logoutRequested() },
         { key: "lock", texto: "Bloquear", icono: "llave",
           ver: showAllOptions, run: () => root.lockScreenRequested() }
     ].filter(a => a.ver)
     property int current: 0
 
-    RectangularShadow {
-        anchors.fill: card
-        offset.y: 18
-        blur: 50
-        radius: card.radius
-        color: Qt.rgba(0, 0, 0, 0.45)
-        opacity: card.open ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 260 } }
+    // Los tres grandes (o lo que se ha pedido) y, debajo, los pequeños
+    readonly property var grandes: showAllOptions ? actions.filter(a => ["halt", "reboot", "sleep"].indexOf(a.key) >= 0) : actions
+    readonly property var pequenos: showAllOptions ? actions.filter(a => grandes.indexOf(a) < 0) : []
+    readonly property var orden: grandes.concat(pequenos)
+    function mover(n) { current = Math.max(0, Math.min(orden.length - 1, current + n)) }
+    function hacer() { if (orden[current]) orden[current].run() }
+    Item {
+        anchors.fill: parent
+        focus: true
+        Keys.onLeftPressed: root.mover(-1)
+        Keys.onRightPressed: root.mover(1)
+        Keys.onUpPressed: { if (root.current >= root.grandes.length) root.current = 0 }
+        Keys.onDownPressed: { if (root.current < root.grandes.length && root.pequenos.length) root.current = root.grandes.length }
+        Keys.onTabPressed: root.current = (root.current + 1) % root.orden.length
+        Keys.onReturnPressed: root.hacer()
+        Keys.onEnterPressed: root.hacer()
     }
-    Rectangle {
-        id: card
-        // Empieza con el tamaño de la isla, abajo en el centro, y crece hacia arriba
-        property bool open: false
-        Component.onCompleted: open = true
-        readonly property real fullWidth: Math.max(560, buttons.implicitWidth + 48)
-        readonly property real fullHeight: col.implicitHeight + 44
-        width: open ? fullWidth : 420
-        height: open ? fullHeight : 54
-        x: (root.width - width) / 2
-        // (desde la isla: abajo o, si va arriba, arriba)
-        y: Tema.posicion === "arriba-dcha" ? 14 : root.height - height - 14
-        radius: open ? 26 : 22
-        color: Qt.rgba(Tema.cromo.r, Tema.cromo.g, Tema.cromo.b, 0.97)
-        border.color: Tema.borde
-        clip: true
-        Behavior on width { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
-        Behavior on height { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
-        Behavior on radius { NumberAnimation { duration: 280 } }
-        Rectangle { // el brillo de 1 px de arriba
-            x: parent.radius; y: 1
-            width: parent.width - 2 * parent.radius; height: 1
-            color: Qt.rgba(1, 1, 1, 0.06)
+
+    Column {
+        id: col
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: Math.round(parent.height * 0.17)
+        spacing: 0
+        opacity: root.open ? 1 : 0
+        transform: Translate { y: root.open ? 0 : 18; Behavior on y { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } } }
+        Behavior on opacity { NumberAnimation { duration: 420 } }
+
+        Nucleo {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 92; height: 92
+            disco: false
+            SequentialAnimation on pulso {
+                loops: Animation.Infinite
+                NumberAnimation { to: 1; duration: 2400; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 0; duration: 2400; easing.type: Easing.InOutSine }
+            }
         }
-        MouseArea { anchors.fill: parent } // (los clics dentro no cancelan)
+        Item { width: 1; height: 24 }
+        Texto {
+            anchors.horizontalCenter: parent.horizontalCenter
+            font { pixelSize: 44; weight: Font.Bold; letterSpacing: -0.6 }
+            color: "#f2f4f8"
+            text: root.showAllOptions ? "¿Hasta luego, " + root.firstName + "?"
+                : sdtype === ShutdownType.ShutdownTypeReboot ? "Reiniciando"
+                : sdtype === ShutdownType.ShutdownTypeHalt ? "Apagando" : "Cerrando la sesión"
+        }
+        Item { width: 1; height: 10 }
+        Texto {
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: Qt.rgba(0.91, 0.93, 0.96, 0.66)
+            font.pixelSize: 15
+            text: [root.uptime ? root.upText() : "",
+                   root.apps.length ? (root.apps.length === 1 ? "1 app abierta" : root.apps.length + " apps abiertas")
+                                      + (root.agape ? " (Ágape guarda tus pestañas)" : " (se cierran bien)") : ""].filter(t => t).join(" · ")
+        }
+        Texto {
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: Qt.rgba(0.91, 0.93, 0.96, 0.66)
+            font.pixelSize: 13
+            topPadding: 8
+            visible: rebootToFirmwareSetup || rebootToBootLoaderMenu
+            text: rebootToFirmwareSetup ? "Al reiniciar entrará en la configuración del equipo (UEFI)." : "Al reiniciar saldrá el menú de arranque."
+        }
+        Item { width: 1; height: 44 }
 
-        Column {
-            id: col
-            x: 22; y: 22
-            width: card.fullWidth - 44
-            spacing: 0
-            opacity: card.open ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.InQuad } }
-
-            // Tu foto, el saludo y desde cuándo está encendido; a la derecha, Cancelar
-            Item {
-                width: parent.width
-                height: 48
-                Foto {
-                    id: face
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 46; height: 46
-                    anillo: true
-                    letra: root.firstName.charAt(0).toUpperCase()
-                    fuente: kuser.faceIconUrl.toString().indexOf("file:") === 0 ? kuser.faceIconUrl : ""
-                }
-                Column {
-                    anchors.left: face.right
-                    anchors.leftMargin: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-                    Texto {
-                        font.pixelSize: 20
-                        font.weight: Font.Black
-                        text: root.showAllOptions ? "¿Hasta luego, " + root.firstName + "?"
-                            : sdtype === ShutdownType.ShutdownTypeReboot ? "Reiniciando"
-                            : sdtype === ShutdownType.ShutdownTypeHalt ? "Apagando" : "Cerrando la sesión"
-                    }
-                    Texto {
-                        color: Tema.apagado
-                        font.pixelSize: 13
-                        text: root.showAllOptions ? (root.uptime ? root.upText() : "Elige qué hacer")
-                            : "En " + root.remaining + (root.remaining === 1 ? " segundo" : " segundos")
-                              + (softwareUpdatePending ? ", con las actualizaciones" : "")
-                    }
-                }
-                QQC2.AbstractButton {
-                    id: cancel
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: cancelRow.implicitWidth + 20
-                    height: 30
+        // Los grandes: cristal; el elegido, encendido (blanco)
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 18
+            Repeater {
+                model: root.grandes
+                delegate: QQC2.AbstractButton {
+                    id: b
+                    required property var modelData
+                    required property int index
+                    readonly property bool on: root.current === index
+                    width: 168; height: 128
                     hoverEnabled: true
-                    onClicked: root.cancelRequested()
-                    background: Rectangle { radius: Tema.r(9); color: cancel.hovered ? Tema.encima : "transparent" }
+                    onHoveredChanged: if (hovered) root.current = index
+                    onClicked: modelData.run()
+                    scale: on ? 1.04 : 1
+                    Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                    RectangularShadow {
+                        anchors.fill: parent
+                        z: -2   // (detrás del botón: si no, su brillo blanco tapa el texto)
+                        visible: b.on
+                        offset.y: 10; blur: 34; spread: -8
+                        radius: 20
+                        color: Qt.rgba(1, 1, 1, 0.35)
+                    }
+                    background: Rectangle {
+                        radius: 20
+                        color: b.on ? "#eef0f4" : Qt.rgba(0.07, 0.08, 0.11, b.pressed ? 0.8 : 0.62)
+                        border.color: b.on ? "transparent" : Qt.rgba(1, 1, 1, 0.1)
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
                     contentItem: Item {
-                        Row {
-                            id: cancelRow
+                        Icono {
+                            id: ico
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: 34
+                            width: 28; height: 28
+                            nombre: b.modelData.icono
+                            color: b.on ? "#0b0e14" : "#f2f4f8"
+                        }
+                        Texto {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: ico.y + ico.height + 14
+                            width: parent.width - 12
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            font { pixelSize: 15; weight: Font.Bold }
+                            color: b.on ? "#0b0e14" : "#f2f4f8"
+                            text: b.modelData.texto
+                        }
+                    }
+                }
+            }
+        }
+        Item { width: 1; height: 34 }
+
+        // Los pequeños, en texto; y «Actualizar al apagar»
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 30
+            visible: root.pequenos.length > 0 || updateNote.visible
+            Repeater {
+                model: root.pequenos
+                delegate: QQC2.AbstractButton {
+                    id: p
+                    required property var modelData
+                    required property int index
+                    readonly property bool on: root.current === root.grandes.length + index
+                    width: pt.implicitWidth + 16; height: 32
+                    hoverEnabled: true
+                    onHoveredChanged: if (hovered) root.current = root.grandes.length + index
+                    onClicked: modelData.run()
+                    background: Rectangle {
+                        radius: 10
+                        color: p.on ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+                    }
+                    contentItem: Item {
+                        Texto {
+                            id: pt
                             anchors.centerIn: parent
-                            spacing: 6
-                            Texto { text: "Cancelar"; font.pixelSize: 13; color: cancel.hovered ? Tema.texto : Tema.apagado; anchors.verticalCenter: parent.verticalCenter }
-                            Rectangle {
-                                width: esc.implicitWidth + 12; height: 20; radius: Tema.r(6)
-                                color: Tema.encima
-                                anchors.verticalCenter: parent.verticalCenter
-                                Texto { id: esc; anchors.centerIn: parent; text: "Esc"; font.pixelSize: 11; font.weight: Font.DemiBold; color: Tema.tenue }
-                            }
+                            text: p.modelData.texto
+                            font { pixelSize: 14; weight: p.on ? Font.DemiBold : Font.Normal }
+                            color: p.on ? "#f2f4f8" : Qt.rgba(0.91, 0.93, 0.96, 0.72)
                         }
                     }
                 }
             }
-            Texto {
-                width: parent.width
-                color: Tema.apagado
-                font.pixelSize: 12
-                topPadding: 8
-                visible: rebootToFirmwareSetup || rebootToBootLoaderMenu
-                text: rebootToFirmwareSetup ? "Al reiniciar entrará en la configuración del equipo (UEFI)." : "Al reiniciar saldrá el menú de arranque."
-            }
-            Item { width: 1; height: 18 }
-
-            // Los botones
-            Row {
-                id: buttons
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 10
-                Repeater {
-                    model: root.actions
-                    delegate: QQC2.AbstractButton {
-                        id: b
-                        required property var modelData
-                        required property int index
-                        readonly property bool on: root.current === index
-                        width: 96; height: 92
-                        hoverEnabled: true
-                        focus: on
-                        onHoveredChanged: if (hovered) root.current = index
-                        onClicked: modelData.run()
-                        Keys.onReturnPressed: modelData.run()
-                        Keys.onEnterPressed: modelData.run()
-                        Keys.onLeftPressed: root.current = Math.max(0, root.current - 1)
-                        Keys.onRightPressed: root.current = Math.min(root.actions.length - 1, root.current + 1)
-                        RectangularShadow {
-                            anchors.fill: parent
-                            visible: b.on
-                            offset.y: 6; blur: 24; spread: -6
-                            radius: Tema.r(18)
-                            color: Tema.rosa
-                            opacity: 0.85
-                        }
-                        background: Rectangle {
-                            radius: Tema.r(18)
-                            color: b.on ? Tema.rosa : (b.pressed ? Tema.pulsado : Tema.encima)
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                        }
-                        contentItem: Item {
-                            Icono {
-                                id: ico
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                y: 22
-                                width: 24; height: 24
-                                nombre: b.modelData.icono
-                                color: b.on ? Tema.sobreRosa : Tema.texto
-                            }
-                            Texto {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                y: ico.y + ico.height + 12
-                                width: parent.width - 8
-                                horizontalAlignment: Text.AlignHCenter
-                                elide: Text.ElideRight
-                                font.weight: Font.Bold
-                                font.pixelSize: 13
-                                color: b.on ? Tema.sobreRosa : Tema.texto
-                                text: b.modelData.texto
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Lo que se cierra y «Actualizar al apagar»
-            Item { width: 1; height: 16; visible: info.visible }
-            Row {
-                id: info
-                width: parent.width
-                spacing: 10
-                visible: root.showAllOptions && (appsNote.visible || updateNote.visible)
-                Rectangle {
-                    id: appsNote
-                    visible: root.apps.length > 0
-                    width: updateNote.visible ? (parent.width - 10) / 2 : parent.width
-                    height: 42; radius: Tema.r(14)
-                    color: Tema.encima
+            QQC2.AbstractButton {
+                id: updateNote
+                visible: root.showAllOptions && (root.updates.cuantas || 0) > 0 && maysd
+                width: un.implicitWidth + 16; height: 32
+                hoverEnabled: true
+                onClicked: root.toggleUpdates()
+                background: Rectangle { radius: 10; color: updateNote.hovered ? Qt.rgba(1, 1, 1, 0.1) : "transparent" }
+                contentItem: Item {
                     Row {
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: 14
-                        spacing: 10
-                        Icono { width: 16; height: 16; nombre: "apps"; color: Tema.apagado; anchors.verticalCenter: parent.verticalCenter }
+                        id: un
+                        anchors.centerIn: parent
+                        spacing: 8
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 14; height: 14; radius: 4
+                            color: root.updates.marcado ? "#eef0f4" : "transparent"
+                            border.color: Qt.rgba(1, 1, 1, 0.5)
+                            Texto { anchors.centerIn: parent; visible: !!root.updates.marcado; text: "✓"; font { pixelSize: 10; weight: Font.Bold } color: "#0b0e14" }
+                        }
                         Texto {
                             anchors.verticalCenter: parent.verticalCenter
-                            font.pixelSize: 13
-                            width: appsNote.width - 54
-                            elide: Text.ElideRight
-                            textFormat: Text.StyledText
-                            text: (root.apps.length === 1 ? "1 app abierta" : root.apps.length + " apps abiertas")
-                                  + "<font color='" + Tema.apagado + "'> · " + (root.agape ? "Ágape guarda tus pestañas" : "se cierran bien") + "</font>"
-                        }
-                    }
-                }
-                QQC2.AbstractButton {
-                    id: updateNote
-                    visible: (root.updates.cuantas || 0) > 0 && maysd
-                    width: appsNote.visible ? (parent.width - 10) / 2 : parent.width
-                    height: 42
-                    hoverEnabled: true
-                    onClicked: root.toggleUpdates()
-                    background: Rectangle { radius: Tema.r(14); color: root.updates.marcado ? Tema.rosaSuave : (updateNote.hovered ? Tema.pulsado : Tema.encima) }
-                    contentItem: Item {
-                        Row {
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: 14
-                            spacing: 10
-                            Icono { width: 16; height: 16; nombre: "descargar"; color: root.updates.marcado ? Tema.rosa : Tema.apagado; anchors.verticalCenter: parent.verticalCenter }
-                            Texto {
-                                anchors.verticalCenter: parent.verticalCenter
-                                font.pixelSize: 13
-                                color: root.updates.marcado ? Tema.rosa : Tema.texto
-                                text: "Actualizar al apagar · " + root.updates.cuantas
-                            }
-                        }
-                        Interruptor {
-                            anchors.right: parent.right
-                            anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            checkable: false   // (lo cambia toggleUpdates; así no se rompe el enlace)
-                            checked: !!root.updates.marcado
-                            onClicked: root.toggleUpdates()
+                            text: "Actualizar al apagar (" + root.updates.cuantas + ")"
+                            font.pixelSize: 14
+                            color: Qt.rgba(0.91, 0.93, 0.96, 0.72)
                         }
                     }
                 }
             }
         }
+    }
+
+    // Abajo: la cuenta atrás (si se ha pedido algo) y cómo cancelar
+    Texto {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom; anchors.bottomMargin: 40
+        opacity: root.open ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 420 } }
+        font { family: Tema.mono; pixelSize: 12; letterSpacing: 3; capitalization: Font.AllUppercase }
+        color: Qt.rgba(0.91, 0.93, 0.96, 0.6)
+        text: (root.showAllOptions ? "" : (sdtype === ShutdownType.ShutdownTypeReboot ? "Se reinicia" : sdtype === ShutdownType.ShutdownTypeHalt ? "Se apaga" : "Se cierra")
+               + " en " + root.remaining + " s" + (softwareUpdatePending ? ", con las actualizaciones" : "") + " · ")
+              + "Esc cancelar · ← → elegir · Intro"
+        MouseArea { anchors.fill: parent; anchors.margins: -8; onClicked: root.cancelRequested() }
     }
 }

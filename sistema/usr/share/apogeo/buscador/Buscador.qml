@@ -233,6 +233,12 @@ Window {
     Connections {
         target: buscador
         function onToggled() { win.visible ? win.close() : win.open() }
+        // (escribiendo en el escritorio: se abre con ello; las letras que llegan mientras se abre, detrás)
+        function onEscrito(t) {
+            if (!win.visible) win.open();
+            field.text += t;
+            field.cursorPosition = field.text.length;
+        }
         function onFilesFound(q, found) { if (q === win.query) win.files = found; }
     }
     Component.onCompleted: if (showAtStart) open()
@@ -567,7 +573,7 @@ Window {
             visible: nota.conTitulo
             width: nota.cuerpoAncho
             text: nota.conTitulo ? nota.lineas[nota.cabeza] : ""
-            font { pixelSize: win.u(16); weight: Font.DemiBold }
+            font { family: Tema.serif; pixelSize: win.u(17); weight: Font.DemiBold }   // (los apuntes, en Source Serif 4)
             elide: Text.ElideRight; wrapMode: Text.NoWrap; textFormat: Text.PlainText
             bottomPadding: win.u(4)
         }
@@ -596,7 +602,8 @@ Window {
                     anchors.verticalCenter: parent.verticalCenter
                     text: ln.casilla ? ln.casilla[2] : ln.modelData[1].replace(/^\s*[-*]\s/, "· ")
                     color: ln.hecha ? Tema.tenue : ln.casilla ? Tema.texto : Tema.apagado
-                    font.pixelSize: win.u(14)
+                    font.family: Tema.serif
+                    font.pixelSize: win.u(15)
                     font.strikeout: ln.hecha
                     elide: Text.ElideRight; wrapMode: Text.NoWrap; textFormat: Text.PlainText
                 }

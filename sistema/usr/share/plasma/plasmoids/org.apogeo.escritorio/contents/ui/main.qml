@@ -3,10 +3,12 @@ import QtQuick.Window
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.taskmanager as TaskManager
+import org.kde.plasma.workspace.dbus as DBus
 import Apogeo
 
 // El escritorio de Apogeo: limpio, solo el fondo (lo que había aquí, la agenda, lo de estudiar y las notas, está en la
-// Órbita abierta: el orbe o Meta). Con el botón derecho sale el carrusel de fondos de este piso.
+// Órbita abierta: el orbe o Meta). Con el botón derecho sale el carrusel de fondos de este piso. Lo que escribas con
+// el escritorio delante va a la Órbita, ya buscándolo (Plasma, si no, abriría KRunner: desde la 6.8 no se puede quitar).
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
@@ -26,6 +28,17 @@ PlasmoidItem {
         width: Screen.width
         height: Screen.height
         readonly property real abajo: 96
+        focus: true
+        TapHandler { onTapped: lienzo.forceActiveFocus() }
+        Keys.onPressed: event => {
+            const t = event.text;
+            if (carrusel.visible || !t || t.trim() === "" || t.charCodeAt(0) < 32 || t.charCodeAt(0) === 127
+                || (event.modifiers & ~(Qt.ShiftModifier | Qt.KeypadModifier | Qt.GroupSwitchModifier)))
+                return;
+            DBus.SessionBus.asyncCall({ service: "org.apogeo.Buscador", path: "/Buscador", iface: "org.apogeo.Buscador",
+                                        member: "Escribir", arguments: [new DBus.string(t)], signature: "(s)" });
+            event.accepted = true;
+        }
         // Botón derecho en el escritorio: el carrusel de fondos («F2»)
         MouseArea {
             anchors.fill: parent

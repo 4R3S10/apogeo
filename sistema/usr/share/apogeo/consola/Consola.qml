@@ -6,7 +6,9 @@ import Apogeo
 // La consola de Jugar («C8 · Cinta panorámica»): tus juegos en una cinta de portadas abajo; el elegido pinta la pantalla
 // con su arte. Arriba: Inicio (lo descargado, lo último jugado primero) y una pestaña por tienda o plataforma con toda tu
 // biblioteca para descargar y quitar. Mando (PlayStation o Xbox) o teclado: ← → elegir · ✕ (A)/Intro jugar o descargar ·
-// □ (X)/Supr quitar · L1 R1 (LB RB)/Q E pestaña · ○ (B)/Esc atrás · ↓ bajar a Navegar. «consola» es apogeo-consola.
+// □ (X)/Supr quitar · L1 R1 (LB RB)/Q E pestaña · ○ (B)/Esc atrás · ↓ bajar a Navegar. La última pestaña,
+// Herramientas («H1»): Discord, Spotify, OBS, Mission Center, CoolerControl, ProtonPlus, Hydra y los FPS en pantalla.
+// «consola» es apogeo-consola.
 Window {
     id: win
     title: "Jugar"
@@ -41,12 +43,26 @@ Window {
     readonly property var lib: consola.tabs
     readonly property var allTabs: [
         { clave: "inicio", texto: "Inicio" }, { clave: "steam", texto: "Steam" }, { clave: "epic", texto: "Epic" },
-        { clave: "emuladores", texto: "Emuladores" }, { clave: "ps5", texto: "PS5" }, { clave: "windows", texto: "Windows" }
+        { clave: "emuladores", texto: "Emuladores" }, { clave: "ps5", texto: "PS5" }, { clave: "windows", texto: "Windows" },
+        { clave: "herramientas", texto: "Herramientas" }
     ]
     // Windows solo si hay un Windows escondido (o algún juego suyo); las demás, siempre (vacías explican qué hacer)
     readonly property var shownTabs: allTabs.filter(t => t.clave !== "windows" || lib.windowsHay || (lib.windows || []).length > 0)
     property int tab: 0
     readonly property string tabKey: shownTabs[Math.min(tab, shownTabs.length - 1)].clave
+    readonly property bool enHerr: tabKey === "herramientas"
+    // Las herramientas y, al final, los FPS en pantalla (MangoHud)
+    readonly property var herr: consola.herramientas.concat([{ clave: "fps", nombre: "FPS en pantalla", texto: "Arriba a la izquierda, en tus juegos", hay: true }])
+    property int hsel: 0
+    function herrHacer(i) {
+        const h = herr[i];
+        if (!h) return;
+        hsel = i;
+        if (h.clave === "fps") { consola.setFpsVisibles(!consola.fpsVisibles); say(consola.fpsVisibles ? "Los FPS se ven en tus juegos" : "Los FPS ya no se ven (el límite sigue)"); return; }
+        if (!h.hay) { say(h.nombre + " no está instalada"); return; }
+        consola.herramienta(h.clave);
+        say("Abriendo " + h.nombre + "…");
+    }
     property string sys: ""                       // el sistema elegido en Emuladores ("" = todos)
     readonly property var systems: {
         const o = [];
@@ -120,6 +136,12 @@ Window {
             else if (k === "b") asking = false;
             return;
         }
+        if (enHerr && ["izquierda", "derecha", "arriba", "abajo", "a"].indexOf(k) >= 0) {
+            const cols = herrGrid.columns;
+            if (k === "a") herrHacer(hsel);
+            else hsel = Math.max(0, Math.min(herr.length - 1, hsel + ({ izquierda: -1, derecha: 1, arriba: -cols, abajo: cols })[k]));
+            return;
+        }
         if (k === "izquierda") select(sel - 1);
         else if (k === "derecha") select(sel + 1);
         else if (k === "a") primary();
@@ -136,6 +158,7 @@ Window {
         target: consola
         function onPad(button) { if (win.active) win.key(button) }
         function onShown() { win.showFullScreen(); win.raise(); win.requestActivate(); consola.refresh(); }
+        function onIrA(t) { const i = win.shownTabs.findIndex(x => x.clave === t); if (i >= 0) win.setTab(i); }
     }
     Item {
         anchors.fill: parent
@@ -552,7 +575,7 @@ Window {
 
     // ---------- Vacío: qué hacer ----------
     Column {
-        visible: !win.game
+        visible: !win.game && !win.enHerr
         x: 48; y: 196
         width: parent.width * 0.5
         spacing: 16
@@ -650,7 +673,7 @@ Window {
     }
     // La marca de agua, muy tenue, a la derecha del vacío
     Nucleo {
-        visible: !win.game
+        visible: !win.game && !win.enHerr
         anchors.right: parent.right; anchors.rightMargin: 140
         y: 200
         width: 280; height: 280
@@ -658,8 +681,84 @@ Window {
         disco: false
     }
 
+    // ---------- Herramientas («H1»): una rejilla de tarjetas de cristal ----------
+    Grid {
+        id: herrGrid
+        visible: win.enHerr
+        x: 48; y: 158
+        columns: Math.max(2, Math.min(4, Math.floor((win.width - 96 + 22) / (300 + 22))))
+        spacing: 22
+        Repeater {
+            model: win.herr
+            delegate: Rectangle {
+                id: ht
+                required property var modelData
+                required property int index
+                readonly property bool on: win.hsel === index
+                readonly property bool esFps: modelData.clave === "fps"
+                width: 300; height: 168; radius: Tema.r(18)
+                color: Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, htm.containsMouse || on ? 0.78 : 0.6)
+                border.width: on ? 2 : 1
+                border.color: on ? Tema.acento : Tema.borde
+                opacity: modelData.hay ? 1 : 0.5
+                scale: on ? 1.03 : 1
+                Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                RectangularShadow { visible: ht.on; anchors.fill: parent; z: -1; blur: 34; spread: 0; radius: parent.radius; color: Tema.acento; opacity: 0.35 }
+                // Su icono (el de la app); los FPS, un «FPS» en el acento
+                Rectangle {
+                    x: 22; y: 22
+                    width: 56; height: 56; radius: Tema.r(16)
+                    color: Tema.encima
+                    border.color: Tema.borde
+                    Image {
+                        visible: !ht.esFps
+                        anchors.centerIn: parent
+                        width: 36; height: 36
+                        source: ht.esFps ? "" : ht.modelData.icono
+                        sourceSize: Qt.size(72, 72)
+                    }
+                    Texto {
+                        visible: ht.esFps
+                        anchors.centerIn: parent
+                        text: "FPS"
+                        color: Tema.acento
+                        font { family: Tema.mono; pixelSize: 15; weight: Font.Bold }
+                    }
+                }
+                // Los FPS: un interruptor
+                Rectangle {
+                    visible: ht.esFps
+                    anchors.right: parent.right; anchors.rightMargin: 22; y: 38
+                    width: 50; height: 28; radius: 14
+                    color: consola.fpsVisibles ? Tema.acento : Qt.rgba(1, 1, 1, 0.16)
+                    Behavior on color { ColorAnimation { duration: 140 } }
+                    Rectangle {
+                        width: 22; height: 22; radius: 11; y: 3
+                        x: consola.fpsVisibles ? parent.width - width - 3 : 3
+                        color: "white"
+                        Behavior on x { NumberAnimation { duration: 140 } }
+                    }
+                }
+                Column {
+                    x: 22; y: 96
+                    width: parent.width - 44
+                    spacing: 4
+                    Texto { width: parent.width; text: ht.modelData.nombre; font { pixelSize: 19; weight: Font.Bold } elide: Text.ElideRight; wrapMode: Text.NoWrap }
+                    Texto {
+                        width: parent.width
+                        text: ht.modelData.hay ? ht.modelData.texto : "No está instalada"
+                        color: Tema.apagado; font.pixelSize: 13
+                        elide: Text.ElideRight; wrapMode: Text.NoWrap
+                    }
+                }
+                MouseArea { id: htm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.herrHacer(ht.index) }
+            }
+        }
+    }
+
     // ---------- La cinta de portadas ----------
     Rectangle {
+        visible: !win.enHerr
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         height: 370
         gradient: Gradient {
@@ -674,6 +773,7 @@ Window {
         color: Tema.linea
     }
     Row {
+        visible: !win.enHerr
         anchors { left: parent.left; leftMargin: 48; bottom: cinta.top; bottomMargin: 14 }
         spacing: 10
         Rectangle { width: 4; height: 14; radius: 2; color: Tema.acento; anchors.verticalCenter: parent.verticalCenter }
@@ -693,6 +793,7 @@ Window {
 
     ListView {
         id: cinta
+        visible: !win.enHerr
         x: 48
         width: parent.width - 48
         height: 256
@@ -784,7 +885,11 @@ Window {
         anchors.bottom: parent.bottom; anchors.bottomMargin: 20
         spacing: 20
         Repeater {
-            model: [
+            model: win.enHerr ? [
+                { b: [win.btn.a], t: "Abrir" },
+                { b: ["←", "→", "↑", "↓"], t: "Elegir" },
+                { b: [win.btn.lb, win.btn.rb], t: "Pestaña" }
+            ] : [
                 { b: [win.btn.a], t: win.game && !win.game.installed ? "Descargar" : "Jugar" },
                 { b: [win.btn.x], t: "Quitar" },
                 { b: [win.btn.lb, win.btn.rb], t: "Pestaña" },

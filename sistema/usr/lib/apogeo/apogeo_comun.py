@@ -80,6 +80,7 @@ DEFAULTS = {
     'fps': 60,
     'pantallaFluida': True,  # FreeSync/VRR: la pantalla va al ritmo del juego (si el monitor lo tiene)
     'juegos_fps': {},    # el límite de FPS de cada juego («steam:123»: 45), si no es el de todos (la consola)
+    'fpsVisibles': True,  # los FPS de MangoHud en los juegos (la consola: Herramientas → FPS en pantalla)
     # Ajustes → Aspecto (apogeo_aspecto): lo de serie es la estética de Ágape
     'aspecto': dict(_aspecto.DEFAULT),
     'version': VERSION,
@@ -151,6 +152,7 @@ def valid(st):
     if st.get('fps') not in FPS_CHOICES:
         st['fps'] = 60
     st['juegos_fps'] = {k: v for k, v in (st.get('juegos_fps') or {}).items() if v in FPS_CHOICES}
+    st['fpsVisibles'] = st.get('fpsVisibles') is not False
     fondos = st['fondos']
     fondos['tuyos'] = list(dict.fromkeys(x for x in fondos.get('tuyos', []) if is_wallpaper_file(x)))
     if not isinstance(fondos.get('carpeta'), str):
@@ -271,7 +273,7 @@ def save(st):
     with open(tmp, 'w') as f:
         json.dump(st, f, ensure_ascii=False, indent=1)
     os.replace(tmp, SETTINGS)  # de golpe: quien lo vigila nunca lee un archivo a medias
-    write_fps(st['fps'], st.get('juegos_fps'))
+    write_fps(st['fps'], st.get('juegos_fps'), st['fpsVisibles'])
     return st
 
 
@@ -287,7 +289,7 @@ def set_path(st, path, value):
     return st
 
 
-def write_fps(fps, per_game=None):
+def write_fps(fps, per_game=None, visible=True):
     """Los juegos a esos FPS como mucho (y los que tienen el suyo, al suyo), con MangoHud (escondido) en todos los juegos
     Vulkan, también los de Windows con Proton. MANGOHUD=1 es del entorno de la sesión: vale al volver a entrar; los
     límites, al momento."""
@@ -297,7 +299,7 @@ def write_fps(fps, per_game=None):
                 'MANGOHUD=1\n')
     try:
         import apogeo_juegos
-        apogeo_juegos.write_mangohud(fps, per_game or {})
+        apogeo_juegos.write_mangohud(fps, per_game or {}, visible)
     except Exception as e:  # (que un juego raro no impida guardar los ajustes)
         print('MangoHud:', e)
 

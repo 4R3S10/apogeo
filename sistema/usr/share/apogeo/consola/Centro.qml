@@ -1,11 +1,13 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Effects
 import org.kde.layershell as LayerShell
 import Apogeo
 
 // El centro de control de Jugar (el botón PS o Xbox, como en la PS5): una banda abajo, de lado a lado, encima del juego
 // y sin pararlo: la hora, el juego, las temperaturas y los ventiladores; y tarjetas con lo que suena (⏮ ⏯ ⏭), Discord
-// (tu micro y abrirlo al lado del juego), los avisos que han llegado en la partida, el volumen y volver a la consola.
+// (tu micro y abrirlo al lado del juego), los avisos que han llegado en la partida, el volumen, las herramientas rápidas
+// («H2»: los FPS en pantalla, grabar con OBS y las demás, en la pestaña Herramientas) y volver a la consola.
 // ← → elegir · ✕ (A) hacer · ↑ ↓ el volumen · ○ (B) o el botón otra vez, cerrar. Con el botón central mantenido, → ←
 // cambian de canción y ↑ ↓ el volumen: sale solo un aviso pequeño arriba a la derecha. Ahí mismo, en la partida, la
 // temperatura cuando llega al límite de Salud del PC («H2»: MangoHud solo enseña los FPS).
@@ -25,6 +27,9 @@ Window {
                                                      : LayerShell.Window.KeyboardInteractivityNone
     LayerShell.Window.activateOnShow: abierto
     title: "Centro de control"
+    // (de toda la pantalla: sin esto, la capa nace de 500×500 y KWin la deja arriba, con la banda pegada al techo)
+    width: Screen.width
+    height: Screen.height
     visible: false
     Component.onCompleted: Tema.piso = "jugar"
 
@@ -33,7 +38,7 @@ Window {
     readonly property bool suena: !!(d.musica && d.musica.titulo)
     // Lo que se puede elegir, en orden (sin música, «Abrir Spotify» en vez de los tres botones)
     readonly property var focos: (suena ? ["anterior", "pausa", "siguiente"] : ["spotify"])
-                                 .concat(["micro", "discord", "volumen", "consola"])
+                                 .concat(["micro", "discord", "volumen", "fps", "obs", "mas", "consola"])
     property int foco: 0
     readonly property string elegido: focos[Math.min(foco, focos.length - 1)]
 
@@ -73,6 +78,9 @@ Window {
         else if (que === "volumen") consola.volumen(0);
         else if (que === "discord") { cerrar(); consola.discord(); return; }
         else if (que === "consola") { cerrar(); consola.traer(); return; }
+        else if (que === "fps") consola.setFpsVisibles(!consola.fpsVisibles);
+        else if (que === "obs") { cerrar(); consola.herramienta("obs"); return; }
+        else if (que === "mas") { cerrar(); consola.traerA("herramientas"); return; }
         luego();
     }
     function key(k) {
@@ -419,6 +427,34 @@ Window {
                             text: win.elegido === "volumen" ? "↑ ↓ cambiar · " + win.btn.a + " silencio" : "Rueda o ↑ ↓ al elegirlo"
                             font { family: Tema.mono; pixelSize: 10 }
                             color: Qt.rgba(0.91, 0.93, 0.96, 0.5)
+                        }
+                    }
+                }
+
+                // Las herramientas rápidas («H2»)
+                Tarjeta {
+                    width: 236
+                    enfocada: ["fps", "obs", "mas"].indexOf(win.elegido) >= 0
+                    Column {
+                        width: 200
+                        spacing: 4
+                        Etiqueta { text: "Herramientas" }
+                        Texto {
+                            text: consola.fpsVisibles ? "FPS a la vista" : "FPS escondidos"
+                            font { pixelSize: 16; weight: Font.Bold }
+                            color: "#e9edf5"
+                        }
+                        Texto {
+                            text: "El límite de FPS sigue igual"
+                            font.pixelSize: 13
+                            color: Qt.rgba(0.91, 0.93, 0.96, 0.6)
+                        }
+                        Item { width: 1; height: 6 }
+                        Row {
+                            spacing: 8
+                            Mando { clave: "fps"; icono: "pantalla"; texto: "FPS" }
+                            Mando { clave: "obs"; icono: "video"; ancho: 40 }
+                            Mando { clave: "mas"; icono: "mas"; ancho: 40 }
                         }
                     }
                 }

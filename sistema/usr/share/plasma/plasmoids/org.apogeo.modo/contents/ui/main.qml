@@ -2,14 +2,18 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
+import org.kde.taskmanager as TaskManager
 import Apogeo
 
 // La barra fina de arriba de Órbita («C · Orbe central»), a la izquierda: el modo en el que estás, en pequeño y en su
-// color (lo dice apogeo-pisos en ~/.config/apogeo/modo.json: Tema lo lee). Un clic abre la Órbita (como el orbe o Meta).
+// color. Lo sabe al momento por el escritorio virtual en el que estás (como el escritorio de Apogeo; modo.json, que
+// Tema lee cada segundo, llegaba tarde al cambiar). Un clic abre la Órbita (como el orbe o Meta).
 PlasmoidItem {
     id: root
     preferredRepresentation: fullRepresentation
-    readonly property string modo: Tema.modo || "navegar"
+    TaskManager.VirtualDesktopInfo { id: desktops }
+    readonly property string escritorio: (desktops.desktopNames[desktops.desktopIds.indexOf(desktops.currentDesktop)] || "").toLowerCase()
+    readonly property string modo: ["jugar", "navegar", "estudiar"].indexOf(escritorio) >= 0 ? escritorio : Tema.modo || "navegar"
     readonly property color color: Tema.claro ? ({ jugar: "#6f52c9", navegar: "#0b86a8", estudiar: "#a85a00" })[modo] || Tema.acento
                                               : ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[modo] || Tema.acento
 

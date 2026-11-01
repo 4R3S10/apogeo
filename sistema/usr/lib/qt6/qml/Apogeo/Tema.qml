@@ -3,7 +3,7 @@ import QtQuick
 import QtCore
 
 // Los colores, la letra y las medidas de Apogeo —Órbita— para todo lo hecho en QML. La base es grafito; el acento y el
-// carácter vienen del modo: Navegar (cian), Estudiar (ámbar y papel) y Jugar (violeta). Si cambias el aspecto
+// carácter vienen del modo: Navegar (cian), Estudiar (ámbar) y Jugar (violeta). Si cambias el aspecto
 // (Ajustes → Identidad), apogeo-pisos deja tus fichas en ~/.config/apogeo/aspecto.json y aquí se leen (y se vuelven a
 // mirar cada segundo: el cambio se ve solo, sin reiniciar nada).
 // Con «Del fondo» cada piso tiene sus colores: las fichas son las del piso en el que estás y en «pisos» van las de los

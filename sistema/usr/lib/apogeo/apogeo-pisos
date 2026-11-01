@@ -370,7 +370,7 @@ def setup(bus):
     if st.get('mangohud', 0) < MANGOHUD:
         # MangoHud en los juegos (pequeño, siempre a la vista) con el límite de FPS: su configuración y el entorno
         cfg = ajustes.load()
-        ajustes.write_fps(cfg['fps'], cfg.get('juegos_fps'))
+        ajustes.write_fps(cfg['fps'], cfg.get('juegos_fps'), cfg.get('fpsVisibles') is not False)
         st['mangohud'] = MANGOHUD
     if st.get('ligero', 0) < LIGHTER:
         # Menos cosas en marcha: el menú global (Apogeo no tiene barra de menús arriba), el ayudante de accesibilidad

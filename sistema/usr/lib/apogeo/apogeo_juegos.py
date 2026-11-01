@@ -808,7 +808,7 @@ def game_exes(g):
     return sorted(names)
 
 
-def mangohud_conf(fps, extra=''):
+def mangohud_conf(fps, extra='', visible=True):
     return (f"""{MANAGED} MangoHud en tus juegos («H2»): siempre a la vista, solo los FPS, pequeños, arriba a la
 # izquierda. La temperatura sale arriba a la derecha solo si se calienta (el centro de control de la consola); con el
 # botón PS, todo (temperaturas y ventiladores). Mayús derecha+F12 lo esconde.
@@ -828,10 +828,10 @@ alpha=0.7
 text_color=E9EDF5
 font_size=12
 font_file=/usr/share/fonts/apogeo/GeistMono-Medium.ttf
-{extra}""")
+{'' if visible else '# (los FPS escondidos: la consola, Herramientas → FPS en pantalla)' + chr(10) + 'no_display' + chr(10)}{extra}""")
 
 
-def write_mangohud(global_fps, per_game):
+def write_mangohud(global_fps, per_game, visible=True):
     """La configuración de MangoHud: la de todos (MangoHud.conf) y, por cada juego con su propio límite, un archivo
     por cada ejecutable suyo (los de Proton se llaman «wine-<nombre>»). Solo toca lo que escribió Apogeo."""
     os.makedirs(MANGOHUD, exist_ok=True)
@@ -844,7 +844,7 @@ def write_mangohud(global_fps, per_game):
             return True   # (no existe: se puede escribir)
     if ours(main):
         with open(main, 'w') as f:
-            f.write(mangohud_conf(global_fps))
+            f.write(mangohud_conf(global_fps, visible=visible))
     keep = set()
     for key, fps in (per_game or {}).items():
         store, _, gid = key.partition(':')
@@ -854,7 +854,7 @@ def write_mangohud(global_fps, per_game):
                 path = os.path.join(MANGOHUD, name + '.conf')
                 if ours(path):
                     with open(path, 'w') as f:
-                        f.write(mangohud_conf(fps, f'# (el límite de {key})\n'))
+                        f.write(mangohud_conf(fps, f'# (el límite de {key})\n', visible))
                     keep.add(path)
     for path in glob.glob(os.path.join(MANGOHUD, '*.conf')):
         if path != main and path not in keep and ours(path):

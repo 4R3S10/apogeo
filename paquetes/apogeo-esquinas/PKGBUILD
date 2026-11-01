@@ -12,6 +12,7 @@ pkgdesc='Esquinas redondeadas para las ventanas de Apogeo (KDE-Rounded-Corners, 
 arch=('x86_64')
 url='https://github.com/matinlotfali/KDE-Rounded-Corners'
 license=('GPL-3.0-only')
+options=(!debug)   # (sin el paquete -debug: nadie lo usa)
 depends=(kwin)  # (sin «=versión»: si no, frenaría la subida de KWin hasta el día siguiente)
 makedepends=(cmake extra-cmake-modules ninja vulkan-headers)
 provides=(kwin-effect-rounded-corners)

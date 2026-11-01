@@ -95,7 +95,7 @@ Seccion {
         }
         // una ventana
         Rectangle {
-            x: 52; y: preview.arriba ? 52 : 22
+            x: 52; y: preview.arriba && !preview.orbita ? 52 : preview.orbita ? 30 : 22
             width: parent.width * 0.5; height: 112
             radius: preview.r(12)
             color: sec.t.superficie || Tema.superficie
@@ -113,8 +113,36 @@ Seccion {
                 font.pixelSize: Math.round((sec.t.letraPt || 10) * 1.3)
             }
         }
-        // la isla
+        // Órbita: la barra fina de arriba (el modo y la hora) y el orbe abajo, con los otros dos modos a sus lados
+        readonly property bool orbita: (sec.a.estilo || "orbita") === "orbita"
+        Item {
+            visible: preview.orbita
+            anchors.fill: parent
+            Row {
+                x: 12; y: 9; spacing: 5
+                Rectangle { width: 5; height: 5; radius: 2.5; color: sec.t.acento || Tema.rosa; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "NAVEGAR"; color: sec.t.acento || Tema.rosa; font { family: Tema.mono; pixelSize: 9; letterSpacing: 2 } }
+            }
+            Text {
+                anchors.right: parent.right; anchors.rightMargin: 12; y: 7
+                text: "18:40"; color: sec.t.texto || Tema.texto
+                font { family: Tema.mono; pixelSize: 10; bold: true }
+            }
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 12
+                spacing: 14
+                Rectangle { width: 12; height: 12; radius: 6; color: "transparent"; border.width: 1.5; border.color: "#b79cff"; anchors.verticalCenter: parent.verticalCenter }
+                Rectangle {
+                    width: 24; height: 24; radius: 12; color: "transparent"; border.width: 2; border.color: sec.t.acento || Tema.rosa
+                    Rectangle { anchors.centerIn: parent; width: 7; height: 7; radius: 3.5; color: "white" }
+                }
+                Rectangle { width: 12; height: 12; radius: 6; color: "transparent"; border.width: 1.5; border.color: "#ffb35c"; anchors.verticalCenter: parent.verticalCenter }
+            }
+        }
+        // la isla (los otros estilos)
         Rectangle {
+            visible: !preview.orbita
             anchors.horizontalCenter: parent.horizontalCenter
             y: preview.arriba ? 10 : parent.height - height - 10
             width: 190; height: Math.round((sec.t.isla || 56) * 0.55); radius: preview.r(14)
@@ -196,7 +224,7 @@ Seccion {
         opacity: enabled ? 1 : 0.45
         titulo: "Claro u oscuro"
         detalle: sec.a.modo === "hora" ? "Claro de 8:00 a 20:00"
-               : sec.a.modo === "piso" && sec.a.estilo === "orbita" ? "Estudiar en papel de 8:00 a 20:00; lo demás, grafito" : ""
+               : sec.a.modo === "piso" && sec.a.estilo === "orbita" ? "Grafito en los tres modos, cada uno con su color" : ""
         Segmentos {
             readonly property var valores: ["piso", "oscuro", "claro", "hora"]
             opciones: [{ texto: "Por modo" }, { texto: "Oscuro" }, { texto: "Claro" }, { texto: "La hora" }]

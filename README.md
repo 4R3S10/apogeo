@@ -103,7 +103,8 @@ tono que más se ve, con su viveza, y con él el acento, el fondo y la superfici
 animados, como Material You pero con la forma de las tarjetas de Órbita). A los fondos animados de Apogeo les das tú el color (Ajustes →
 Fondos → «Color de los animados»; sin elegir, el del modo). Al cambiar de modo o de fondo cambia todo: lo de
 Apogeo en QML al momento y los temas de KDE un momento después (al acabar la animación). La ventana activa lleva un
-borde del color del modo (el efecto de esquinas redondeadas). Las apps de KDE ya abiertas se quedan con el color con el
+borde del color del modo (el efecto de esquinas redondeadas: `apogeo-esquinas`, KDE-Rounded-Corners compilado cada
+día para la KWin de ese día, porque el efecto solo carga con la versión exacta de KWin para la que se compiló). Las apps de KDE ya abiertas se quedan con el color con el
 que se abrieron (Kvantum no cambia en vivo); las que abras cogen el del modo.
 - Los temas de KDE de cada modo se hacen una vez por colores (`ApogeoTuAspecto-<huella>`, en segundo plano) y al cambiar
   de modo solo se ponen. Las carpetas usan el más parecido de los colores de los animados (hacer un tema de iconos
@@ -158,6 +159,12 @@ Casi vacío, como en la bienvenida de una consola:
   25/5, los exámenes, las tareas de hoy y tus asignaturas); Esc vuelve. Al escribir, encima del campo: tus apps, la
   cuenta, las **órdenes** (Jugar, Navegar, Estudiar, apagar, reiniciar, suspender, bloquear, cerrar sesión, ajustes,
   atajos), lo de KDE (sin repetir las apps), tus archivos y la web con Ágape. A los lados del orbe, los otros modos.
+  **Escribir con el escritorio delante** también la abre, con lo escrito ya en el buscador (`Escribir` de
+  `apogeo-buscador`, lo manda `org.apogeo.escritorio`): desde Plasma 6.8 eso abría KRunner sin forma de quitarlo. Las
+  notas (y la nota de los satélites) van en **Source Serif 4**; para documentos, la plantilla **«Apuntes»** (Source
+  Serif 4, A4) está en tus Plantillas y en las de ONLYOFFICE (la copia `apogeo-sesion` una vez; la genera
+  `herramientas/plantilla.py`). La esquina de arriba a la izquierda ya no abre la Vista general de KDE, y el modo de la
+  barra fina cambia a la vez que el orbe (lo lee del escritorio virtual).
 - Las barras y el orbe sin fondo son del estilo de Plasma de Órbita (`herramientas/plasma.py`: los trozos «north-…» y
   «south-…» de `panel-background`, vacíos, y sin sombra de panel). Con Clásico, la isla de cristal de siempre.
 
@@ -242,6 +249,11 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
   - Con el mando (lo lee la consola, sin Steam por medio) o el teclado: ← → elegir, ✕/Intro jugar o descargar, □/Supr
     quitar, L1 R1/Q E pestaña, ○/Esc atrás, ↓ bajar a Navegar. El botón PS trae la consola desde cualquier sitio. Los
     botones salen como en tu mando (PlayStation de serie; A B X Y LB RB con uno de Xbox).
+  - **Herramientas («H1»):** la última pestaña, con lo que se usa jugando: Discord, Spotify, OBS, Mission Center,
+    CoolerControl, ProtonPlus e Hydra (las que no tengas salen apagadas) y **FPS en pantalla** (MangoHud a la vista o
+    escondido: lo apunta `fpsVisibles` y añade `no_display` a su configuración).
+  - **Botón PS («H2»):** en el centro rápido, la tarjeta Herramientas: FPS a la vista o escondidos, OBS y «+» (abre la
+    pestaña Herramientas).
 - **Al día solo (`apogeo-al-dia`), sin jugar:** cada 2 horas, si no estás jugando, se ponen al día los emuladores (Flatpak),
   GE-Proton, AnyPS5, los núcleos de RetroArch y Heroic pone al día tus juegos de Epic. Steam lo hace él (y no descarga
   mientras juegas).
@@ -276,10 +288,11 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
 
 ## Bienvenida
 
-Al entrar por primera vez sale una tarjeta en el centro, como la bienvenida de Ágape, con los pasos: tu nombre y tu foto
-(para el inicio de sesión y el bloqueo), instalar Ágape con tu llave, traer tu copia de Ágape (`.agape`, la contraseña
-la pide Ágape), los modos y la isla. Todo se puede saltar; si se cierra sin terminar vuelve en el siguiente inicio,
-hasta acabarla o pulsar «No volver a mostrar». Se abre de nuevo desde el buscador («Bienvenida de Apogeo»).
+Al entrar por primera vez sale una tarjeta de cristal en el centro, **sobre la Tierra vista desde la Luna («B1»**, la de la
+pantalla de arranque, que se acerca muy despacio), con los pasos: tu nombre y tu foto (para el inicio de sesión y el
+bloqueo), instalar Ágape con tu llave, traer tu copia de Ágape (`.agape`, la contraseña la pide Ágape), los tres modos
+(cada uno con su color) y el orbe (con Clásico, la isla). Todo se puede saltar; si se cierra sin terminar vuelve en el
+siguiente inicio, hasta acabarla o pulsar «No volver a mostrar». Se abre de nuevo desde la Órbita («Bienvenida»).
 
 ## Ajustes
 
@@ -406,9 +419,10 @@ delante (que enseña la suya) ni con algo a pantalla completa.
   Al acabar se copia sola (y queda en lo copiado de Meta+V), se guarda en Imágenes/Capturas y sale una miniatura abajo
   a la derecha unos segundos: Editar, la carpeta o arrastrarla a un chat. La foto la da KWin
   (`org.kde.KWin.ScreenShot2`) al pulsar, antes de cargar nada. `apogeo-captura` y `sistema/usr/share/apogeo/captura/`.
-- **Pantalla de apagar («A1 · La isla se abre»):** la isla de abajo crece y se convierte en el menú: tu foto, desde
-  cuándo está encendido, Apagar, Reiniciar, Reposo, Ir a Windows (si hay Windows escondido), Salir y Bloquear; cuántas
-  apps se cierran (Ágape guarda sus pestañas) y **«Actualizar al apagar»** si hay actualizaciones (las instala el
+- **Pantalla de apagar («A1 · Tierra y botones»):** la Tierra desenfocada detrás, el Núcleo latiendo, «¿Hasta luego,
+  (tu nombre)?», desde cuándo está encendido y tres botones grandes (Apagar, Reiniciar, Reposo; el elegido, en blanco);
+  debajo, Ir a Windows (si hay Windows escondido), Cerrar sesión y Bloquear. Con el teclado: ← → elegir, ↑ ↓ cambiar de
+  fila, Intro. Cuántas apps se cierran (Ágape guarda sus pestañas) y **«Actualizar al apagar»** si hay actualizaciones (las instala el
   servicio `apogeo-actualizar-al-apagar` antes de apagarse, con su aviso en la pantalla de arranque; si algo falla no
   toca nada y avisa al volver). Desde Plasma 6.8 vive en el escritorio de Plasma: `apogeo-bloqueo` la pone, como la de
   bloqueo.

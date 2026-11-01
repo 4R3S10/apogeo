@@ -27,6 +27,39 @@ SERVICE, PATH, IFACE = 'org.apogeo.Consola', '/Consola', 'org.apogeo.Consola'
 QML = os.environ.get('APOGEO_CONSOLA_QML', '/usr/share/apogeo/consola/Consola.qml')
 CENTRO_QML = os.path.join(os.path.dirname(QML), 'Centro.qml')
 MODO = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'modo.json')
+# La pestaña Herramientas («H1»): lo que se usa alrededor de los juegos (clave, nombre, para qué, su .desktop)
+HERRAMIENTAS = [
+    ('discord', 'Discord', 'Voz y amigos', 'discord.desktop'),
+    ('spotify', 'Spotify', 'Tu música', 'spotify-launcher.desktop'),
+    ('obs', 'OBS', 'Grabar y emitir', 'com.obsproject.Studio.desktop'),
+    ('mission', 'Mission Center', 'Qué gasta el PC', 'io.missioncenter.MissionCenter.desktop'),
+    ('cooler', 'CoolerControl', 'Ventiladores y temperaturas', 'org.coolercontrol.CoolerControl.desktop'),
+    ('protonplus', 'ProtonPlus', 'Versiones de Proton', 'com.vysp3r.ProtonPlus.desktop'),
+    ('hydra', 'Hydra', 'Tu otra biblioteca', 'hydralauncher.desktop'),
+]
+
+
+def _desktop(name):
+    """Dónde está ese .desktop (el tuyo, el del sistema o el de un Flatpak); '' si no está instalado."""
+    data = [os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))]
+    data += (os.environ.get('XDG_DATA_DIRS') or '/usr/local/share:/usr/share').split(':')
+    data += [os.path.expanduser('~/.local/share/flatpak/exports/share'), '/var/lib/flatpak/exports/share']
+    for d in data:
+        path = os.path.join(d, 'applications', name)
+        if os.path.isfile(path):
+            return path
+    return ''
+
+
+def _icon(path):
+    try:
+        with open(path) as f:
+            for line in f:
+                if line.startswith('Icon='):
+                    return line[5:].strip()
+    except OSError:
+        pass
+    return ''
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 
 
@@ -198,6 +231,41 @@ def main():
             comun.save(st)
             self.fpsChanged.emit()
 
+        # ----- Herramientas («H1»: su pestaña; «H2»: las rápidas en el centro del botón PS) -----
+        @pyqtProperty('QVariantList', constant=True)
+        def herramientas(self):
+            out = []
+            for key, name, what, desktop in HERRAMIENTAS:
+                path = _desktop(desktop)
+                out.append({'clave': key, 'nombre': name, 'texto': what, 'hay': bool(path),
+                            'icono': 'image://icono/' + (_icon(path) or 'applications-games')})
+            return out
+
+        @pyqtSlot(str)
+        def herramienta(self, key):
+            desktop = next((d for k, _n, _w, d in HERRAMIENTAS if k == key), '')
+            if desktop and _desktop(desktop):
+                juegos.detach(['gtk-launch', desktop])
+
+        irA = pyqtSignal(str, arguments=['tab'])      # la consola delante, en esa pestaña
+
+        @pyqtSlot(str)
+        def traerA(self, tab):
+            self.shown.emit()
+            self.irA.emit(tab)
+
+        @pyqtProperty(bool, notify=fpsChanged)
+        def fpsVisibles(self):
+            return comun.load().get('fpsVisibles') is not False
+
+        @pyqtSlot(bool)
+        def setFpsVisibles(self, on):
+            """Los FPS de MangoHud en los juegos, a la vista o no (el límite sigue igual). Los juegos abiertos lo leen ya."""
+            st = comun.load()
+            st['fpsVisibles'] = bool(on)
+            comun.save(st)
+            self.fpsChanged.emit()
+
         @pyqtSlot(result=bool)
         def fueraDeJugar(self):
             """¿Estás en otro modo? Lo dice apogeo-pisos en ~/.config/apogeo/modo.json (el piso no es un número fijo:
@@ -326,6 +394,19 @@ def main():
     if os.environ.get('APOGEO_QML_DIR'):
         engine.addImportPath(os.environ['APOGEO_QML_DIR'])
     engine.rootContext().setContextProperty('consola', consola)
+    from PyQt6.QtCore import QSize
+    from PyQt6.QtQuick import QQuickImageProvider
+
+    class Icons(QQuickImageProvider):
+        """image://icono/NOMBRE: un icono del tema (los de las herramientas)."""
+        def __init__(self):
+            super().__init__(QQuickImageProvider.ImageType.Pixmap)
+
+        def requestPixmap(self, name, requested):
+            side = max(requested.width(), requested.height(), 48)
+            return QIcon.fromTheme(name, QIcon.fromTheme('applications-games')).pixmap(QSize(side, side)), QSize(side, side)
+    icons = Icons()   # (se guarda: si no, Python lo borraría)
+    engine.addImageProvider('icono', icons)
     engine.load(QUrl.fromLocalFile(QML))
     if not engine.rootObjects():
         return 1

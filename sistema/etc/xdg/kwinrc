@@ -26,6 +26,11 @@ DisableRoundFullScreen=true
 DisableOutlineMaximize=true
 DisableOutlineFullScreen=true
 
+# La esquina de arriba a la izquierda no abre la Vista general de KDE (ahí está el modo, en la barra fina; la Órbita
+# sale del orbe o con Meta). 9 = ningún borde
+[Effect-overview]
+BorderActivate=9
+
 # Cambiar de piso como un ascensor: las ventanas suben o bajan y el fondo se queda quieto detrás (luego cambia al del
 # piso nuevo, fundiéndose)
 [Effect-slide]

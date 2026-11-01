@@ -1,5 +1,18 @@
 [
   {
+    "fecha": "2026-11-01",
+    "titulo": "1 de noviembre",
+    "cosas": [
+      {"icono": "jugar", "titulo": "Herramientas en la consola", "como": "La consola estrena la pestaña Herramientas: Discord, Spotify, OBS, Mission Center, CoolerControl, ProtonPlus e Hydra a un botón, y los FPS en pantalla a la vista o escondidos. Con el botón PS, lo mismo en pequeño: FPS, OBS y «+»."},
+      {"icono": "apagar", "titulo": "Apagar, desde el espacio", "como": "La pantalla de apagar es nueva: la Tierra detrás, el Núcleo latiendo, «¿Hasta luego?» y tres botones grandes (Apagar, Reiniciar, Reposo). Debajo, Windows, Cerrar sesión y Bloquear; todo con el teclado."},
+      {"icono": "novedades", "titulo": "Una bienvenida con vistas", "como": "La bienvenida sale sobre la Tierra vista desde la Luna, explica los modos con su color y enseña el orbe en vez de la isla."},
+      {"icono": "buscar", "titulo": "Escribe y busca", "como": "Si escribes con el escritorio delante se abre la Órbita con lo que has escrito (antes salía el buscador de KDE). Y la esquina de arriba a la izquierda ya no abre la vista general."},
+      {"icono": "texto", "titulo": "Apuntes con otra letra", "como": "Tus notas se escriben en Source Serif 4, una letra hecha para leer. Y en ONLYOFFICE y en Crear nuevo tienes la plantilla «Apuntes» con ella."},
+      {"icono": "ventana", "titulo": "Esquinas siempre redondas", "como": "Las esquinas redondeadas de las ventanas se preparan para tu KWin cada día, así no se pierden al actualizar KDE."},
+      {"icono": "aspecto", "titulo": "Pequeños retoques", "como": "Ajustes habla del orbe (y su vista previa lo enseña), los fondos de serie tienen nombre en el carrusel, el modo de arriba cambia a la vez que el orbe y el centro del botón PS ya sale abajo."}
+    ]
+  },
+  {
     "fecha": "2026-10-31",
     "titulo": "31 de octubre",
     "cosas": [
