@@ -303,9 +303,8 @@ def preparar(e, destino, part_windows, part_efi, avisa, run, log):
         for nombre, texto in (('winpeshl.ini', WINPESHL), ('apogeo.cmd', PE_CMD)):
             with open(os.path.join(tmp, nombre), 'w', newline='\r\n') as f:
                 f.write(texto)
-        run(['wimlib-imagex', 'update', wim, '1',
-             f'--command=add {tmp}/winpeshl.ini /Windows/System32/winpeshl.ini',
-             f'--command=add {tmp}/apogeo.cmd /Windows/System32/apogeo.cmd'])
+        for nombre in ('winpeshl.ini', 'apogeo.cmd'):   # (wimlib admite un solo --command cada vez)
+            run(['wimlib-imagex', 'update', wim, '1', f'--command=add {tmp}/{nombre} /Windows/System32/{nombre}'])
         os.makedirs(f'{boot}/sources', exist_ok=True)
         shutil.copy(wim, f'{boot}/sources/boot.wim')
         os.makedirs(f'{boot}/boot', exist_ok=True)
