@@ -1,0 +1,533 @@
+#!/usr/bin/python3
+"""
+Apología, la IA de Apogeo en tu PC (Apologia.qml). Chats a la izquierda, la conversación en el centro y arriba el
+modelo; «Modelos» busca y baja modelos (Hugging Face, GitHub o cualquier enlace) y «Modificador» cambia cómo responde.
+Lo de dentro (el motor llama.cpp, los modelos, los chats, Colab) está en apogeo_apologia.py.
+
+  apogeo-apologia      la abre (o la trae delante)
+D-Bus: org.apogeo.Apologia /Apologia org.apogeo.Apologia.Mostrar()
+"""
+import os
+import subprocess
+import sys
+import threading
+
+SERVICE, PATH, IFACE = 'org.apogeo.Apologia', '/Apologia', 'org.apogeo.Apologia'
+LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
+QML = os.environ.get('APOGEO_APOLOGIA_QML', '/usr/share/apogeo/apologia/Apologia.qml')
+sys.path.insert(0, LIB)
+
+import apogeo_apologia as A  # noqa: E402
+
+
+def already_running():
+    import dbus
+    try:
+        bus = dbus.SessionBus()
+        if not bus.name_has_owner(SERVICE):
+            return False
+        bus.get_object(SERVICE, PATH).Mostrar(dbus_interface=IFACE)
+        return True
+    except dbus.DBusException:
+        return False
+
+
+def downloads_dir():
+    try:
+        d = subprocess.run(['xdg-user-dir', 'DOWNLOAD'], capture_output=True, text=True, timeout=5).stdout.strip()
+        if d and d != A.HOME:
+            return d
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return os.path.join(A.HOME, 'Descargas')
+
+
+def main():
+    if already_running():
+        return 0
+    from PyQt6.QtCore import QCoreApplication, QObject, QTimer, pyqtClassInfo, pyqtProperty, pyqtSignal, pyqtSlot
+    from PyQt6.QtDBus import QDBusAbstractAdaptor, QDBusConnection
+    from PyQt6.QtGui import QGuiApplication
+    import apogeo_qt
+    from apogeo_comun import spawn
+
+    class Apologia(QObject):
+        chatsChanged = pyqtSignal()
+        mensajesChanged = pyqtSignal()
+        parcialChanged = pyqtSignal()
+        generandoChanged = pyqtSignal()
+        modelosChanged = pyqtSignal()
+        motorChanged = pyqtSignal()
+        statsChanged = pyqtSignal()
+        ajustesChanged = pyqtSignal()
+        descargasChanged = pyqtSignal()
+        mostrar = pyqtSignal()
+        aviso = pyqtSignal(str)
+        resultados = pyqtSignal(str, str, 'QVariantList', str)   # origen, lo buscado, lo encontrado, error
+        archivos = pyqtSignal('QVariantMap', str)                # un repositorio con sus modelos, error
+        colabListo = pyqtSignal(str)                             # el cuaderno escrito
+        # (de los hilos a la ventana)
+        _estado = pyqtSignal(str, str)
+        _trozo = pyqtSignal(str, str)
+        _fin = pyqtSignal(str, 'QVariantMap', str, bool)
+        _bajando = pyqtSignal(str, float, float, float)
+        _bajado = pyqtSignal(str, str)
+
+        def __init__(self):
+            super().__init__()
+            self.st = A.settings()
+            self.chat = A.new_chat()
+            self._chats = A.chat_list()
+            self._modelos = A.models()
+            self._parcial, self._razon = '', ''
+            self._generando, self.stop_ev = False, threading.Event()
+            self._stats = {}
+            self._descargas = {}   # archivo → {archivo, nombre, hecho, total, velocidad, estado, error}
+            self.cancels = {}
+            self._estado.connect(self._on_estado)
+            self._trozo.connect(self._on_trozo)
+            self._fin.connect(self._on_fin)
+            self._bajando.connect(self._on_bajando)
+            self._bajado.connect(self._on_bajado)
+            self.engine = A.Engine(lambda s, d: self._estado.emit(s, d))
+            QCoreApplication.instance().aboutToQuit.connect(self.engine.stop)
+            self.timer = QTimer(self)
+            self.timer.setInterval(2000)
+            self.timer.timeout.connect(self._ram)
+            self.timer.start()
+            # El último modelo, ya cargándose: al escribir, estará listo
+            if any(m['archivo'] == self.st['modelo'] for m in self._modelos):
+                self.engine.start(self.st['modelo'], self.st)
+
+        # ---------- Los chats ----------
+
+        @pyqtProperty('QVariantList', notify=chatsChanged)
+        def chats(self):
+            return self._chats
+
+        @pyqtProperty(str, notify=mensajesChanged)
+        def chatId(self):
+            return self.chat['id']
+
+        @pyqtProperty('QVariantList', notify=mensajesChanged)
+        def mensajes(self):
+            return self.chat['mensajes']
+
+        @pyqtProperty(str, notify=parcialChanged)
+        def parcial(self):
+            return self._parcial
+
+        @pyqtProperty(str, notify=parcialChanged)
+        def parcialRazon(self):
+            return self._razon
+
+        @pyqtProperty(bool, notify=generandoChanged)
+        def generando(self):
+            return self._generando
+
+        def _refresh_chats(self):
+            self._chats = A.chat_list()
+            self.chatsChanged.emit()
+
+        @pyqtSlot()
+        def nuevoChat(self):
+            self.parar()
+            self.chat = A.new_chat()
+            self._stats.pop('contexto', None)
+            self._stats.pop('recortado', None)
+            self.mensajesChanged.emit()
+            self.statsChanged.emit()
+
+        @pyqtSlot(str)
+        def abrirChat(self, cid):
+            if cid == self.chat['id']:
+                return
+            c = A.load_chat(cid)
+            if not c:
+                return self._refresh_chats()
+            self.parar()
+            self.chat = c
+            last = next((m for m in reversed(c['mensajes']) if m.get('tokens')), None)
+            self._stats['contexto'] = last['tokens'] if last else 0
+            self._stats['recortado'] = False
+            self.mensajesChanged.emit()
+            self.statsChanged.emit()
+
+        @pyqtSlot(str)
+        def borrarChat(self, cid):
+            if cid == self.chat['id']:
+                self.nuevoChat()
+            A.delete_chat(cid)
+            self._refresh_chats()
+
+        @pyqtSlot(str, str)
+        def renombrarChat(self, cid, titulo):
+            titulo = ' '.join(titulo.split())[:80]
+            c = self.chat if cid == self.chat['id'] else A.load_chat(cid)
+            if c and titulo:
+                c['titulo'] = titulo
+                if c['mensajes']:
+                    A.save_chat(c)
+                self._refresh_chats()
+
+        # ---------- Hablar ----------
+
+        @pyqtSlot(str, result=bool)
+        def enviar(self, texto):
+            texto = texto.strip()
+            if not texto or self._generando:
+                return False
+            if not self.engine.model and self.engine.state != 'cargando':
+                self.aviso.emit('Elige primero un modelo (arriba) o busca uno en «Modelos»')
+                return False
+            self.chat['mensajes'].append({'rol': 'user', 'texto': texto})
+            A.save_chat(self.chat)
+            self.mensajesChanged.emit()
+            self._refresh_chats()
+            self._responder()
+            return True
+
+        @pyqtSlot()
+        def regenerar(self):
+            msgs = self.chat['mensajes']
+            if self._generando or not msgs or msgs[-1]['rol'] != 'assistant':
+                return
+            msgs.pop()
+            self.mensajesChanged.emit()
+            self._responder()
+
+        @pyqtSlot()
+        def parar(self):
+            if self._generando:
+                self.stop_ev.set()
+
+        def _responder(self):
+            self._parcial, self._razon = '', ''
+            self._generando = True
+            self.stop_ev = threading.Event()
+            stop, chat, st, eng = self.stop_ev, self.chat, dict(self.st), self.engine
+            self.parcialChanged.emit()
+            self.generandoChanged.emit()
+
+            def work():
+                for _ in range(1800):  # (si aún está cargando el modelo, se le espera)
+                    if eng.state != 'cargando' or stop.is_set():
+                        break
+                    stop.wait(0.5)
+                if stop.is_set():
+                    return self._fin.emit(chat['id'], {'fin': 'parado'}, '', False)
+                if eng.state != 'listo':
+                    return self._fin.emit(chat['id'], {}, eng.detail or 'No hay ningún modelo listo', False)
+                msgs, cut = A.build_messages(chat, st, eng.ctx)
+                if eng.kv_chat != chat['id'] and eng.has_memory(chat['id']):
+                    eng.memory('restore', chat['id'])
+                try:
+                    res, err = eng.chat(msgs, st, lambda k, t: self._trozo.emit(k, t), stop), ''
+                    eng.memory('save', chat['id'])
+                except RuntimeError as e:
+                    res, err = {}, str(e)
+                res['modelo'] = next((m['nombre'] for m in self._modelos if m['archivo'] == eng.model), eng.model)
+                self._fin.emit(chat['id'], res, err, cut)
+            threading.Thread(target=work, daemon=True).start()
+
+        @pyqtSlot(str, str)
+        def _on_trozo(self, kind, text):
+            if kind == 'razon':
+                self._razon += text
+            else:
+                self._parcial += text
+            self.parcialChanged.emit()
+
+        @pyqtSlot(str, 'QVariantMap', str, bool)
+        def _on_fin(self, cid, res, err, cut):
+            chat = self.chat if cid == self.chat['id'] else A.load_chat(cid)
+            if chat and (self._parcial or self._razon or err):
+                chat['mensajes'].append({'rol': 'assistant', 'texto': self._parcial, 'razon': self._razon.strip(),
+                                         'modelo': res.get('modelo', ''), 'tps': res.get('tps', 0),
+                                         'tokens': res.get('tokens', 0), 'parado': res.get('fin') == 'parado',
+                                         'cortado': res.get('fin') == 'length', 'error': err})
+                A.save_chat(chat)
+            self._parcial, self._razon = '', ''
+            self._generando = False
+            if res.get('tokens'):
+                self._stats.update(tps=res.get('tps', 0), contexto=res['tokens'])
+            self._stats['recortado'] = cut
+            self.parcialChanged.emit()
+            self.generandoChanged.emit()
+            self.mensajesChanged.emit()
+            self.statsChanged.emit()
+            self._refresh_chats()
+
+        @pyqtSlot(str)
+        def copiar(self, texto):
+            QGuiApplication.clipboard().setText(texto)
+
+        # ---------- El motor y los modelos ----------
+
+        @pyqtProperty('QVariantList', notify=modelosChanged)
+        def modelos(self):
+            return self._modelos
+
+        @pyqtProperty(str, notify=motorChanged)
+        def modelo(self):
+            return self.engine.model or self.st['modelo']
+
+        @pyqtProperty(str, notify=motorChanged)
+        def motor(self):
+            return self.engine.state
+
+        @pyqtProperty(str, notify=motorChanged)
+        def motorDetalle(self):
+            return self.engine.detail
+
+        @pyqtProperty('QVariantMap', notify=statsChanged)
+        def stats(self):
+            return dict(self._stats, contextoMax=self.engine.ctx, gpu=self.engine.gpu)
+
+        @pyqtProperty(str, notify=modelosChanged)
+        def libre(self):
+            return A.human(A.free_space())
+
+        @pyqtProperty(str, constant=True)
+        def ram(self):
+            return A.human(A.ram_total())
+
+        @pyqtSlot(str, str)
+        def _on_estado(self, state, detail):
+            self.motorChanged.emit()
+            self.statsChanged.emit()
+            self._ram()
+
+        def _ram(self):
+            r = self.engine.ram() if self.engine.state in ('listo', 'cargando') else 0
+            if r != self._stats.get('ramB'):
+                self._stats.update(ramB=r, ram=A.human(r) if r else '')
+                self.statsChanged.emit()
+
+        @pyqtSlot(str)
+        def elegirModelo(self, archivo):
+            self.parar()
+            self.st = A.save_settings({'modelo': archivo})
+            self.ajustesChanged.emit()
+            self.engine.start(archivo, self.st)
+            self.motorChanged.emit()
+
+        @pyqtSlot()
+        def reintentar(self):
+            if self.st['modelo']:
+                self.engine.start(self.st['modelo'], self.st)
+
+        @pyqtSlot(str)
+        def quitarModelo(self, archivo):
+            if archivo == self.engine.model:
+                self.engine.stop()
+            if archivo == self.st['modelo']:
+                self.st = A.save_settings({'modelo': ''})
+                self.ajustesChanged.emit()
+            A.delete_model(archivo)
+            self._refresh_models()
+            self.motorChanged.emit()
+
+        def _refresh_models(self):
+            self._modelos = A.models()
+            self.modelosChanged.emit()
+
+        @pyqtSlot(str)
+        def importar(self, url):
+            path = url[7:] if url.startswith('file://') else url
+            from urllib.parse import unquote
+            try:
+                name = A.import_model(unquote(path))
+            except (OSError, ValueError) as e:
+                return self.aviso.emit(str(e))
+            self._refresh_models()
+            if not self.engine.model:
+                self.elegirModelo(name)
+
+        @pyqtSlot()
+        def carpetaModelos(self):
+            os.makedirs(A.MODELS, exist_ok=True)
+            spawn('xdg-open', A.MODELS)
+
+        # ---------- Buscar y bajar ----------
+
+        def _bg(self, fn):
+            threading.Thread(target=fn, daemon=True).start()
+
+        @pyqtSlot(str, str)
+        def buscar(self, origen, texto):
+            def work():
+                try:
+                    found = A.gh_search(texto) if origen == 'github' else A.hf_search(texto)
+                    self.resultados.emit(origen, texto, found, '')
+                except RuntimeError as e:
+                    self.resultados.emit(origen, texto, [], str(e))
+            self._bg(work)
+
+        @pyqtSlot(str, str)
+        def verArchivos(self, origen, repo):
+            def work():
+                try:
+                    self.archivos.emit(A.gh_files(repo) if origen == 'github' else A.hf_files(repo), '')
+                except RuntimeError as e:
+                    self.archivos.emit({'repo': repo, 'origen': origen}, str(e))
+            self._bg(work)
+
+        @pyqtSlot(str)
+        def enlace(self, url):
+            def work():
+                try:
+                    self.archivos.emit(A.from_link(url), '')
+                except RuntimeError as e:
+                    self.archivos.emit({'repo': '', 'origen': 'enlace'}, str(e))
+            self._bg(work)
+
+        @pyqtProperty('QVariantList', notify=descargasChanged)
+        def descargas(self):
+            return list(self._descargas.values())
+
+        @pyqtSlot('QVariantMap', str)
+        def descargar(self, f, repo):
+            name = f['archivo']
+            d = self._descargas.get(name)
+            if d and d['estado'] in ('bajando', 'comprobando'):
+                return
+            cancel = threading.Event()
+            self.cancels[name] = cancel
+            self._descargas[name] = {'archivo': name, 'repo': repo, 'hecho': 0, 'total': f.get('tamano', 0),
+                                     'velocidad': '', 'estado': 'bajando', 'error': '', 'f': dict(f)}
+            self.descargasChanged.emit()
+            parts = f['partes']
+
+            def work():
+                base = 0
+                try:
+                    for p in parts:
+                        size = p.get('tamano') or 0
+                        A.download(p, lambda done, total, speed, b=base: self._bajando.emit(
+                            name, float(done if done < 0 else b + done), float(total), float(speed)), cancel)
+                        base += size
+                    self._bajado.emit(name, '')
+                except RuntimeError as e:
+                    self._bajado.emit(name, str(e))
+                except OSError as e:
+                    self._bajado.emit(name, 'No se ha podido guardar: ' + (e.strerror or str(e)))
+            self._bg(work)
+
+        @pyqtSlot(str, float, float, float)
+        def _on_bajando(self, name, done, total, speed):
+            d = self._descargas.get(name)
+            if not d:
+                return
+            if done < 0:
+                d['estado'] = 'comprobando'
+            else:
+                d.update(hecho=done, estado='bajando', velocidad=A.human(speed) + '/s')
+                if total and not d['total']:
+                    d['total'] = total
+            self.descargasChanged.emit()
+
+        @pyqtSlot(str, str)
+        def _on_bajado(self, name, err):
+            d = self._descargas.get(name)
+            if d:
+                d.update(estado='error' if err else 'hecho', error=err, hecho=d['total'] if not err else d['hecho'])
+            self.descargasChanged.emit()
+            if not err:
+                self._refresh_models()
+                if not self.engine.model and self.engine.state != 'cargando':
+                    self.elegirModelo(name)
+
+        @pyqtSlot(str)
+        def cancelarDescarga(self, name):
+            if name in self.cancels:
+                self.cancels[name].set()
+
+        @pyqtSlot(str)
+        def olvidarDescarga(self, name):
+            d = self._descargas.get(name)
+            if d and d['estado'] not in ('bajando', 'comprobando'):
+                del self._descargas[name]
+                self.descargasChanged.emit()
+
+        # ---------- Colab ----------
+
+        @pyqtSlot('QVariantMap', 'QVariantMap')
+        def colab(self, info, f):
+            try:
+                path = A.colab_notebook(info, f, self.st, downloads_dir())
+            except OSError as e:
+                return self.aviso.emit('No se ha podido escribir el cuaderno: ' + (e.strerror or str(e)))
+            self.colabListo.emit(path)
+
+        @pyqtSlot(str)
+        def verArchivo(self, path):
+            spawn('xdg-open', os.path.dirname(path))
+
+        # ---------- El modificador ----------
+
+        @pyqtProperty('QVariantMap', notify=ajustesChanged)
+        def ajustes(self):
+            return self.st
+
+        @pyqtProperty(int, constant=True)
+        def nucleos(self):
+            return os.cpu_count() or 4
+
+        @pyqtSlot('QVariantMap')
+        def guardarAjustes(self, changes):
+            old = self.st
+            self.st = A.save_settings(changes)
+            self.ajustesChanged.emit()
+            # La memoria, la GPU y los hilos son del arranque del motor: se vuelve a cargar el modelo
+            if self.engine.model and any(old[k] != self.st[k] for k in ('contexto', 'gpu', 'hilos')):
+                self.parar()
+                self.engine.start(self.engine.model, self.st)
+
+        @pyqtSlot(str)
+        def estilo(self, name):
+            if name in A.PRESETS:
+                self.guardarAjustes(A.PRESETS[name])
+
+        @pyqtSlot(result=str)
+        def estiloActual(self):
+            return next((k for k, v in A.PRESETS.items()
+                         if all(abs(float(self.st[x]) - float(y)) < 1e-6 for x, y in v.items())), '')
+
+        @pyqtSlot()
+        def restablecer(self):
+            self.guardarAjustes({k: v for k, v in A.DEFAULTS.items() if k != 'modelo'})
+
+        @pyqtProperty(bool, notify=ajustesChanged)
+        def tokenHf(self):
+            return bool(A.hf_token())
+
+        @pyqtSlot(str)
+        def guardarToken(self, token):
+            A.set_hf_token(token)
+            self.ajustesChanged.emit()
+
+        @pyqtSlot(str)
+        def web(self, url):
+            if url.startswith('https://'):
+                spawn('xdg-open', url)
+
+    @pyqtClassInfo('D-Bus Interface', IFACE)
+    class Adaptor(QDBusAbstractAdaptor):
+        @pyqtSlot()
+        def Mostrar(self):
+            self.parent().mostrar.emit()
+
+    class Backend(Apologia):
+        def __init__(self):
+            super().__init__()
+            Adaptor(self)
+            bus = QDBusConnection.sessionBus()
+            bus.registerService(SERVICE)
+            bus.registerObject(PATH, self)
+
+    return apogeo_qt.run('Apología', 'apogeo-apologia', QML, Backend)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

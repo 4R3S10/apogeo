@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Apología
+GenericName=IA en tu PC
+Comment=Habla con modelos de IA que corren en tu propio PC (GGUF de Hugging Face, GitHub o cualquier enlace)
+Keywords=ia;ai;chat;llm;modelos;gguf;llama;qwen;mistral;gemma;asistente;preguntar;apologia;
+Exec=/usr/lib/apogeo/apogeo-apologia
+Icon=apologia
+Categories=Utility;Education;
+StartupWMClass=apogeo-apologia

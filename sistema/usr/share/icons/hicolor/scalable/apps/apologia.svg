@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Apología: una A hecha de nodos y conexiones (una red neuronal), sobre el grafito de Órbita -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="#0f131a"/>
+  <rect x="4.5" y="4.5" width="119" height="119" rx="29.5" fill="none" stroke="#ffffff" stroke-opacity="0.1"/>
+  <g stroke="#e9edf5" stroke-opacity="0.7" stroke-width="3.6" stroke-linecap="round">
+    <line x1="64" y1="30" x2="47.8" y2="70.8"/><line x1="47.8" y1="70.8" x2="31.6" y2="109.2"/>
+    <line x1="64" y1="30" x2="80.2" y2="70.8"/><line x1="80.2" y1="70.8" x2="96.4" y2="109.2"/>
+    <line x1="47.8" y1="70.8" x2="80.2" y2="70.8"/>
+    <line x1="47.8" y1="70.8" x2="96.4" y2="109.2"/><line x1="80.2" y1="70.8" x2="31.6" y2="109.2"/>
+  </g>
+  <circle cx="64" cy="30" r="8.4" fill="#b59cff"/>
+  <circle cx="47.8" cy="70.8" r="7.2" fill="#8ab4ff"/>
+  <circle cx="80.2" cy="70.8" r="7.2" fill="#8ab4ff"/>
+  <circle cx="31.6" cy="109.2" r="7.2" fill="#e9edf5"/>
+  <circle cx="96.4" cy="109.2" r="7.2" fill="#e9edf5"/>
+</svg>

@@ -207,6 +207,35 @@ Jugar, Estudiar, Internet, Crear y Sistema, Instalados y Actualizaciones; arriba
 Lo hacen `apogeo-tienda` (el catálogo de AppStream: `archlinux-appstream-data` y Flathub), `apogeo-tienda-root` (pacman,
 con pkexec y la regla de polkit `org.apogeo.tienda`) y `/usr/share/apogeo/tienda/Tienda.qml`.
 
+## Apología (la IA en tu PC)
+
+Habla con modelos de IA que corren en tu propio PC, sin cuentas ni nube. A la izquierda los chats (se guardan, se
+renombran con doble clic y se borran con dos clics en la ×), en el centro la conversación y arriba el modelo; abajo, la
+velocidad, la RAM que usa y cuánta memoria de la conversación lleva.
+- **Motor:** `llama-server` de llama.cpp (paquetes `llama-cpp` y `ggml-vulkan`), solo en 127.0.0.1 y con una llave
+  nueva en cada arranque (ninguna web puede usarlo desde el navegador). Reparte el modelo solo: lo que cabe en la GPU
+  (Vulkan), el resto en la RAM y, si no cabe, lo lee del disco (mmap). Se apaga al cerrar Apología.
+- **Memoria de cada chat:** la caché KV se guarda en `~/.cache/apologia/memoria` al acabar cada respuesta y se recupera
+  al volver a ese chat (sin volver a leer toda la conversación); de cada modelo se guardan hasta 3 GB.
+- **Cambiar de modelo** a mitad de un chat no pierde el hilo: al nuevo se le pasa la conversación entera. Si ya no cabe
+  en su memoria, se quitan los mensajes más antiguos (y lo avisa).
+- **Modelos:** en `~/.local/share/apologia/modelos`. Se buscan en Hugging Face (los GGUF más bajados) y en GitHub (sus
+  versiones y los .gguf del repositorio), o se pega cualquier enlace. Solo GGUF: son datos; los .bin/.pt de PyTorch
+  pueden ejecutar código al abrirse y no se aceptan. Se comprueban (que empiecen por «GGUF» y, si se sabe, su sha256) y
+  se sigue donde se quedó si se corta. Los de otra carpeta o un disco externo se añaden con un enlace, sin copiarlos.
+  Cada archivo dice si va bien en tu PC (según tu RAM) y si es de calidad baja (IQ1, IQ2, Q2).
+- **Modificador:** tus instrucciones (o ninguna), sin límite de largo, pensar antes de responder, Preciso/Equilibrado/
+  Creativo y temperatura, top-p, top-k, min-p y repetición, la memoria (4k–32k o la máxima del modelo), GPU automática o
+  solo procesador, y los hilos. Cambia cómo responde, no lo que el modelo aprendió al entrenarse.
+- **Hugging Face:** los modelos con licencia (Llama, Gemma…) piden tu token; se guarda en `~/.config/apologia/token-hf`
+  (600) y solo se manda a huggingface.co (al saltar a su CDN se quita).
+- **Colab:** para los modelos que no caben, «Colab» escribe en Descargas un cuaderno que compila llama.cpp con CUDA, baja
+  ese modelo de Hugging Face y abre un chat dentro del propio cuaderno con la GPU T4 gratis (Colab gratis no deja
+  usarlo desde fuera del cuaderno). Con la T4 caben unos 14B en Q4.
+
+Lo hacen `apogeo-apologia` (la ventana), `apogeo_apologia.py` (motor, modelos, chats, descargas y Colab) y
+`/usr/share/apogeo/apologia/` (`Apologia.qml` y `Marca.qml`, la A de nodos).
+
 ## Terminal
 
 Ghostty con el estilo «T1 · Cristal con píldoras»: el cristal grafito translúcido con desenfoque, **Geist Mono** como
