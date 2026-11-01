@@ -10,7 +10,8 @@ import org.kde.taskmanager as TaskManager
 //    resolución y como mucho a 30 imágenes por segundo;
 //  - o una imagen o un vídeo tuyo en alta calidad («Archivo»). El vídeo va en bucle, sin sonido, y se para cuando una
 //    ventana maximizada o a pantalla completa lo tapa (primero la salud del equipo).
-// Al cambiar de fondo, el nuevo aparece fundiéndose sobre el anterior.
+// Al cambiar de fondo, el nuevo aparece fundiéndose sobre el anterior. Al entrar en Jugar o salir de él, de golpe: ahí
+// delante está la consola y su fondo no tiene que verse en medio.
 WallpaperItem {
     id: root
 
@@ -18,18 +19,32 @@ WallpaperItem {
     readonly property var styles: ["orbitas", "nebulosa", "aurora"]
     // El piso en el que estás (por el nombre del escritorio, sin su número: «Navegar 2» es Navegar) y su fondo; en la
     // pantalla de bloqueo, el de «Estilo»/«Archivo»
+    readonly property var floors: ["Jugar", "Navegar", "Estudiar"]
     readonly property string floorName: {
         const i = desktops.desktopIds.indexOf(desktops.currentDesktop);
         const n = i >= 0 ? String(desktops.desktopNames[i] || "").split(" ")[0] : "";
-        return ["Jugar", "Navegar", "Estudiar"].indexOf(n) >= 0 ? n : "";
+        if (floors.indexOf(n) >= 0) return n;
+        // (al empezar, los escritorios aún no están: el modo que dice apogeo-pisos; sin él, nada: ni un fondo que no es)
+        const m = String(Tema.modo || "");
+        const t = m.charAt(0).toUpperCase() + m.slice(1);
+        return floors.indexOf(t) >= 0 ? t : "";
     }
-    readonly property bool porPiso: root.configuration.PorPiso && floorName !== ""
+    readonly property bool porPiso: !!root.configuration.PorPiso
+    readonly property bool sinPiso: porPiso && floorName === ""
     // Los colores de este piso (cada piso con su acento), al momento: en Plasma, para todo
     readonly property string floorKey: (porPiso ? floorName : String(root.configuration.Piso || "")).toLowerCase()
     onFloorKeyChanged: Tema.piso = floorKey
-    readonly property string estilo: porPiso ? root.configuration["Estilo" + floorName] : root.configuration.Estilo
+    readonly property string estilo: porPiso ? root.configuration["Estilo" + floorName] || "" : root.configuration.Estilo
     readonly property int kind: Math.max(0, styles.indexOf(estilo))
-    readonly property string file: (porPiso ? root.configuration["Archivo" + floorName] : root.configuration.Archivo) || ""
+    readonly property string file: (porPiso ? (sinPiso ? "" : root.configuration["Archivo" + floorName]) : root.configuration.Archivo) || ""
+    // El piso cuyo fondo se ve, y si el último cambio es de golpe (de Jugar o a Jugar). «deGolpe» se decide antes de
+    // cambiar «visto», así las animaciones ya lo saben
+    property string visto: ""
+    property bool deGolpe: false
+    onFloorNameChanged: {
+        deGolpe = visto === "Jugar" || floorName === "Jugar";
+        visto = floorName;
+    }
     function videoFile(f) { return /\.(mp4|webm|mkv|mov|m4v)$/i.test(f) }
     // Sin gráfica (el dibujo lo haría el procesador) se queda quieto: primero la salud del equipo
     readonly property bool animate: root.configuration.Animar && GraphicsInfo.api !== GraphicsInfo.Software
@@ -61,9 +76,9 @@ WallpaperItem {
     Item {
         id: animated
         anchors.fill: parent
-        visible: root.file === "" || opacity > 0
-        opacity: root.file === "" ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
+        visible: opacity > 0
+        opacity: root.file === "" && !root.sinPiso ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: root.deGolpe ? 0 : 700; easing.type: Easing.InOutQuad } }
         ShaderEffect {
             id: fx
             width: Math.max(2, Math.round(root.width / 3))
@@ -91,7 +106,7 @@ WallpaperItem {
     Timer {
         interval: 33
         repeat: true
-        running: root.animate && root.seen && root.file === ""
+        running: root.animate && root.seen && root.file === "" && !root.sinPiso
         onTriggered: root.time += 0.033
     }
 
@@ -103,7 +118,7 @@ WallpaperItem {
             id: foto
             required property string modelData
             readonly property string archivo: (modelData ? root.configuration["Archivo" + modelData] : root.configuration.Archivo) || ""
-            readonly property bool esta: modelData === "" || modelData === root.floorName
+            readonly property bool esta: modelData === "" || modelData === root.visto
             anchors.fill: parent
             z: esta ? 2 : 1
             fillMode: Image.PreserveAspectCrop
@@ -114,11 +129,11 @@ WallpaperItem {
             sourceSize: Qt.size(root.width * Screen.devicePixelRatio, root.height * Screen.devicePixelRatio)
             source: archivo !== "" && !root.videoFile(archivo) ? "file://" + archivo.split("/").map(encodeURIComponent).join("/") : ""
             opacity: esta && status === Image.Ready ? 1 : 0
-            // (la que se va espera a que la nueva esté encima: sin ver el fondo vacío en medio)
+            // (la que se va espera a que la nueva esté encima: sin ver el fondo vacío en medio; de golpe, a la vez)
             Behavior on opacity {
                 SequentialAnimation {
-                    PauseAnimation { duration: foto.esta ? 0 : 520 }
-                    NumberAnimation { duration: foto.esta ? 500 : 0; easing.type: Easing.InOutQuad }
+                    PauseAnimation { duration: foto.esta || root.deGolpe ? 0 : 520 }
+                    NumberAnimation { duration: foto.esta && !root.deGolpe ? 500 : 0; easing.type: Easing.InOutQuad }
                 }
             }
         }
@@ -133,7 +148,7 @@ WallpaperItem {
         loops: MediaPlayer.Infinite
         muted: true
         opacity: 0
-        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutQuad } }
+        Behavior on opacity { NumberAnimation { duration: root.deGolpe ? 0 : 700; easing.type: Easing.InOutQuad } }
         onPlaybackStateChanged: if (playbackState === MediaPlayer.PlayingState) opacity = 1
     }
 
@@ -148,5 +163,5 @@ WallpaperItem {
     }
     onFileChanged: show()
     onSeenChanged: if (videoFile(root.file)) { if (root.seen) video.play(); else video.pause(); }
-    Component.onCompleted: { Tema.piso = floorKey; show() }
+    Component.onCompleted: { visto = floorName; Tema.piso = floorKey; show() }
 }

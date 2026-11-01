@@ -142,7 +142,8 @@ Casi vacío, como en la bienvenida de una consola:
   quita «asomado» y, cuando ya ha bajado, vuelve a esconder la barra. Con una ventana a pantalla completa no sale.
 - **Jugar es solo la consola:** en Jugar no hay barra ni orbe (sus widgets no se pintan y la consola, a pantalla
   completa, va encima); al salir de Jugar, vuelven. Cada modo tiene su fondo ya cargado: al cambiar, se funden sin
-  pasar por el del modo anterior.
+  pasar por el del modo anterior. Al entrar en Jugar o salir de él el fondo cambia de golpe (delante está la consola y
+  el fondo de Jugar no se ve en medio), y al empezar la sesión sale el del modo en el que estás, sin otro antes.
 - **Al abrir la Órbita**, el orbe no se duplica: la Órbita pinta el suyo justo encima del de abajo (el orbe le dice
   dónde está por D-Bus, `AbrirDesde`/`Orbe` de `apogeo-buscador`), se enciende y los satélites salen de él; al
   cerrarla, vuelven a él y se apaga.
