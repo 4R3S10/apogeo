@@ -95,13 +95,38 @@ if not defined W (
   pause
   exit /b 1
 )
-bcdboot %W%\\Windows /l es-es /f UEFI
+rem El arranque de Windows, al final de la lista (Apogeo sigue arrancando primero); solo el proximo arranque va a
+rem Windows, para que termine de prepararse (tu cuenta Microsoft)
+bcdboot %W%\\Windows /l es-es /f UEFI /addlast
+bcdedit /set {fwbootmgr} bootsequence {bootmgr}
 del /q %W%\\Windows\\System32\\apogeo-destino.txt
 mountvol S: /s
 rd /s /q S:\\sources
 del /q S:\\boot\\boot.sdi
 rd /s /q S:\\EFI\\apogeo-pe
 wpeutil reboot
+'''
+
+# Al primer arranque de Apogeo: quitar del firmware la entrada del PE (ya no existe) y quitarse a sí mismo
+LIMPIA = 'apogeo-quitar-pe.service'
+LIMPIA_UNIDAD = '''[Unit]
+Description=Apogeo: quitar la entrada de arranque de un solo uso de Windows
+ConditionPathExists=/sys/firmware/efi
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/apogeo-quitar-pe
+
+[Install]
+WantedBy=multi-user.target
+'''
+LIMPIA_SCRIPT = '''#!/bin/sh
+# Apogeo: quita del firmware la entrada «Apogeo: preparar Windows» (el PE de un solo uso ya se borró) y se quita
+for n in $(efibootmgr | sed -n 's/^Boot\\([0-9A-F]\\{4\\}\\)\\*\\{0,1\\} *Apogeo: preparar Windows.*/\\1/p'); do
+    efibootmgr -q -b "$n" -B
+done
+rm -f /etc/systemd/system/multi-user.target.wants/apogeo-quitar-pe.service /etc/systemd/system/apogeo-quitar-pe.service \\
+    /usr/local/lib/apogeo-quitar-pe
 '''
 
 
@@ -298,6 +323,15 @@ def preparar(e, destino, part_windows, part_efi, avisa, run, log):
         nueva = set(re.findall(r'^Boot([0-9A-F]{4})', run(['efibootmgr']), re.M)) - antes
         if nueva:
             run(['efibootmgr', '--bootnext', nueva.pop()])
+        # y que Apogeo, la primera vez que arranque (ya con Windows preparado), quite esa entrada del firmware
+        with open(f'{destino}/etc/systemd/system/{LIMPIA}', 'w') as f:
+            f.write(LIMPIA_UNIDAD)
+        os.makedirs(f'{destino}/usr/local/lib', exist_ok=True)
+        with open(f'{destino}/usr/local/lib/apogeo-quitar-pe', 'w') as f:
+            f.write(LIMPIA_SCRIPT)
+        os.chmod(f'{destino}/usr/local/lib/apogeo-quitar-pe', 0o755)
+        os.makedirs(f'{destino}/etc/systemd/system/multi-user.target.wants', exist_ok=True)
+        os.symlink(f'/etc/systemd/system/{LIMPIA}', f'{destino}/etc/systemd/system/multi-user.target.wants/{LIMPIA}')
         avisa('Windows preparado', 1.0)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
