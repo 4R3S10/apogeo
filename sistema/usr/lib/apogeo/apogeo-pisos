@@ -1256,8 +1256,9 @@ def island(bus, st):
     plasma_script(bus, """
         panels().forEach(function (p) {
             var types = p.widgets().map(function (w) { return w.type; });
-            if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, arriba
+            if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, arriba (y fina: Plasma a veces la volvía a 40)
                 if (p.location != 'top') p.location = 'top';
+                if (p.height != 30) p.height = 30;
                 return;
             }
             if (types.indexOf('org.apogeo.isla') < 0) return;

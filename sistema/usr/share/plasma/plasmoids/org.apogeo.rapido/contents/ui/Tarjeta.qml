@@ -10,7 +10,7 @@ import Apogeo
 // arrastran o se pulsan); luz nocturna y no molestar; y abajo bloquear, reposo, cerrar sesión, reiniciar y apagar
 // (los tres últimos piden un segundo toque: el botón se pone rojo, «¿Seguro?»). Se va al pulsar fuera, con Esc o con
 // otro clic en la hora (o Meta+N). La música, los avisos y el tiempo están en la Órbita.
-// Lo de los botones lo lee y lo cambia «apogeo-ajustes rapido», solo con la tarjeta abierta.
+// Lo de los botones lo lee y lo cambia «apogeo-ajustes rapido», con la tarjeta abierta (y una vez al empezar).
 PlasmaCore.Dialog {
     id: tarjeta
     type: PlasmaCore.Dialog.AppletPopup
@@ -51,6 +51,9 @@ PlasmaCore.Dialog {
         }
     }
     function refresh() { tarjeta.runner.connectSource(tool) }
+    // Una vez al empezar, para saber ya si hay brillo: la tarjeta abre con su tamaño de verdad (si la barra del brillo
+    // salía después de abrirla, Plasma no siempre agrandaba la ventana y abajo quedaba cortada)
+    Component.onCompleted: refresh()
     function act(what, value) {
         tarjeta.runner.connectSource(tool + " " + what + (value !== undefined ? " " + value : ""));
         tarjeta.luego.restart();
