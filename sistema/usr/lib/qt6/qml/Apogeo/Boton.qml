@@ -13,6 +13,8 @@ AbstractButton {
     implicitWidth: fila.implicitWidth + (text ? (grande ? 44 : 28) : 18)
     opacity: enabled ? 1 : 0.45
     hoverEnabled: true
+    Keys.onReturnPressed: b.click()   // (Espacio ya lo hace; con el teclado también Intro)
+    Keys.onEnterPressed: b.click()
     background: Item {
         RectangularShadow {
             anchors.fill: parent

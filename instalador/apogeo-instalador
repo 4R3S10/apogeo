@@ -197,6 +197,7 @@ class Instalador(QObject):
 
 def main():
     os.environ.setdefault('QT_QUICK_CONTROLS_STYLE', 'Basic')
+    os.environ.setdefault('QML_XHR_ALLOW_FILE_READ', '1')   # (Tema lee así sus ajustes)
     app = QGuiApplication(sys.argv)
     app.setApplicationName('Instalar Apogeo')
     app.setDesktopFileName('apogeo-instalador')

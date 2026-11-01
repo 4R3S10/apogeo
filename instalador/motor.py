@@ -160,9 +160,11 @@ def nivel_cpu():
 def pacman_conf(nivel):
     v3 = ''.join(f'[{r}-v3]\nInclude = /etc/pacman.d/cachyos-v3-mirrorlist\n\n'
                  for r in ('cachyos', 'cachyos-core', 'cachyos-extra')) if nivel == 'v3' else ''
+    # (el pacman de Arch no reconoce los paquetes x86_64_v3 con «auto»: hay que decírselo)
+    arq = 'x86_64 x86_64_v3' if nivel == 'v3' else 'auto'
     return f'''[options]
 HoldPkg     = pacman glibc
-Architecture = auto
+Architecture = {arq}
 Color
 ILoveCandy
 VerbosePkgLists

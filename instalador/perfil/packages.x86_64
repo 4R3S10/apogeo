@@ -8,9 +8,8 @@ amd-ucode
 intel-ucode
 mkinitcpio
 mkinitcpio-archiso
-# la pantalla: el instalador a pantalla completa (cage) con Qt
-cage
 zsh
+# la pantalla: el instalador a pantalla completa con Qt (eglfs, sin compositor)
 mesa
 vulkan-swrast
 python
