@@ -4,7 +4,8 @@ Apologia.qml):
   Motor     llama-server (llama.cpp), solo en 127.0.0.1, con el modelo que elijas. El modelo se reparte solo: lo que cabe
             en la GPU (Vulkan), el resto en la RAM y, si tampoco cabe, se lee del disco (mmap). La memoria de cada chat
             (su caché KV) se guarda en el disco al acabar cada respuesta y se recupera al volver a ese chat.
-  Modelos   los .gguf de ~/.local/share/apologia/modelos (los de otras carpetas se añaden con un enlace). Se buscan en
+  Modelos   los .gguf de ~/Modelos, todos juntos (o de la carpeta que elijas; los de otras carpetas se añaden con un
+            enlace). Se buscan en
             Hugging Face y en GitHub, o se bajan de cualquier enlace. Solo GGUF: son datos, no ejecutan nada al abrirse
             (los .bin/.pt de PyTorch sí podrían, y no se aceptan).
   Chats     uno por archivo en chats/, con qué modelo se escribió cada respuesta. Al cambiar de modelo se le pasa la
@@ -33,7 +34,9 @@ HOME = os.path.expanduser('~')
 DATA = os.path.join(os.environ.get('XDG_DATA_HOME', os.path.join(HOME, '.local/share')), 'apologia')
 CONFIG = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apologia')
 CACHE = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(HOME, '.cache')), 'apologia')
-MODELS = os.path.join(DATA, 'modelos')
+DEFAULT_MODELS = os.path.join(HOME, 'Modelos')
+OLD_MODELS = os.path.join(DATA, 'modelos')     # (donde iban al principio, escondidos)
+MODELS = DEFAULT_MODELS                        # la de ahora: la pone use_models_dir() con tus ajustes
 CHATS = os.path.join(DATA, 'chats')
 KV = os.path.join(CACHE, 'memoria')            # la caché KV de cada chat (una carpeta por modelo)
 KV_MAX = 3 << 30                               # (de cada modelo se guardan los chats más recientes, hasta 3 GB)
@@ -57,6 +60,7 @@ DEFAULTS = {
     'gpu': 'auto',          # auto · cpu
     'hilos': 0,             # 0 = los que elija llama.cpp
     'modelo': '',           # el último elegido
+    'carpeta': '',          # la carpeta de los modelos ('' = ~/Modelos)
 }
 PRESETS = {
     'preciso': {'temperatura': 0.3, 'top_p': 0.9, 'top_k': 20, 'min_p': 0.05, 'repeticion': 1.05},
@@ -92,6 +96,57 @@ def save_settings(changes):
     st.update({k: v for k, v in changes.items() if k in DEFAULTS})
     save_json(SETTINGS, st)
     return st
+
+
+def use_models_dir(path=''):
+    global MODELS
+    MODELS = os.path.abspath(os.path.expanduser(path)) if path else DEFAULT_MODELS
+    return MODELS
+
+
+def move_models(src, dest, on_progress=lambda done, total, name: None):
+    """Lleva los modelos (con sus partes y los enlaces) de una carpeta a otra. Si es a otro disco, mira antes que
+    quepan. Lanza RuntimeError con el porqué si no puede."""
+    os.makedirs(dest, exist_ok=True)
+    if not os.path.isdir(src):
+        return
+    files = sorted(f for f in os.listdir(src) if f.endswith('.gguf'))
+    if os.stat(src).st_dev != os.stat(dest).st_dev:
+        need = sum(os.path.getsize(os.path.join(src, f)) for f in files if not os.path.islink(os.path.join(src, f)))
+        free = shutil.disk_usage(dest).free
+        if free < need + (512 << 20):
+            raise RuntimeError(f'No caben: hacen falta {human(need)} y en ese disco quedan {human(free)}')
+    moved = []
+    for i, f in enumerate(files):
+        on_progress(i, len(files), f)
+        target = os.path.join(dest, f)
+        if os.path.lexists(target):
+            continue
+        try:
+            shutil.move(os.path.join(src, f), target)
+            moved.append(f)
+        except OSError as e:
+            if os.path.lexists(os.path.join(src, f)) and os.path.lexists(target):
+                os.remove(target)  # (la copia a medias en el otro disco)
+            for m in moved:  # (a medias no: lo movido vuelve a su sitio)
+                try:
+                    shutil.move(os.path.join(dest, m), os.path.join(src, m))
+                except OSError:
+                    pass
+            raise RuntimeError(f'No se ha podido mover {f}: {e.strerror or e}')
+
+
+def migrate_old():
+    """Los modelos de la carpeta escondida del principio (~/.local/share/apologia/modelos) pasan a la de ahora."""
+    if os.path.isdir(OLD_MODELS) and os.path.realpath(OLD_MODELS) != os.path.realpath(MODELS):
+        try:
+            move_models(OLD_MODELS, MODELS)
+            for f in os.listdir(OLD_MODELS):
+                if f.endswith('.part'):
+                    os.remove(os.path.join(OLD_MODELS, f))
+            os.rmdir(OLD_MODELS)
+        except (OSError, RuntimeError):
+            pass
 
 
 def ram_total():

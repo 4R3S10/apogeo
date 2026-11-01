@@ -219,10 +219,13 @@ velocidad, la RAM que usa y cuánta memoria de la conversación lleva.
   al volver a ese chat (sin volver a leer toda la conversación); de cada modelo se guardan hasta 3 GB.
 - **Cambiar de modelo** a mitad de un chat no pierde el hilo: al nuevo se le pasa la conversación entera. Si ya no cabe
   en su memoria, se quitan los mensajes más antiguos (y lo avisa).
-- **Modelos:** en `~/.local/share/apologia/modelos`. Se buscan en Hugging Face (los GGUF más bajados) y en GitHub (sus
+- **Modelos:** todos juntos en `~/Modelos` (o en la carpeta que elijas con «Cambiar carpeta», que pregunta si llevar
+  los que ya tienes; si es otro disco, mira antes que quepan y, si algo falla a medias, deja todo donde estaba). Los
+  que hubiera en la carpeta escondida del principio (`~/.local/share/apologia/modelos`) pasan solos. Se buscan en Hugging Face (los GGUF más bajados) y en GitHub (sus
   versiones y los .gguf del repositorio), o se pega cualquier enlace. Solo GGUF: son datos; los .bin/.pt de PyTorch
   pueden ejecutar código al abrirse y no se aceptan. Se comprueban (que empiecen por «GGUF» y, si se sabe, su sha256) y
-  se sigue donde se quedó si se corta. Los de otra carpeta o un disco externo se añaden con un enlace, sin copiarlos.
+  se sigue donde se quedó si se corta. Un .gguf suelto de otra carpeta se añade con un enlace, sin copiarlo. Los
+  diálogos para elegir son los de KDE (kdialog).
   Cada archivo dice si va bien en tu PC (según tu RAM) y si es de calidad baja (IQ1, IQ2, Q2).
 - **Modificador:** tus instrucciones (o ninguna), sin límite de largo, pensar antes de responder, Preciso/Equilibrado/
   Creativo y temperatura, top-p, top-k, min-p y repetición, la memoria (4k–32k o la máxima del modelo), GPU automática o

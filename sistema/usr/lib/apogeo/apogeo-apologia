@@ -66,16 +66,21 @@ def main():
         resultados = pyqtSignal(str, str, 'QVariantList', str)   # origen, lo buscado, lo encontrado, error
         archivos = pyqtSignal('QVariantMap', str)                # un repositorio con sus modelos, error
         colabListo = pyqtSignal(str)                             # el cuaderno escrito
+        elegido = pyqtSignal(str, str)                           # 'carpeta' | 'archivo', la ruta elegida
         # (de los hilos a la ventana)
         _estado = pyqtSignal(str, str)
         _trozo = pyqtSignal(str, str)
         _fin = pyqtSignal(str, 'QVariantMap', str, bool)
         _bajando = pyqtSignal(str, float, float, float)
         _bajado = pyqtSignal(str, str)
+        _movido = pyqtSignal(str)     # '' va moviendo · 'ok' · el error
 
         def __init__(self):
             super().__init__()
             self.st = A.settings()
+            A.use_models_dir(self.st['carpeta'])
+            A.migrate_old()
+            self._moviendo = ''
             self.chat = A.new_chat()
             self._chats = A.chat_list()
             self._modelos = A.models()
@@ -89,6 +94,7 @@ def main():
             self._fin.connect(self._on_fin)
             self._bajando.connect(self._on_bajando)
             self._bajado.connect(self._on_bajado)
+            self._movido.connect(self._on_movido)
             self.engine = A.Engine(lambda s, d: self._estado.emit(s, d))
             QCoreApplication.instance().aboutToQuit.connect(self.engine.stop)
             self.timer = QTimer(self)
@@ -343,6 +349,93 @@ def main():
             self._refresh_models()
             if not self.engine.model:
                 self.elegirModelo(name)
+
+        @pyqtProperty(str, notify=modelosChanged)
+        def carpeta(self):
+            """La carpeta de los modelos, para leerla (~/Modelos)."""
+            return A.MODELS.replace(A.HOME, '~', 1) if A.MODELS.startswith(A.HOME + '/') else A.MODELS
+
+        @pyqtProperty(str, notify=modelosChanged)
+        def carpetaRuta(self):
+            return A.MODELS
+
+        @pyqtProperty(str, notify=modelosChanged)
+        def moviendo(self):
+            """Lo que va moviendo al cambiar de carpeta ('' si nada)."""
+            return self._moviendo
+
+        @pyqtSlot(str, bool)
+        def cambiarCarpeta(self, url, mover):
+            from urllib.parse import unquote
+            path = os.path.abspath(unquote(url[7:] if url.startswith('file://') else url))
+            if self._moviendo or os.path.realpath(path) == os.path.realpath(A.MODELS):
+                return
+            if any(d['estado'] in ('bajando', 'comprobando') for d in self._descargas.values()):
+                return self.aviso.emit('Espera a que acaben las descargas para cambiar de carpeta')
+            try:
+                os.makedirs(path, exist_ok=True)
+            except OSError as e:
+                return self.aviso.emit('No se puede usar esa carpeta: ' + (e.strerror or str(e)))
+            if not os.access(path, os.W_OK):
+                return self.aviso.emit('En esa carpeta no se puede escribir')
+            old, model = A.MODELS, self.engine.model
+            home = path if path != A.DEFAULT_MODELS else ''
+
+            def done(err):
+                if not err:
+                    self.st = A.save_settings({'carpeta': home})
+                    A.use_models_dir(home)
+                self._moviendo = ''
+                self._refresh_models()
+                if err:
+                    self.aviso.emit(err)
+                if model and any(m['archivo'] == model for m in self._modelos):
+                    self.engine.start(model, self.st)
+                elif model:
+                    self.motorChanged.emit()
+            if not mover:
+                if model:
+                    self.engine.stop()
+                return done('')
+            self.parar()
+            self.engine.stop()
+            self._moviendo = 'Moviendo los modelos…'
+            self.modelosChanged.emit()
+
+            def work():
+                def step(i, n, name):
+                    self._moviendo = f'Moviendo {i + 1} de {n}: {name}'
+                    self._movido.emit('')
+                try:
+                    A.move_models(old, path, step)
+                    self._movido.emit('ok')
+                except RuntimeError as e:
+                    self._movido.emit(str(e))
+            self._done_move = done
+            self._bg(work)
+
+        @pyqtSlot(str)
+        def _on_movido(self, res):
+            if res == '':
+                return self.modelosChanged.emit()
+            self._done_move('' if res == 'ok' else res)
+
+        @pyqtSlot(str)
+        def preguntar(self, que):
+            """El diálogo de KDE para elegir la carpeta de los modelos («carpeta») o un .gguf que ya tengas."""
+            if que == 'carpeta':
+                cmd = ['kdialog', '--title', 'Elige la carpeta de los modelos', '--getexistingdirectory', A.MODELS]
+            else:
+                cmd = ['kdialog', '--title', 'Elige un modelo GGUF', '--getopenfilename', A.HOME, '*.gguf|Modelos GGUF']
+
+            def work():
+                try:
+                    out = subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
+                except OSError:
+                    out = ''
+                if out:
+                    self.elegido.emit(que, out)
+            self._bg(work)
 
         @pyqtSlot()
         def carpetaModelos(self):

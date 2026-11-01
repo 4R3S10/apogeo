@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
 import Apogeo
 
 // Apología, la IA de Apogeo en tu PC. A la izquierda los chats (y abajo Modelos y Modificador); en el centro la
@@ -736,12 +735,18 @@ ApplicationWindow {
         function onColabListo(path) { win.colabPath = path }
     }
 
-    FileDialog {
-        id: elegirArchivo
-        title: "Elige un modelo GGUF"
-        nameFilters: ["Modelos GGUF (*.gguf)"]
-        onAccepted: apogeo.importar(selectedFile.toString())
+    // Lo elegido en el diálogo de KDE: un .gguf que ya tienes, o la carpeta de los modelos (si ya tienes alguno, antes
+    // se pregunta si llevarlos)
+    property string nuevaCarpeta: ""
+    Connections {
+        target: apogeo
+        function onElegido(que, ruta) {
+            if (que === "archivo") apogeo.importar(ruta);
+            else if (apogeo.modelos.length) win.nuevaCarpeta = ruta;
+            else apogeo.cambiarCarpeta(ruta, false);
+        }
     }
+    function legible(url) { return decodeURIComponent(url.replace(/^file:\/\//, "")) }
 
     Flickable {
         id: modelosPage
@@ -767,8 +772,45 @@ ApplicationWindow {
                 Texto { text: "Modelos"; font.pixelSize: 26; font.weight: Font.ExtraBold }
                 Texto {
                     width: parent.width
-                    text: "Se guardan en tu PC. Quedan " + apogeo.libre + " libres en el disco; tienes " + apogeo.ram + " de RAM."
+                    text: "Se guardan en " + apogeo.carpeta + ". Quedan " + apogeo.libre + " libres en ese disco; tienes "
+                          + apogeo.ram + " de RAM."
                     color: Tema.apagado
+                }
+                Row {
+                    topPadding: 8
+                    spacing: 8
+                    Boton { text: "Cambiar carpeta"; icono: "carpeta"; enabled: !apogeo.moviendo; onClicked: apogeo.preguntar("carpeta") }
+                    Boton { tipo: "plano"; text: "Abrir la carpeta"; onClicked: apogeo.carpetaModelos() }
+                }
+            }
+
+            Row {
+                visible: apogeo.moviendo !== ""
+                spacing: 10
+                Girando {}
+                Texto { text: apogeo.moviendo; color: Tema.apagado; anchors.verticalCenter: parent.verticalCenter }
+            }
+
+            Seccion {
+                visible: win.nuevaCarpeta !== ""
+                width: parent.width
+                titulo: "¿Te llevo los modelos?"
+                intro: "Tienes " + apogeo.modelos.length + (apogeo.modelos.length === 1 ? " modelo (" : " modelos (")
+                       + win.tam(apogeo.modelos.reduce((t, m) => t + (m.enlace ? 0 : m.tamano), 0)) + ") en " + apogeo.carpeta
+                       + ". ¿Los muevo a " + win.legible(win.nuevaCarpeta) + "?"
+                Row {
+                    topPadding: 10
+                    spacing: 8
+                    Boton { tipo: "principal"; text: "Moverlos"; onClicked: { apogeo.cambiarCarpeta(win.nuevaCarpeta, true); win.nuevaCarpeta = "" } }
+                    Boton { text: "No, empezar vacía"; onClicked: { apogeo.cambiarCarpeta(win.nuevaCarpeta, false); win.nuevaCarpeta = "" } }
+                    Boton { tipo: "plano"; text: "Cancelar"; onClicked: win.nuevaCarpeta = "" }
+                }
+                Texto {
+                    width: parent.width
+                    topPadding: 8
+                    color: Tema.tenue
+                    font.pixelSize: 12
+                    text: "Si no los mueves, se quedan donde están y dejan de salir aquí (puedes volver a esa carpeta cuando quieras)."
                 }
             }
 
@@ -928,8 +970,7 @@ ApplicationWindow {
                 Row {
                     topPadding: 16
                     spacing: 8
-                    Boton { text: "Añadir un .gguf del PC"; icono: "mas"; onClicked: elegirArchivo.open() }
-                    Boton { tipo: "plano"; text: "Abrir la carpeta"; icono: "carpeta"; onClicked: apogeo.carpetaModelos() }
+                    Boton { text: "Añadir un .gguf del PC"; icono: "mas"; onClicked: apogeo.preguntar("archivo") }
                 }
             }
 
@@ -1030,7 +1071,7 @@ ApplicationWindow {
                 Row {
                     topPadding: 6
                     spacing: 8
-                    Boton { text: "Elegir un .gguf del PC"; icono: "carpeta"; onClicked: elegirArchivo.open() }
+                    Boton { text: "Elegir un .gguf del PC"; icono: "carpeta"; onClicked: apogeo.preguntar("archivo") }
                 }
                 Texto {
                     width: parent.width
