@@ -175,8 +175,9 @@ Casi vacío, como en la bienvenida de una consola:
   todo a la vista nada más entrar, sin pestañas. En el centro, unida al orbe por un haz de luz, la cubierta con **tus
   apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza vacío; Estudiar con Obsidian,
   Okular, Xournal++, Anki, ONLYOFFICE, Ágape y Spotify) y el buscador. Las demás apps solo se encuentran buscando: su
-  chincheta (o Ctrl+Intro) las fija; en la cubierta, su chincheta las quita. **Carpetas:** con el clic derecho (o la
-  tecla Menú) en una app fijada, «Nueva carpeta…», «Mover a «…»», «Sacar de «…»» o «Quitar»; en una carpeta,
+  chincheta (o Ctrl+Intro) las fija; en la cubierta, su chincheta las quita. **Carpetas:** arrastra una app encima de otra
+  (carpeta nueva: le pones nombre al momento) o encima de una carpeta (dentro); con una carpeta abierta, arrástrala a su
+  cabecera para sacarla. También con el clic derecho (o la tecla Menú) en una app fijada, «Nueva carpeta…», «Mover a «…»», «Sacar de «…»» o «Quitar»; en una carpeta,
   «Renombrar…» o «Deshacer carpeta» (sus apps siguen fijadas, sueltas). La carpeta enseña sus cuatro primeras apps;
   un clic la abre dentro de la cubierta y Esc vuelve (`~/.config/apogeo/carpetas.json`). Con 8 fijadas o más, arriba
   salen tus **6 más usadas** (las que más abres desde la Órbita, `~/.local/state/apogeo/usos.json`). Con muchas, la
@@ -297,7 +298,8 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
     Cortos), los FPS, abrir su carpeta, su página en la tienda y quitarlo (`~/.config/apogeo/colecciones.json`).
   - **Orden** (☰ / O): recientes, nombre, horas jugadas o tamaño. **Buscar escribiendo:** F o / y escribe (Esc lo borra).
   - **Sonidos y tacto:** sonidos cortos al moverte, cambiar de pestaña, elegir, abrir la ficha y volver
-    (`apogeo-consola-*` en el tema de sonidos de Apogeo, `herramientas/sonidos.py`); el mando vibra un poco al jugar o
+    (`apogeo-consola-*` en el tema de sonidos de Apogeo, `herramientas/sonidos.py`; los toca `pw-play`: con QtMultimedia
+    la consola se caía al arrancar con MangoHud cargado); el mando vibra un poco al jugar o
     descargar. Las portadas se acercan y les pasa un brillo al pasar el ratón.
   Las pestañas:
   - **Steam:** los descargados y el resto de tu biblioteca (descargar y quitar los hace Steam).

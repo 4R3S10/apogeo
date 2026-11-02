@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
-import QtMultimedia
 import Apogeo
 
 // La consola de Jugar («C8 · Cinta panorámica»): tus juegos en una cinta de portadas abajo; el elegido pinta la pantalla
@@ -128,28 +127,23 @@ Window {
 
     function select(i) {
         const n = Math.max(0, Math.min(i, list.length - 1));
-        if (n !== sel) sonar(sMover);
+        if (n !== sel) sonar("mover");
         const s = Object.assign({}, selByTab);
         s[selKey] = n;
         selByTab = s;
         cinta.positionViewAtIndex(sel, ListView.Contain);
     }
-    function setTab(i) { tab = (i + shownTabs.length) % shownTabs.length; sys = ""; filtro = ""; buscando = false; sonar(sPestana); }
+    function setTab(i) { tab = (i + shownTabs.length) % shownTabs.length; sys = ""; filtro = ""; buscando = false; sonar("pestana"); }
     function setFila(i) {
         const n = Math.max(0, Math.min(i, estantes.length - 1));
         if (n === filaOk) return;
         fila = n;
-        sonar(sPestana);
+        sonar("pestana");
     }
 
     // ---------- Sonidos y el mando que vibra ----------
-    function sonar(efecto) { if (win.active) efecto.play() }
-    readonly property string sonidos: "file:///usr/share/sounds/apogeo/stereo/apogeo-consola-"
-    SoundEffect { id: sMover; source: win.sonidos + "mover.wav"; volume: 0.45 }
-    SoundEffect { id: sPestana; source: win.sonidos + "pestana.wav"; volume: 0.5 }
-    SoundEffect { id: sElegir; source: win.sonidos + "elegir.wav"; volume: 0.55 }
-    SoundEffect { id: sAbrir; source: win.sonidos + "abrir.wav"; volume: 0.5 }
-    SoundEffect { id: sAtras; source: win.sonidos + "atras.wav"; volume: 0.45 }
+    // (los toca apogeo-consola con pw-play: QtMultimedia, con MangoHud cargado en la consola, la tiraba al arrancar)
+    function sonar(nombre) { if (win.active) consola.sonar(nombre) }
 
     // Al cambiar de pestaña o de estante, la cinta y el elegido entran deslizándose
     property real entra: 1
@@ -189,21 +183,21 @@ Window {
         try { fichaDatos = JSON.parse(consola.ficha(game)); } catch (e) { fichaDatos = {}; }
         fsel = 0;
         fichaCol = false;
-        sonar(sAbrir);
+        sonar("abrir");
     }
-    function cerrarFicha() { ficha = null; fichaCol = false; sonar(sAtras); }
+    function cerrarFicha() { ficha = null; fichaCol = false; sonar("atras"); }
     function fichaHacer() {
         const a = fichaAcciones[fsel];
         if (!a) return;
         const g = ficha;
         if (a.k === "jugar") { ficha = null; primary(); }
-        else if (a.k === "coleccion") { fichaCol = true; csel = 0; sonar(sAbrir); }
+        else if (a.k === "coleccion") { fichaCol = true; csel = 0; sonar("abrir"); }
         else if (a.k === "fps") {
             const seq = [0, 30, 45, 60], key = g.store + ":" + g.id;
             const v = seq[(seq.indexOf(consola.juegosFps[key] || 0) + 1) % seq.length];
             consola.setFps(key, v);
             say(v ? v + " FPS en " + g.name : g.name + ": FPS como todos");
-            sonar(sElegir);
+            sonar("elegir");
         }
         else if (a.k === "carpeta") { consola.abrirCarpeta(fichaDatos.carpeta); say("Abriendo su carpeta…"); }
         else if (a.k === "tienda") { consola.abrirTienda(fichaDatos.tienda); say("Abriendo su página en Steam…"); }
@@ -214,14 +208,14 @@ Window {
         if (!c || !ficha) return;
         consola.coleccion(c.nombre, clave(ficha), !c.dentro);
         say(c.dentro ? "Fuera de «" + c.nombre + "»" : "En «" + c.nombre + "»");
-        sonar(sElegir);
+        sonar("elegir");
     }
     function say(t) { toast = t; toastTimer.restart(); }
     Timer { id: toastTimer; interval: 4500; onTriggered: win.toast = "" }
 
     function primary() {
         if (!game || (dl && dl.estado !== "error")) return;
-        sonar(sElegir);
+        sonar("elegir");
         consola.vibrar();
         if (game.store === "windows") { salto = game; cuenta = 10; return; }   // «W1»: 10 s para cancelar
         if (game.installed) {
@@ -269,15 +263,15 @@ Window {
         if (ficha) {
             if (fichaCol) {
                 const n = fichaColecciones.length;
-                if (k === "arriba" || k === "izquierda") { csel = (csel - 1 + n) % n; sonar(sMover); }
-                else if (k === "abajo" || k === "derecha") { csel = (csel + 1) % n; sonar(sMover); }
+                if (k === "arriba" || k === "izquierda") { csel = (csel - 1 + n) % n; sonar("mover"); }
+                else if (k === "abajo" || k === "derecha") { csel = (csel + 1) % n; sonar("mover"); }
                 else if (k === "a") coleccionHacer(csel);
-                else if (k === "b") { fichaCol = false; sonar(sAtras); }
+                else if (k === "b") { fichaCol = false; sonar("atras"); }
                 return;
             }
             const n = fichaAcciones.length;
-            if (k === "izquierda") { fsel = Math.max(0, fsel - 1); sonar(sMover); }
-            else if (k === "derecha") { fsel = Math.min(n - 1, fsel + 1); sonar(sMover); }
+            if (k === "izquierda") { fsel = Math.max(0, fsel - 1); sonar("mover"); }
+            else if (k === "derecha") { fsel = Math.min(n - 1, fsel + 1); sonar("mover"); }
             else if (k === "a") fichaHacer();
             else if (k === "b" || k === "y") cerrarFicha();
             return;
@@ -293,8 +287,8 @@ Window {
         else if (k === "a") primary();
         else if (k === "x") secondary();
         else if (k === "y") abrirFicha();
-        else if (k === "start") { orden = (orden + 1) % ordenes.length; sonar(sPestana); say("Orden: " + ordenes[orden][1]); }
-        else if (k === "b" && (filtro !== "" || buscando)) { filtro = ""; buscando = false; sonar(sAtras); }
+        else if (k === "start") { orden = (orden + 1) % ordenes.length; sonar("pestana"); say("Orden: " + ordenes[orden][1]); }
+        else if (k === "b" && (filtro !== "" || buscando)) { filtro = ""; buscando = false; sonar("atras"); }
         else if (k === "lb") setTab(tab - 1);
         else if (k === "rb") setTab(tab + 1);
         else if (k === "abajo" && enInicio && filaOk < estantes.length - 1) setFila(filaOk + 1);

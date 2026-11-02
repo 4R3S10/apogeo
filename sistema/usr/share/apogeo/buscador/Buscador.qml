@@ -43,6 +43,9 @@ Window {
     property string carpeta: ""                    // la carpeta abierta («» ninguna)
     property var menu: null                        // el menú del clic derecho: { item, x, y } (en la cubierta)
     property bool menuNombre: false                // el menú pide un nombre (carpeta nueva o renombrar)
+    property var arrastre: null                    // la app que estás arrastrando
+    property bool recienSoltada: false             // (al soltar no cuenta como clic)
+    Timer { id: soltadaTimer; interval: 250; onTriggered: win.recienSoltada = false }
     property var insp: ({ musica: {}, avisos: [], bajando: [], proximo: [] })
     property var avisos: []
     property var notas: []
@@ -239,6 +242,37 @@ Window {
         if (p.y < fijFlick.contentY) fijFlick.contentY = p.y;
         else if (p.y + item.height > fijFlick.contentY + fijFlick.height) fijFlick.contentY = p.y + item.height - fijFlick.height;
     }
+    // Soltar una app arrastrada: encima de una carpeta, dentro; encima de otra app, las dos en una carpeta nueva (y le
+    // pones nombre); en la cabecera de una carpeta abierta, fuera de ella
+    function nombreNuevo() {
+        let i = 1;
+        const n = k => k === 1 ? "Carpeta" : "Carpeta " + k;
+        while (vista.carpetas.some(c => c.nombre === n(i))) i++;
+        return n(i);
+    }
+    function soltado() {   // (aquí y no en la app arrastrada: al rehacerse la cubierta, esa app ya no existe)
+        arrastre = null;
+        recienSoltada = true;
+        soltadaTimer.restart();
+    }
+    function soltarEn(t) {
+        const a = arrastre;
+        soltado();
+        if (!a || !t || a.id === t.id) return;
+        if (t.carpeta) { aCarpeta(a.id, t.carpeta); return; }
+        if (t.id === "" || carpeta !== "") return;
+        const n = nombreNuevo();
+        buscador.aCarpeta(modo, t.id, n);
+        buscador.aCarpeta(modo, a.id, n);
+        leerFijadas();
+        // Su nombre, ya: el menú de la carpeta pidiéndolo
+        menu = { item: { id: "", carpeta: n, nombre: n, apps: [] }, x: deck.width / 2 - u(115), y: u(30) };
+        menuNombre = true;
+        nombreCampo.text = n;
+        nombreCampo.selectAll();
+        nombreCampo.forceActiveFocus();
+    }
+    function sacarArrastrada() { const a = arrastre; soltado(); if (a && carpeta !== "") aCarpeta(a.id, ""); }
     function aCarpeta(id, nombre) { buscador.aCarpeta(modo, id, nombre); leerFijadas(); }
     function hace(cuando) {
         const m = Math.floor((ahora / 1000 - cuando) / 60);
@@ -742,13 +776,13 @@ Window {
     Rectangle {
         id: deck
         readonly property real pad: win.u(16)
-        readonly property real tile: win.u(72)
-        readonly property int porFila: Math.min(win.flat.length, 6)
+        readonly property real tile: win.u(62)
+        readonly property int porFila: Math.min(win.flat.length, 7)
         readonly property real maxRes: orbe.y - win.u(44) - win.techo - campo.height - 3 * pad
         visible: opacity > 0.01
         opacity: win.llegada * (win.detalle === "" ? 1 : 0)
         width: win.query !== "" ? Math.min(win.width - 2 * win.margen, win.u(640))
-                                : Math.max(win.u(460), porFila * tile + 2 * pad)
+                                : Math.max(win.u(420), porFila * tile + 2 * pad)
         height: deckCol.height + 2 * pad
         x: (win.width - width) / 2
         y: orbe.y - win.u(44) - height + (1 - win.llegada) * win.u(20)
@@ -765,10 +799,19 @@ Window {
             width: deck.width - 2 * deck.pad
             spacing: win.u(12)
 
-            // Una carpeta abierta: su nombre y volver
+            // Una carpeta abierta: su nombre y volver (y, arrastrando una de sus apps aquí, sacarla)
             Item {
                 visible: win.query === "" && win.carpeta !== ""
                 width: parent.width; height: visible ? win.u(36) : 0
+                DropArea { id: sacarAqui; anchors.fill: parent; onDropped: win.sacarArrastrada() }
+                Rectangle {
+                    anchors.fill: parent; anchors.margins: -win.u(4)
+                    visible: !!win.arrastre
+                    radius: Tema.r(win.u(10))
+                    color: sacarAqui.containsDrag ? Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, 0.16) : "transparent"
+                    border.width: 1.5; border.color: Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, sacarAqui.containsDrag ? 0.8 : 0.35)
+                    Texto { anchors.centerIn: parent; text: "Suéltala aquí para sacarla de la carpeta"; color: Tema.acento; font.pixelSize: win.u(12) }
+                }
                 Redondo {
                     id: carpetaAtras
                     icono: "flecha"; rotation: 180
@@ -795,7 +838,7 @@ Window {
                 visible: win.query === ""
                 width: parent.width
                 // (como mucho unas tres filas: más arriba taparía los satélites; lo demás se desliza con la rueda o las flechas)
-                height: visible ? Math.min(fijCol.height, Math.max(win.u(180), Math.min(deck.maxRes, win.u(82) * 3 + win.u(30)))) : 0
+                height: visible ? Math.min(fijCol.height, Math.max(win.u(180), Math.min(deck.maxRes, win.u(68) * 3 + win.u(64)))) : 0
                 contentHeight: fijCol.height
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -1058,6 +1101,17 @@ Window {
                     font { family: Tema.mono; pixelSize: win.u(11) }
                 }
             }
+        }
+
+        // Lo que arrastras (sigue al ratón; al soltarlo, cae en la app o la carpeta de debajo)
+        Item {
+            id: fantasma
+            width: win.u(36); height: width
+            z: 20
+            visible: !!win.arrastre
+            Drag.active: !!win.arrastre
+            Drag.hotSpot.x: width / 2; Drag.hotSpot.y: height / 2
+            Kirigami.Icon { anchors.fill: parent; source: win.arrastre ? win.arrastre.icono : ""; scale: 1.15; opacity: 0.92 }
         }
 
         // El menú del clic derecho (una app: a una carpeta, sacarla, quitarla; una carpeta: renombrarla o deshacerla)
@@ -1412,7 +1466,8 @@ Window {
         Icono { anchors.centerIn: parent; width: win.u(16); height: width; nombre: rd.icono; color: rd.lleno ? "#0b0e14" : Tema.texto }
         MouseArea { id: rm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: rd.clicked() }
     }
-    // Una app fijada, una carpeta o «+»: clic abrirla; el clic derecho, su menú (carpetas, quitar); la chincheta la quita
+    // Una app fijada, una carpeta o «+» (compacta): clic abrirla; el clic derecho, su menú (carpetas, quitar); la chincheta
+    // la quita. Arrastrándola: encima de otra app, carpeta nueva (y le pones nombre); encima de una carpeta, dentro
     component Tile: Item {
         id: tile
         property int pos
@@ -1420,19 +1475,25 @@ Window {
         readonly property bool on: win.sel === pos && win.query === ""
         readonly property bool esCarpeta: !!app.carpeta
         readonly property bool mas: app.id === "" && !esCarpeta
-        width: deck.tile; height: win.u(82)
+        readonly property bool deAbajo: pos >= win.arriba.length          // («Más usadas» no se arrastra ni recibe)
+        readonly property bool arrastrable: deAbajo && !mas && !esCarpeta
+        readonly property bool arrastrada: !!win.arrastre && win.arrastre.id === app.id && !esCarpeta
+        width: deck.tile; height: win.u(68)
+        opacity: arrastrada ? 0.3 : 1
         onOnChanged: if (on) Qt.callLater(() => { if (win) win.aseguraFij(tile) })
         Rectangle {
             anchors.fill: parent
             anchors.margins: win.u(2)
-            radius: Tema.r(win.u(14))
+            radius: Tema.r(win.u(12))
             color: Qt.rgba(1, 1, 1, tile.on ? 0.1 : area.containsMouse ? 0.06 : 0)
+            border.width: suelo.containsDrag && !tile.arrastrada ? 2 : 0
+            border.color: Tema.acento
             Behavior on color { ColorAnimation { duration: 120 } }
         }
         Rectangle {   // «+»
             visible: tile.mas
             anchors.horizontalCenter: parent.horizontalCenter
-            y: win.u(10); width: win.u(38); height: width; radius: width / 2
+            y: win.u(8); width: win.u(32); height: width; radius: width / 2
             color: "transparent"
             border.width: 1.5; border.color: Qt.rgba(1, 1, 1, area.containsMouse || tile.on ? 0.4 : 0.18)
             Icono { anchors.centerIn: parent; nombre: "mas"; color: Tema.apagado }
@@ -1440,7 +1501,7 @@ Window {
         Kirigami.Icon {
             visible: !tile.mas && !tile.esCarpeta
             anchors.horizontalCenter: parent.horizontalCenter
-            y: win.u(10); width: win.u(38); height: width
+            y: win.u(8); width: win.u(32); height: width
             source: tile.esCarpeta ? "" : tile.app.icono
             scale: area.pressed ? 0.9 : 1
             Behavior on scale { NumberAnimation { duration: 100 } }
@@ -1448,12 +1509,12 @@ Window {
         Rectangle {   // una carpeta: sus cuatro primeras apps en pequeño
             visible: tile.esCarpeta
             anchors.horizontalCenter: parent.horizontalCenter
-            y: win.u(6); width: win.u(46); height: width
-            radius: Tema.r(win.u(13))
-            color: Qt.rgba(1, 1, 1, area.containsMouse || tile.on ? 0.13 : 0.08)
-            border.color: Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, tile.on ? 0.55 : 0.18)
-            scale: area.pressed ? 0.92 : 1
-            Behavior on scale { NumberAnimation { duration: 100 } }
+            y: win.u(5); width: win.u(38); height: width
+            radius: Tema.r(win.u(11))
+            color: Qt.rgba(1, 1, 1, area.containsMouse || tile.on || suelo.containsDrag ? 0.14 : 0.08)
+            border.color: Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, tile.on || suelo.containsDrag ? 0.6 : 0.18)
+            scale: suelo.containsDrag ? 1.08 : area.pressed ? 0.92 : 1
+            Behavior on scale { NumberAnimation { duration: 120 } }
             Grid {
                 anchors.centerIn: parent
                 columns: 2; spacing: win.u(3)
@@ -1461,28 +1522,51 @@ Window {
                     model: tile.esCarpeta ? tile.app.apps.slice(0, 4) : []
                     delegate: Kirigami.Icon {
                         required property var modelData
-                        width: win.u(16); height: width
+                        width: win.u(13); height: width
                         source: modelData.icono
                     }
                 }
             }
         }
         Texto {
-            y: win.u(56); width: parent.width - win.u(6); x: win.u(3)
+            y: win.u(46); width: parent.width - win.u(4); x: win.u(2)
             horizontalAlignment: Text.AlignHCenter
             text: tile.app.nombre
             color: tile.on ? Tema.texto : Tema.apagado
-            font.pixelSize: win.u(12)
+            font.pixelSize: win.u(11)
             elide: Text.ElideRight; wrapMode: Text.NoWrap
+        }
+        // Donde cae lo que arrastras
+        DropArea {
+            id: suelo
+            anchors.fill: parent
+            enabled: tile.deAbajo && !tile.mas
+            onDropped: win.soltarEn(tile.app)
         }
         MouseArea {
             id: area
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
-            cursorShape: Qt.PointingHandCursor
+            cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+            preventStealing: true          // (que la cubierta no se deslice al arrastrar una app)
+            drag.target: tile.arrastrable ? fantasma : null
+            drag.threshold: win.u(10)
             onEntered: win.sel = tile.pos
+            onPressed: mouse => {
+                if (!tile.arrastrable || mouse.button !== Qt.LeftButton) return;
+                const p = tile.mapToItem(deck, (tile.width - fantasma.width) / 2, win.u(4));
+                fantasma.x = p.x; fantasma.y = p.y;
+            }
+            drag.onActiveChanged: if (drag.active) win.arrastre = tile.app
+            onReleased: {
+                if (!win.arrastre) return;
+                // Si cae encima de algo, ya lo suelta él (soltarEn); si no, aquí
+                const hecho = fantasma.Drag.drop() !== Qt.IgnoreAction;
+                if (!hecho && typeof win !== "undefined") win.soltado();   // (si cayó, esta app ya puede no existir)
+            }
             onClicked: mouse => {
+                if (win.recienSoltada) return;
                 if (mouse.button === Qt.RightButton) {
                     if (tile.mas) return;
                     const p = tile.mapToItem(deck, mouse.x, mouse.y);
@@ -1491,12 +1575,12 @@ Window {
             }
         }
         Rectangle {   // la chincheta: quitarla del modo
-            visible: !tile.mas && !tile.esCarpeta && (area.containsMouse || pinArea.containsMouse)
+            visible: !tile.mas && !tile.esCarpeta && !win.arrastre && (area.containsMouse || pinArea.containsMouse)
             anchors.right: parent.right; anchors.top: parent.top
-            anchors.margins: win.u(2)
-            width: win.u(22); height: width; radius: width / 2
+            anchors.margins: win.u(1)
+            width: win.u(20); height: width; radius: width / 2
             color: pinArea.containsMouse ? Tema.acento : Qt.rgba(1, 1, 1, 0.14)
-            Icono { anchors.centerIn: parent; width: win.u(12); height: width; nombre: "chincheta"; color: pinArea.containsMouse ? Tema.sobreAcento : Tema.texto }
+            Icono { anchors.centerIn: parent; width: win.u(11); height: width; nombre: "chincheta"; color: pinArea.containsMouse ? Tema.sobreAcento : Tema.texto }
             MouseArea {
                 id: pinArea
                 anchors.fill: parent; anchors.margins: -4
