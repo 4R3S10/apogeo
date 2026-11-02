@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Ares" }],
+        "Description": "Meta+W: tus modos y sus escritorios en una columna a la izquierda y tus ventanas como tarjetas (como en COSMIC)",
+        "EnabledByDefault": true,
+        "Icon": "preferences-system-windows",
+        "Id": "apogeo-vista",
+        "License": "MIT",
+        "Name": "Apogeo: vista de escritorios"
+    },
+    "X-Plasma-API": "declarativescript"
+}

@@ -9,6 +9,7 @@ ElectricBorderMaximize=false
 [Plugins]
 apogeo-ventanasEnabled=true
 apogeo-escritoriosEnabled=true
+apogeo-vistaEnabled=true
 kwin4_effect_shapecornersEnabled=true
 # (sin el brillo de KDE al acercar el ratón a una barra escondida: el orbe sale al tocar el borde, no antes)
 screenedgeEnabled=false

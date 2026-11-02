@@ -511,6 +511,18 @@ def setup(bus):
         restart_plasma['pending'] = True
     if st.get('audio', 0) < AUDIO and audio_setup():
         st['audio'] = AUDIO
+    if st.get('vista', 0) < VISTA:
+        # La vista de escritorios de Apogeo (apogeo-vista, «como en COSMIC») con Meta+W: se le quita a la Vista general
+        # de KDE, que la tenía
+        kw('kwinrc', 'Plugins', 'apogeo-vistaEnabled', 'true')
+        try:
+            g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'),
+                               'org.kde.KGlobalAccel')
+            g.setForeignShortcutKeys(['kwin', 'Overview', '', ''], _keys())
+        except dbus.DBusException as e:
+            log('Meta+W: %s' % e)
+        kwin_reconfigure()
+        st['vista'] = VISTA
     save_state(st)
     # Al volver de un piso sin avisos sale el resumen de Apogeo, no el «Notificaciones sin leer» de Plasma (también en
     # /etc/xdg; aquí por si la cuenta tenía el suyo). Plasma lo lee la primera vez que lo necesita en la sesión
@@ -537,6 +549,7 @@ ORB = 3  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe 
 DEFAULT_WALLPAPERS = 2  # igual, para los fondos de serie de Órbita de Wallhaven (se bajan una vez)
 DESKTOPS = 1  # igual, para los escritorios de cada modo (los atajos de apogeo-escritorios en vez de los de KWin)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
+VISTA = 1  # igual, para la vista de escritorios (Meta+W)
 AUDIO = 1  # igual, para el sonido: la salida de los auriculares de serie y Spotify a su mejor calidad (una vez)
 AESTHETICS = 18  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita;
 # 18: Órbita también para quien se quedó en el aspecto de antes)

@@ -399,6 +399,14 @@ para buscar más.
 Lo hacen `apogeo_fondos.py` (la biblioteca), `apogeo-pisos` (el de cada modo y que cambie solo) y el fondo de
 Plasma `org.apogeo.fondo`.
 
+## Vista de escritorios (Meta+W)
+
+Como en COSMIC (`apogeo-vista`, script de KWin): a la izquierda, una columna con tus modos y los escritorios de cada uno
+en pequeño y en vivo (cada ventana en su sitio), del color de su modo, con el tuyo encendido; un clic te lleva. En el
+centro, las ventanas del escritorio en el que estás, como tarjetas en vivo con su icono, su nombre y una ✕ roja para
+cerrarla; un clic la trae delante. Arrastrar una tarjeta a un escritorio de la columna la lleva allí. Esc, Meta+W o un
+clic en un hueco la cierran. Meta+W era de la Vista general de KDE: se le quita una vez (`apogeo-pisos`).
+
 ## Alt+Tab y animaciones de las ventanas
 
 - **Alt+Tab de cristal** («6»): el cambiador de ventanas `apogeo` (`/usr/share/kwin/tabbox/apogeo`), con tus ventanas
