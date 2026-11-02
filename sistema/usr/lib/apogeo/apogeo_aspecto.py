@@ -40,6 +40,14 @@ ORBITA = {'nombre': 'Órbita', 'fondo': '#080a0f', 'superficie': '#0f131a', 'tex
           'wp': ['#0b1118', '#12303d', '#45d6ff'], 'letra': 'Geist', 'mono': 'Geist Mono',
           'acentos': {'jugar': '#b79cff', 'navegar': '#45d6ff', 'estudiar': '#ffb35c'},
           'acentosClaro': {'jugar': '#6d4bc4', 'navegar': '#007a99', 'estudiar': '#a85a00'}}
+# Los modos con su color fijo (lo que manda sobre «Del fondo»): Navegar en azul navy y Estudiar en ámbar cálido oscuro,
+# con su barra de arriba de ese color (la que sale con Ágape delante). Jugar sigue con el de su fondo (o el violeta).
+PALETAS = {
+    'navegar': {'fondo': '#08112a', 'superficie': '#0d1a3a', 'acento': '#5b8cff', 'sobreAcento': '#ffffff',
+                'barra': '#172a5c', 'barraOpacidad': 0.82, 'sobreBarra': '#e8edf7'},
+    'estudiar': {'fondo': '#140c05', 'superficie': '#1e140a', 'acento': '#ffb35c', 'sobreAcento': '#2a1a08',
+                 'barra': '#ffb35c', 'barraOpacidad': 0.88, 'sobreBarra': '#2a1a08'},
+}
 DEFAULT = {'estilo': 'orbita', 'acento': '', 'color': 'fondo', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves',
            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
 CORNERS = {'rectas': 0.35, 'suaves': 0.7, 'redondas': 1.0}
@@ -122,6 +130,17 @@ def tokens(a, floor='navegar', fondo=None):
         if del_fondo:
             s['fondo'] = mix(s['fondo'], s['acento'], 0.06)
             s['superficie'] = mix(s['superficie'], s['acento'], 0.05)
+    pal = PALETAS.get(mode)
+    if pal and not a['acento']:
+        if light:
+            s.update(acento=mix(pal['acento'], '#000000', 0.35), vivo=mix(pal['acento'], '#000000', 0.25), sobreAcento='#ffffff')
+            s['fondo'] = mix(s['fondo'], pal['acento'], 0.06)
+            s['superficie'] = mix(s['superficie'], pal['acento'], 0.05)
+        else:
+            s.update(fondo=pal['fondo'], superficie=pal['superficie'], acento=pal['acento'], sobreAcento=pal['sobreAcento'],
+                     vivo=mix(pal['acento'], '#ffffff', 0.18))
+            s['wp'] = [pal['fondo'], mix(pal['superficie'], pal['acento'], 0.3), pal['acento']]
+        s.update(barra=pal['barra'], barraOpacidad=pal['barraOpacidad'], sobreBarra=pal['sobreBarra'])
     if a['acento']:
         acc = a['acento']
         s.update(acento=acc, vivo=mix(acc, '#ffffff', 0.25),
@@ -137,6 +156,8 @@ def tokens(a, floor='navegar', fondo=None):
         'letra': s['letra'], 'mono': s['mono'],
         'modo': a['modo'], 'letraPt': font_pt, 'isla': island,
         'animaciones': ANIMS.get(a['animaciones'], 1.0), 'posicion': 'abajo-dcha',
+        # la barra de arriba (con Ágape delante): su color, lo opaca que es y el de lo que va encima ('' = sin franja)
+        'barra': s.get('barra', ''), 'barraOpacidad': s.get('barraOpacidad', 0), 'sobreBarra': s.get('sobreBarra', s['texto']),
     }
     t['nombre'] = None if stock(t) else theme_name(t)
     return t
@@ -149,7 +170,7 @@ _STOCK = {'fondo': '#080a0f', 'superficie': '#0f131a', 'texto': '#e9edf5', 'acen
 
 # Sube cuando cambian los generadores (así tus temas se vuelven a hacer con lo nuevo). 2: el brillo de la isla del color
 # del piso.
-GENERATED = 4  # 4: ventanas, menús y bocadillos transparentes (como COSMIC)
+GENERATED = 5  # 5: la barra de arriba de color en Navegar y Estudiar; 4: 4: ventanas, menús y bocadillos transparentes (como COSMIC)
 
 
 def stock(t):
@@ -160,12 +181,14 @@ def theme_name(t):
     """El nombre de tus temas generados con estos colores y formas: si cambian, otro nombre (así Plasma los vuelve a
     leer) y los mismos colores en otro piso usan los mismos temas."""
     import hashlib
-    key = json.dumps([t.get(k) for k in (*_STOCK, 'cristal')] + ([GENERATED] if GENERATED > 1 else []))
+    key = json.dumps([t.get(k) for k in (*_STOCK, 'cristal')] + ([GENERATED] if GENERATED > 1 else [])
+                     + ([t.get('barra'), t.get('barraOpacidad')] if t.get('barra') else []))
     return MINE + '-' + hashlib.sha1(key.encode()).hexdigest()[:8]
 
 
 # Lo de cada piso que va en aspecto.json («pisos»)
-FLOOR_TOKENS = ('fondo', 'superficie', 'texto', 'acento', 'sobreAcento', 'vivo', 'wp', 'claro')
+FLOOR_TOKENS = ('fondo', 'superficie', 'texto', 'acento', 'sobreAcento', 'vivo', 'wp', 'claro', 'barra', 'barraOpacidad',
+                'sobreBarra')
 
 
 def all_tokens(st, floor):

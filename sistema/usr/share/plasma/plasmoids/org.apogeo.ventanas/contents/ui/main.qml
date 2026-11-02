@@ -115,7 +115,7 @@ PlasmoidItem {
             x: Math.max(0, Math.min(hueco.width - width, hueco.centro - width / 2))
             anchors.verticalCenter: parent.verticalCenter
             text: Qt.locale("es_ES").toString(ahora, "d MMM, HH:mm")
-            color: Tema.texto
+            color: Tema.sobreBarra
             wrapMode: Text.NoWrap
             font { family: Tema.letra; pixelSize: 13; weight: Font.Medium }
         }
@@ -212,7 +212,7 @@ PlasmoidItem {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 15; height: 15
                 nombre: root.osd === "brillo" ? "sol" : root.osdSilencio || root.osdValor === 0 ? "silencio" : "volumen"
-                color: "#eceef3"
+                color: Tema.sobreBarra
             }
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
@@ -227,7 +227,7 @@ PlasmoidItem {
             Texto {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.osdSilencio ? "Silencio" : root.osdValor
-                color: "#eceef3"
+                color: Tema.sobreBarra
                 font { family: Tema.mono; pixelSize: 11 }
             }
         }

@@ -110,7 +110,10 @@ La piel de todo el sistema, la única (Ajustes → Identidad): la estética de a
 
 ### Tu identidad (Ajustes → Identidad)
 
-**El color de cada modo sale de su fondo de pantalla** («Del fondo», lo de serie, como en COSMIC): cada modo coge el
+**Navegar va en azul navy y Estudiar en ámbar cálido oscuro** (`PALETAS` de `apogeo_aspecto.py`: fondos, ventanas,
+menús y lo elegido de su color, y la barra de arriba, con Ágape delante, navy translúcida o ámbar con letras oscuras; el
+estilo de Plasma la pinta como franja, `herramientas/plasma.py`, y los widgets usan `Tema.sobreBarra`). Mandan sobre lo de
+abajo. **Jugar coge el color de su fondo de pantalla** («Del fondo», lo de serie, como en COSMIC): cada modo coge el
 tono que más pesa entre los colores vivos de su fondo (`apogeo_color.py`: el fondo a 48 × 48 con ffmpeg, también el
 primer fotograma de un vídeo; redondeado a pasos de 10°) y con él el acento, el grafito (un poco teñido), la barra, el
 orbe, la Órbita, la transición, los menús y la pantalla de bloqueo. Un fondo en blanco y negro da un acento gris claro; un

@@ -81,8 +81,8 @@ Seccion {
     Fila {
         titulo: "El color de cada modo"
         detalle: (sec.a.color || "fondo") === "fondo"
-                 ? "Sale de su fondo de pantalla: todo se tiñe de él (un fondo animado de Apogeo se queda con el suyo)"
-                 : "El violeta de Jugar, el cian de Navegar y el ámbar de Estudiar"
+                 ? "Navegar va en azul navy y Estudiar en ámbar; Jugar coge el color de su fondo de pantalla"
+                 : "Navegar va en azul navy y Estudiar en ámbar; Jugar, en su violeta"
         Segmentos {
             readonly property var valores: ["fondo", "modo"]
             opciones: [{ texto: "Del fondo" }, { texto: "Del modo" }]

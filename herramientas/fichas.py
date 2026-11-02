@@ -36,6 +36,8 @@ LETRA = _T.get('letra', 'Geist')
 MONO = _T.get('mono', 'Geist Mono')
 WP = _T.get('wp', ['#0b1118', '#12303d', ACCENT])
 ANIM = float(_T.get('animaciones', 1.0))
+BARRA = _T.get('barra') or ''                          # la franja de la barra de arriba ('' = sin franja)
+BARRA_OPACIDAD = float(_T.get('barraOpacidad', 0) or 0)
 
 
 def r(n):

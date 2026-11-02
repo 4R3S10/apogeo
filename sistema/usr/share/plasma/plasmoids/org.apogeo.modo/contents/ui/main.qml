@@ -53,7 +53,8 @@ PlasmoidItem {
             x: 8
             anchors.verticalCenter: parent.verticalCenter
             spacing: 14
-            Rectangle { width: 6; height: 6; radius: 3; color: root.color; anchors.verticalCenter: parent.verticalCenter }
+            // (sobre una barra de color, el punto del color de las letras: el ámbar sobre el ámbar no se vería)
+            Rectangle { width: 6; height: 6; radius: 3; color: Tema.c("barra", "") !== "" ? Tema.sobreBarra : root.color; anchors.verticalCenter: parent.verticalCenter }
             Repeater {
                 model: [{ t: "Escritorios", f: "vista" }, { t: "Aplicaciones", f: "orbita" }]
                 delegate: Texto {
@@ -61,7 +62,7 @@ PlasmoidItem {
                     required property var modelData
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.t
-                    color: raton.containsMouse ? Tema.texto : Qt.rgba(Tema.texto.r, Tema.texto.g, Tema.texto.b, 0.86)
+                    color: raton.containsMouse ? Tema.sobreBarra : Qt.rgba(Tema.sobreBarra.r, Tema.sobreBarra.g, Tema.sobreBarra.b, 0.86)
                     wrapMode: Text.NoWrap
                     font { family: Tema.letra; pixelSize: 13; weight: Font.Medium }
                     MouseArea {

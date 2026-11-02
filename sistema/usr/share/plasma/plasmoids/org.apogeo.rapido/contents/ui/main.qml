@@ -105,12 +105,13 @@ PlasmoidItem {
             leftPadding: root.fina ? 9 : 11
             rightPadding: root.fina ? 10 : 12
             Texto { visible: false /* (la hora va en el centro de la barra) */ && root.fina; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font { family: Tema.mono; pixelSize: 12; weight: Font.DemiBold } color: Tema.texto }
-            Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.netIcon; color: root.netIcon === "sinred" ? Tema.rosa : Tema.apagado }
-            Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.muted ? "silencio" : "volumen"; color: Tema.apagado }
+            // (en la barra fina, del color de lo que va encima de la barra: oscuro sobre el ámbar de Estudiar)
+            Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.netIcon; color: root.netIcon === "sinred" ? Tema.rosa : root.fina ? Tema.sobreBarraApagado : Tema.apagado }
+            Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.muted ? "silencio" : "volumen"; color: root.fina ? Tema.sobreBarraApagado : Tema.apagado }
             Item {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 16; height: 16
-                Icono { anchors.fill: parent; nombre: "campana"; color: compact.unread > 0 ? Tema.texto : Tema.apagado }
+                Icono { anchors.fill: parent; nombre: "campana"; color: root.fina ? (compact.unread > 0 ? Tema.sobreBarra : Tema.sobreBarraApagado) : compact.unread > 0 ? Tema.texto : Tema.apagado }
                 Rectangle { // los avisos sin leer
                     visible: compact.unread > 0
                     x: 8; y: -5

@@ -17,7 +17,7 @@ import os
 import sys
 
 DST = sys.argv[1] if len(sys.argv) > 1 else '/usr/share/plasma/desktoptheme'
-from fichas import SURFACE, TEXT, ACCENT, NOMBRE, CRISTAL, ESTILO, r
+from fichas import SURFACE, TEXT, ACCENT, NOMBRE, CRISTAL, ESTILO, BARRA, BARRA_OPACIDAD, r
 
 THEME = NOMBRE or 'apogeo'
 
@@ -270,8 +270,12 @@ def bare(svg):
     parts = ['topleft', 'top', 'topright', 'left', 'center', 'right', 'bottomleft', 'bottom', 'bottomright']
     extra = []
     for edge in ('north', 'south', 'east'):
-        extra += [f'<rect id="{edge}-{p}" x="0" y="0" width="4" height="4" fill="none"/>' for p in parts]
-        extra += [f'<rect id="mask-{edge}-{p}" x="0" y="0" width="4" height="4" fill="none"/>' for p in parts]
+        # La barra de arriba: en Navegar y Estudiar, una franja de su color (navy o ámbar), translúcida; si no, nada
+        franja = edge == 'north' and BARRA
+        fill = f'fill="{BARRA}" fill-opacity="{BARRA_OPACIDAD}"' if franja else 'fill="none"'
+        extra += [f'<rect id="{edge}-{p}" x="0" y="0" width="4" height="4" {fill}/>' for p in parts]
+        extra += [f'<rect id="mask-{edge}-{p}" x="0" y="0" width="4" height="4" {"fill=\"#000\"" if franja else "fill=\"none\""}/>'
+                  for p in parts]
         extra += [f'<rect id="{edge}-hint-{side}-margin" x="0" y="0" width="2" height="2" fill="none"/>'
                   for side in ('top', 'bottom', 'left', 'right')]
     svg = svg.replace('id="shadow-', 'id="sin-sombra-')
