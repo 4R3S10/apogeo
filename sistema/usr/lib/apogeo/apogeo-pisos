@@ -462,7 +462,7 @@ def setup(bus):
                 bar.floating = false;
                 bar.height = 30;
                 bar.lengthMode = 'fill';
-                bar.hiding = 'dodgewindows';
+                bar.hiding = 'none';
                 bar.opacity = 'translucent';
                 bar.addWidget('org.apogeo.modo');
                 bar.addWidget('org.apogeo.ventanas');
@@ -1315,9 +1315,8 @@ def island(bus, st):
             if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, arriba (y fina: Plasma a veces la volvía a 40)
                 if (p.location != 'top') p.location = 'top';
                 if (p.height != 30) p.height = 30;
-                // Piezas sueltas sobre el fondo: no se guarda sitio para ella (las ventanas maximizadas llegan arriba
-                // del todo); se aparta cuando una ventana la tapa y sale al tocar el borde de arriba
-                if (p.hiding != 'dodgewindows') p.hiding = 'dodgewindows';
+                // Siempre a la vista, sin fondo (como en COSMIC): las ventanas maximizadas empiezan debajo
+                if (p.hiding != 'none') p.hiding = 'none';
                 if (p.floating) p.floating = false;
                 return;
             }

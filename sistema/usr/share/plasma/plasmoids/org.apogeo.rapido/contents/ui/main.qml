@@ -104,7 +104,7 @@ PlasmoidItem {
             spacing: root.fina ? 10 : 11
             leftPadding: root.fina ? 9 : 11
             rightPadding: root.fina ? 10 : 12
-            Texto { visible: root.fina; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font { family: Tema.mono; pixelSize: 12; weight: Font.DemiBold } color: Tema.texto }
+            Texto { visible: false /* (la hora va en el centro de la barra) */ && root.fina; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font { family: Tema.mono; pixelSize: 12; weight: Font.DemiBold } color: Tema.texto }
             Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.netIcon; color: root.netIcon === "sinred" ? Tema.rosa : Tema.apagado }
             Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.muted ? "silencio" : "volumen"; color: Tema.apagado }
             Item {

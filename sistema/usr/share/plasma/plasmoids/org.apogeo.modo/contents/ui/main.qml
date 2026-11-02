@@ -5,7 +5,8 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.taskmanager as TaskManager
 import Apogeo
 
-// La barra fina de arriba de Órbita («C · Orbe central»), a la izquierda: el modo en el que estás, en pequeño y en su
+// La barra fina de arriba de Órbita, a la izquierda (como en COSMIC): un punto del color del modo y «Escritorios» (la vista
+// de Meta+W) y «Aplicaciones» (la Órbita). Antes: el modo en el que estás, en pequeño y en su
 // color. Lo sabe al momento por el escritorio virtual en el que estás (como el escritorio de Apogeo; modo.json, que
 // Tema lee cada segundo, llegaba tarde al cambiar). Un clic abre la Órbita (como el orbe o Meta).
 // Al lado, si en este modo tienes más de un escritorio abierto (apogeo-escritorios: Ctrl+Alt+← →), un punto por cada uno,
@@ -31,87 +32,44 @@ PlasmoidItem {
                              + "variant:string:" + id);
     }
 
+    // (Escritorios: el atajo «Apogeo vista» de KWin, Meta+W; Aplicaciones: la Órbita)
+    function vista() {
+        runner.connectSource("dbus-send --session --type=method_call --dest=org.kde.kglobalaccel /component/kwin "
+                             + "org.kde.kglobalaccel.Component.invokeShortcut string:'Apogeo vista'");
+    }
+    function orbita() {
+        runner.connectSource("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle");
+    }
+
     fullRepresentation: Item {
         // Jugar es solo la consola (a pantalla completa): aquí no se ve nada
         opacity: root.modo === "jugar" ? 0 : 1
         enabled: opacity > 0
         Layout.minimumWidth: linea.implicitWidth + 16
         Layout.preferredWidth: linea.implicitWidth + 16
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: runner.connectSource("dbus-send --session --type=method_call --dest=org.apogeo.Buscador /Buscador org.apogeo.Buscador.Toggle")
-        }
+        // Como en COSMIC: «Escritorios» y «Aplicaciones», sueltos sobre el fondo (el punto, del color del modo)
         Row {
             id: linea
             x: 8
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 8
+            spacing: 14
             Rectangle { width: 6; height: 6; radius: 3; color: root.color; anchors.verticalCenter: parent.verticalCenter }
-            Texto {
-                anchors.verticalCenter: parent.verticalCenter
-                text: ({ jugar: "Jugar", navegar: "Navegar", estudiar: "Estudiar" })[root.modo] || ""
-                color: root.color
-                wrapMode: Text.NoWrap
-                font { family: Tema.mono; pixelSize: 11; weight: Font.DemiBold; letterSpacing: 2.2; capitalization: Font.AllUppercase }
-            }
-            // Los escritorios de este modo
-            Row {
-                id: puntos
-                anchors.verticalCenter: parent.verticalCenter
-                leftPadding: 4
-                spacing: 2
-                readonly property int abiertos: {
-                    let n = 0;
-                    for (let i = 0; i < escritorios.count; i++) { const p = escritorios.itemAt(i); if (p && p.abierto) n++; }
-                    return n;
-                }
-                visible: root.fila > 0 && abiertos > 1
-                Repeater {
-                    id: escritorios
-                    model: root.fila > 0 ? root.columnas : 0
-                    delegate: Item {
-                        id: punto
-                        required property int index
-                        readonly property string id_: desktops.desktopIds[root.fila * root.columnas + index] || ""
-                        readonly property bool actual: index === root.columna
-                        // Abierto: el primero, en el que estás o con ventanas (las que van en todos no cuentan)
-                        readonly property int propias: {
-                            let n = 0;
-                            for (let i = 0; i < cuenta.count; i++) { const v = cuenta.itemAt(i); if (v && v.propia) n++; }
-                            return n;
-                        }
-                        readonly property bool abierto: id_ !== "" && (index === 0 || actual || propias > 0)
-                        visible: abierto
-                        width: 14; height: 18
-                        TaskManager.TasksModel {
-                            id: tareas
-                            filterByVirtualDesktop: true
-                            virtualDesktop: punto.id_
-                            groupMode: TaskManager.TasksModel.GroupDisabled
-                        }
-                        Repeater {
-                            id: cuenta
-                            model: tareas
-                            delegate: Item { readonly property bool propia: !model.IsOnAllVirtualDesktops }
-                        }
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: punto.actual ? 7 : 6; height: width; radius: width / 2
-                            color: punto.actual ? root.color : "transparent"
-                            border.width: punto.actual ? 0 : 1.2
-                            border.color: Qt.rgba(root.color.r, root.color.g, root.color.b, raton.containsMouse ? 0.95 : 0.55)
-                            scale: raton.containsMouse && !punto.actual ? 1.25 : 1
-                            Behavior on scale { NumberAnimation { duration: 120 } }
-                            Behavior on color { ColorAnimation { duration: 160 } }
-                        }
-                        MouseArea {
-                            id: raton
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.irA(punto.id_)
-                        }
+            Repeater {
+                model: [{ t: "Escritorios", f: "vista" }, { t: "Aplicaciones", f: "orbita" }]
+                delegate: Texto {
+                    id: boton
+                    required property var modelData
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: modelData.t
+                    color: raton.containsMouse ? Tema.texto : Qt.rgba(Tema.texto.r, Tema.texto.g, Tema.texto.b, 0.86)
+                    wrapMode: Text.NoWrap
+                    font { family: Tema.letra; pixelSize: 13; weight: Font.Medium }
+                    MouseArea {
+                        id: raton
+                        anchors.fill: parent; anchors.margins: -6
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: boton.modelData.f === "vista" ? root.vista() : root.orbita()
                     }
                 }
             }

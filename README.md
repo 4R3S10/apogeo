@@ -149,13 +149,12 @@ que se abrieron (Kvantum no cambia en vivo); las que abras cogen el del modo.
 ### El escritorio de Órbita («C · Orbe central»)
 
 Casi vacío, como en la bienvenida de una consola:
-- **Arriba, una barra fina sin fondo, suelta sobre el fondo de pantalla:** no guarda sitio (las ventanas maximizadas
-  llegan arriba del todo); se aparta cuando una ventana la tapa y sale al tocar el borde de arriba (Plasma: «Esquivar
-  ventanas»). A la izquierda el modo en el que estás, pequeño y en su color
-  (`org.apogeo.modo`; un clic abre la Órbita); **en el centro, tus ventanas abiertas** en el modo, solo sus iconos y
-  un punto bajo la activa (`org.apogeo.ventanas`: clic ir o minimizar, clic central otra, clic derecho cerrar); al
-  cambiar el volumen o el brillo, su barrita sale ahí un momento. A la derecha la hora, los iconos de tus apps
-  (bandeja), la red, el sonido y la campana (un clic, o Meta+N, abre la tarjeta rápida: ver «La tarjeta rápida»).
+- **Arriba, una barra fina sin fondo, como en COSMIC, siempre a la vista** (las ventanas maximizadas empiezan debajo): a la
+  izquierda un punto del color del modo, **Escritorios** (la vista de Meta+W) y **Aplicaciones** (la Órbita)
+  (`org.apogeo.modo`); **en el centro, la fecha y la hora** («2 nov., 23:10», `org.apogeo.ventanas`; al cambiar el
+  volumen o el brillo, su barrita sale ahí un momento). A la derecha los iconos de tus apps (bandeja), la red, el sonido
+  y la campana (un clic, o Meta+N, abre la tarjeta rápida: ver «La tarjeta rápida»). Tus ventanas abiertas ya no van en
+  la barra: están en Escritorios.
 - **Abajo, el orbe** (`org.apogeo.isla`, sin cristal detrás): el del modo en el que estás en el centro y, a sus lados,
   los otros dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo
   siempre queda en el centro). Nada encima ni a los lados: tus ventanas van arriba. Está escondido (abajo no se ve

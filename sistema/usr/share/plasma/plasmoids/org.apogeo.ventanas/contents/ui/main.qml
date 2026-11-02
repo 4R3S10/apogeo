@@ -106,9 +106,23 @@ PlasmoidItem {
         Component.onCompleted: Qt.callLater(recoloca)
         Timer { interval: 2000; repeat: true; running: true; onTriggered: hueco.recoloca() }
 
+        // La fecha y la hora, en el centro (como en COSMIC: «2 nov., 23:10»)
+        Texto {
+            id: fecha
+            property date ahora: new Date()
+            Timer { interval: 10000; repeat: true; running: true; triggeredOnStart: true; onTriggered: fecha.ahora = new Date() }
+            visible: root.osd === ""
+            x: Math.max(0, Math.min(hueco.width - width, hueco.centro - width / 2))
+            anchors.verticalCenter: parent.verticalCenter
+            text: Qt.locale("es_ES").toString(ahora, "d MMM, HH:mm")
+            color: Tema.texto
+            wrapMode: Text.NoWrap
+            font { family: Tema.letra; pixelSize: 13; weight: Font.Medium }
+        }
+        // (tus ventanas, como antes: ya no salen en la barra; están en «Escritorios», Meta+W)
         Row {
             id: fila
-            visible: root.osd === ""
+            visible: false
             opacity: visible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 160 } }
             x: Math.max(0, Math.min(hueco.width - width, hueco.centro - width / 2))
