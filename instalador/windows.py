@@ -8,9 +8,11 @@ El Windows escondido, preparado desde el instalador de Apogeo (lo llama motor.py
      Home, Home Single Language o Pro, la que se activará sola. Sin clave en el PC (una máquina virtual), Home.
   3. Se aplica esa edición a la partición de Windows (wimlib, como hace DISM).
   4. Los archivos de arranque de Windows solo los sabe poner bcdboot, que es de Windows: se deja en la partición EFI un
-     Windows PE (el de la misma descarga) que al arrancar una vez ejecuta bcdboot, se borra y reinicia. Entonces
-     Windows termina de prepararse (OOBE: tu cuenta Microsoft) y, al entrar, instala el puente de Apogeo
-     (instalar.cmd: la tarea de arranque, entrar sin contraseña…).
+     Windows PE (el de la misma descarga) que al arrancar una vez ejecuta bcdboot, se borra y reinicia. Desde ese PE
+     bcdboot no puede crear la entrada del firmware (no abre su almacén del sistema), así que la pone Apogeo en su
+     primer arranque, la primera, y reinicia: Windows termina de prepararse (OOBE: tu cuenta Microsoft) y, al entrar,
+     vuelve a poner Apogeo delante e instala el puente de Apogeo (instalar.cmd: la tarea de arranque, entrar sin
+     contraseña…).
 
 Ajustes que van con él (unattend.xml): español, el reloj en UTC como Apogeo (si no, la hora sale mal al cambiar), y
 sin cifrado de dispositivo automático (BitLocker con cuenta Microsoft: al saltar desde Apogeo pediría la clave de
@@ -34,7 +36,7 @@ PKEYCONFIG = '/Windows/System32/spp/tokens/pkeyconfig/pkeyconfig.xrm-ms'
 
 UNATTEND = '''<?xml version="1.0" encoding="utf-8"?>
 <!-- Apogeo: Windows en español, el reloj en UTC (como Apogeo), sin cifrado automático y, al entrar por primera vez,
-     el puente de Apogeo. Tu cuenta la eliges tú en la preparación de Windows. -->
+     Apogeo otra vez el primero al arrancar y el puente de Apogeo. Tu cuenta la eliges tú en la preparación de Windows. -->
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
   <settings pass="specialize">
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
@@ -69,6 +71,11 @@ UNATTEND = '''<?xml version="1.0" encoding="utf-8"?>
       <FirstLogonCommands>
         <SynchronousCommand wcm:action="add">
           <Order>1</Order>
+          <CommandLine>bcdedit /set {fwbootmgr} displayorder {bootmgr} /addlast</CommandLine>
+          <Description>Apogeo: Windows ya esta preparado, Apogeo vuelve a arrancar el primero</Description>
+        </SynchronousCommand>
+        <SynchronousCommand wcm:action="add">
+          <Order>2</Order>
           <CommandLine>cmd /c C:\\Apogeo-instalar\\instalar.cmd</CommandLine>
           <Description>Apogeo: el puente del Windows escondido</Description>
         </SynchronousCommand>
@@ -95,23 +102,35 @@ if not defined W (
   pause
   exit /b 1
 )
-rem El arranque de Windows, al final de la lista (Apogeo sigue arrancando primero); solo el proximo arranque va a
-rem Windows, para que termine de prepararse (tu cuenta Microsoft)
-bcdboot %W%\\Windows /l es-es /f UEFI /addlast
-bcdedit /set {fwbootmgr} bootsequence {bootmgr}
+rem Los archivos de arranque de Windows en la particion EFI (la entrada del firmware la pone Apogeo al arrancar)
+set L=%W%\\apogeo-pe.log
+mountvol S: /s > %L% 2>&1
+rem (el BCD del medio de instalacion, con el que arranco este PE, no vale para Windows: bcdboot crea uno nuevo)
+attrib -h -s -r S:\\EFI\\Microsoft\\Boot\\BCD* >> %L% 2>&1
+del /f /q S:\\EFI\\Microsoft\\Boot\\BCD* >> %L% 2>&1
+dir /a S:\\EFI\\Microsoft\\Boot >> %L% 2>&1
+bcdboot %W%\\Windows /l es-es /s S: /f UEFI >> %L% 2>&1
+if errorlevel 1 (
+  echo   No se pudo preparar el arranque de Windows. Lo que paso esta en %L%
+  pause
+  wpeutil reboot
+  exit /b 1
+)
 del /q %W%\\Windows\\System32\\apogeo-destino.txt
-mountvol S: /s
 rd /s /q S:\\sources
 del /q S:\\boot\\boot.sdi
 rd /s /q S:\\EFI\\apogeo-pe
 wpeutil reboot
 '''
 
-# Al primer arranque de Apogeo: quitar del firmware la entrada del PE (ya no existe) y quitarse a sí mismo
+# Al primer arranque de Apogeo (antes de la pantalla de entrada): quitar del firmware la entrada del PE (ya no existe),
+# poner la de Windows (la primera hasta que termine de prepararse), reiniciar en él y quitarse a sí mismo
 LIMPIA = 'apogeo-quitar-pe.service'
 LIMPIA_UNIDAD = '''[Unit]
-Description=Apogeo: quitar la entrada de arranque de un solo uso de Windows
+Description=Apogeo: quitar la entrada de arranque de un solo uso de Windows y poner la suya
 ConditionPathExists=/sys/firmware/efi
+# (antes que apogeo-windows, que pondría Apogeo el primero otra vez antes de reiniciar)
+Before=display-manager.service apogeo-windows.service
 
 [Service]
 Type=oneshot
@@ -121,12 +140,32 @@ ExecStart=/usr/local/lib/apogeo-quitar-pe
 WantedBy=multi-user.target
 '''
 LIMPIA_SCRIPT = '''#!/bin/sh
-# Apogeo: quita del firmware la entrada «Apogeo: preparar Windows» (el PE de un solo uso ya se borró) y se quita
+# Apogeo, la primera vez que arranca: quita del firmware la entrada «Apogeo: preparar Windows» (el PE de un solo uso ya
+# se borró). Si el PE dejó los archivos de arranque de Windows, le pone su entrada (con los datos con los que Windows la
+# reconoce como suya, {bootmgr}: así no crea otra) la primera, porque Windows se reinicia varias veces mientras se
+# prepara (tu cuenta Microsoft); cuando entras por primera vez se pone él el último (unattend.xml). Y se quita.
 for n in $(efibootmgr | sed -n 's/^Boot\\([0-9A-F]\\{4\\}\\)\\*\\{0,1\\} *Apogeo: preparar Windows.*/\\1/p'); do
     efibootmgr -q -b "$n" -B
 done
+win=
+if [ -f /boot/EFI/Microsoft/Boot/bootmgfw.efi ] && ! efibootmgr | grep -qi 'Windows Boot Manager'; then
+    esp=$(findmnt -nro SOURCE /boot)
+    datos=$(mktemp)
+    echo 'V0lORE9XUwABAAAAiAAAAHgAAABCAEMARABPAEIASgBFAEMAVAA9AHsAOQBkAGUAYQA4ADYAMgBjAC0ANQBjAGQAZAAtADQAZQA3ADAALQBhAGMAYwAxAC0AZgAzADIAYgAzADQANABkADQANwA5ADUAfQAAAAAAAQAAABAAAAAEAAAAf/8EAA==' | base64 -d > "$datos"
+    efibootmgr -q --create-only --disk "/dev/$(lsblk -nro PKNAME "$esp")" \\
+        --part "$(cat "/sys/class/block/${esp##*/}/partition")" \\
+        --label 'Windows Boot Manager' --loader '\\EFI\\Microsoft\\Boot\\bootmgfw.efi' --append-binary-args "$datos"
+    rm -f "$datos"
+    win=$(efibootmgr | sed -n 's/^Boot\\([0-9A-F]\\{4\\}\\)\\*\\{0,1\\} *Windows Boot Manager.*/\\1/p' | head -n 1)
+    orden=$(efibootmgr | sed -n 's/^BootOrder: *//p')
+    [ -n "$win" ] && efibootmgr -q -o "$win${orden:+,$orden}"
+fi
 rm -f /etc/systemd/system/multi-user.target.wants/apogeo-quitar-pe.service /etc/systemd/system/apogeo-quitar-pe.service \\
     /usr/local/lib/apogeo-quitar-pe
+if [ -n "$win" ]; then
+    sync
+    systemctl --no-block reboot
+fi
 '''
 
 

@@ -545,8 +545,9 @@ ningún archivo):
 - **Windows** (`instalador/windows.py`): la imagen oficial en español se descarga de Microsoft (el catálogo de la
   herramienta de creación de medios, con su suma comprobada). La edición sale de la clave que trae el PC (la tabla MSDM
   del firmware): Home, Home Single Language o Pro, para que se active sola. Se copia con `wimlib` en su partición y un
-  WinPE de un solo uso hace el arranque (`bcdboot`) y se borra. En el primer arranque Windows te pide tu cuenta de
-  Microsoft y luego instala el puente de Apogeo (sin cifrado de dispositivo, reloj en UTC).
+  WinPE de un solo uso pone sus archivos de arranque (`bcdboot`) y se borra. En su primer arranque Apogeo le pone a
+  Windows su entrada del firmware y reinicia en él: Windows te pide tu cuenta de Microsoft y, al entrar, vuelve a
+  poner Apogeo el primero e instala el puente de Apogeo (sin cifrado de dispositivo, reloj en UTC).
 
 Construirlo: `instalador/construir-iso.sh <paquete apogeo-*.pkg.tar.zst> [salida]` (en Arch, como root, con archiso).
 Lo hace `.github/workflows/iso.yml` al cambiar el instalador o al publicarse un paquete nuevo. Para ver cómo queda sin
