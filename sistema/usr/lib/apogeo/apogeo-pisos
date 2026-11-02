@@ -1162,7 +1162,7 @@ class Floors:
             return
         self.wall_written[floor] = want
         cap = floor.capitalize()
-        plasma_script(self.bus, """
+        hecho = plasma_script(self.bus, """
             desktops().forEach(function (d) {
                 d.wallpaperPlugin = 'org.apogeo.fondo';
                 d.currentConfigGroup = ['Wallpaper', 'org.apogeo.fondo', 'General'];
@@ -1172,6 +1172,14 @@ class Floors:
                 d.writeConfig('Animar', %s);
             });
         """ % (cap, json.dumps(style), cap, json.dumps(archivo), animate))
+        if hecho is None:
+            # Plasma aún no estaba (la primera vez que entras, este programa arranca antes): se vuelve a intentar, si no
+            # se quedaba el fondo de KDE hasta cambiar de piso
+            self.wall_written.pop(floor, None)
+            self.wall_retries = getattr(self, 'wall_retries', 0) + 1
+            if self.wall_retries <= 40:
+                GLib.timeout_add_seconds(3, lambda: (self.wallpaper(style if not archivo else archivo, animate == 'true',
+                                                                    floor), False)[-1])
 
     def prepare_wallpapers(self):
         """Al empezar: el fondo de los tres pisos (así el primer cambio a cada uno ya no escribe nada)."""
