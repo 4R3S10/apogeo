@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
+import QtMultimedia
 import Apogeo
 
 // La consola de Jugar («C8 · Cinta panorámica»): tus juegos en una cinta de portadas abajo; el elegido pinta la pantalla
@@ -8,6 +9,9 @@ import Apogeo
 // biblioteca para descargar y quitar. Mando (PlayStation o Xbox) o teclado: ← → elegir · ✕ (A)/Intro jugar o descargar ·
 // □ (X)/Supr quitar · L1 R1 (LB RB)/Q E pestaña · ○ (B)/Esc atrás · ↓ bajar a Navegar. La última pestaña,
 // Herramientas («H1»): Discord, Spotify, OBS, Mission Center, CoolerControl, ProtonPlus, Hydra y los FPS en pantalla.
+// En Inicio, estantes (↑ ↓): Recientes, Más jugados, Sin empezar y tus colecciones. △ (Y)/I la ficha del juego (tus
+// capturas, lo jugado, colecciones, su carpeta y su tienda). ☰/O cambia el orden; F o / busca escribiendo. Suena y el
+// mando vibra un poco al elegir.
 // «consola» es apogeo-consola.
 Window {
     id: win
@@ -34,8 +38,8 @@ Window {
     // El fondo se mueve solo con la consola delante y con gráfica de verdad (en una máquina sin 3D lo haría el procesador)
     Binding { target: Tema; property: "animar"; value: consola.gpu && win.active && win.visibility !== Window.Minimized }
     // Los botones como en tu mando: PlayStation (lo de serie) o Xbox (si el que hay conectado es de Xbox)
-    readonly property var btn: consola.mando === "xbox" ? { a: "A", b: "B", x: "X", lb: "LB", rb: "RB" }
-                                                        : { a: "✕", b: "○", x: "□", lb: "L1", rb: "R1" }
+    readonly property var btn: consola.mando === "xbox" ? { a: "A", b: "B", x: "X", y: "Y", lb: "LB", rb: "RB", start: "☰" }
+                                                        : { a: "✕", b: "○", x: "□", y: "△", lb: "L1", rb: "R1", start: "☰" }
     readonly property var lib: consola.tabs
     readonly property var allTabs: [
         { clave: "inicio", texto: "Inicio" }, { clave: "steam", texto: "Steam" }, { clave: "epic", texto: "Epic" },
@@ -65,9 +69,54 @@ Window {
         for (const g of (lib.emuladores || [])) if (!o.some(s => s.clave === g.system)) o.push({ clave: g.system, texto: g.systemName });
         return o;
     }
-    readonly property var list: (lib[tabKey] || []).filter(g => tabKey !== "emuladores" || sys === "" || g.system === sys)
+    // ---------- Inicio: los estantes (↑ ↓) ----------
+    function clave(g) { return g.store + ":" + g.id }
+    readonly property var colecciones: consola.colecciones
+    readonly property var todos: {
+        const m = {};
+        for (const k of ["steam", "epic", "emuladores", "ps5", "windows"]) for (const g of (lib[k] || [])) m[clave(g)] = g;
+        return m;
+    }
+    readonly property var estantes: {
+        const ins = lib.inicio || [];
+        const out = [{ clave: "recientes", texto: "Recientes", juegos: ins }];
+        const mas = ins.filter(g => (g.minutes || 0) > 0).sort((a, b) => b.minutes - a.minutes);
+        if (mas.length > 1) out.push({ clave: "mas", texto: "Más jugados", juegos: mas });
+        const sin = ins.filter(g => !(g.minutes > 0) && !g.last);
+        if (sin.length) out.push({ clave: "sin", texto: "Sin empezar", juegos: sin });
+        for (const c of colecciones) {
+            const js = c.juegos.map(k => todos[k]).filter(g => !!g);
+            if (js.length) out.push({ clave: "c:" + c.nombre, texto: c.nombre, juegos: js, coleccion: true });
+        }
+        return out;
+    }
+    property int fila: 0
+    readonly property int filaOk: Math.max(0, Math.min(fila, estantes.length - 1))
+    readonly property bool enInicio: tabKey === "inicio"
+
+    // ---------- Orden (☰) y buscar escribiendo (F o /) ----------
+    readonly property var ordenes: [["reciente", "Recientes"], ["nombre", "Nombre"], ["horas", "Horas jugadas"], ["tamano", "Tamaño"]]
+    property int orden: 0
+    property string filtro: ""
+    property bool buscando: false
+    function plano(t) {
+        const s = String(t).toLowerCase();
+        try { return s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (e) { return s; }
+    }
+    readonly property var base: enInicio ? (estantes[filaOk] ? estantes[filaOk].juegos : [])
+                                         : (lib[tabKey] || []).filter(g => tabKey !== "emuladores" || sys === "" || g.system === sys)
+    readonly property var list: {
+        let l = base;
+        if (filtro !== "") { const q = plano(filtro); l = l.filter(g => plano(g.name).indexOf(q) >= 0); }
+        const o = ordenes[orden][0];
+        if (o === "nombre") l = l.slice().sort((a, b) => a.name.localeCompare(b.name));
+        else if (o === "horas") l = l.slice().sort((a, b) => (b.minutes || 0) - (a.minutes || 0));
+        else if (o === "tamano") l = l.slice().sort((a, b) => (b.size || 0) - (a.size || 0));
+        return l;
+    }
+    readonly property string selKey: tabKey + sys + (enInicio ? ":" + filaOk : "") + "|" + filtro + "|" + orden
     property var selByTab: ({})
-    readonly property int sel: Math.max(0, Math.min(selByTab[tabKey + sys] || 0, list.length - 1))
+    readonly property int sel: Math.max(0, Math.min(selByTab[selKey] || 0, list.length - 1))
     readonly property var game: list.length ? list[sel] : null
     readonly property var dl: game ? (lib.descargas || {})[game.id] : undefined
     property string toast: ""
@@ -78,17 +127,102 @@ Window {
     function countOf(key) { return (lib[key] || []).length }
 
     function select(i) {
+        const n = Math.max(0, Math.min(i, list.length - 1));
+        if (n !== sel) sonar(sMover);
         const s = Object.assign({}, selByTab);
-        s[tabKey + sys] = Math.max(0, Math.min(i, list.length - 1));
+        s[selKey] = n;
         selByTab = s;
         cinta.positionViewAtIndex(sel, ListView.Contain);
     }
-    function setTab(i) { tab = (i + shownTabs.length) % shownTabs.length; sys = ""; }
+    function setTab(i) { tab = (i + shownTabs.length) % shownTabs.length; sys = ""; filtro = ""; buscando = false; sonar(sPestana); }
+    function setFila(i) {
+        const n = Math.max(0, Math.min(i, estantes.length - 1));
+        if (n === filaOk) return;
+        fila = n;
+        sonar(sPestana);
+    }
+
+    // ---------- Sonidos y el mando que vibra ----------
+    function sonar(efecto) { if (win.active) efecto.play() }
+    readonly property string sonidos: "file:///usr/share/sounds/apogeo/stereo/apogeo-consola-"
+    SoundEffect { id: sMover; source: win.sonidos + "mover.wav"; volume: 0.45 }
+    SoundEffect { id: sPestana; source: win.sonidos + "pestana.wav"; volume: 0.5 }
+    SoundEffect { id: sElegir; source: win.sonidos + "elegir.wav"; volume: 0.55 }
+    SoundEffect { id: sAbrir; source: win.sonidos + "abrir.wav"; volume: 0.5 }
+    SoundEffect { id: sAtras; source: win.sonidos + "atras.wav"; volume: 0.45 }
+
+    // Al cambiar de pestaña o de estante, la cinta y el elegido entran deslizándose
+    property real entra: 1
+    NumberAnimation { id: entraAnim; target: win; property: "entra"; from: 0; to: 1; duration: 340; easing.type: Easing.OutCubic }
+    onTabKeyChanged: entraAnim.restart()
+    onFilaOkChanged: entraAnim.restart()
+
+    // ---------- La ficha de un juego (△) ----------
+    property var ficha: null                      // el juego
+    property var fichaDatos: ({})
+    property int fsel: 0
+    property bool fichaCol: false                 // eligiendo colecciones
+    property int csel: 0
+    readonly property var sugeridas: ["Favoritos", "Con amigos", "Pendientes", "Cortos"]
+    readonly property var fichaAcciones: {
+        const g = ficha;
+        if (!g) return [];
+        const out = [{ k: "jugar", t: g.installed ? "Jugar" : g.store === "ps5" ? "Convertir" : "Descargar", principal: true }];
+        out.push({ k: "coleccion", t: "Colecciones" });
+        if (g.installed && (g.store === "steam" || g.store === "epic")) out.push({ k: "fps", t: "FPS" });
+        if (fichaDatos.carpeta) out.push({ k: "carpeta", t: "Abrir su carpeta" });
+        if (fichaDatos.tienda) out.push({ k: "tienda", t: "Ver en la tienda" });
+        if (g.installed && g.store !== "windows") out.push({ k: "quitar", t: "Quitar" });
+        return out;
+    }
+    // Las colecciones para elegir: las tuyas (con ✓ si está) y, debajo, las sugeridas que aún no tienes
+    readonly property var fichaColecciones: {
+        if (!ficha) return [];
+        const k = clave(ficha);
+        const out = colecciones.map(c => ({ nombre: c.nombre, dentro: c.juegos.indexOf(k) >= 0 }));
+        for (const n of sugeridas) if (!out.some(c => c.nombre === n)) out.push({ nombre: n, dentro: false, nueva: true });
+        return out;
+    }
+    function abrirFicha() {
+        if (!game) return;
+        ficha = game;
+        try { fichaDatos = JSON.parse(consola.ficha(game)); } catch (e) { fichaDatos = {}; }
+        fsel = 0;
+        fichaCol = false;
+        sonar(sAbrir);
+    }
+    function cerrarFicha() { ficha = null; fichaCol = false; sonar(sAtras); }
+    function fichaHacer() {
+        const a = fichaAcciones[fsel];
+        if (!a) return;
+        const g = ficha;
+        if (a.k === "jugar") { ficha = null; primary(); }
+        else if (a.k === "coleccion") { fichaCol = true; csel = 0; sonar(sAbrir); }
+        else if (a.k === "fps") {
+            const seq = [0, 30, 45, 60], key = g.store + ":" + g.id;
+            const v = seq[(seq.indexOf(consola.juegosFps[key] || 0) + 1) % seq.length];
+            consola.setFps(key, v);
+            say(v ? v + " FPS en " + g.name : g.name + ": FPS como todos");
+            sonar(sElegir);
+        }
+        else if (a.k === "carpeta") { consola.abrirCarpeta(fichaDatos.carpeta); say("Abriendo su carpeta…"); }
+        else if (a.k === "tienda") { consola.abrirTienda(fichaDatos.tienda); say("Abriendo su página en Steam…"); }
+        else if (a.k === "quitar") { ficha = null; secondary(); }
+    }
+    function coleccionHacer(i) {
+        const c = fichaColecciones[i];
+        if (!c || !ficha) return;
+        consola.coleccion(c.nombre, clave(ficha), !c.dentro);
+        say(c.dentro ? "Fuera de «" + c.nombre + "»" : "En «" + c.nombre + "»");
+        sonar(sElegir);
+    }
     function say(t) { toast = t; toastTimer.restart(); }
     Timer { id: toastTimer; interval: 4500; onTriggered: win.toast = "" }
 
     function primary() {
         if (!game || (dl && dl.estado !== "error")) return;
+        sonar(sElegir);
+        consola.vibrar();
         if (game.store === "windows") { salto = game; cuenta = 10; return; }   // «W1»: 10 s para cancelar
         if (game.installed) {
             const msg = consola.play(game);
@@ -132,6 +266,22 @@ Window {
             else if (k === "b") asking = false;
             return;
         }
+        if (ficha) {
+            if (fichaCol) {
+                const n = fichaColecciones.length;
+                if (k === "arriba" || k === "izquierda") { csel = (csel - 1 + n) % n; sonar(sMover); }
+                else if (k === "abajo" || k === "derecha") { csel = (csel + 1) % n; sonar(sMover); }
+                else if (k === "a") coleccionHacer(csel);
+                else if (k === "b") { fichaCol = false; sonar(sAtras); }
+                return;
+            }
+            const n = fichaAcciones.length;
+            if (k === "izquierda") { fsel = Math.max(0, fsel - 1); sonar(sMover); }
+            else if (k === "derecha") { fsel = Math.min(n - 1, fsel + 1); sonar(sMover); }
+            else if (k === "a") fichaHacer();
+            else if (k === "b" || k === "y") cerrarFicha();
+            return;
+        }
         if (enHerr && ["izquierda", "derecha", "arriba", "abajo", "a"].indexOf(k) >= 0) {
             const cols = herrGrid.columns;
             if (k === "a") herrHacer(hsel);
@@ -142,9 +292,14 @@ Window {
         else if (k === "derecha") select(sel + 1);
         else if (k === "a") primary();
         else if (k === "x") secondary();
+        else if (k === "y") abrirFicha();
+        else if (k === "start") { orden = (orden + 1) % ordenes.length; sonar(sPestana); say("Orden: " + ordenes[orden][1]); }
+        else if (k === "b" && (filtro !== "" || buscando)) { filtro = ""; buscando = false; sonar(sAtras); }
         else if (k === "lb") setTab(tab - 1);
         else if (k === "rb") setTab(tab + 1);
+        else if (k === "abajo" && enInicio && filaOk < estantes.length - 1) setFila(filaOk + 1);
         else if (k === "abajo") consola.floor(1);
+        else if (k === "arriba" && enInicio) setFila(filaOk - 1);
         else if (k === "arriba" && tabKey === "emuladores" && systems.length) {
             const i = systems.findIndex(s => s.clave === sys);
             sys = i + 1 < systems.length ? systems[i + 1].clave : "";
@@ -160,10 +315,20 @@ Window {
         anchors.fill: parent
         focus: true
         Keys.onPressed: e => {
+            // Buscando: las letras van al filtro (Intro o las flechas siguen eligiendo; Esc lo borra)
+            if (win.buscando && !win.ficha) {
+                if (e.key === Qt.Key_Backspace) { win.filtro = win.filtro.slice(0, -1); e.accepted = true; return; }
+                if (e.text && e.text.length === 1 && e.text.charCodeAt(0) >= 32 && e.text.charCodeAt(0) !== 127) {
+                    win.filtro += e.text; e.accepted = true; return;
+                }
+            }
+            if (!win.ficha && !win.asking && (e.key === Qt.Key_F || e.key === Qt.Key_Slash)) {
+                win.buscando = true; e.accepted = true; return;
+            }
             const m = { [Qt.Key_Left]: "izquierda", [Qt.Key_Right]: "derecha", [Qt.Key_Up]: "arriba", [Qt.Key_Down]: "abajo",
                         [Qt.Key_Return]: "a", [Qt.Key_Enter]: "a", [Qt.Key_Space]: "a", [Qt.Key_Escape]: "b",
                         [Qt.Key_Delete]: "x", [Qt.Key_X]: "x", [Qt.Key_Q]: "lb", [Qt.Key_E]: "rb", [Qt.Key_Tab]: "rb",
-                        [Qt.Key_Backtab]: "lb" };
+                        [Qt.Key_Backtab]: "lb", [Qt.Key_I]: "y", [Qt.Key_O]: "start" };
             if (m[e.key]) { win.key(m[e.key]); e.accepted = true; }
         }
     }
@@ -175,8 +340,9 @@ Window {
         if (s < 86400) return "hace " + Math.round(s / 3600) + " h";
         if (s < 172800) return "ayer";
         if (s < 604800) return "hace " + Math.round(s / 86400) + " días";
-        if (s < 2592000) return "hace " + Math.round(s / 604800) + " semanas";
-        return "hace " + Math.round(s / 2592000) + " meses";
+        if (s < 2592000) { const n = Math.round(s / 604800); return "hace " + n + (n === 1 ? " semana" : " semanas"); }
+        const n = Math.round(s / 2592000);
+        return "hace " + n + (n === 1 ? " mes" : " meses");
     }
     // Lo que has jugado: «35 min», «2,5 h», «120 h» (de Steam, de Heroic o del cronómetro de la consola)
     function hours(m) {
@@ -450,6 +616,7 @@ Window {
     // ---------- El elegido ----------
     Column {
         visible: !!win.game
+        opacity: win.entra
         x: 48; y: 178
         width: parent.width * 0.55
         spacing: 0
@@ -768,28 +935,102 @@ Window {
         height: 1
         color: Tema.linea
     }
+    // Encima de la cinta: en Inicio, los estantes (↑ ↓); en las demás, cuántos hay. A la derecha, el orden y lo que buscas
     Row {
         visible: !win.enHerr
         anchors { left: parent.left; leftMargin: 48; bottom: cinta.top; bottomMargin: 14 }
         spacing: 10
         Rectangle { width: 4; height: 14; radius: 2; color: Tema.acento; anchors.verticalCenter: parent.verticalCenter }
         Texto {
+            visible: !win.enInicio
             text: "BIBLIOTECA"
             color: Tema.apagado
             font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 2.2 }
             anchors.verticalCenter: parent.verticalCenter
         }
         Texto {
+            visible: !win.enInicio
             text: win.total + (win.total === 1 ? " juego" : " juegos") + (win.installed > 0 ? " · " + win.installed + " listos" : "")
             color: Tema.tenue
             font { family: Tema.mono; pixelSize: 10 }
             anchors.verticalCenter: parent.verticalCenter
+        }
+        Repeater {
+            model: win.enInicio ? win.estantes : []
+            delegate: Rectangle {
+                id: est
+                required property var modelData
+                required property int index
+                readonly property bool on: index === win.filaOk
+                anchors.verticalCenter: parent.verticalCenter
+                width: el.implicitWidth + 22; height: 28; radius: Tema.r(9)
+                color: on ? Tema.rosaSuave : em.containsMouse ? Tema.encima : "transparent"
+                border.color: on ? Tema.acento : "transparent"
+                Behavior on color { ColorAnimation { duration: 160 } }
+                Row {
+                    id: el
+                    anchors.centerIn: parent
+                    spacing: 6
+                    Texto { visible: est.modelData.coleccion === true; text: "◆"; color: Tema.acento; font.pixelSize: 8; anchors.verticalCenter: parent.verticalCenter }
+                    Texto {
+                        text: est.modelData.texto
+                        color: est.on ? Tema.texto : Tema.apagado
+                        font { pixelSize: 12; weight: est.on ? Font.Bold : Font.Medium }
+                    }
+                    Texto { text: est.modelData.juegos.length; color: Tema.tenue; font { family: Tema.mono; pixelSize: 10 } anchors.verticalCenter: parent.verticalCenter }
+                }
+                MouseArea { id: em; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.setFila(est.index) }
+            }
+        }
+        Texto {
+            visible: win.enInicio && win.estantes.length > 1
+            anchors.verticalCenter: parent.verticalCenter
+            text: "↑ ↓"
+            color: Tema.tenue
+            font { family: Tema.mono; pixelSize: 10 }
+        }
+    }
+    Row {
+        visible: !win.enHerr
+        anchors { right: parent.right; rightMargin: 48; bottom: cinta.top; bottomMargin: 14 }
+        spacing: 8
+        Rectangle {   // lo que buscas (F o /)
+            visible: win.buscando || win.filtro !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(150, bq.implicitWidth + 44); height: 28; radius: Tema.r(9)
+            color: Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.7)
+            border.color: win.buscando ? Tema.acento : Tema.borde
+            Icono { x: 10; anchors.verticalCenter: parent.verticalCenter; width: 13; height: 13; nombre: "buscar"; color: Tema.apagado }
+            Texto {
+                id: bq
+                x: 30; anchors.verticalCenter: parent.verticalCenter
+                text: win.filtro !== "" ? win.filtro : "Escribe…"
+                color: win.filtro !== "" ? Tema.texto : Tema.tenue
+                font.pixelSize: 12
+            }
+            Rectangle {   // el cursor
+                visible: win.buscando
+                x: bq.x + (win.filtro !== "" ? bq.implicitWidth : 0) + 1
+                anchors.verticalCenter: parent.verticalCenter
+                width: 1.5; height: 14; color: Tema.acento
+                SequentialAnimation on opacity { running: win.buscando; loops: Animation.Infinite; NumberAnimation { to: 0; duration: 500 } NumberAnimation { to: 1; duration: 500 } }
+            }
+        }
+        Rectangle {   // el orden (☰)
+            anchors.verticalCenter: parent.verticalCenter
+            width: ol2.implicitWidth + 22; height: 28; radius: Tema.r(9)
+            color: om.containsMouse ? Tema.encima : "transparent"
+            border.color: win.orden ? Tema.acento : Tema.borde
+            Texto { id: ol2; anchors.centerIn: parent; text: win.btn.start + "  " + win.ordenes[win.orden][1]; color: win.orden ? Tema.texto : Tema.apagado; font { family: Tema.mono; pixelSize: 10 } }
+            MouseArea { id: om; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.key("start") }
         }
     }
 
     ListView {
         id: cinta
         visible: !win.enHerr
+        opacity: win.entra
+        transform: Translate { x: (1 - win.entra) * 46 }
         x: 48
         width: parent.width - 48
         height: 256
@@ -815,6 +1056,8 @@ Window {
                 id: carta
                 anchors.bottom: parent.bottom
                 width: parent.width; height: width * 1.5
+                scale: cartaRaton.containsMouse && !d.on ? 1.04 : 1
+                Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                 radius: Tema.r(14)
                 // (detrás de las cajas de los emuladores, que no llenan la carta, un oscuro neutro)
                 color: d.modelData.store === "emu" && portada.status === Image.Ready ? Tema.fondo : win.tint(d.modelData.name)
@@ -853,6 +1096,18 @@ Window {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 3; color: Tema.acento
                 }
+                // Un brillo que sigue al ratón por la portada
+                Rectangle {
+                    visible: cartaRaton.containsMouse
+                    width: carta.width * 1.4; height: width; radius: width / 2
+                    x: cartaRaton.mouseX - width / 2; y: cartaRaton.mouseY - height / 2
+                    gradient: Gradient {
+                        GradientStop { position: 0; color: Qt.rgba(1, 1, 1, 0) }
+                        GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, 0.14) }
+                        GradientStop { position: 1; color: Qt.rgba(1, 1, 1, 0) }
+                    }
+                    rotation: -35
+                }
             }
             Rectangle {
                 visible: d.on
@@ -868,9 +1123,16 @@ Window {
                 color: Tema.acento; opacity: 0.42
             }
             MouseArea {
+                id: cartaRaton
                 anchors.fill: carta
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: d.on ? win.primary() : win.select(d.index)
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: mouse => {
+                    if (mouse.button === Qt.RightButton) { win.select(d.index); win.abrirFicha(); }
+                    else if (d.on) win.primary();
+                    else win.select(d.index);
+                }
             }
         }
     }
@@ -887,9 +1149,11 @@ Window {
                 { b: [win.btn.lb, win.btn.rb], t: "Pestaña" }
             ] : [
                 { b: [win.btn.a], t: win.game && !win.game.installed ? "Descargar" : "Jugar" },
+                { b: [win.btn.y], t: "Ficha" },
                 { b: [win.btn.x], t: "Quitar" },
                 { b: [win.btn.lb, win.btn.rb], t: "Pestaña" },
-                { b: ["↓"], t: "Navegar" }
+                { b: [win.btn.start], t: "Orden" },
+                { b: win.enInicio && win.estantes.length > 1 ? ["↑", "↓"] : ["↓"], t: win.enInicio && win.estantes.length > 1 ? "Estante" : "Navegar" }
             ]
             delegate: Row {
                 required property var modelData
@@ -912,6 +1176,218 @@ Window {
         anchors.bottom: parent.bottom; anchors.bottomMargin: 23
         text: "Meta+Tab en un juego: Discord y la música"
         color: Tema.tenue; font { family: Tema.mono; pixelSize: 10 }
+    }
+
+    // ---------- La ficha de un juego (△ o clic derecho) ----------
+    Rectangle {
+        id: fichaVista
+        visible: opacity > 0.01
+        opacity: win.ficha ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        anchors.fill: parent
+        z: 8
+        color: Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.86)
+        MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton; onClicked: win.cerrarFicha() }
+        // (lo último que se abrió, para que no se vacíe mientras se va)
+        property var g: ({})
+        Connections { target: win; function onFichaChanged() { if (win.ficha) fichaVista.g = win.ficha } }
+        Rectangle {
+            id: fichaCaja
+            anchors.centerIn: parent
+            width: Math.min(1120, parent.width - 120)
+            height: fichaColumna.implicitHeight + fichaColumna.y + 40
+            radius: Tema.r(26)
+            color: Tema.elevada
+            border.color: Tema.borde
+            clip: true
+            scale: win.ficha ? 1 : 0.96
+            Behavior on scale { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+            MouseArea { anchors.fill: parent }
+            // El arte, arriba, fundiéndose con la ficha
+            Image {
+                id: fichaArte
+                anchors { left: parent.left; right: parent.right; top: parent.top }
+                height: 300
+                source: fichaVista.g.hero || fichaVista.g.cover || ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                sourceSize.width: 1200
+            }
+            Rectangle {
+                anchors.fill: fichaArte
+                color: fichaArte.status === Image.Ready ? "transparent" : win.tint(fichaVista.g.name || "")
+                gradient: Gradient {
+                    GradientStop { position: 0; color: Qt.rgba(Tema.elevada.r, Tema.elevada.g, Tema.elevada.b, 0.15) }
+                    GradientStop { position: 0.7; color: Qt.rgba(Tema.elevada.r, Tema.elevada.g, Tema.elevada.b, 0.75) }
+                    GradientStop { position: 1; color: Tema.elevada }
+                }
+            }
+            Column {
+                id: fichaColumna
+                x: 40; y: fichaArte.status === Image.Ready ? 170 : 44
+                width: parent.width - 80 - (win.fichaCol ? 352 : 0)   // (con las colecciones abiertas, a su lado)
+                spacing: 18
+                Column {
+                    spacing: 6
+                    width: parent.width
+                    Texto {
+                        text: (win.where(fichaVista.g) || "").toUpperCase() + (fichaVista.g.installed ? " · INSTALADO" : " · EN LA BIBLIOTECA")
+                        color: Tema.acento
+                        font { family: Tema.mono; pixelSize: 11; weight: Font.DemiBold; letterSpacing: 1.4 }
+                    }
+                    Texto {
+                        width: parent.width
+                        text: fichaVista.g.name || ""
+                        font { pixelSize: 46; weight: Font.ExtraBold; letterSpacing: -1 }
+                        elide: Text.ElideRight; wrapMode: Text.NoWrap
+                    }
+                }
+                // Lo que has jugado
+                Row {
+                    spacing: 12
+                    Repeater {
+                        model: {
+                            const g = fichaVista.g, d = win.fichaDatos || {};
+                            const out = [];
+                            out.push({ t: "Jugado", v: win.hours(g.minutes) ? win.hours(g.minutes).replace(" jugadas", "").replace(" jugados", "") : "Nada aún" });
+                            if (d.dosSemanas) out.push({ t: "Últimas 2 semanas", v: win.hours(d.dosSemanas).replace(" jugadas", "").replace(" jugados", "") });
+                            if (g.last) out.push({ t: "Última vez", v: win.ago(g.last) });
+                            if (g.size) out.push({ t: "Tamaño", v: win.gb(g.size) });
+                            return out;
+                        }
+                        delegate: Rectangle {
+                            id: dato
+                            required property var modelData
+                            width: Math.max(150, dv.implicitWidth + 36); height: 74; radius: Tema.r(16)
+                            color: Tema.encima; border.color: Tema.borde
+                            Column {
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: 18; spacing: 4
+                                Texto { text: dato.modelData.t.toUpperCase(); color: Tema.tenue; font { family: Tema.mono; pixelSize: 10; letterSpacing: 1.2 } }
+                                Texto { id: dv; text: dato.modelData.v; font { pixelSize: 22; weight: Font.Bold } }
+                            }
+                        }
+                    }
+                }
+                // Tus capturas (las de Steam)
+                Column {
+                    visible: (win.fichaDatos.capturas || []).length > 0
+                    width: parent.width
+                    spacing: 8
+                    Texto { text: "TUS CAPTURAS"; color: Tema.tenue; font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 1.6 } }
+                    Row {
+                        spacing: 10
+                        Repeater {
+                            model: (win.fichaDatos.capturas || []).slice(0, 6)
+                            delegate: Rectangle {
+                                required property string modelData
+                                width: 168; height: 95; radius: Tema.r(10)
+                                color: Tema.encima; clip: true
+                                Image { anchors.fill: parent; source: parent.modelData; fillMode: Image.PreserveAspectCrop; asynchronous: true; sourceSize.width: 336 }
+                            }
+                        }
+                    }
+                }
+                // En tus colecciones
+                Row {
+                    visible: win.fichaColecciones.some(c => c.dentro)
+                    spacing: 8
+                    Repeater {
+                        model: win.fichaColecciones.filter(c => c.dentro)
+                        delegate: Rectangle {
+                            required property var modelData
+                            width: cn.implicitWidth + 24; height: 28; radius: Tema.r(9)
+                            color: Tema.rosaSuave; border.color: Tema.acento
+                            Texto { id: cn; anchors.centerIn: parent; text: "◆ " + parent.modelData.nombre; font.pixelSize: 12 }
+                        }
+                    }
+                }
+                // Lo que se puede hacer (← → y ✕)
+                Flow {
+                    width: parent.width
+                    spacing: 10
+                    Repeater {
+                        model: win.fichaAcciones
+                        delegate: Rectangle {
+                            id: fa
+                            required property var modelData
+                            required property int index
+                            readonly property bool on: win.fsel === index && !win.fichaCol
+                            width: fl2.implicitWidth + 44; height: 52; radius: Tema.r(15)
+                            color: modelData.principal ? Tema.acento : on ? Tema.pulsado : Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.5)
+                            border.width: on ? 2 : 1
+                            border.color: on ? (modelData.principal ? Tema.texto : Tema.acento) : Tema.borde
+                            scale: on ? 1.04 : 1
+                            Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                            Texto {
+                                id: fl2
+                                anchors.centerIn: parent
+                                text: fa.modelData.k === "fps"
+                                      ? (consola.juegosFps[fichaVista.g.store + ":" + fichaVista.g.id] || 0
+                                         ? consola.juegosFps[fichaVista.g.store + ":" + fichaVista.g.id] + " FPS" : "FPS como todos")
+                                      : (fa.modelData.principal ? "▶  " : "") + fa.modelData.t
+                                color: fa.modelData.principal ? Tema.sobreAcento : Tema.texto
+                                font { pixelSize: 15; weight: fa.modelData.principal ? Font.ExtraBold : Font.Medium }
+                            }
+                            MouseArea {
+                                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onEntered: if (!win.fichaCol) win.fsel = fa.index
+                                onClicked: { win.fsel = fa.index; win.fichaHacer(); }
+                            }
+                        }
+                    }
+                }
+                Texto {
+                    text: "← → elegir · " + win.btn.a + " hacer · " + win.btn.b + " volver"
+                    color: Tema.tenue
+                    font { family: Tema.mono; pixelSize: 10 }
+                }
+            }
+            // Elegir colecciones (✓ las que lo tienen; las sugeridas se crean al elegirlas)
+            Rectangle {
+                visible: win.fichaCol
+                anchors.right: parent.right; anchors.rightMargin: 32
+                anchors.top: parent.top; anchors.topMargin: 32
+                width: 320; height: ccCol.implicitHeight + 24
+                radius: Tema.r(18)
+                color: Tema.superficie
+                border.color: Tema.acento
+                MouseArea { anchors.fill: parent }
+                Column {
+                    id: ccCol
+                    x: 12; y: 12
+                    width: parent.width - 24
+                    spacing: 2
+                    Texto { leftPadding: 10; bottomPadding: 6; text: "COLECCIONES"; color: Tema.tenue; font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 1.6 } }
+                    Repeater {
+                        model: win.fichaColecciones
+                        delegate: Rectangle {
+                            id: cc
+                            required property var modelData
+                            required property int index
+                            readonly property bool on: win.csel === index
+                            width: ccCol.width; height: 40; radius: Tema.r(11)
+                            color: on ? Tema.pulsado : ccm.containsMouse ? Tema.encima : "transparent"
+                            Rectangle {
+                                x: 10; anchors.verticalCenter: parent.verticalCenter
+                                width: 20; height: 20; radius: Tema.r(6)
+                                color: cc.modelData.dentro ? Tema.acento : "transparent"
+                                border.color: cc.modelData.dentro ? Tema.acento : Tema.borde
+                                Texto { anchors.centerIn: parent; visible: cc.modelData.dentro; text: "✓"; color: Tema.sobreAcento; font { pixelSize: 12; weight: Font.Bold } }
+                            }
+                            Texto {
+                                x: 42; anchors.verticalCenter: parent.verticalCenter
+                                text: (cc.modelData.nueva ? "+ " : "") + cc.modelData.nombre
+                                color: cc.modelData.nueva ? Tema.apagado : Tema.texto
+                                font.pixelSize: 14
+                            }
+                            MouseArea { id: ccm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onEntered: win.csel = cc.index; onClicked: win.coleccionHacer(cc.index) }
+                        }
+                    }
+                    Texto { leftPadding: 10; topPadding: 6; text: win.btn.a + " meter o sacar · " + win.btn.b + " listo"; color: Tema.tenue; font { family: Tema.mono; pixelSize: 10 } }
+                }
+            }
+        }
     }
 
     // ---------- La cuenta atrás a Windows ----------

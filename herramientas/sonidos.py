@@ -207,6 +207,18 @@ def sounds():
     for k, (n, p) in enumerate((('B5', 0.4), ('E5', -0.4), ('B4', 0.0))):
         logout = at(logout, tone(n, 1.2, 0.5 - 0.06 * k, glow=0.12, attack=0.015, decay=2.8), 0.05 + k * 0.2, p)
     s['desktop-logout'] = space(logout, wet=0.4, tail=1.5)
+    # La consola de Jugar (como en una consola: cortos y suaves, que se repiten mucho)
+    # Moverse: un punto de luz muy corto, sin eco
+    s['apogeo-consola-mover'] = tone('E6', 0.06, 0.55, glow=0.08, attack=0.002, decay=55)
+    # Pestaña o estante: un poco más grave, con un pelo de aire
+    s['apogeo-consola-pestana'] = space(at(tone('B5', 0.09, 0.5, glow=0.06, attack=0.003, decay=30), air(0.12, 0.12, 6000, 2500), 0),
+                                        wet=0.12, tail=0.3)
+    # Elegir (jugar, abrir): dos notas que suben y brillan
+    s['apogeo-consola-elegir'] = space(notes(('B5', 'E6'), 0.05, 0.35, 0.8, pans=(-0.15, 0.15), decay=12), wet=0.2, tail=0.6)
+    # La ficha de un juego: un acorde corto que se abre
+    s['apogeo-consola-abrir'] = space(notes(('E5', 'B5', 'E6'), 0.035, 0.4, 0.6, pans=(-0.3, 0, 0.3), decay=9), wet=0.25, tail=0.7)
+    # Atrás: dos notas que bajan, más apagadas
+    s['apogeo-consola-atras'] = space(notes(('E6', 'B5'), 0.05, 0.25, 0.6, glow=0.05, decay=16), wet=0.12, tail=0.4)
     return s
 
 

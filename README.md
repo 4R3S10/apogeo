@@ -270,7 +270,18 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
   portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte
   (un **fondo vivo**: se acerca y se aleja muy despacio, se queda un poco atrás al pasar de un juego a otro, y sus
   colores, mezclados con el violeta, tiñen el grafito), con cuándo jugaste y **cuántas horas llevas** (las de Steam y Heroic; en emuladores y PS5 las cuenta Apogeo).
-  Arriba, **Inicio** y una pestaña por tienda o plataforma con toda tu biblioteca para **descargar y quitar**:
+  Arriba, **Inicio** y una pestaña por tienda o plataforma con toda tu biblioteca para **descargar y quitar**.
+  - **Inicio con estantes** (↑ ↓): Recientes, Más jugados, Sin empezar y cada una de **tus colecciones** (◆). Al cambiar de
+    pestaña o de estante, la cinta y el elegido entran deslizándose.
+  - **La ficha de cada juego** (△ / Y, la I o el clic derecho): su arte, lo que llevas jugado (y en las últimas dos semanas,
+    con Steam), la última vez, lo que ocupa, **tus capturas** (las de Steam), en qué colecciones está y lo que se puede
+    hacer: jugar o descargar, **colecciones** (las tuyas con ✓ y, para empezar, Favoritos, Con amigos, Pendientes y
+    Cortos), los FPS, abrir su carpeta, su página en la tienda y quitarlo (`~/.config/apogeo/colecciones.json`).
+  - **Orden** (☰ / O): recientes, nombre, horas jugadas o tamaño. **Buscar escribiendo:** F o / y escribe (Esc lo borra).
+  - **Sonidos y tacto:** sonidos cortos al moverte, cambiar de pestaña, elegir, abrir la ficha y volver
+    (`apogeo-consola-*` en el tema de sonidos de Apogeo, `herramientas/sonidos.py`); el mando vibra un poco al jugar o
+    descargar. Las portadas se acercan y les pasa un brillo al pasar el ratón.
+  Las pestañas:
   - **Steam:** los descargados y el resto de tu biblioteca (descargar y quitar los hace Steam).
   - **Epic:** tu biblioteca de Heroic; descargar (con su progreso) y quitar con legendary, el de Heroic.
   - **Emuladores:** tus copias de tus juegos en `~/Juegos/<sistema>/` (NES, SNES, N64, GB, GBC, GBA, Mega Drive, PS1, PSP,

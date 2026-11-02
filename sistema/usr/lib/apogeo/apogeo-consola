@@ -98,6 +98,7 @@ def main():
             super().__init__()
             self._tabs = {k: [] for k in ('inicio', 'steam', 'epic', 'emuladores', 'ps5', 'windows')}
             self._tabs.update(descargas={}, emuladoresHay={}, anyps5=False)
+            self.mandos = {}   # los mandos conectados (los rellena el hilo del mando)
             self._loading = False
             self._ready.connect(self._set)
             self._mando = 'ps'
@@ -137,6 +138,42 @@ def main():
         @pyqtProperty(str, constant=True)
         def folder(self):
             return juegos.JUEGOS
+
+        # ----- Colecciones, la ficha de cada juego y el mando que vibra -----
+        coleccionesChanged = pyqtSignal()
+
+        @pyqtProperty('QVariantList', notify=coleccionesChanged)
+        def colecciones(self):
+            return juegos.collections()
+
+        @pyqtSlot(str, str, bool)
+        def coleccion(self, nombre, clave, on):
+            juegos.set_in_collection(nombre, clave, on)
+            self.coleccionesChanged.emit()
+
+        @pyqtSlot('QVariant', result=str)
+        def ficha(self, g):
+            g = g.toVariant() if hasattr(g, 'toVariant') else g
+            try:
+                return json.dumps(juegos.card(g or {}), ensure_ascii=False)
+            except Exception as e:  # (una tienda con un archivo raro: la ficha, igual, sin lo que falte)
+                print('[consola] ficha:', e, file=sys.stderr)
+                return '{}'
+
+        @pyqtSlot(str)
+        def abrirCarpeta(self, path):
+            if path and os.path.isdir(path):
+                juegos.detach(['xdg-open', path])
+
+        @pyqtSlot(str)
+        def abrirTienda(self, url):
+            if url.startswith('steam://'):
+                juegos.detach(['steam', url])
+
+        @pyqtSlot()
+        def vibrar(self):
+            """Un toque corto en el mando (al elegir), si vibra."""
+            rumble(self.mandos)
 
         @pyqtSlot()
         def refresh(self):
@@ -450,6 +487,32 @@ def _running(*names):
 
 # ---------- El mando ----------
 
+def rumble(devices):
+    """Un toque corto (90 ms) en los mandos que vibran."""
+    try:
+        from evdev import ecodes as e, ff
+    except ImportError:
+        return
+    for d in list(devices.values()):
+        try:
+            if e.EV_FF not in d.capabilities():
+                continue
+            effect = ff.Effect(e.FF_RUMBLE, -1, 0, ff.Trigger(0, 0), ff.Replay(90, 0),
+                               ff.EffectType(ff_rumble_effect=ff.Rumble(strong_magnitude=0x2800, weak_magnitude=0x6000)))
+            eid = d.upload_effect(effect)
+            d.write(e.EV_FF, eid, 1)
+            threading.Timer(0.4, lambda d=d, eid=eid: _erase(d, eid)).start()
+        except OSError:
+            pass
+
+
+def _erase(d, eid):
+    try:
+        d.erase_effect(eid)
+    except OSError:
+        pass
+
+
 def gamepads(consola):
     """Lee los mandos (evdev) y se los pasa a la consola (que solo hace caso con su ventana delante) o, con el centro de
     control abierto, al centro (y entonces el mando es solo suyo: el juego no se entera). El botón central, al soltarlo:
@@ -469,7 +532,7 @@ def gamepads(consola):
     combos = {'derecha': 'siguiente', 'izquierda': 'anterior', 'arriba': 'subir', 'abajo': 'bajar'}
     LONG = 0.7  # segundos mantenido: la consola en vez del centro
     sel = selectors.DefaultSelector()
-    known = {}
+    known = consola.mandos
     stick = {}     # dispositivo → -1/0/1 en horizontal (para no repetir)
     held = None    # el botón central mantenido: [cuándo, si ya se ha usado para un atajo]
     grabbed = False

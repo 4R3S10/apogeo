@@ -529,6 +529,83 @@ def tabs():
     return out
 
 
+# ---------- Colecciones y la ficha de cada juego ----------
+
+COLLECTIONS = os.path.join(HOME, '.config/apogeo/colecciones.json')   # [{nombre, juegos: ["tienda:id"]}]
+
+
+def collections():
+    out = []
+    for c in read_json(COLLECTIONS, []) if isinstance(read_json(COLLECTIONS, []), list) else []:
+        if isinstance(c, dict) and str(c.get('nombre') or '').strip():
+            juegos = [str(j) for j in c.get('juegos', []) if isinstance(j, str)]
+            out.append({'nombre': str(c['nombre']).strip()[:40], 'juegos': list(dict.fromkeys(juegos))})
+    return out
+
+
+def set_in_collection(name, key, on):
+    """Mete (o saca) un juego («tienda:id») en una colección; si no existe, la crea; si se queda vacía, se quita."""
+    name = name.strip()[:40]
+    if not name or not key:
+        return
+    cols = collections()
+    c = next((c for c in cols if c['nombre'] == name), None)
+    if c is None:
+        if not on:
+            return
+        c = {'nombre': name, 'juegos': []}
+        cols.append(c)
+    c['juegos'] = [j for j in c['juegos'] if j != key] + ([key] if on else [])
+    write_json(COLLECTIONS, [c for c in cols if c['juegos']])
+
+
+def _steam_dir(appid):
+    for lib in steam_libraries():
+        try:
+            with open(os.path.join(lib, f'appmanifest_{appid}.acf'), encoding='utf-8', errors='replace') as f:
+                d = (vdf_values(f.read(), 'installdir') or [''])[0]
+        except OSError:
+            continue
+        path = os.path.join(lib, 'common', d)
+        if d and os.path.isdir(path):
+            return path
+    return ''
+
+
+def _steam_two_weeks(appid):
+    best = 0
+    for f in glob.glob(os.path.join(STEAM, 'userdata/*/config/localconfig.vdf')):
+        try:
+            with open(f, encoding='utf-8', errors='replace') as fh:
+                apps = _get(vdf_parse(fh.read()), 'UserLocalConfigStore', 'Software', 'Valve', 'Steam', 'apps') or {}
+            best = max(best, int(_get(apps.get(str(appid)) or {}, 'Playtime2wks') or 0))
+        except (OSError, TypeError, ValueError):
+            pass
+    return best
+
+
+def card(g):
+    """Lo de la ficha de un juego: tus capturas (las de Steam), lo jugado en las últimas dos semanas (Steam), su carpeta
+    y su página en la tienda (lo que se sepa; lo demás vacío)."""
+    store, gid = g.get('store'), str(g.get('id', ''))
+    out = {'capturas': [], 'dosSemanas': 0, 'carpeta': '', 'tienda': ''}
+    if store == 'steam' and gid.isdigit():
+        shots = glob.glob(os.path.join(STEAM, f'userdata/*/760/remote/{gid}/screenshots/*.jpg'))
+        shots.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        out['capturas'] = [file_url(p) for p in shots[:8]]
+        out['dosSemanas'] = _steam_two_weeks(gid)
+        out['carpeta'] = _steam_dir(gid) if g.get('installed') else ''
+        out['tienda'] = f'steam://store/{gid}'
+    elif store == 'epic':
+        inst = read_json(os.path.join(HEROIC, 'legendaryConfig/legendary/installed.json'), {})
+        path = (inst.get(gid) or {}).get('install_path', '') if isinstance(inst, dict) else ''
+        out['carpeta'] = path if path and os.path.isdir(path) else ''
+    elif store in ('emu', 'ps5') and g.get('path'):
+        path = g['path'] if os.path.isdir(g['path']) else os.path.dirname(g['path'])
+        out['carpeta'] = path if os.path.isdir(path) else ''
+    return out
+
+
 def mark_played(gid):
     played = read_json(PLAYED, {})
     played[gid] = int(time.time())
