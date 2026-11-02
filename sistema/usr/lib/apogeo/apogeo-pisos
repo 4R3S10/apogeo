@@ -462,7 +462,8 @@ def setup(bus):
                 bar.floating = false;
                 bar.height = 30;
                 bar.lengthMode = 'fill';
-                bar.hiding = 'none';
+                bar.hiding = 'dodgewindows';
+                bar.opacity = 'translucent';
                 bar.addWidget('org.apogeo.modo');
                 bar.addWidget('org.apogeo.ventanas');
                 var tray = bar.addWidget('org.kde.plasma.systemtray');
@@ -1264,9 +1265,18 @@ def island(bus, st):
     plasma_script(bus, """
         panels().forEach(function (p) {
             var types = p.widgets().map(function (w) { return w.type; });
+            if (types.indexOf('org.apogeo.isla') >= 0 || types.indexOf('org.apogeo.modo') >= 0) {
+                // Nunca con fondo: con «adaptable» (lo de serie) Plasma les pone el fondo opaco cuando una ventana las
+                // toca, y se veía un rectángulo gris oscuro detrás del orbe y de la barra
+                if (p.opacity != 'translucent') p.opacity = 'translucent';
+            }
             if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, arriba (y fina: Plasma a veces la volvía a 40)
                 if (p.location != 'top') p.location = 'top';
                 if (p.height != 30) p.height = 30;
+                // Piezas sueltas sobre el fondo: no se guarda sitio para ella (las ventanas maximizadas llegan arriba
+                // del todo); se aparta cuando una ventana la tapa y sale al tocar el borde de arriba
+                if (p.hiding != 'dodgewindows') p.hiding = 'dodgewindows';
+                if (p.floating) p.floating = false;
                 return;
             }
             if (types.indexOf('org.apogeo.isla') < 0) return;

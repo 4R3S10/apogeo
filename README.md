@@ -127,7 +127,9 @@ que se abrieron (Kvantum no cambia en vivo); las que abras cogen el del modo.
 ### El escritorio de Órbita («C · Orbe central»)
 
 Casi vacío, como en la bienvenida de una consola:
-- **Arriba, una barra fina sin fondo:** a la izquierda el modo en el que estás, pequeño y en su color
+- **Arriba, una barra fina sin fondo, suelta sobre el fondo de pantalla:** no guarda sitio (las ventanas maximizadas
+  llegan arriba del todo); se aparta cuando una ventana la tapa y sale al tocar el borde de arriba (Plasma: «Esquivar
+  ventanas»). A la izquierda el modo en el que estás, pequeño y en su color
   (`org.apogeo.modo`; un clic abre la Órbita); **en el centro, tus ventanas abiertas** en el modo, solo sus iconos y
   un punto bajo la activa (`org.apogeo.ventanas`: clic ir o minimizar, clic central otra, clic derecho cerrar); al
   cambiar el volumen o el brillo, su barrita sale ahí un momento. A la derecha la hora, los iconos de tus apps
@@ -172,7 +174,8 @@ Casi vacío, como en la bienvenida de una consola:
 - Las barras y el orbe sin fondo son del estilo de Plasma de Órbita (`herramientas/plasma.py`: los trozos «north-…» y
   «south-…» de `panel-background`, vacíos, y sin sombra de panel), también en su versión opaca
   (`solid/widgets/panel-background`, la que usa Plasma cuando una ventana toca el panel: sin ella cogía la de Breeze y
-  salía un fondo oscuro).
+  salía un fondo oscuro). Además, las dos van en opacidad «translúcida» (`island()` de `apogeo-pisos`, en cada
+  inicio): con la «adaptable» de serie, Plasma les ponía el fondo opaco al tocarlas una ventana.
 
 ### Los avisos
 
