@@ -287,6 +287,11 @@ letra de datos (con JetBrains Mono Nerd Font de respaldo, para los símbolos del
 
 ## Jugar
 
+- **Estética «terminal pixelada»** (como los terminales del vídeo de COSMIC): todo en la monoespaciada (Geist Mono) y con
+  esquinas casi rectas (`Tema.letraForzada` y `Tema.radioForzado`), la hora en bloques arriba a la izquierda, las
+  pestañas en mayúsculas con la elegida subrayada, el juego como una orden («> Elden Ring_», con el cursor parpadeando),
+  los botones planos «[ JUGAR ]» y las portadas sin resplandores. **Sonidos: clics mecánicos** secos y suaves
+  (`click()` de `herramientas/sonidos.py`).
 - **Consola («C8 · Cinta panorámica»):** al entrar en el modo Jugar sale al instante, a pantalla completa (`apogeo-pisos`
   la abre al entrar en la sesión, en Jugar, y ya no se cierra). Abajo, una cinta con las
   portadas de tus juegos descargados (el último jugado primero); el elegido se agranda y pinta la pantalla con su arte

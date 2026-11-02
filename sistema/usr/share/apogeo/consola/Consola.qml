@@ -17,7 +17,8 @@ Window {
     title: "Jugar"
     color: Tema.fondo
     visible: true
-    Component.onCompleted: { Tema.piso = "jugar"; showFullScreen(); }
+    // «Terminal pixelada» (como los terminales del vídeo de COSMIC): todo en la monoespaciada, esquinas casi rectas
+    Component.onCompleted: { Tema.piso = "jugar"; Tema.letraForzada = Tema.mono; Tema.radioForzado = 0.18; showFullScreen(); }
     // Siempre con los colores de Jugar, aunque esté abierta (escondida) mientras estás en otro modo: así sale ya en violeta
     Connections { target: Tema; function onPisoChanged() { if (Tema.piso !== "jugar") Tema.piso = "jugar"; } }
 
@@ -488,20 +489,43 @@ Window {
         anchors { left: parent.left; right: parent.right; top: parent.top }
         height: 86
 
+        // La hora en bloques (como tty-clock en los terminales del vídeo) y el modo
         Row {
             x: 48
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 12
-            Nucleo { width: 34; height: 34; anchors.verticalCenter: parent.verticalCenter }
-            Column {
+            spacing: 16
+            Row {
+                id: relojBloques
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 0
-                Texto {
-                    text: "ÓRBITA"
-                    font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold; letterSpacing: 3.2 }
-                    color: Tema.apagado
+                spacing: 6
+                property date ahora: new Date()
+                Timer { interval: 5000; repeat: true; running: true; triggeredOnStart: true; onTriggered: relojBloques.ahora = new Date() }
+                Repeater {
+                    model: Qt.formatTime(relojBloques.ahora, "HH:mm").split("")
+                    delegate: Grid {
+                        required property string modelData
+                        readonly property string mapa: ({ "0": "111101101101111", "1": "001001001001001", "2": "111001111100111",
+                            "3": "111001111001111", "4": "101101111001001", "5": "111100111001111", "6": "111100111101111",
+                            "7": "111001001001001", "8": "111101111101111", "9": "111101111001111" })[modelData] || ""
+                        readonly property bool puntos: modelData === ":"
+                        columns: puntos ? 1 : 3
+                        columnSpacing: 2; rowSpacing: 2
+                        Repeater {
+                            model: parent.puntos ? [0, 1, 0, 1, 0] : parent.mapa.split("").map(Number)
+                            delegate: Rectangle {
+                                required property int modelData
+                                width: 7; height: 6; radius: 1
+                                color: modelData ? Tema.texto : "transparent"
+                            }
+                        }
+                    }
                 }
-                Texto { text: "Jugar"; font { pixelSize: 19; weight: Font.ExtraBold; letterSpacing: -0.2 } }
+            }
+            Texto {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "JUGAR"
+                color: Tema.acento
+                font { pixelSize: 13; weight: Font.DemiBold; letterSpacing: 3 }
             }
         }
 
@@ -567,22 +591,22 @@ Window {
                 required property var modelData
                 required property int index
                 readonly property bool on: win.tab === index
-                width: tl.implicitWidth + 30; height: 38; radius: Tema.r(12)
-                color: on ? Tema.rosa : tm.containsMouse ? Tema.encima : "transparent"
-                border.width: on ? 0 : 1
-                border.color: Tema.linea
+                // Como en una terminal: el nombre en mayúsculas y, la elegida, subrayada del color del modo
+                width: tl.implicitWidth + 26; height: 38
+                color: "transparent"
                 Row {
                     id: tl
                     anchors.centerIn: parent
                     spacing: 7
-                    Texto { text: t.modelData.texto; font { pixelSize: 14; weight: t.on ? Font.Bold : Font.Medium } color: t.on ? Tema.sobreRosa : Tema.apagado }
+                    Texto { text: t.modelData.texto.toUpperCase(); font { pixelSize: 13; weight: t.on ? Font.Bold : Font.Medium; letterSpacing: 2 } color: t.on ? Tema.acento : tm.containsMouse ? Tema.texto : Tema.apagado }
                     Texto {
                         visible: win.countOf(t.modelData.clave) > 0
                         text: win.countOf(t.modelData.clave)
                         font { family: Tema.mono; pixelSize: 10; weight: Font.DemiBold }
-                        color: t.on ? Tema.sobreRosa : Tema.tenue
+                        color: Tema.tenue
                     }
                 }
+                Rectangle { visible: t.on; anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; width: tl.implicitWidth; height: 2; color: Tema.acento }
                 MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.setTab(t.index) }
             }
         }
@@ -629,12 +653,24 @@ Window {
                 font { family: Tema.mono; pixelSize: 11; weight: Font.DemiBold; letterSpacing: 1.4 }
             }
         }
-        Texto {
+        // Como una orden en la terminal: «> Elden Ring_» (el cursor parpadea)
+        Row {
             width: parent.width
-            text: win.game ? win.game.name : ""
-            font { pixelSize: 60; weight: Font.ExtraBold; letterSpacing: -1.4 }
-            maximumLineCount: 2; elide: Text.ElideRight
-            lineHeight: 0.92
+            spacing: 14
+            Texto { text: ">"; color: Tema.acento; font { pixelSize: 52; weight: Font.Bold } }
+            Texto {
+                width: Math.min(implicitWidth, parent.width - 120)
+                text: win.game ? win.game.name : ""
+                font { pixelSize: 52; weight: Font.Bold; letterSpacing: -0.5 }
+                maximumLineCount: 1; elide: Text.ElideRight
+                wrapMode: Text.NoWrap
+            }
+            Rectangle {
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 12
+                width: 26; height: 6; color: Tema.acento
+                SequentialAnimation on opacity { loops: Animation.Infinite; running: win.active
+                    NumberAnimation { to: 0; duration: 530 } NumberAnimation { to: 1; duration: 530 } }
+            }
         }
         Item { width: 1; height: 12 }
         // La compatibilidad, sin promesas: la tienda, el estado y la capa que lo hace funcionar
@@ -662,16 +698,7 @@ Window {
                 height: 54; radius: Tema.r(16)
                 color: busy ? Qt.rgba(Tema.fondo.r, Tema.fondo.g, Tema.fondo.b, 0.7) : Tema.acento
                 border.color: busy ? Tema.borde : "transparent"
-                RectangularShadow { anchors.fill: parent; z: -1; visible: !boton.busy; offset.y: 6; blur: 26; spread: -4; radius: parent.radius; color: Tema.acento; opacity: 0.7 }
-                Rectangle {
-                    visible: !boton.busy
-                    anchors { left: parent.left; right: parent.right; top: parent.top }
-                    height: parent.height / 2; radius: parent.radius
-                    gradient: Gradient {
-                        GradientStop { position: 0; color: Qt.rgba(1, 1, 1, 0.16) }
-                        GradientStop { position: 1; color: "transparent" }
-                    }
-                }
+                // (plano, sin brillos: como un botón de terminal)
                 Rectangle {
                     visible: boton.busy && win.dl.estado !== "error"
                     x: 0; y: 0; height: parent.height; radius: parent.radius
@@ -682,7 +709,7 @@ Window {
                     id: bl
                     anchors.centerIn: parent
                     text: boton.busy ? (win.dl.estado === "error" ? win.dl.mensaje : (win.dl.estado === "quitando" ? "Quitando… " : "Descargando… ") + Math.round((win.dl.progreso || 0) * 100) + " %")
-                        : win.game && win.game.installed ? "▶  Jugar" : win.game && win.game.store === "ps5" ? "Convertir con AnyPS5" : "↓  Descargar"
+                        : win.game && win.game.installed ? "[ JUGAR ]" : win.game && win.game.store === "ps5" ? "[ CONVERTIR ]" : "[ DESCARGAR ]"
                     color: boton.busy ? Tema.texto : Tema.sobreAcento
                     font { pixelSize: boton.busy ? 14 : 17; weight: Font.ExtraBold }
                 }
@@ -860,7 +887,7 @@ Window {
                 opacity: modelData.hay ? 1 : 0.5
                 scale: on ? 1.03 : 1
                 Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-                RectangularShadow { visible: ht.on; anchors.fill: parent; z: -1; blur: 34; spread: 0; radius: parent.radius; color: Tema.acento; opacity: 0.35 }
+                // (plano: sin resplandor)
                 // Su icono (el de la app); los FPS, un «FPS» en el acento
                 Rectangle {
                     x: 22; y: 22
@@ -1090,18 +1117,6 @@ Window {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 3; color: Tema.acento
                 }
-                // Un brillo que sigue al ratón por la portada
-                Rectangle {
-                    visible: cartaRaton.containsMouse
-                    width: carta.width * 1.4; height: width; radius: width / 2
-                    x: cartaRaton.mouseX - width / 2; y: cartaRaton.mouseY - height / 2
-                    gradient: Gradient {
-                        GradientStop { position: 0; color: Qt.rgba(1, 1, 1, 0) }
-                        GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, 0.14) }
-                        GradientStop { position: 1; color: Qt.rgba(1, 1, 1, 0) }
-                    }
-                    rotation: -35
-                }
             }
             Rectangle {
                 visible: d.on
@@ -1110,12 +1125,7 @@ Window {
                 color: "transparent"
                 border.width: 2; border.color: Tema.acento
             }
-            RectangularShadow {
-                visible: d.on
-                anchors.fill: carta; z: -1
-                blur: 38; spread: 2; radius: Tema.r(18)
-                color: Tema.acento; opacity: 0.42
-            }
+            // (la elegida: solo su marco del color del modo, plano, sin resplandor)
             MouseArea {
                 id: cartaRaton
                 anchors.fill: carta

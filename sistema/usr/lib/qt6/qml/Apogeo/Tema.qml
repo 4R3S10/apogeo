@@ -59,7 +59,10 @@ QtObject {
     readonly property color error: "#ff6b81"
     readonly property color aviso: Qt.rgba(255 / 255, 200 / 255, 87 / 255, 0.14)
 
-    readonly property string letra: c("letra", "Geist")
+    // (una app puede forzar su letra y sus esquinas: la consola de Jugar va en monoespaciada y casi recta, «terminal»)
+    property string letraForzada: ""
+    property real radioForzado: -1
+    readonly property string letra: letraForzada !== "" ? letraForzada : c("letra", "Geist")
     readonly property string mono: c("mono", "Geist Mono")
     readonly property string serif: "Source Serif 4"   // (para leer y escribir apuntes)
     readonly property real letraPt: c("letraPt", 10)
@@ -67,7 +70,7 @@ QtObject {
     readonly property var wp: c("wp", ["#0b1118", piso === "jugar" ? "#2b2147" :
                                        piso === "estudiar" ? "#3a2a17" : "#12303d", acento])
     // Las esquinas (Rectas · Suaves · Redondas): r(16) es un radio de 16 con tus esquinas
-    readonly property real radio: c("radio", 0.7)
+    readonly property real radio: radioForzado >= 0 ? radioForzado : c("radio", 0.7)
     function r(n) { return Math.max(2, Math.round(n * radio)) }
     readonly property string posicion: c("posicion", "abajo-dcha")
 

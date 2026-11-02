@@ -162,6 +162,25 @@ def write(path, x, peak=0.42):
         w.writeframes(bytes(data))
 
 
+def click(vol=0.6, tono=2400, cuerpo=0.35, dur=0.045):
+    """Un clic mecánico: un chasquido de ruido muy corto (el contacto) y un golpecito grave que se apaga enseguida (la
+    tecla al tocar fondo). Seco: sin sala."""
+    import random
+    rnd = random.Random(int(tono))   # (siempre el mismo clic)
+    n = int(dur * RATE)
+    out = []
+    prev = 0.0
+    for i in range(n):
+        t = i / RATE
+        noise = rnd.uniform(-1, 1)
+        hp = noise - prev   # (ruido agudo: solo los cambios)
+        prev = noise
+        chasquido = hp * math.exp(-t * 900) * 0.6
+        golpe = math.sin(TAU * tono * t) * math.exp(-t * 260) * 0.35 + math.sin(TAU * 180 * t) * math.exp(-t * 120) * cuerpo
+        out.append((chasquido + golpe) * vol)
+    return [out, list(out)]
+
+
 def notes(seq, step, dur=0.8, vol=1.0, pans=None, **kw):
     """Unas notas seguidas («step» segundos entre ellas), cada una en su sitio de lado a lado."""
     x = empty()
@@ -207,18 +226,14 @@ def sounds():
     for k, (n, p) in enumerate((('B5', 0.4), ('E5', -0.4), ('B4', 0.0))):
         logout = at(logout, tone(n, 1.2, 0.5 - 0.06 * k, glow=0.12, attack=0.015, decay=2.8), 0.05 + k * 0.2, p)
     s['desktop-logout'] = space(logout, wet=0.4, tail=1.5)
-    # La consola de Jugar (como en una consola: cortos y suaves, que se repiten mucho)
-    # Moverse: un punto de luz muy corto, sin eco
-    s['apogeo-consola-mover'] = tone('E6', 0.06, 0.55, glow=0.08, attack=0.002, decay=55)
-    # Pestaña o estante: un poco más grave, con un pelo de aire
-    s['apogeo-consola-pestana'] = space(at(tone('B5', 0.09, 0.5, glow=0.06, attack=0.003, decay=30), air(0.12, 0.12, 6000, 2500), 0),
-                                        wet=0.12, tail=0.3)
-    # Elegir (jugar, abrir): dos notas que suben y brillan
-    s['apogeo-consola-elegir'] = space(notes(('B5', 'E6'), 0.05, 0.35, 0.8, pans=(-0.15, 0.15), decay=12), wet=0.2, tail=0.6)
-    # La ficha de un juego: un acorde corto que se abre
-    s['apogeo-consola-abrir'] = space(notes(('E5', 'B5', 'E6'), 0.035, 0.4, 0.6, pans=(-0.3, 0, 0.3), decay=9), wet=0.25, tail=0.7)
-    # Atrás: dos notas que bajan, más apagadas
-    s['apogeo-consola-atras'] = space(notes(('E6', 'B5'), 0.05, 0.25, 0.6, glow=0.05, decay=16), wet=0.12, tail=0.4)
+    # La consola de Jugar: clics mecánicos, secos y suaves (como un teclado mecánico silencioso)
+    s['apogeo-consola-mover'] = click(0.55, 2600)
+    s['apogeo-consola-pestana'] = click(0.6, 1900, cuerpo=0.5)
+    # Elegir: un clic doble (como pulsar y soltar una tecla)
+    s['apogeo-consola-elegir'] = at(click(0.7, 2200, cuerpo=0.6), click(0.45, 3000), 0.045)
+    s['apogeo-consola-abrir'] = at(click(0.65, 1700, cuerpo=0.7), click(0.35, 2600), 0.03)
+    # Atrás: un clic más grave y apagado
+    s['apogeo-consola-atras'] = click(0.5, 1300, cuerpo=0.6)
     return s
 
 
