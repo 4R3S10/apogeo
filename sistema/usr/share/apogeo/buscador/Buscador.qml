@@ -794,7 +794,8 @@ Window {
                 id: fijFlick
                 visible: win.query === ""
                 width: parent.width
-                height: visible ? Math.min(fijCol.height, Math.max(win.u(180), deck.maxRes)) : 0
+                // (como mucho unas tres filas: más arriba taparía los satélites; lo demás se desliza con la rueda o las flechas)
+                height: visible ? Math.min(fijCol.height, Math.max(win.u(180), Math.min(deck.maxRes, win.u(82) * 3 + win.u(30)))) : 0
                 contentHeight: fijCol.height
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
