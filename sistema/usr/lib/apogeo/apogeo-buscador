@@ -92,6 +92,73 @@ def save_pins(pins):
     os.replace(tmp, PINS)
 
 
+# Carpetas de tus apps fijadas (por modo): [{nombre, apps: [ids]}]. Una app de una carpeta sigue fijada en el modo
+# (fijadas.json manda: lo que se quita de ahí sale también de su carpeta); las que no están en ninguna van sueltas.
+FOLDERS = os.path.join(os.path.dirname(PINS), 'carpetas.json')
+# Cuántas veces abres cada app desde la Órbita y cuándo fue la última (para «Más usadas»)
+USES = os.path.join(os.environ.get('XDG_STATE_HOME', os.path.expanduser('~/.local/state')), 'apogeo', 'usos.json')
+MOST_USED = 6       # apps en «Más usadas»
+MOST_USED_FROM = 8  # «Más usadas» sale a partir de estas fijadas (con menos, ya están todas a la vista)
+
+
+def _load_json(path, default):
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return data if isinstance(data, type(default)) else default
+    except (OSError, ValueError):
+        return default
+
+
+def _save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.nuevo'
+    with open(tmp, 'w') as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def load_folders(modo, pins=None):
+    """Las carpetas del modo, limpias: sin apps que ya no están fijadas, sin repetidas y sin carpetas vacías."""
+    pinned = set((pins or load_pins()).get(modo, []))
+    seen, out = set(), []
+    for c in _load_json(FOLDERS, {}).get(modo, []):
+        if not isinstance(c, dict):
+            continue
+        name = str(c.get('nombre') or '').strip()[:40]
+        apps = [str(a) for a in c.get('apps', []) if isinstance(a, str) and a in pinned and a not in seen]
+        seen.update(apps)
+        if name and apps and name not in [x['nombre'] for x in out]:
+            out.append({'nombre': name, 'apps': apps})
+    return out
+
+
+def save_folders(modo, folders):
+    data = _load_json(FOLDERS, {})
+    data[modo] = folders
+    _save_json(FOLDERS, data)
+
+
+def note_use(desktop_id):
+    import time
+    uses = _load_json(USES, {})
+    u = uses.get(desktop_id) if isinstance(uses.get(desktop_id), dict) else {}
+    uses[desktop_id] = {'n': int(u.get('n', 0)) + 1, 'ultimo': int(time.time())}
+    try:
+        _save_json(USES, uses)
+    except OSError:
+        pass
+
+
+def most_used(ids, n):
+    """Las n más abiertas de esas (al menos dos veces), de más a menos; a igualdad, la última abierta primero."""
+    uses = _load_json(USES, {})
+    def score(i):
+        u = uses.get(i) if isinstance(uses.get(i), dict) else {}
+        return (int(u.get('n', 0)), int(u.get('ultimo', 0)))
+    return [i for i in sorted(ids, key=score, reverse=True) if score(i)[0] >= 2][:n]
+
+
 def app_info(desktop_id):
     """{id, nombre, icono} de una app instalada (None si no está)."""
     import gi
@@ -307,6 +374,7 @@ def main():
             import subprocess
             subprocess.Popen(['systemd-run', '--user', '--scope', '--collect', '--slice=app.slice', 'gio', 'launch', path],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            note_use(desktop_id)
 
         @pyqtSlot(str, result='QVariantMap')
         def answer(self, text):
@@ -354,13 +422,68 @@ def main():
 
         @pyqtSlot(str, str, bool)
         def fijar(self, modo, desktop_id, on):
-            """Fijar una app en el modo (al final) o quitarla."""
+            """Fijar una app en el modo (al final) o quitarla (también de su carpeta)."""
             pins = load_pins()
             if modo not in pins:
                 return
             have = [i for i in pins[modo] if i != desktop_id]
             pins[modo] = have + [desktop_id] if on else have
             save_pins(pins)
+            if not on:
+                save_folders(modo, load_folders(modo, pins))
+            self.pinsChanged.emit()
+
+        @pyqtSlot(str, result=str)
+        def vista(self, modo):
+            """Lo que enseña la cubierta sin escribir: «Más usadas» (si tienes bastantes fijadas), las sueltas y las
+            carpetas con sus apps. JSON: {masUsadas: [app], sueltas: [app], carpetas: [{nombre, apps: [app]}]}."""
+            pins = load_pins()
+            ids = pins.get(modo, [])
+            folders = load_folders(modo, pins)
+            infos = {i: a for i, a in ((i, app_info(i)) for i in ids) if a}
+            inside = {a for c in folders for a in c['apps']}
+            out = {
+                'masUsadas': [infos[i] for i in most_used(list(infos), MOST_USED)] if len(infos) >= MOST_USED_FROM else [],
+                'sueltas': [infos[i] for i in ids if i in infos and i not in inside],
+                'carpetas': [{'nombre': c['nombre'], 'apps': [infos[i] for i in c['apps'] if i in infos]} for c in folders],
+            }
+            out['carpetas'] = [c for c in out['carpetas'] if c['apps']]
+            return json.dumps(out, ensure_ascii=False)
+
+        @pyqtSlot(str, str, str)
+        def aCarpeta(self, modo, desktop_id, nombre):
+            """Mete una app fijada en la carpeta «nombre» (si no existe, la crea al final); con «» la saca y va suelta."""
+            pins = load_pins()
+            if desktop_id not in pins.get(modo, []):
+                return
+            nombre = nombre.strip()[:40]
+            folders = [dict(c, apps=[a for a in c['apps'] if a != desktop_id]) for c in load_folders(modo, pins)]
+            if nombre:
+                for c in folders:
+                    if c['nombre'] == nombre:
+                        c['apps'].append(desktop_id)
+                        break
+                else:
+                    folders.append({'nombre': nombre, 'apps': [desktop_id]})
+            save_folders(modo, [c for c in folders if c['apps']])
+            self.pinsChanged.emit()
+
+        @pyqtSlot(str, str, str)
+        def renombrarCarpeta(self, modo, viejo, nuevo):
+            nuevo = nuevo.strip()[:40]
+            folders = load_folders(modo)
+            if not nuevo or any(c['nombre'] == nuevo for c in folders):
+                return
+            for c in folders:
+                if c['nombre'] == viejo:
+                    c['nombre'] = nuevo
+            save_folders(modo, folders)
+            self.pinsChanged.emit()
+
+        @pyqtSlot(str, str)
+        def deshacerCarpeta(self, modo, nombre):
+            """Quita la carpeta; sus apps siguen fijadas, sueltas."""
+            save_folders(modo, [c for c in load_folders(modo) if c['nombre'] != nombre])
             self.pinsChanged.emit()
 
         @pyqtSlot(str, result='QVariantList')

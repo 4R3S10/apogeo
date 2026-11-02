@@ -153,7 +153,12 @@ Casi vacío, como en la bienvenida de una consola:
   todo a la vista nada más entrar, sin pestañas. En el centro, unida al orbe por un haz de luz, la cubierta con **tus
   apps del modo** (las que fijas tú, `~/.config/apogeo/fijadas.json`: Navegar empieza vacío; Estudiar con Obsidian,
   Okular, Xournal++, Anki, ONLYOFFICE, Ágape y Spotify) y el buscador. Las demás apps solo se encuentran buscando: su
-  chincheta (o Ctrl+Intro) las fija; en la cubierta, su chincheta o el clic derecho las quitan. Encima, en abanico
+  chincheta (o Ctrl+Intro) las fija; en la cubierta, su chincheta las quita. **Carpetas:** con el clic derecho (o la
+  tecla Menú) en una app fijada, «Nueva carpeta…», «Mover a «…»», «Sacar de «…»» o «Quitar»; en una carpeta,
+  «Renombrar…» o «Deshacer carpeta» (sus apps siguen fijadas, sueltas). La carpeta enseña sus cuatro primeras apps;
+  un clic la abre dentro de la cubierta y Esc vuelve (`~/.config/apogeo/carpetas.json`). Con 8 fijadas o más, arriba
+  salen tus **6 más usadas** (las que más abres desde la Órbita, `~/.local/state/apogeo/usos.json`). Con muchas, la
+  cubierta se desliza. Encima, en abanico
   sobre un **arco de luz** alrededor del orbe (con una chispa que lo recorre), los **satélites**, todos del mismo
   tamaño y un poco girados hacia el orbe (al abrir salen de él y se despliegan; el radio se ajusta para no tapar la
   cubierta): **tu nota** a la izquierda, lo que suena (su portada, sus colores en el

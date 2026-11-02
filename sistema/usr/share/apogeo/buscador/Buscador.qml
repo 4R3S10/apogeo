@@ -38,6 +38,11 @@ Window {
     property int sel: 0
     property bool pista: false                     // tras «+»: cómo se fija una app
     property var fijadas: []
+    // Tus fijadas como se enseñan: «Más usadas», las sueltas y las carpetas (apogeo-buscador: vista)
+    property var vista: ({ masUsadas: [], sueltas: [], carpetas: [] })
+    property string carpeta: ""                    // la carpeta abierta («» ninguna)
+    property var menu: null                        // el menú del clic derecho: { item, x, y } (en la cubierta)
+    property bool menuNombre: false                // el menú pide un nombre (carpeta nueva o renombrar)
     property var insp: ({ musica: {}, avisos: [], bajando: [], proximo: [] })
     property var avisos: []
     property var notas: []
@@ -70,8 +75,14 @@ Window {
     Behavior on verS { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
     function rgba(c, a) { return "rgba(" + Math.round(c.r * 255) + "," + Math.round(c.g * 255) + "," + Math.round(c.b * 255) + "," + a + ")" }
 
-    // Sin escribir: tus fijadas y «+»
-    readonly property var flat: fijadas.concat([{ id: "", nombre: "Fijar", icono: "" }])
+    // Sin escribir: «Más usadas» (arriba) y, debajo, tus sueltas, tus carpetas y «+»; con una carpeta abierta, sus apps
+    readonly property var carpetaAbierta: vista.carpetas.find(c => c.nombre === carpeta) || null
+    readonly property var arriba: carpeta === "" ? vista.masUsadas : []
+    readonly property var abajo: carpetaAbierta ? carpetaAbierta.apps
+        : vista.sueltas.concat(vista.carpetas.map(c => ({ id: "", carpeta: c.nombre, nombre: c.nombre, apps: c.apps })),
+                               [{ id: "", nombre: "Fijar", icono: "" }])
+    readonly property var flat: arriba.concat(abajo)
+    function carpetaDe(id) { const c = vista.carpetas.find(c => c.apps.some(a => a.id === id)); return c ? c.nombre : "" }
     // Al escribir, en orden: tus apps, la cuenta (0 o 1), las órdenes, lo de KDE, tus archivos y la web
     readonly property var appsHalladas: query === "" ? [] : buscador.buscarApps(query)
     readonly property var nombresHallados: appsHalladas.map(a => a.nombre)
@@ -91,10 +102,21 @@ Window {
 
     function leer() {
         modo = buscador.modo();
-        fijadas = buscador.fijadas(modo);
+        leerFijadas();
         leerAhora();
         leerLento();
     }
+    function leerFijadas() {
+        fijadas = buscador.fijadas(modo);
+        try { vista = JSON.parse(buscador.vista(modo)); } catch (e) {}
+        if (carpeta !== "" && !carpetaAbierta) carpeta = "";
+        if (sel >= flat.length) sel = Math.max(0, flat.length - 1);
+    }
+    function abrirCarpeta(nombre) { carpeta = nombre; sel = 0; menu = null; field.forceActiveFocus(); }
+    function cerrarCarpeta() { const n = carpeta; carpeta = ""; menu = null; sel = Math.max(0, flat.findIndex(a => a.carpeta === n)); }
+    // El clic derecho en una app o una carpeta (o la tecla Menú sobre la elegida)
+    function abrirMenu(item, x, y) { menuNombre = false; menu = { item: item, x: x, y: y }; }
+    function cerrarMenu() { menu = null; menuNombre = false; field.forceActiveFocus(); }
     function leerAhora() {
         try { insp = JSON.parse(buscador.inspector()); } catch (e) {}
         try { avisos = JSON.parse(buscador.avisos()); } catch (e) {}
@@ -124,6 +146,8 @@ Window {
         field.text = "";
         detalle = "";
         pista = false;
+        carpeta = "";
+        menu = null;
         leer();
         sel = 0;
         showFullScreen();
@@ -156,6 +180,7 @@ Window {
         if (query === "") {
             const a = flat[i];
             if (!a) return;
+            if (a.carpeta) { abrirCarpeta(a.carpeta); return; }
             if (a.id === "") { pista = true; field.forceActiveFocus(); return; }   // «+»: se fija desde el buscador
             buscador.launch(a.id); close();
         } else if (i < answerAt) {
@@ -208,7 +233,13 @@ Window {
         else if (p.y + item.height > resFlick.contentY + resFlick.height) resFlick.contentY = p.y + item.height - resFlick.height;
     }
     function pinned(id) { return fijadas.some(a => a.id === id) }
-    function pin(id, on) { buscador.fijar(modo, id, on); fijadas = buscador.fijadas(modo); }
+    function pin(id, on) { buscador.fijar(modo, id, on); leerFijadas(); }
+    function aseguraFij(item) {
+        const p = item.mapToItem(fijCol, 0, 0);
+        if (p.y < fijFlick.contentY) fijFlick.contentY = p.y;
+        else if (p.y + item.height > fijFlick.contentY + fijFlick.height) fijFlick.contentY = p.y + item.height - fijFlick.height;
+    }
+    function aCarpeta(id, nombre) { buscador.aCarpeta(modo, id, nombre); leerFijadas(); }
     function hace(cuando) {
         const m = Math.floor((ahora / 1000 - cuando) / 60);
         return m < 1 ? "ahora" : m < 60 ? m + " min" : m < 1440 ? Math.floor(m / 60) + " h" : Math.floor(m / 1440) + " d";
@@ -270,7 +301,7 @@ Window {
         id: dim
         anchors.fill: parent
         color: Qt.rgba(5 / 255, 7 / 255, 11 / 255, 0.62)
-        MouseArea { anchors.fill: parent; onClicked: win.detalle !== "" ? win.volver() : win.close() }
+        MouseArea { anchors.fill: parent; onClicked: win.menu ? win.cerrarMenu() : win.detalle !== "" ? win.volver() : win.close() }
     }
     Shape {
         anchors.fill: parent
@@ -734,18 +765,70 @@ Window {
             width: deck.width - 2 * deck.pad
             spacing: win.u(12)
 
-            // Tus fijadas (y «+»)
-            Flow {
+            // Una carpeta abierta: su nombre y volver
+            Item {
+                visible: win.query === "" && win.carpeta !== ""
+                width: parent.width; height: visible ? win.u(36) : 0
+                Redondo {
+                    id: carpetaAtras
+                    icono: "flecha"; rotation: 180
+                    anchors.verticalCenter: parent.verticalCenter
+                    onClicked: win.cerrarCarpeta()
+                }
+                Texto {
+                    x: carpetaAtras.width + win.u(12)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: win.carpeta
+                    font { pixelSize: win.u(17); weight: Font.DemiBold }
+                }
+                Texto {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Esc volver"
+                    color: Tema.tenue
+                    font { family: Tema.mono; pixelSize: win.u(11) }
+                }
+            }
+            // Tus fijadas: «Más usadas» y, debajo, las sueltas, las carpetas y «+» (con muchas, se desliza)
+            Flickable {
+                id: fijFlick
                 visible: win.query === ""
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: deck.porFila * deck.tile
-                Repeater {
-                    model: win.query === "" ? win.flat : []
-                    delegate: Tile {
-                        required property var modelData
-                        required property int index
-                        pos: index
-                        app: modelData
+                width: parent.width
+                height: visible ? Math.min(fijCol.height, Math.max(win.u(180), deck.maxRes)) : 0
+                contentHeight: fijCol.height
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                Column {
+                    id: fijCol
+                    width: fijFlick.width
+                    Titulo { visible: win.arriba.length > 0; text: "Más usadas" }
+                    Flow {
+                        visible: win.arriba.length > 0
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: deck.porFila * deck.tile
+                        Repeater {
+                            model: win.query === "" ? win.arriba : []
+                            delegate: Tile {
+                                required property var modelData
+                                required property int index
+                                pos: index
+                                app: modelData
+                            }
+                        }
+                    }
+                    Titulo { visible: win.arriba.length > 0; text: "Tus apps" }
+                    Flow {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: deck.porFila * deck.tile
+                        Repeater {
+                            model: win.query === "" ? win.abajo : []
+                            delegate: Tile {
+                                required property var modelData
+                                required property int index
+                                pos: win.arriba.length + index
+                                app: modelData
+                            }
+                        }
                     }
                 }
             }
@@ -936,7 +1019,16 @@ Window {
                     font.pixelSize: win.u(16)
                     clip: true
                     focus: true
-                    Keys.onEscapePressed: { if (field.text !== "") field.text = ""; else win.close(); }
+                    Keys.onEscapePressed: {
+                        if (win.menu) win.cerrarMenu();
+                        else if (field.text !== "") field.text = "";
+                        else if (win.carpeta !== "") win.cerrarCarpeta();
+                        else win.close();
+                    }
+                    Keys.onMenuPressed: {
+                        const a = win.flat[win.sel];
+                        if (win.query === "" && a && (a.id !== "" || a.carpeta)) win.abrirMenu(a, deck.width / 2 - win.u(110), win.u(20));
+                    }
                     Keys.onDownPressed: event => { if (win.query !== "") win.move(1); }
                     Keys.onUpPressed: event => { if (win.query !== "") win.move(-1); }
                     Keys.onRightPressed: event => { if (win.query === "") win.move(1); else event.accepted = false; }
@@ -963,6 +1055,134 @@ Window {
                     text: win.query !== "" && win.sel < win.answerAt ? "↵ abrir · Ctrl+↵ fijar" : "↵ abrir · Esc"
                     color: Tema.tenue
                     font { family: Tema.mono; pixelSize: win.u(11) }
+                }
+            }
+        }
+
+        // El menú del clic derecho (una app: a una carpeta, sacarla, quitarla; una carpeta: renombrarla o deshacerla)
+        MouseArea {
+            anchors.fill: parent
+            anchors.margins: -win.u(400)
+            visible: !!win.menu
+            z: 9
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: win.cerrarMenu()
+        }
+        Rectangle {
+            id: menuCaja
+            visible: !!win.menu
+            z: 10
+            readonly property var item: win.menu ? win.menu.item : null
+            readonly property bool esCarpeta: !!(item && item.carpeta)
+            readonly property string enCarpeta: item && !esCarpeta ? win.carpetaDe(item.id) : ""
+            width: win.u(230)
+            height: menuCol.height + win.u(12)
+            x: win.menu ? Math.max(-win.u(40), Math.min(win.menu.x, deck.width - width + win.u(40))) : 0
+            y: win.menu ? win.menu.y - height - win.u(6) : 0
+            radius: Tema.r(win.u(14))
+            color: Qt.rgba(0.09, 0.1, 0.13, 0.98)
+            border.color: Qt.rgba(1, 1, 1, 0.12)
+            MouseArea { anchors.fill: parent }
+            Column {
+                id: menuCol
+                x: win.u(6); y: win.u(6)
+                width: parent.width - win.u(12)
+                Texto {
+                    width: parent.width
+                    leftPadding: win.u(10); topPadding: win.u(6); bottomPadding: win.u(6)
+                    text: menuCaja.item ? menuCaja.item.nombre : ""
+                    color: Tema.tenue
+                    font { family: Tema.mono; pixelSize: win.u(10); letterSpacing: 1.2; capitalization: Font.AllUppercase }
+                    elide: Text.ElideRight; wrapMode: Text.NoWrap
+                }
+                // Pedir un nombre (carpeta nueva o renombrar)
+                Rectangle {
+                    visible: win.menuNombre
+                    width: parent.width; height: visible ? win.u(38) : 0
+                    radius: Tema.r(win.u(10))
+                    color: Qt.rgba(1, 1, 1, 0.07)
+                    border.color: Tema.acento
+                    TextInput {
+                        id: nombreCampo
+                        anchors.fill: parent; anchors.leftMargin: win.u(10); anchors.rightMargin: win.u(10)
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: Tema.texto
+                        selectionColor: Tema.acento
+                        font.family: Tema.letra; font.pixelSize: win.u(14)
+                        maximumLength: 40
+                        clip: true
+                        Keys.onEscapePressed: win.cerrarMenu()
+                        function hecho() {
+                            const t = text.trim();
+                            if (t === "" || !menuCaja.item) return;
+                            if (menuCaja.esCarpeta) {
+                                const viejo = menuCaja.item.carpeta;
+                                buscador.renombrarCarpeta(win.modo, viejo, t);
+                                if (win.carpeta === viejo) win.carpeta = t;
+                                win.leerFijadas();
+                            } else win.aCarpeta(menuCaja.item.id, t);
+                            win.cerrarMenu();
+                        }
+                        Keys.onReturnPressed: hecho()
+                        Keys.onEnterPressed: hecho()
+                        Texto {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: nombreCampo.text === ""
+                            text: menuCaja.esCarpeta ? "Nuevo nombre" : "Nombre de la carpeta"
+                            color: Tema.tenue
+                            font.pixelSize: win.u(14)
+                        }
+                    }
+                }
+                Repeater {
+                    model: {
+                        const it = menuCaja.item;
+                        if (!it || win.menuNombre) return [];
+                        if (menuCaja.esCarpeta)
+                            return [{ k: "renombrar", t: "Renombrar…", i: "lapiz" }, { k: "deshacer", t: "Deshacer carpeta", i: "deshacer" }];
+                        const out = [{ k: "nueva", t: "Nueva carpeta…", i: "carpeta" }];
+                        for (const c of win.vista.carpetas)
+                            if (c.nombre !== menuCaja.enCarpeta) out.push({ k: "mover", t: "Mover a «" + c.nombre + "»", i: "flecha", c: c.nombre });
+                        if (menuCaja.enCarpeta !== "") out.push({ k: "sacar", t: "Sacar de «" + menuCaja.enCarpeta + "»", i: "anterior" });
+                        out.push({ k: "quitar", t: "Quitar de " + win.nombreModo[win.modo], i: "chincheta" });
+                        return out;
+                    }
+                    delegate: Rectangle {
+                        id: mf
+                        required property var modelData
+                        width: menuCol.width; height: win.u(36)
+                        radius: Tema.r(win.u(10))
+                        color: mfArea.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
+                        Icono { x: win.u(10); anchors.verticalCenter: parent.verticalCenter; width: win.u(14); height: width; nombre: mf.modelData.i; color: mf.modelData.k === "quitar" || mf.modelData.k === "deshacer" ? Tema.apagado : Tema.acento }
+                        Texto {
+                            x: win.u(34); width: parent.width - x - win.u(8)
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: mf.modelData.t
+                            font.pixelSize: win.u(13)
+                            elide: Text.ElideRight; wrapMode: Text.NoWrap
+                        }
+                        MouseArea {
+                            id: mfArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                const it = menuCaja.item, k = mf.modelData.k;
+                                if (k === "nueva" || k === "renombrar") {
+                                    win.menuNombre = true;
+                                    nombreCampo.text = k === "renombrar" ? it.carpeta : "";
+                                    nombreCampo.selectAll();
+                                    nombreCampo.forceActiveFocus();
+                                    return;
+                                }
+                                if (k === "mover") win.aCarpeta(it.id, mf.modelData.c);
+                                else if (k === "sacar") win.aCarpeta(it.id, "");
+                                else if (k === "quitar") win.pin(it.id, false);
+                                else if (k === "deshacer") { buscador.deshacerCarpeta(win.modo, it.carpeta); if (win.carpeta === it.carpeta) win.carpeta = ""; win.leerFijadas(); }
+                                win.cerrarMenu();
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1191,14 +1411,16 @@ Window {
         Icono { anchors.centerIn: parent; width: win.u(16); height: width; nombre: rd.icono; color: rd.lleno ? "#0b0e14" : Tema.texto }
         MouseArea { id: rm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: rd.clicked() }
     }
-    // Una app fijada (o «+»): clic abrirla; su chincheta o el clic derecho la quitan del modo
+    // Una app fijada, una carpeta o «+»: clic abrirla; el clic derecho, su menú (carpetas, quitar); la chincheta la quita
     component Tile: Item {
         id: tile
         property int pos
         property var app
         readonly property bool on: win.sel === pos && win.query === ""
-        readonly property bool mas: app.id === ""
+        readonly property bool esCarpeta: !!app.carpeta
+        readonly property bool mas: app.id === "" && !esCarpeta
         width: deck.tile; height: win.u(82)
+        onOnChanged: if (on) Qt.callLater(() => { if (win) win.aseguraFij(tile) })
         Rectangle {
             anchors.fill: parent
             anchors.margins: win.u(2)
@@ -1215,12 +1437,34 @@ Window {
             Icono { anchors.centerIn: parent; nombre: "mas"; color: Tema.apagado }
         }
         Kirigami.Icon {
-            visible: !tile.mas
+            visible: !tile.mas && !tile.esCarpeta
             anchors.horizontalCenter: parent.horizontalCenter
             y: win.u(10); width: win.u(38); height: width
-            source: tile.app.icono
+            source: tile.esCarpeta ? "" : tile.app.icono
             scale: area.pressed ? 0.9 : 1
             Behavior on scale { NumberAnimation { duration: 100 } }
+        }
+        Rectangle {   // una carpeta: sus cuatro primeras apps en pequeño
+            visible: tile.esCarpeta
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: win.u(6); width: win.u(46); height: width
+            radius: Tema.r(win.u(13))
+            color: Qt.rgba(1, 1, 1, area.containsMouse || tile.on ? 0.13 : 0.08)
+            border.color: Qt.rgba(Tema.acento.r, Tema.acento.g, Tema.acento.b, tile.on ? 0.55 : 0.18)
+            scale: area.pressed ? 0.92 : 1
+            Behavior on scale { NumberAnimation { duration: 100 } }
+            Grid {
+                anchors.centerIn: parent
+                columns: 2; spacing: win.u(3)
+                Repeater {
+                    model: tile.esCarpeta ? tile.app.apps.slice(0, 4) : []
+                    delegate: Kirigami.Icon {
+                        required property var modelData
+                        width: win.u(16); height: width
+                        source: modelData.icono
+                    }
+                }
+            }
         }
         Texto {
             y: win.u(56); width: parent.width - win.u(6); x: win.u(3)
@@ -1238,12 +1482,15 @@ Window {
             cursorShape: Qt.PointingHandCursor
             onEntered: win.sel = tile.pos
             onClicked: mouse => {
-                if (mouse.button === Qt.RightButton) { if (!tile.mas) win.pin(tile.app.id, false); }
-                else win.activate(tile.pos);
+                if (mouse.button === Qt.RightButton) {
+                    if (tile.mas) return;
+                    const p = tile.mapToItem(deck, mouse.x, mouse.y);
+                    win.abrirMenu(tile.app, p.x, p.y);
+                } else win.activate(tile.pos);
             }
         }
         Rectangle {   // la chincheta: quitarla del modo
-            visible: !tile.mas && (area.containsMouse || pinArea.containsMouse)
+            visible: !tile.mas && !tile.esCarpeta && (area.containsMouse || pinArea.containsMouse)
             anchors.right: parent.right; anchors.top: parent.top
             anchors.margins: win.u(2)
             width: win.u(22); height: width; radius: width / 2
