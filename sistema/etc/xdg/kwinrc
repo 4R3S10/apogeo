@@ -18,8 +18,17 @@ screenedgeEnabled=false
 [Round-Corners]
 ActiveCornerRadius=12
 InactiveCornerRadius=12
-ActiveOutlineThickness=0
+# Un borde fino del acento del modo en la ventana activa, como en COSMIC (el color «resaltado» de KDE: cambia solo con
+# el modo); las demás, sin borde. OutlineThickness es la activa en las versiones nuevas; ActiveOutlineThickness, antes
+OutlineThickness=2
+ActiveOutlineThickness=2
 InactiveOutlineThickness=0
+ActiveOutlineUsePalette=true
+ActiveOutlinePalette=12
+ActiveOutlineUseCustom=false
+ActiveOutlineAlpha=235
+SecondOutlineThickness=0
+OuterOutlineThickness=0
 ActiveSecondOutlineThickness=0
 InactiveSecondOutlineThickness=0
 ActiveOuterOutlineThickness=0
@@ -50,3 +59,8 @@ library=org.kde.kwin.aurorae
 theme=__aurorae__svg__apogeo
 ButtonsOnLeft=
 ButtonsOnRight=IAX
+
+# El desenfoque detrás de lo transparente: poco, como en COSMIC (se ve el fondo casi nítido)
+[Effect-blur]
+BlurStrength=4
+NoiseStrength=0

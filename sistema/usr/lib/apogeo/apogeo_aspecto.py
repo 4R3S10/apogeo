@@ -149,7 +149,7 @@ _STOCK = {'fondo': '#080a0f', 'superficie': '#0f131a', 'texto': '#e9edf5', 'acen
 
 # Sube cuando cambian los generadores (así tus temas se vuelven a hacer con lo nuevo). 2: el brillo de la isla del color
 # del piso.
-GENERATED = 3
+GENERATED = 4  # 4: ventanas, menús y bocadillos transparentes (como COSMIC)
 
 
 def stock(t):

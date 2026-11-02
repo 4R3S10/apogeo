@@ -294,10 +294,11 @@ def main():
         # al salir encima de una). Si falta, coge la de Breeze y la barra y el orbe salían con un fondo oscuro
         'solid/widgets/panel-background.svg': panel(frame_svg(r(20), 6, CHROME, 1, 22, 0.32)),
         # Menús, avisos y ventanitas: tarjeta de Ágape
-        'translucent/dialogs/background.svg': frame_svg(r(16), 12, CHROME, min(0.98, CRISTAL + 0.35), 32, 0.45),
+        # (transparentes como COSMIC: se ve el fondo detrás, con poco desenfoque)
+        'translucent/dialogs/background.svg': frame_svg(r(16), 12, CHROME, min(0.9, CRISTAL + 0.15), 32, 0.45),
         'dialogs/background.svg': frame_svg(r(16), 12, CHROME, 0.98, 32, 0.45),
         # Bocadillos
-        'translucent/widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.94, 16, 0.35, highlight=False),
+        'translucent/widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.84, 16, 0.35, highlight=False),
         'widgets/tooltip.svg': frame_svg(r(10), 8, CHROME, 0.98, 16, 0.35, highlight=False),
     }
     files['widgets/tabbar.svg'] = tabbar()

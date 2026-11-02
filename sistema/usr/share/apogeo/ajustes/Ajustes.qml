@@ -14,7 +14,7 @@ ApplicationWindow {
     minimumWidth: 860
     minimumHeight: 560
     title: "Ajustes de Apogeo"
-    color: Tema.superficie
+    color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.74)   // (transparente, como COSMIC)
     font.family: Tema.letra
 
     readonly property var s: apogeo.settings

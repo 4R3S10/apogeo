@@ -13,7 +13,7 @@ ApplicationWindow {
     minimumWidth: 860
     minimumHeight: 560
     title: "apologIA"
-    color: Tema.superficie
+    color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.74)   // (transparente, como COSMIC)
     font.family: Tema.letra
 
     property string page: "chat"       // chat · modelos · modificador

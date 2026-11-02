@@ -753,7 +753,7 @@ Window {
         x: (win.width - width) / 2
         y: orbe.y - win.u(44) - height + (1 - win.llegada) * win.u(20)
         radius: Tema.r(win.u(22))
-        color: Qt.rgba(0.07, 0.08, 0.105, 0.86)
+        color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.74)
         border.color: Qt.rgba(1, 1, 1, 0.09)
         Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         MouseArea { anchors.fill: parent; onClicked: field.forceActiveFocus() }
@@ -1081,7 +1081,7 @@ Window {
             x: win.menu ? Math.max(-win.u(40), Math.min(win.menu.x, deck.width - width + win.u(40))) : 0
             y: win.menu ? win.menu.y - height - win.u(6) : 0
             radius: Tema.r(win.u(14))
-            color: Qt.rgba(0.09, 0.1, 0.13, 0.98)
+            color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.92)
             border.color: Qt.rgba(1, 1, 1, 0.12)
             MouseArea { anchors.fill: parent }
             Column {
@@ -1200,7 +1200,7 @@ Window {
         x: (win.width - width) / 2
         y: win.techo + (1 - opacity) * win.u(16)
         radius: Tema.r(win.u(22))
-        color: Qt.rgba(0.07, 0.08, 0.105, 0.92)
+        color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.82)
         border.color: Qt.rgba(1, 1, 1, 0.09)
         MouseArea { anchors.fill: parent }
         Keys.onEscapePressed: win.volver()
@@ -1330,7 +1330,7 @@ Window {
         height: win.altoSat
         antialiasing: true
         radius: Tema.r(win.u(18))
-        color: Qt.rgba(0.07, 0.08, 0.105, 0.84)
+        color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.74)
         border.color: Qt.rgba(1, 1, 1, sArea.containsMouse && clicable ? 0.18 : 0.08)
         Behavior on border.color { ColorAnimation { duration: 140 } }
         Rectangle {   // el color de lo que suena, desde arriba a la izquierda

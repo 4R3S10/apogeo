@@ -117,6 +117,12 @@ orbe, la Órbita, la transición, los menús y la pantalla de bloqueo. Un fondo 
 fondo animado de Apogeo se queda con el color de su modo. Con «que cambie solo», el del fondo que se ve. «Del modo»
 vuelve al violeta, cian y ámbar de siempre; un acento elegido a mano manda sobre los dos. En QML, `Tema.acentoDe(modo)`.
 
+**Transparente, como COSMIC:** las apps de Qt (Kvantum: ventanas al 70 % y menús al 82 %, con poco desenfoque; los
+reproductores de vídeo, OBS y Krita, opacos), la terminal (72 %), los menús, ventanitas y bocadillos de Plasma, la Órbita y
+las ventanas de Apogeo (Ajustes, Tienda, apologIA) dejan ver el fondo, con el desenfoque de KWin bajo
+(`BlurStrength=4`). **La ventana activa lleva un borde fino del acento del modo** (el efecto de esquinas redondeadas con el
+color «resaltado» de KDE, que cambia con el modo); maximizada o a pantalla completa, sin borde.
+
 Órbita: grafito con el acento de cada modo. Arriba, una vista en pequeño de cómo queda; debajo, cada detalle a mano: el
 color (el de cada modo, que es lo de serie, o uno tuyo para los tres), claro u oscuro (por modo, que es lo de serie, o
 según la hora: claro de 8:00 a 20:00), las esquinas (rectas, suaves o redondas), el cristal, el tamaño (letra y orbe) y

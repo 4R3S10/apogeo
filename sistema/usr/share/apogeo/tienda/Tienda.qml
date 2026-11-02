@@ -15,7 +15,7 @@ ApplicationWindow {
     minimumWidth: 880
     minimumHeight: 560
     title: "Tienda de Apogeo"
-    color: Tema.superficie
+    color: Qt.rgba(Tema.superficie.r, Tema.superficie.g, Tema.superficie.b, 0.74)   // (transparente, como COSMIC)
     font.family: Tema.letra
 
     property string page: "inicio"     // inicio · jugar, estudiar… · buscar · instalados
