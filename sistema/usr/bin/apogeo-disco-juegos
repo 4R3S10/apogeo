@@ -1,0 +1,272 @@
+#!/usr/bin/python3
+"""
+El disco de los juegos y la IA: formatea el SSD con la etiqueta «JUEGOS» y lo deja en dos partes.
+
+  - JUEGOSyIA (ext4, el 70 %), en /mnt/JUEGOSyIA: Juegos/Steam, Juegos/Heroic y ModelosIA. ext4 porque los juegos de
+    Steam con Proton fallan en NTFS dentro de Linux.
+  - JUEGOSWin (NTFS, el 30 %), en /mnt/JuegosWindows: Juegos, para los juegos del Windows escondido (Windows no ve ext4).
+
+Y lo conecta: apologIA guarda sus modelos en ModelosIA (los que ya tuvieras se mueven allí) y Heroic instala en
+Juegos/Heroic. A Steam se le añade a mano (Ajustes → Almacenamiento): no deja hacerlo desde fuera sin riesgo.
+
+BORRA TODO LO QUE HAY EN ESE SSD. Solo sigue si el disco no tiene nada más que esa partición «JUEGOS» (ni el sistema, ni
+Windows, ni otras particiones) y después de escribir BORRAR.
+
+  sudo apogeo-disco-juegos [--etiqueta JUEGOS] [--reparto 70]
+"""
+import argparse
+import json
+import os
+import pwd
+import shutil
+import subprocess
+import sys
+import time
+
+LINUX_LABEL, WIN_LABEL = 'JUEGOSyIA', 'JUEGOSWin'
+LINUX_MNT, WIN_MNT = '/mnt/JUEGOSyIA', '/mnt/JuegosWindows'
+NTFS_TYPE = 'EBD0A0A2-B9E5-4433-87C0-68B6B72699C7'   # «Microsoft basic data»: Windows la ve y le pone letra
+SYSTEM_MOUNTS = {'/', '/boot', '/boot/efi', '/efi', '/home', '/usr', '/var', '[SWAP]'}
+
+
+def say(*a):
+    print(*a, flush=True)
+
+
+def die(msg):
+    say('\n✗ ' + msg)
+    sys.exit(1)
+
+
+def run(*cmd, check=True):
+    r = subprocess.run(list(cmd), capture_output=True, text=True)
+    if check and r.returncode != 0:
+        die(f'Falló «{" ".join(cmd)}»: {(r.stderr or r.stdout).strip()}')
+    return r.stdout
+
+
+def lsblk():
+    data = json.loads(run('lsblk', '-J', '-b', '-o', 'NAME,PATH,TYPE,LABEL,SIZE,MODEL,PKNAME,MOUNTPOINTS,FSTYPE,PARTTYPE'))
+    # (si udev aún no sabe la etiqueta o el formato, se le pregunta al disco)
+    for d in flat(data['blockdevices']):
+        for key, tag in (('label', 'LABEL'), ('fstype', 'TYPE')):
+            if not d.get(key) and d.get('type') in ('part', 'disk'):
+                d[key] = run('blkid', '-s', tag, '-o', 'value', d['path'], check=False).strip() or None
+    return data
+
+
+def flat(devs, out=None):
+    out = [] if out is None else out
+    for d in devs:
+        out.append(d)
+        flat(d.get('children') or [], out)
+    return out
+
+
+def human(b):
+    return f'{b / 1e9:.0f} GB' if b >= 1e9 else f'{b / 1e6:.0f} MB'
+
+
+def target_user():
+    name = os.environ.get('SUDO_USER') or os.environ.get('PKEXEC_UID') and pwd.getpwuid(int(os.environ['PKEXEC_UID'])).pw_name
+    if not name or name == 'root':
+        die('Ejecútalo con sudo desde tu cuenta (sudo apogeo-disco-juegos): hace falta saber de quién es el disco.')
+    return pwd.getpwnam(name)
+
+
+def find_disk(label):
+    devs = flat(lsblk()['blockdevices'])
+    parts = [d for d in devs if d.get('type') in ('part', 'disk') and d.get('label') == label]
+    if not parts:
+        say('Discos y particiones que hay:')
+        for d in devs:
+            if d.get('type') in ('disk', 'part'):
+                say(f"  {d['path']:<16} {human(d['size']):>8}  {d.get('label') or '':<16} {d.get('model') or ''}")
+        die(f'No hay ninguna partición con la etiqueta «{label}».')
+    if len(parts) > 1:
+        die(f'Hay {len(parts)} particiones con la etiqueta «{label}»: no sé cuál es. Cambia la etiqueta de las que no son.')
+    part = parts[0]
+    if part.get('type') == 'disk':   # (sin tabla de particiones: el disco entero era «JUEGOS»)
+        disk = part
+    else:
+        disk = next(d for d in devs if d.get('type') == 'disk' and d['name'] == part['pkname'])
+    others = [c for c in (disk.get('children') or []) if c['path'] != part['path']]
+    if others:
+        die(f"{disk['path']} tiene más particiones ({', '.join(c['path'] + ' ' + (c.get('label') or c.get('fstype') or '') for c in others)}): "
+            'para no borrar nada más, este programa solo formatea un disco que tenga únicamente la de los juegos.')
+    for d in flat([disk]):
+        mounts = {m for m in (d.get('mountpoints') or []) if m}
+        if mounts & SYSTEM_MOUNTS:
+            die(f"{d['path']} tiene el sistema ({', '.join(mounts)}): no se toca.")
+    return disk, part
+
+
+def unmount(dev):
+    for d in flat([dev]):
+        for m in [m for m in (d.get('mountpoints') or []) if m]:
+            r = subprocess.run(['umount', m], capture_output=True, text=True)
+            if r.returncode != 0:
+                die(f'No se puede desmontar {m} (¿algo lo está usando? cierra Steam, Heroic, apologIA y el gestor de '
+                    f'archivos): {r.stderr.strip()}')
+
+
+def part_paths(disk_path):
+    time.sleep(1)
+    run('udevadm', 'settle')
+    kids = [d for d in flat(lsblk()['blockdevices']) if d.get('pkname') == os.path.basename(disk_path) and d['type'] == 'part']
+    kids.sort(key=lambda d: d['path'])
+    if len(kids) != 2:
+        die('No aparecen las dos particiones nuevas: reinicia y vuelve a probar.')
+    return kids[0]['path'], kids[1]['path']
+
+
+def uuid_of(dev):
+    return run('blkid', '-s', 'UUID', '-o', 'value', dev).strip()
+
+
+def update_fstab(old_uuid, old_label, linux_uuid, win_uuid, user):
+    path = '/etc/fstab'
+    with open(path) as f:
+        lines = f.read().splitlines()
+    shutil.copy2(path, path + '.antes-de-JUEGOSyIA')
+    drop = {f'UUID={old_uuid}', f'LABEL={old_label}', f'UUID={linux_uuid}', f'UUID={win_uuid}'} - {'UUID='}
+    keep = [l for l in lines if not (l.split() and l.split()[0] in drop) and 'Apogeo: JUEGOSyIA' not in l
+            and 'Apogeo: JUEGOSWin' not in l]
+    keep += [
+        f'# Apogeo: JUEGOSyIA (juegos de Apogeo y modelos de IA)',
+        f'UUID={linux_uuid}  {LINUX_MNT}  ext4  defaults,noatime,nofail,x-gvfs-show,x-gvfs-name={LINUX_LABEL}  0 2',
+        f'# Apogeo: JUEGOSWin (juegos del Windows escondido)',
+        f'UUID={win_uuid}  {WIN_MNT}  ntfs3  defaults,noatime,nofail,uid={user.pw_uid},gid={user.pw_gid},windows_names,'
+        f'x-gvfs-show,x-gvfs-name={WIN_LABEL}  0 0',
+    ]
+    with open(path + '.nuevo', 'w') as f:
+        f.write('\n'.join(keep) + '\n')
+    os.replace(path + '.nuevo', path)
+
+
+def as_user(user, code):
+    """Lo de tu cuenta (apologIA y Heroic), como tú."""
+    env = {'HOME': user.pw_dir, 'USER': user.pw_name, 'PATH': '/usr/bin:/bin', 'PYTHONPATH': '/usr/lib/apogeo'}
+    r = subprocess.run([shutil.which('runuser') or 'runuser', '-u', user.pw_name, '--', 'python3', '-c', code], env=env,
+                       capture_output=True,
+                       text=True)
+    out = (r.stdout + r.stderr).strip()
+    if out:
+        say(out)
+
+
+USER_STEP = r'''
+import json, os, sys
+modelos, heroic_dir = sys.argv[1], sys.argv[2]
+# apologIA: sus modelos en ModelosIA (los que ya tenías se mueven)
+try:
+    import apogeo_apologia as A
+    st = A.settings()
+    A.use_models_dir(st.get('carpeta') or '')
+    antes = A.MODELS
+    if os.path.realpath(antes) != os.path.realpath(modelos):
+        A.move_models(antes, modelos, lambda i, n, f: print(f'  apologIA: moviendo {f} ({i + 1}/{n})', flush=True))
+    A.save_settings({'carpeta': modelos})
+    print('✓ apologIA guarda sus modelos en', modelos)
+except Exception as e:
+    print('! apologIA:', e)
+# Heroic: instala en Juegos/Heroic
+for base in ('~/.config/heroic', '~/.var/app/com.heroicgameslauncher.hgl/config/heroic'):
+    cfg = os.path.join(os.path.expanduser(base), 'config.json')
+    if not os.path.isfile(cfg):
+        continue
+    try:
+        with open(cfg) as f:
+            data = json.load(f)
+        data.setdefault('defaultSettings', {})['defaultInstallPath'] = heroic_dir
+        with open(cfg + '.nuevo', 'w') as f:
+            json.dump(data, f, indent=2)
+        os.replace(cfg + '.nuevo', cfg)
+        print('✓ Heroic instala en', heroic_dir)
+    except (OSError, ValueError) as e:
+        print('! Heroic:', e)
+'''
+
+
+def main():
+    ap = argparse.ArgumentParser(description='Formatea el SSD «JUEGOS» en JUEGOSyIA (ext4) y JUEGOSWin (NTFS).')
+    ap.add_argument('--etiqueta', default='JUEGOS')
+    ap.add_argument('--reparto', type=int, default=70, help='el %% para JUEGOSyIA (ext4); el resto, NTFS')
+    args = ap.parse_args()
+    if os.geteuid() != 0:
+        die('Hace falta: sudo apogeo-disco-juegos')
+    if not 30 <= args.reparto <= 95:
+        die('El reparto va de 30 a 95.')
+    user = target_user()
+    for tool in ('sfdisk', 'wipefs', 'mkfs.ext4', 'blkid', 'runuser'):
+        if not shutil.which(tool):
+            die(f'Falta {tool}.')
+    if not shutil.which('mkfs.ntfs'):
+        say('Instalando ntfs-3g (para crear la parte NTFS)…')
+        run('pacman', '-S', '--needed', '--noconfirm', 'ntfs-3g')
+
+    disk, part = find_disk(args.etiqueta)
+    size = disk['size']
+    say(f"\nEl SSD de los juegos: {disk['path']} · {disk.get('model') or 'sin nombre'} · {human(size)}")
+    say(f"  ahora: {part['path']} «{part.get('label')}» ({part.get('fstype') or '?'})")
+    say(f'  quedará: {LINUX_LABEL} (ext4, {args.reparto} %, ~{human(size * args.reparto / 100)}) en {LINUX_MNT}')
+    say(f'           {WIN_LABEL} (NTFS, {100 - args.reparto} %, ~{human(size * (100 - args.reparto) / 100)}) en {WIN_MNT}')
+    say('\n⚠ SE BORRA TODO LO QUE HAY EN ESE SSD. No se puede deshacer.')
+    if input('Escribe BORRAR para seguir: ').strip() != 'BORRAR':
+        die('No se ha tocado nada.')
+
+    old_uuid = uuid_of(part['path'])
+    unmount(disk)
+    say('· Borrando lo que había…')
+    run('wipefs', '-a', part['path'], check=False)
+    run('wipefs', '-a', disk['path'])
+    say('· Haciendo las dos partes…')
+    script = f'label: gpt\n,{size * args.reparto // 100 // 1048576}MiB,L\n,,{NTFS_TYPE}\n'
+    r = subprocess.run(['sfdisk', '--wipe', 'always', disk['path']], input=script, capture_output=True, text=True)
+    if r.returncode != 0:
+        die('No se han podido hacer las particiones: ' + r.stderr.strip())
+    run('partprobe', disk['path'], check=False) if shutil.which('partprobe') else None
+    p_linux, p_win = part_paths(disk['path'])
+    say(f'· {p_linux}: ext4 «{LINUX_LABEL}»…')
+    run('mkfs.ext4', '-F', '-L', LINUX_LABEL, p_linux)
+    say(f'· {p_win}: NTFS «{WIN_LABEL}»…')
+    run('mkfs.ntfs', '-f', '-L', WIN_LABEL, p_win)
+    run('udevadm', 'settle')
+    linux_uuid, win_uuid = uuid_of(p_linux), uuid_of(p_win)
+
+    say('· Que se monten solos al encender (/etc/fstab; la copia de antes en /etc/fstab.antes-de-JUEGOSyIA)…')
+    update_fstab(old_uuid, args.etiqueta, linux_uuid, win_uuid, user)
+    os.makedirs(LINUX_MNT, exist_ok=True)
+    os.makedirs(WIN_MNT, exist_ok=True)
+    run('systemctl', 'daemon-reload', check=False)
+    run('mount', LINUX_MNT)
+    run('mount', WIN_MNT)
+
+    say('· Las carpetas…')
+    folders = [os.path.join(LINUX_MNT, 'Juegos', 'Steam'), os.path.join(LINUX_MNT, 'Juegos', 'Heroic'),
+               os.path.join(LINUX_MNT, 'ModelosIA')]
+    for d in folders:
+        os.makedirs(d, exist_ok=True)
+    for root, dirs, _files in os.walk(LINUX_MNT):
+        if 'lost+found' in root:
+            continue
+        os.chown(root, user.pw_uid, user.pw_gid)
+    os.makedirs(os.path.join(WIN_MNT, 'Juegos'), exist_ok=True)
+
+    say('· Conectándolo con apologIA y Heroic…')
+    as_user(user, USER_STEP.replace('sys.argv[1], sys.argv[2]',
+                                    repr(os.path.join(LINUX_MNT, 'ModelosIA')) + ', ' + repr(os.path.join(LINUX_MNT, 'Juegos', 'Heroic'))))
+
+    say(f'''
+✓ Listo.
+  {LINUX_MNT}/Juegos/Steam    los juegos de Steam
+  {LINUX_MNT}/Juegos/Heroic   los de Epic (Heroic ya instala ahí)
+  {LINUX_MNT}/ModelosIA       los modelos de apologIA (ya los guarda ahí)
+  {WIN_MNT}/Juegos      para el Windows escondido (en Windows sale como «{WIN_LABEL}»)
+
+Falta un paso en Steam (no deja hacerlo desde fuera): Steam → Ajustes → Almacenamiento → «Añadir unidad» → elige
+{LINUX_MNT}/Juegos/Steam y, en sus tres puntos, «Hacer predeterminada».''')
+
+
+if __name__ == '__main__':
+    main()

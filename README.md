@@ -510,6 +510,17 @@ igual y siempre sirve: al encender y al iniciar sesión se pide ella.
   cuenta. Tras 5 dibujos que no son, solo vale la contraseña durante 10 minutos.
 - Lo guardado está en `/var/lib/apogeo/simbolo/<tú>.json` (solo lo lees tú; cambiarlo pide tu contraseña).
 
+## El disco de los juegos y la IA
+
+`sudo apogeo-disco-juegos` formatea el SSD con la etiqueta «JUEGOS» y lo deja en dos partes: **JUEGOSyIA** (ext4, el 70 %,
+en `/mnt/JUEGOSyIA`: `Juegos/Steam`, `Juegos/Heroic` y `ModelosIA`) y **JUEGOSWin** (NTFS, el 30 %, en
+`/mnt/JuegosWindows`: `Juegos`, para el Windows escondido). ext4 para lo de Apogeo porque los juegos de Steam con Proton
+fallan en NTFS dentro de Linux; NTFS para lo que tiene que ver Windows. Se montan solos al encender (`/etc/fstab`, con la
+copia de antes en `/etc/fstab.antes-de-JUEGOSyIA`). Lo conecta: apologIA guarda sus modelos en `ModelosIA` (los que
+tuvieras se mueven) y Heroic instala en `Juegos/Heroic`; a Steam se le añade a mano (Almacenamiento → Añadir unidad →
+Hacer predeterminada). **Borra todo lo del SSD:** solo sigue si el disco no tiene nada más que esa partición (ni el
+sistema ni Windows) y después de escribir BORRAR. `--reparto` cambia el 70 %.
+
 ## Sonido
 
 - **La mejor calidad** (`/etc/pipewire/*.conf.d/50-apogeo-calidad.conf`): si suena una sola cosa, la tarjeta se pone a su
