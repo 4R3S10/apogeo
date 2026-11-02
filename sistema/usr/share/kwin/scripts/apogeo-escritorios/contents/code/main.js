@@ -17,6 +17,15 @@
 
 const MODOS = ["Jugar", "Navegar", "Estudiar"];
 const MAX = 4;
+// Al cambiar de modo, el orbe se expande (Transicion.qml de apogeo-buscador): se le pide y, cuando ya tapa la pantalla,
+// se cambia de escritorio debajo (lo que tarda en taparla: «tapar» en Transicion.qml). Sin el buscador, igual (un
+// momento después). Se apaga en kwinrc ([Script-apogeo-escritorios] transicion=false)
+const TAPAR = 260;
+const cambio = new QTimer();
+cambio.singleShot = true;
+cambio.interval = TAPAR;
+let pendiente = null;
+cambio.timeout.connect(function () { const p = pendiente; pendiente = null; if (p) ir(p.d, p.w); });
 
 function lista() { return workspace.desktops; }
 function columnas() { return Math.max(1, Math.ceil(lista().length / MODOS.length)); }
@@ -103,7 +112,12 @@ function modo(fila, llevar) {
     if (llevar && (!w || !cuenta(w))) return;
     const s = sitio(workspace.currentDesktop);
     if (s && s.fila === fila) return;
-    ir(destino(fila), w);
+    if (!readConfig("transicion", true)) { ir(destino(fila), w); return; }
+    const otra = pendiente !== null;
+    pendiente = { d: destino(fila), w: w };
+    if (otra) return;   // (ya está tapándose: va al último que pidas)
+    callDBus("org.apogeo.Buscador", "/Buscador", "org.apogeo.Buscador", "Transicion", MODOS[fila].toLowerCase());
+    cambio.start();
 }
 function arriba(paso, llevar) {
     const s = sitio(workspace.currentDesktop);

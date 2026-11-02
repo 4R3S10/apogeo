@@ -14,7 +14,11 @@ tres **modos**: Jugar, Navegar y Estudiar.
 
 El escritorio son tres modos, uno encima de otro: **Jugar**, **Navegar** y **Estudiar**. Se cambia con Meta+F1/F2/F3, con
 Meta+Ctrl+↑ ↓, en la Órbita, desde la consola y en la pantalla de inicio de sesión (cada modo es una sesión); las
-ventanas se deslizan como en un ascensor. Cada modo guarda sus ventanas, su fondo y su acento: **violeta `#B79CFF` en
+ventanas se deslizan como en un ascensor. **Al cambiar, el orbe se expande** (`Transicion.qml`, en `apogeo-buscador`): el orbe del modo nuevo
+crece desde el de la isla hasta llenar la pantalla con su color y su nombre; debajo, KWin cambia de escritorio, y luego
+se abre como un iris desde el mismo sitio (unos 800 ms). Lo pide `apogeo-escritorios` por D-Bus (`Transicion`) y cambia
+de escritorio cuando ya está tapado; sin el buscador, cambia igual. Se quita con `transicion=false` en
+`[Script-apogeo-escritorios]` de kwinrc. Cada modo guarda sus ventanas, su fondo y su acento: **violeta `#B79CFF` en
 Jugar, cian `#45D6FF` en Navegar y ámbar `#FFB35C` en Estudiar**, sobre el grafito de Órbita (Estudiar va, además, en
 papel cálido de serie).
 

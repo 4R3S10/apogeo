@@ -28,6 +28,7 @@ import sys
 SERVICE, PATH, IFACE = 'org.apogeo.Buscador', '/Buscador', 'org.apogeo.Buscador'
 QML = os.environ.get('APOGEO_BUSCADOR_QML', '/usr/share/apogeo/buscador/Buscador.qml')
 ATAJOS_QML = os.path.join(os.path.dirname(QML), 'Atajos.qml')
+TRANSICION_QML = os.path.join(os.path.dirname(QML), 'Transicion.qml')
 MODO = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'modo.json')
 sys.path.insert(0, os.environ.get('APOGEO_LIB', '/usr/lib/apogeo'))
 
@@ -282,6 +283,7 @@ def main():
         atajos = pyqtSignal(bool)   # la guía: mientras mantienes Meta (True) o con Meta+/ (False)
         soltada = pyqtSignal()
         escrito = pyqtSignal(str)   # lo que se escribe en el escritorio: abre la Órbita con ello en el buscador
+        transicion = pyqtSignal(str)   # cambio de modo: el orbe se expande (Transicion.qml; lo pide apogeo-escritorios)
 
         def __init__(self):
             super().__init__()
@@ -609,6 +611,10 @@ def main():
         def Atajos(self):
             self.parent().atajos.emit(False)
 
+        @pyqtSlot(str)
+        def Transicion(self, modo):
+            self.parent().transicion.emit(modo)
+
     app = QGuiApplication(sys.argv)
     app.setApplicationName('Buscador de Apogeo')
     app.setDesktopFileName('apogeo-buscador')
@@ -631,6 +637,7 @@ def main():
     engine.rootContext().setContextProperty('atajosAtStart', '--atajos' in sys.argv)
     engine.load(QUrl.fromLocalFile(QML))
     engine.load(QUrl.fromLocalFile(ATAJOS_QML))
+    engine.load(QUrl.fromLocalFile(TRANSICION_QML))
     if not engine.rootObjects():
         return 1
     return app.exec()
