@@ -116,7 +116,9 @@ texto = Sprite();
 fun pedir_contrasena(pregunta, cuantos) {
   barra.SetOpacity(0);
   barra_fondo.SetOpacity(0);
-  texto_img = Image.Text(pregunta, 0.913, 0.929, 0.961);
+  # (la pregunta de systemd llega en inglés, «Please enter passphrase for disk…»; en Apogeo la única contraseña al
+  # arrancar es la del disco, cuando el chip de seguridad no lo ha abierto solo)
+  texto_img = Image.Text("Escribe tu contraseña de Apogeo para abrir el disco", 0.913, 0.929, 0.961);
   texto.SetImage(texto_img);
   texto.SetOpacity(1);
   texto.SetPosition(X + W / 2 - texto_img.GetWidth() / 2, barra_y - 6, 3);
