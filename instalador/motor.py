@@ -192,12 +192,24 @@ Server = {REPO}
 '''
 
 
+def quitar_entradas(d):
+    """Las entradas del firmware que arrancaban algo de este disco (un Windows o un Linux de antes, o una prueba
+    anterior): al borrarlo ya no llevan a nada, y saldrían en el menú de arranque del PC."""
+    guids = {g.lower() for g in run(['lsblk', '-nro', 'PARTUUID', d], ok=(0, 1, 32)).split()}
+    if not guids or not os.path.isdir('/sys/firmware/efi'):
+        return
+    for n, guid in re.findall(r'^Boot([0-9A-F]{4})\*?\s.*?HD\(\d+,GPT,([0-9a-fA-F-]+)', run(['efibootmgr']), re.M):
+        if guid.lower() in guids:
+            run(['efibootmgr', '-q', '-b', n, '-B'], ok=(0, 1))
+
+
 def particionar(e):
     d = e['disco']
     di(paso='disco', texto='Preparando el disco', progreso=0.02)
     # (nada montado de ese disco: lo que haya quedado de otra prueba)
     run(['umount', '-R', DESTINO], ok=(0, 1, 32))
     run(['cryptsetup', 'close', 'apogeo'], ok=(0, 1, 4))
+    quitar_entradas(d)
     run(['wipefs', '-af', d])
     run(['sgdisk', '--zap-all', d], ok=(0, 2))
     args = ['sgdisk', '-n', f'1:0:+{EFI_GIB}G', '-t', '1:ef00', '-c', '1:EFI']
