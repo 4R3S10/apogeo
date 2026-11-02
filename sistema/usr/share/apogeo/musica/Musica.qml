@@ -42,9 +42,12 @@ Window {
     // Sin nada sonando, no sale (KWin la vuelve a colocar abajo a la izquierda al volver a salir)
     visible: !win.idle
 
-    // Abrir al pasar el ratón; cerrar un poco después de salir (por si vuelve)
-    Timer { id: closeTimer; interval: 350; onTriggered: win.open = false }
-    function hover(inside) { if (inside) { closeTimer.stop(); win.open = true; } else closeTimer.restart(); }
+    // Abrir al pasar el ratón; cerrar un poco después de salir (por si vuelve). Cuenta estar encima de las portadas O de
+    // la tarjeta: antes cada una avisaba por su cuenta y, al pasar de las portadas a la tarjeta, las portadas decían
+    // «fuera» y la tarjeta se cerraba sola justo cuando ibas a usarla
+    readonly property bool encima: bubblesHover.hovered || cardHover.hovered
+    onEncimaChanged: { if (encima) { closeTimer.stop(); win.open = true; } else closeTimer.restart(); }
+    Timer { id: closeTimer; interval: 450; onTriggered: if (!win.encima) win.open = false }
 
     // Solo la parte que se ve recibe el ratón
     function updateMask() {
@@ -53,6 +56,16 @@ Window {
     }
     onOpenChanged: Qt.callLater(updateMask)
     onListChanged: Qt.callLater(updateMask)
+    Connections { target: card; function onHeightChanged() { Qt.callLater(win.updateMask) } }
+
+    // El tiempo de lo que suena avanza aquí (apogeo-musica solo avisa si cambia algo o si saltas): «time» al leerlo en «at»
+    property real reloj: Date.now()
+    Timer { interval: 500; repeat: true; running: win.open && !!win.main && !win.main.paused; onTriggered: win.reloj = Date.now() }
+    function tiempo(src) {
+        if (!src) return 0;
+        const t = (src.time || 0) + (src.paused || !src.at ? 0 : Math.max(0, win.reloj - src.at) / 1000);
+        return src.dur > 0 ? Math.min(t, src.dur) : t;
+    }
     Component.onCompleted: Qt.callLater(updateMask)
 
     // Volumen con la rueda: se enseña el % un momento
@@ -136,7 +149,7 @@ Window {
                 }
             }
         }
-        HoverHandler { onHoveredChanged: win.hover(hovered) }
+        HoverHandler { id: bubblesHover }
         WheelHandler { onWheel: ev => win.main && win.wheel(win.main, ev) }
     }
 
@@ -157,7 +170,7 @@ Window {
         transformOrigin: Item.BottomLeft
         Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-        HoverHandler { onHoveredChanged: win.hover(hovered) }
+        HoverHandler { id: cardHover; enabled: win.open }
 
         // Sin nada sonando
         Column {
@@ -232,9 +245,9 @@ Window {
                 Rectangle {
                     y: 6; width: parent.width; height: 4; radius: 2
                     color: Tema.tinte(0.14)
-                    Rectangle { height: parent.height; radius: 2; color: Tema.rosa; width: win.main && win.main.dur ? parent.width * Math.min(1, win.main.time / win.main.dur) : 0 }
+                    Rectangle { height: parent.height; radius: 2; color: Tema.rosa; width: win.main && win.main.dur ? parent.width * Math.min(1, win.tiempo(win.main) / win.main.dur) : 0 }
                 }
-                Texto { y: 11; text: win.main ? win.mmss(win.main.time) : ""; color: Tema.tenue; font.pixelSize: 11 }
+                Texto { y: 11; text: win.main ? win.mmss(win.tiempo(win.main)) : ""; color: Tema.tenue; font.pixelSize: 11 }
                 Texto { y: 11; anchors.right: parent.right; text: win.main ? win.mmss(win.main.dur) : ""; color: Tema.tenue; font.pixelSize: 11 }
             }
             // Botones

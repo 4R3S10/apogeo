@@ -17,6 +17,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtProperty, pyqtSignal, pyqtSlot  # noqa: E402
@@ -32,6 +33,7 @@ PATH = '/org/mpris/MediaPlayer2'
 PLAYER = 'org.mpris.MediaPlayer2.Player'
 LAST = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'apogeo', 'musica-ultima.json')
 NAMES = {'spotify': 'Spotify', 'firefox': 'Firefox', 'vlc': 'VLC', 'elisa': 'Elisa'}
+TIMEOUT = 400   # ms por pregunta a un reproductor: uno que no contesta no deja la música (ni su ventana) parada
 
 
 def unwrap(v):
@@ -58,6 +60,7 @@ class Musica(QObject):
         self.sock.readyRead.connect(self._read)
         self.sock.errorOccurred.connect(lambda *_: self._drop())
         self.buf = b''
+        self.idents = {}        # reproductor → su nombre (Identity), que no cambia: se pregunta una vez
         try:
             with open(LAST) as f:
                 self._last = json.load(f)
@@ -109,12 +112,19 @@ class Musica(QObject):
 
     def _poll_mpris(self):
         out = []
-        for name in self._players():
-            root = QDBusInterface(name, PATH, 'org.freedesktop.DBus.Properties', self.bus)
-            got = root.call('Get', 'org.mpris.MediaPlayer2', 'Identity').arguments()
-            ident = str(unwrap(got[0])) if got else ''
-            if 'chromium' in name or str(ident).lower() in ('ares', 'ágape', 'agape'):
+        names = self._players()
+        self.idents = {n: v for n, v in self.idents.items() if n in names}
+        for name in names:
+            if 'chromium' in name:
                 continue  # Ágape: van sus pestañas, una a una
+            root = QDBusInterface(name, PATH, 'org.freedesktop.DBus.Properties', self.bus)
+            root.setTimeout(TIMEOUT)
+            if name not in self.idents:
+                got = root.call('Get', 'org.mpris.MediaPlayer2', 'Identity').arguments()
+                self.idents[name] = str(unwrap(got[0])) if got else ''
+            ident = self.idents[name]
+            if ident.lower() in ('ares', 'ágape', 'agape'):
+                continue
             msg = root.call('GetAll', PLAYER)
             if msg.type() == QDBusMessage.MessageType.ErrorMessage or not msg.arguments():
                 continue
@@ -131,14 +141,29 @@ class Musica(QObject):
                 'title': title, 'artist': ', '.join(artist) if isinstance(artist, list) else str(artist),
                 'art': art if art.startswith(('https://', 'file://')) else '',
                 'paused': p.get('PlaybackStatus') != 'Playing',
-                'time': (p.get('Position') or 0) / 1e6, 'dur': (meta.get('mpris:length') or 0) / 1e6,
+                'time': (p.get('Position') or 0) / 1e6, 'at': time.time() * 1000, 'dur': (meta.get('mpris:length') or 0) / 1e6,
                 'vol': float(p.get('Volume', 1.0) or 0), 'prev': bool(p.get('CanGoPrevious')), 'next': bool(p.get('CanGoNext')),
                 'spotify': short == 'spotify',
             })
-        if out != self._mpris:
+        if self._differs(self._mpris, out):
             self._mpris = out
             self._remember()
             self.changed.emit()
+
+    @staticmethod
+    def _differs(old, new):
+        """¿Ha cambiado algo de verdad? El tiempo que avanza solo no cuenta (la ventana lo hace avanzar ella sola desde
+        «time» y «at»): solo si salta (has movido la canción) más de un segundo y medio. Así la ventana no se rehace
+        cada segundo mientras suena."""
+        if len(old) != len(new):
+            return True
+        for a, b in zip(old, new):
+            if {k: v for k, v in a.items() if k not in ('time', 'at')} != {k: v for k, v in b.items() if k not in ('time', 'at')}:
+                return True
+            expected = a.get('time', 0) + (0 if a.get('paused') else (b.get('at', 0) - a.get('at', 0)) / 1000)
+            if abs(expected - b.get('time', 0)) > 1.5:
+                return True
+        return False
 
     # ---------- Ágape (socket) ----------
 
@@ -178,8 +203,9 @@ class Musica(QObject):
                 data = json.loads(line)
             except ValueError:
                 continue
-            items = [{**d, 'kind': 'agape', 'app': 'Ágape'} for d in (data or []) if isinstance(d, dict)]
-            if items != self._agape:
+            now = time.time() * 1000
+            items = [{**d, 'kind': 'agape', 'app': 'Ágape', 'at': now} for d in (data or []) if isinstance(d, dict)]
+            if self._differs(self._agape, items):
                 self._agape = items
                 self._remember()
                 self.changed.emit()
@@ -194,7 +220,7 @@ class Musica(QObject):
         else:
             method = {'toggle': 'PlayPause', 'next': 'Next', 'prev': 'Previous'}.get(action)
             if method:
-                QDBusInterface(key, PATH, PLAYER, self.bus).call(method)
+                QDBusInterface(key, PATH, PLAYER, self.bus).asyncCall(method)   # (sin esperar: el botón responde ya)
         QTimer.singleShot(300, self.poll)
 
     def _launch(self, *cmd):
@@ -223,7 +249,7 @@ class Musica(QObject):
         if key.startswith('web:'):
             self._send({'cmd': 'volume', 'key': key, 'value': value})
         else:
-            QDBusInterface(key, PATH, 'org.freedesktop.DBus.Properties', self.bus).call(
+            QDBusInterface(key, PATH, 'org.freedesktop.DBus.Properties', self.bus).asyncCall(
                 'Set', PLAYER, 'Volume', QDBusVariant(value))
 
     @pyqtSlot(str)
