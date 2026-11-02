@@ -21,7 +21,8 @@ PlasmoidItem {
     Plasmoid.constraintHints: Plasmoid.CanFillArea
 
     readonly property string modo: Tema.modo || "navegar"
-    readonly property color color: Tema.acentoDe(modo)
+    // (sobre una barra de color, el punto de la activa del color de lo que va encima: ámbar sobre ámbar no se vería)
+    readonly property color color: Tema.c("barra", "") !== "" ? Tema.sobreBarra : Tema.acentoDe(modo)
 
     TaskManager.VirtualDesktopInfo { id: desktops }
     TaskManager.ActivityInfo { id: activities }
@@ -111,7 +112,7 @@ PlasmoidItem {
             id: fecha
             property date ahora: new Date()
             Timer { interval: 10000; repeat: true; running: true; triggeredOnStart: true; onTriggered: fecha.ahora = new Date() }
-            visible: root.osd === ""
+            visible: false   // (ya no: en el centro van tus apps abiertas)
             x: Math.max(0, Math.min(hueco.width - width, hueco.centro - width / 2))
             anchors.verticalCenter: parent.verticalCenter
             text: Qt.locale("es_ES").toString(ahora, "d MMM, HH:mm")
@@ -119,10 +120,10 @@ PlasmoidItem {
             wrapMode: Text.NoWrap
             font { family: Tema.letra; pixelSize: 13; weight: Font.Medium }
         }
-        // (tus ventanas, como antes: ya no salen en la barra; están en «Escritorios», Meta+W)
+        // Tus apps abiertas en el modo, en el centro
         Row {
             id: fila
-            visible: false
+            visible: root.osd === ""
             opacity: visible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 160 } }
             x: Math.max(0, Math.min(hueco.width - width, hueco.centro - width / 2))

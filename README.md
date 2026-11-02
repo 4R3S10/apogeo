@@ -152,21 +152,14 @@ que se abrieron (Kvantum no cambia en vivo); las que abras cogen el del modo.
 ### El escritorio de Órbita («C · Orbe central»)
 
 Casi vacío, como en la bienvenida de una consola:
-- **Arriba, una barra fina sin fondo, como en COSMIC, que solo se ve con Ágape delante** (Ágape baja un poco para dejarle
-  sitio; con cualquier otra app se esconde; lo hace `apogeo-bordes` según la ventana activa): a la
-  izquierda un punto del color del modo, **Escritorios** (la vista de Meta+W) y **Aplicaciones** (la Órbita)
-  (`org.apogeo.modo`); **en el centro, la fecha y la hora** («2 nov., 23:10», `org.apogeo.ventanas`; al cambiar el
-  volumen o el brillo, su barrita sale ahí un momento). A la derecha los iconos de tus apps (bandeja), la red, el sonido
-  y la campana (un clic, o Meta+N, abre la tarjeta rápida: ver «La tarjeta rápida»). Tus ventanas abiertas ya no van en
-  la barra: están en Escritorios.
-- **Abajo, el orbe** (`org.apogeo.isla`, sin cristal detrás): el del modo en el que estás en el centro y, a sus lados,
-  los otros dos en bolitas con su nombre (Jugar violeta, Navegar cian, Estudiar ámbar; un clic te lleva y el tuyo
-  siempre queda en el centro). Nada encima ni a los lados: tus ventanas van arriba. Está escondido (abajo no se ve
-  nada) y solo sale al **tocar** el borde de abajo con el ratón (en el centro, donde está; no antes, al acercarse):
-  sube desde abajo y se enciende (su anillo pasa del gris al color del modo con un destello y el punto de dentro
-  aparece), y las bolitas le siguen un poco después. Al alejar el ratón baja y se apaga, más deprisa. Lo hace
-  `apogeo-bordes`: saca la barra («las ventanas van debajo») y pone «asomado» en el orbe, que se anima solo; al bajar,
-  quita «asomado» y, cuando ya ha bajado, vuelve a esconder la barra. Con una ventana a pantalla completa no sale.
+- **Arriba, una barra fina de color sólido que solo se ve con Ágape delante** (navy en Navegar, ámbar con letras oscuras en
+  Estudiar; Ágape baja un poco para dejarle sitio; con cualquier otra app se esconde, lo hace `apogeo-bordes`): **en el
+  centro, tus apps abiertas en el modo** (`org.apogeo.ventanas`: clic ir o minimizar, clic central otra, clic derecho
+  cerrar; al cambiar el volumen o el brillo, su barrita sale ahí un momento) y a la derecha la hora, los iconos de tus apps
+  (bandeja), la red, el sonido y la campana (un clic, o Meta+N, abre la tarjeta rápida: ver «La tarjeta rápida»).
+- **Sin orbe abajo:** la Órbita sale solo con **Meta**, y de modo se cambia con los atajos (Meta+F1/F2/F3, Meta+Ctrl+↑ ↓)
+  o con la Órbita abierta (sus bolitas). `island()` de `apogeo-pisos` quita el panel del orbe en cada inicio y
+  `apogeo-bordes` ya no lo saca al tocar el borde. La consola tampoco cambia de modo (sin su pastilla de modos ni «↓»).
 - **Jugar es solo la consola:** en Jugar no hay barra ni orbe (sus widgets no se pintan y la consola, a pantalla
   completa, va encima); al salir de Jugar, vuelven. Cada modo tiene su fondo ya cargado: al cambiar, se funden sin
   pasar por el del modo anterior. Al entrar en Jugar o salir de él el fondo cambia de golpe (delante está la consola y

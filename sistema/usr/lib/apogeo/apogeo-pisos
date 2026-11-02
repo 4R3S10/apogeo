@@ -1303,9 +1303,11 @@ class Floors:
 def island(bus, st):
     """El orbe como en los ajustes: abajo en el centro y escondido (o siempre a la vista, si lo quitas en Ajustes → Orbe).
     El script de KWin «apogeo-bordes» lo saca al tocar el borde de abajo y tiene que saber si lo hace."""
+    # Sin orbe abajo: la Órbita sale solo con Meta y de modo se cambia con los atajos o con la Órbita abierta. El panel
+    # del orbe se quita y apogeo-bordes ya no lo saca al tocar el borde
     hide = st['isla']['esconder']
     t = aspecto.tokens(aspecto.settings_of(st))
-    kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'true' if hide else 'false')
+    kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'false')
     kwin_reconfigure()
     plasma_script(bus, """
         panels().forEach(function (p) {
@@ -1324,6 +1326,7 @@ def island(bus, st):
                 if (p.floating) p.floating = false;
                 return;
             }
+            if (types.indexOf('org.apogeo.isla') >= 0) { p.remove(); return; }
             if (types.indexOf('org.apogeo.isla') < 0) return;
             if (p.location != 'bottom') p.location = 'bottom';
             if (p.height != %d) p.height = %d;

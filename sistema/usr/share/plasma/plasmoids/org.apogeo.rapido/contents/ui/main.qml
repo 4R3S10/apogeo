@@ -104,7 +104,7 @@ PlasmoidItem {
             spacing: root.fina ? 10 : 11
             leftPadding: root.fina ? 9 : 11
             rightPadding: root.fina ? 10 : 12
-            Texto { visible: false /* (la hora va en el centro de la barra) */ && root.fina; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font { family: Tema.mono; pixelSize: 12; weight: Font.DemiBold } color: Tema.texto }
+            Texto { visible: root.fina; anchors.verticalCenter: parent.verticalCenter; text: root.clock; font { family: Tema.mono; pixelSize: 12; weight: Font.DemiBold } color: Tema.sobreBarra }
             // (en la barra fina, del color de lo que va encima de la barra: oscuro sobre el ámbar de Estudiar)
             Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.netIcon; color: root.netIcon === "sinred" ? Tema.rosa : root.fina ? Tema.sobreBarraApagado : Tema.apagado }
             Icono { anchors.verticalCenter: parent.verticalCenter; nombre: root.muted ? "silencio" : "volumen"; color: root.fina ? Tema.sobreBarraApagado : Tema.apagado }

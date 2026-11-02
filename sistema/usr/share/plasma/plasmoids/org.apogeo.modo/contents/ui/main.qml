@@ -45,35 +45,9 @@ PlasmoidItem {
         // Jugar es solo la consola (a pantalla completa): aquí no se ve nada
         opacity: root.modo === "jugar" ? 0 : 1
         enabled: opacity > 0
-        Layout.minimumWidth: linea.implicitWidth + 16
-        Layout.preferredWidth: linea.implicitWidth + 16
-        // Como en COSMIC: «Escritorios» y «Aplicaciones», sueltos sobre el fondo (el punto, del color del modo)
-        Row {
-            id: linea
-            x: 8
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 14
-            // (sobre una barra de color, el punto del color de las letras: el ámbar sobre el ámbar no se vería)
-            Rectangle { width: 6; height: 6; radius: 3; color: Tema.c("barra", "") !== "" ? Tema.sobreBarra : root.color; anchors.verticalCenter: parent.verticalCenter }
-            Repeater {
-                model: [{ t: "Escritorios", f: "vista" }, { t: "Aplicaciones", f: "orbita" }]
-                delegate: Texto {
-                    id: boton
-                    required property var modelData
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.t
-                    color: raton.containsMouse ? Tema.sobreBarra : Qt.rgba(Tema.sobreBarra.r, Tema.sobreBarra.g, Tema.sobreBarra.b, 0.86)
-                    wrapMode: Text.NoWrap
-                    font { family: Tema.letra; pixelSize: 13; weight: Font.Medium }
-                    MouseArea {
-                        id: raton
-                        anchors.fill: parent; anchors.margins: -6
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: boton.modelData.f === "vista" ? root.vista() : root.orbita()
-                    }
-                }
-            }
-        }
+        Layout.minimumWidth: 8
+        Layout.preferredWidth: 8
+        // (antes: «Escritorios» y «Aplicaciones»; ya no van en la barra: la Órbita sale con Meta y la vista con Meta+W)
+        Item { id: linea; implicitWidth: 0 }
     }
 }

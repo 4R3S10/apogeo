@@ -293,7 +293,6 @@ Window {
         else if (k === "lb") setTab(tab - 1);
         else if (k === "rb") setTab(tab + 1);
         else if (k === "abajo" && enInicio && filaOk < estantes.length - 1) setFila(filaOk + 1);
-        else if (k === "abajo") consola.floor(1);
         else if (k === "arriba" && enInicio) setFila(filaOk - 1);
         else if (k === "arriba" && tabKey === "emuladores" && systems.length) {
             const i = systems.findIndex(s => s.clave === sys);
@@ -529,8 +528,9 @@ Window {
             }
         }
 
-        // Los tres modos, en una pastilla de cristal
+        // Los tres modos, en una pastilla de cristal (ya no: de modo se cambia con los atajos o con la Órbita abierta)
         Rectangle {
+            visible: false
             anchors.centerIn: parent
             width: modos.implicitWidth + 8
             height: 40
@@ -1157,7 +1157,7 @@ Window {
                 { b: [win.btn.x], t: "Quitar" },
                 { b: [win.btn.lb, win.btn.rb], t: "Pestaña" },
                 { b: [win.btn.start], t: "Orden" },
-                { b: win.enInicio && win.estantes.length > 1 ? ["↑", "↓"] : ["↓"], t: win.enInicio && win.estantes.length > 1 ? "Estante" : "Navegar" }
+                { b: ["↑", "↓"], t: "Estante" }
             ]
             delegate: Row {
                 required property var modelData

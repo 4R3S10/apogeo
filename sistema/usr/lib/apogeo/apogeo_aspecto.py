@@ -41,12 +41,12 @@ ORBITA = {'nombre': 'Órbita', 'fondo': '#080a0f', 'superficie': '#0f131a', 'tex
           'acentos': {'jugar': '#b79cff', 'navegar': '#45d6ff', 'estudiar': '#ffb35c'},
           'acentosClaro': {'jugar': '#6d4bc4', 'navegar': '#007a99', 'estudiar': '#a85a00'}}
 # Los modos con su color fijo (lo que manda sobre «Del fondo»): Navegar en azul navy y Estudiar en ámbar cálido oscuro,
-# con su barra de arriba de ese color (la que sale con Ágape delante). Jugar sigue con el de su fondo (o el violeta).
+# con su barra de arriba de ese color, sólida (la que sale con Ágape delante). Jugar sigue con el de su fondo (o el violeta).
 PALETAS = {
     'navegar': {'fondo': '#08112a', 'superficie': '#0d1a3a', 'acento': '#5b8cff', 'sobreAcento': '#ffffff',
-                'barra': '#172a5c', 'barraOpacidad': 0.82, 'sobreBarra': '#e8edf7'},
+                'barra': '#172a5c', 'barraOpacidad': 1.0, 'sobreBarra': '#e8edf7'},
     'estudiar': {'fondo': '#140c05', 'superficie': '#1e140a', 'acento': '#ffb35c', 'sobreAcento': '#2a1a08',
-                 'barra': '#ffb35c', 'barraOpacidad': 0.88, 'sobreBarra': '#2a1a08'},
+                 'barra': '#ffb35c', 'barraOpacidad': 1.0, 'sobreBarra': '#2a1a08'},
 }
 DEFAULT = {'estilo': 'orbita', 'acento': '', 'color': 'fondo', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves',
            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
