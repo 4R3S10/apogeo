@@ -24,10 +24,7 @@ PlasmoidItem {
     readonly property var modos: ["jugar", "navegar", "estudiar"]
     readonly property string modo: modos.indexOf(floor.toLowerCase()) >= 0 ? floor.toLowerCase() : "navegar"
     readonly property color accent: Tema.rosa
-    function colorModo(m) {
-        return Tema.claro ? ({ jugar: "#6f52c9", navegar: "#0b86a8", estudiar: "#a85a00" })[m]
-                          : ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[m];
-    }
+    function colorModo(m) { return Tema.acentoDe(m) }
     function nombreModo(m) { return ({ jugar: "Jugar", navegar: "Navegar", estudiar: "Estudiar" })[m] }
 
     // ---------- Asomarse: subir y encenderse ----------

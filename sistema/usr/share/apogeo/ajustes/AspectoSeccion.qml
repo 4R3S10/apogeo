@@ -79,8 +79,20 @@ Seccion {
 
     // ---------- A tu gusto ----------
     Fila {
+        titulo: "El color de cada modo"
+        detalle: (sec.a.color || "fondo") === "fondo"
+                 ? "Sale de su fondo de pantalla: todo se tiñe de él (un fondo animado de Apogeo se queda con el suyo)"
+                 : "El violeta de Jugar, el cian de Navegar y el ámbar de Estudiar"
+        Segmentos {
+            readonly property var valores: ["fondo", "modo"]
+            opciones: [{ texto: "Del fondo" }, { texto: "Del modo" }]
+            actual: Math.max(0, valores.indexOf(sec.a.color || "fondo"))
+            onElegido: i => sec.put("color", valores[i])
+        }
+    }
+    Fila {
         titulo: "Color"
-        detalle: sec.a.acento ? "El tuyo, en los tres modos" : "El de cada modo"
+        detalle: sec.a.acento ? "El tuyo, en los tres modos" : (sec.a.color || "fondo") === "fondo" ? "El de cada fondo" : "El de cada modo"
         Row {
             spacing: 8
             Repeater {

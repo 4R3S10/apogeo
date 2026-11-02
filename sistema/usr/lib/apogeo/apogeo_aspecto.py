@@ -8,8 +8,12 @@ Lo que lee todo lo de Apogeo hecho en QML (Tema): ~/.config/apogeo/aspecto.json 
 tiene su acento: en aspecto.json van los del modo en el que estás y, en «pisos», los de los tres (el fondo de Plasma
 pinta cada modo con los suyos sin esperar).
 
-  ajustes['aspecto'] = {estilo, acento, modo, letra, esquinas, cristal, tamano, animaciones, posicion}
+  ajustes['aspecto'] = {estilo, acento, color, modo, letra, esquinas, cristal, tamano, animaciones, posicion}
   (estilo, letra y posicion ya no se eligen: siempre Órbita, Geist y abajo a la derecha)
+
+«color»: «fondo» (lo de serie, como en COSMIC: cada modo coge el color de su fondo de pantalla y todo se tiñe de él; un
+fondo animado de Apogeo, que no es una imagen, se queda con el color de su modo) o «modo» (el violeta, el cian y el ámbar
+de siempre). Un acento elegido a mano manda sobre los dos.
 """
 import datetime
 import glob
@@ -18,6 +22,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+
+import apogeo_color
 
 HOME = os.path.expanduser('~')
 CONFIG = os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
@@ -34,7 +40,7 @@ ORBITA = {'nombre': 'Órbita', 'fondo': '#080a0f', 'superficie': '#0f131a', 'tex
           'wp': ['#0b1118', '#12303d', '#45d6ff'], 'letra': 'Geist', 'mono': 'Geist Mono',
           'acentos': {'jugar': '#b79cff', 'navegar': '#45d6ff', 'estudiar': '#ffb35c'},
           'acentosClaro': {'jugar': '#6d4bc4', 'navegar': '#007a99', 'estudiar': '#a85a00'}}
-DEFAULT = {'estilo': 'orbita', 'acento': '', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves',
+DEFAULT = {'estilo': 'orbita', 'acento': '', 'color': 'fondo', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves',
            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
 CORNERS = {'rectas': 0.35, 'suaves': 0.7, 'redondas': 1.0}
 SIZES = {'compacto': (9, 50), 'normal': (10, 56), 'grande': (11.5, 64)}     # (letra en pt, alto del orbe)
@@ -65,26 +71,57 @@ def settings_of(st):
     a.update(estilo='orbita', letra='Geist', posicion='abajo-dcha')
     if a['modo'] not in ('oscuro', 'claro', 'hora', 'piso'):
         a['modo'] = 'piso'
+    if a['color'] not in ('fondo', 'modo'):
+        a['color'] = 'fondo'
     return a
 
 
-def tokens(a, floor='navegar'):
-    """Las fichas de tu aspecto en el modo «floor» (lo que leen Tema y los generadores): el acento del modo, salvo que
-    hayas elegido uno a mano."""
+def wallpaper_of(st, floor):
+    """El fondo que se ve en ese piso (con «que cambie solo», el que toca ahora: lo pone apogeo-pisos en «_vistos»):
+    la ruta de una imagen o un vídeo, o '' si es un fondo animado de Apogeo."""
+    f = (st.get('_vistos') or {}).get(floor) or ((st.get('pisos') or {}).get(floor) or {}).get('fondo') or ''
+    return f if isinstance(f, str) and os.path.isfile(f) else ''
+
+
+def wallpaper_colors(st, a):
+    """{piso: lo que dice apogeo_color de su fondo} con «Del fondo»; vacío con «Del modo» o un acento a mano."""
+    if a['color'] != 'fondo' or a['acento']:
+        return {}
+    out = {}
+    for k in FLOORS:
+        path = wallpaper_of(st, k)
+        info = apogeo_color.color_de(path) if path else None
+        if info:
+            out[k] = info
+    return out
+
+
+def tokens(a, floor='navegar', fondo=None):
+    """Las fichas de tu aspecto en el modo «floor» (lo que leen Tema y los generadores): el acento del modo (o el de su
+    fondo de pantalla, con «Del fondo»: «fondo» es lo que dice apogeo_color), salvo que hayas elegido uno a mano."""
     s = dict(ORBITA)
     mode = floor if floor in FLOORS else 'navegar'
     light = a['modo'] == 'claro' or (a['modo'] == 'hora' and light_now())   # («por modo»: grafito en los tres)
+    del_fondo = not a['acento'] and a.get('color') == 'fondo' and fondo
     if not a['acento']:
-        acc = (s['acentosClaro'] if light else s['acentos'])[mode]
+        acc = apogeo_color.acento(fondo, light) if del_fondo else (s['acentosClaro'] if light else s['acentos'])[mode]
         s['acento'] = acc
         s['vivo'] = mix(acc, '#000000' if light else '#ffffff', 0.12 if light else 0.18)
         s['sobreAcento'] = '#ffffff' if light or luminance(acc) < 0.45 else '#041318'
         s['wp'] = [s['wp'][0], mix(s['wp'][1], acc, 0.35), acc]
+        if del_fondo:
+            # Todo se tiñe del fondo (como en COSMIC): el grafito, un poco de su color
+            s['fondo'] = mix(s['fondo'], acc, 0.07)
+            s['superficie'] = mix(s['superficie'], acc, 0.11)
+            s['wp'] = [s['fondo'], mix(s['wp'][1], acc, 0.45), acc]
     if light:
         # Papel cálido, no un blanco clínico: se lee como un cuaderno
         s.update(fondo='#f3efe6', superficie='#fbf8f2', texto='#1a1c22', claro=True,
                  vivo=mix(s['acento'], '#000000', 0.10), sobreAcento='#ffffff')
         s['wp'] = ['#f3efe6', '#e9e2d3', s['acento']]
+        if del_fondo:
+            s['fondo'] = mix(s['fondo'], s['acento'], 0.06)
+            s['superficie'] = mix(s['superficie'], s['acento'], 0.05)
     if a['acento']:
         acc = a['acento']
         s.update(acento=acc, vivo=mix(acc, '#ffffff', 0.25),
@@ -134,7 +171,8 @@ FLOOR_TOKENS = ('fondo', 'superficie', 'texto', 'acento', 'sobreAcento', 'vivo',
 def all_tokens(st, floor):
     """Las fichas del piso en el que estás, con las de los tres pisos en «pisos» (y «piso»: cuál es este)."""
     a = settings_of(st)
-    per = {k: tokens(a, k) for k in FLOORS}
+    colors = wallpaper_colors(st, a)
+    per = {k: tokens(a, k, colors.get(k)) for k in FLOORS}
     t = dict(per[floor] if floor in per else per['navegar'])
     t['piso'] = floor
     t['pisos'] = {k: {x: v[x] for x in FLOOR_TOKENS} for k, v in per.items()}

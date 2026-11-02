@@ -657,7 +657,7 @@ def aesthetics():
     run('systemctl', '--user', 'disable', '--now', 'arch-update.timer')
     run('pkill', '-f', 'arch-update --tray')
     # (si has cambiado el aspecto, el tuyo encima de lo de serie; se guarda, por si ajustes.load() lo ha puesto al día)
-    aspecto.apply(ajustes.save(ajustes.load()), log=log)
+    aspecto.apply(con_vistos(ajustes.save(ajustes.load())), log=log)
     log('estética aplicada')
 
 
@@ -1100,6 +1100,7 @@ class Floors:
             # Sin «que cambie solo», o acabas de elegir uno a mano: se ve ese
             self.chosen[floor] = chosen
             self.shown[floor] = chosen
+            VISTOS[floor] = chosen
             return chosen
         self.chosen[floor] = chosen
         if advance or (entering and rot['cada'] == 'piso') or floor not in self.shown:
@@ -1112,6 +1113,7 @@ class Floors:
             state['rotacion'][floor] = idx
             save_state(state)
             self.shown[floor] = pool[idx]
+        VISTOS[floor] = self.shown[floor]
         return self.shown[floor]
 
     def schedule_rotation(self, st, floor):
@@ -1295,11 +1297,19 @@ def island(bus, st):
 
 
 _look = {'ultimo': None, 'cerrojo': threading.Lock()}
+# El fondo que se ve ahora en cada piso (con «que cambie solo» no es siempre el elegido): de él sale su color («Del fondo»)
+VISTOS = {}
+
+
+def con_vistos(st):
+    return dict(st, _vistos=dict(VISTOS))
 
 
 def apply_look(st, floor, force=False):
     """Ajustes → Identidad: solo si ha cambiado (genera temas y los pone: tarda un poco) y en segundo plano. Con «según
     la hora», también al pasar de día a noche (lo mira el reloj cada 10 minutos)."""
+    st = con_vistos(st)
+
     def work():
         with _look['cerrojo']:
             _t, per = aspecto.all_tokens(st, floor)
@@ -1313,6 +1323,8 @@ def apply_look(st, floor, force=False):
 
 def switch_look(st, floor):
     """El acento del piso en el que estás (al cambiar de piso), en segundo plano."""
+    st = con_vistos(st)
+
     def work():
         with _look['cerrojo']:
             aspecto.switch(st, floor, log=log)

@@ -32,9 +32,8 @@ Window {
     readonly property int abrir: 360
 
     property string modo: "navegar"
-    readonly property var colores: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })
     readonly property var nombres: ({ jugar: "Jugar", navegar: "Navegar", estudiar: "Estudiar" })
-    readonly property color c: colores[modo] || "#45d6ff"
+    readonly property color c: Tema.acentoDe(modo)   // (el de su fondo de pantalla, con «Del fondo»)
     // El relleno: el grafito de Órbita teñido del modo; el borde que avanza, de su color
     readonly property color relleno: Qt.tint("#0b0e14", Qt.rgba(c.r, c.g, c.b, 0.2))
     readonly property color borde: Qt.rgba(c.r, c.g, c.b, 0.9)
@@ -52,7 +51,7 @@ Window {
     readonly property real hr: hueco * (1 + 3 * filo)
 
     function empezar(m) {
-        modo = m in colores ? m : "navegar";
+        modo = m in nombres ? m : "navegar";
         const n = String(buscador.donde() || "").split(",").map(Number);
         const p = t.screen;
         const sx = p ? p.virtualX : 0, sy = p ? p.virtualY : 0;

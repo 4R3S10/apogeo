@@ -37,6 +37,14 @@ QtObject {
     readonly property color acento: c("acento", piso === "jugar" ? "#b79cff" :
                                       piso === "estudiar" ? "#ffb35c" : "#45d6ff")
     readonly property color rosa: acento
+    // El acento de cualquier modo (el de su fondo de pantalla con «Del fondo», o el suyo de siempre): lo calcula
+    // apogeo_aspecto y va en «pisos»
+    function acentoDe(m) {
+        const x = f.pisos && f.pisos[m];
+        if (x && x.acento) return x.acento;
+        return (claro ? { jugar: "#6f52c9", navegar: "#0b86a8", estudiar: "#a85a00" }
+                      : { jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[m] || acento;
+    }
     readonly property color rosaSuave: Qt.rgba(acento.r, acento.g, acento.b, 0.16)
     readonly property color sobreAcento: c("sobreAcento", "#041318")
     readonly property color sobreRosa: sobreAcento

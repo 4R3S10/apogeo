@@ -21,7 +21,7 @@ PlasmoidItem {
     Plasmoid.constraintHints: Plasmoid.CanFillArea
 
     readonly property string modo: Tema.modo || "navegar"
-    readonly property color color: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[modo] || Tema.acento
+    readonly property color color: Tema.acentoDe(modo)
 
     TaskManager.VirtualDesktopInfo { id: desktops }
     TaskManager.ActivityInfo { id: activities }

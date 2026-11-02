@@ -190,7 +190,7 @@ Item {
         return cfg ? String(cfg.Archivo || "") : "";
     }
     readonly property bool foto: /\.(jpe?g|png|webp|avif|jxl|bmp)$/i.test(archivo) && fotoImg.status === Image.Ready
-    readonly property color modoColor: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[floors[floor].key]
+    readonly property color modoColor: Tema.acentoDe(floors[floor].key)
     Image {
         id: fotoImg
         anchors.fill: parent
@@ -363,7 +363,7 @@ Item {
                 required property var modelData
                 required property int index
                 readonly property bool on: index === root.floor
-                readonly property color c: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[modelData.key]
+                readonly property color c: Tema.acentoDe(modelData.key)
                 spacing: 8
                 opacity: on ? 1 : modoArea.containsMouse ? 0.8 : 0.45
                 Behavior on opacity { NumberAnimation { duration: 160 } }

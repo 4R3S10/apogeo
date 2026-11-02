@@ -21,8 +21,7 @@ PlasmoidItem {
     readonly property int columna: indice >= 0 ? indice % columnas : 0
     readonly property string escritorio: String(desktops.desktopNames[indice] || "").split(" ")[0].toLowerCase()
     readonly property string modo: ["jugar", "navegar", "estudiar"].indexOf(escritorio) >= 0 ? escritorio : Tema.modo || "navegar"
-    readonly property color color: Tema.claro ? ({ jugar: "#6f52c9", navegar: "#0b86a8", estudiar: "#a85a00" })[modo] || Tema.acento
-                                              : ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })[modo] || Tema.acento
+    readonly property color color: Tema.acentoDe(modo)
 
     P5Support.DataSource { id: runner; engine: "executable"; onNewData: source => disconnectSource(source) }
     function irA(id) {

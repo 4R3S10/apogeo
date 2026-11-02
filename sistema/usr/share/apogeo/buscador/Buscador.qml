@@ -28,7 +28,7 @@ Window {
     readonly property real techo: Math.max(u(56), height * 0.1)
 
     property string modo: "navegar"
-    readonly property var colorModo: ({ jugar: "#b79cff", navegar: "#45d6ff", estudiar: "#ffb35c" })
+    readonly property var colorModo: ({ jugar: Tema.acentoDe("jugar"), navegar: Tema.acentoDe("navegar"), estudiar: Tema.acentoDe("estudiar") })
     readonly property var nombreModo: ({ jugar: "Jugar", navegar: "Navegar", estudiar: "Estudiar" })
     readonly property string query: field.text.trim()
     property string detalle: ""                    // «», «agenda», «notas» o «estudios»: un satélite abierto entero

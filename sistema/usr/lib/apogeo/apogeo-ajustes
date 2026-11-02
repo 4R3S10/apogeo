@@ -285,8 +285,10 @@ def window(section):
         @pyqtSlot('QVariant', result='QVariantMap')
         def lookTokens(self, a):
             a = a.toVariant() if hasattr(a, 'toVariant') else a
-            t = aspecto.tokens(aspecto.settings_of({'aspecto': dict(a or {})}), self._floor())
-            return {k: v for k, v in t.items() if v is not None}
+            # (con los fondos de tus modos: con «Del fondo», el color sale de ellos)
+            st = dict(self._st, aspecto=dict(a or {}))
+            t, _per = aspecto.all_tokens(st, self._floor() or 'navegar')
+            return {k: v for k, v in t.items() if v is not None and k != 'pisos'}
 
         # ----- Fondos: los animados de Apogeo y tu biblioteca de Aura -----
         @pyqtProperty('QVariantMap', notify=libraryChanged)
