@@ -166,7 +166,9 @@ def _generate(t):
     name, icons = t['nombre'], icon_theme(t)
     want = [os.path.join(DATA, 'color-schemes', name + '.colors'), os.path.join(CONFIG, 'Kvantum', name),
             os.path.join(DATA, 'plasma', 'desktoptheme', name), os.path.join(DATA, 'aurorae', 'themes', name),
-            os.path.join(DATA, 'icons', icons)]
+            os.path.join(DATA, 'icons', icons),
+            # (los temas hechos antes de la versión opaca del panel se rehacen: sin ella, fondo oscuro en las barras)
+            os.path.join(DATA, 'plasma', 'desktoptheme', name, 'solid', 'widgets', 'panel-background.svg')]
     if all(os.path.exists(x) for x in want):
         return
     paths = []

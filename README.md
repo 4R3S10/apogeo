@@ -170,7 +170,9 @@ Casi vacío, como en la bienvenida de una consola:
   `herramientas/plantilla.py`). La esquina de arriba a la izquierda ya no abre la Vista general de KDE, y el modo de la
   barra fina cambia a la vez que el orbe (lo lee del escritorio virtual).
 - Las barras y el orbe sin fondo son del estilo de Plasma de Órbita (`herramientas/plasma.py`: los trozos «north-…» y
-  «south-…» de `panel-background`, vacíos, y sin sombra de panel).
+  «south-…» de `panel-background`, vacíos, y sin sombra de panel), también en su versión opaca
+  (`solid/widgets/panel-background`, la que usa Plasma cuando una ventana toca el panel: sin ella cogía la de Breeze y
+  salía un fondo oscuro).
 
 ### Los avisos
 

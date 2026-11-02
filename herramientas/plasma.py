@@ -290,6 +290,9 @@ def main():
         # (con Órbita, la barra fina de arriba y el orbe sin fondo: bare)
         'translucent/widgets/panel-background.svg': panel(frame_svg(r(20), 6, SURFACE, CRISTAL, 22, 0.32, shine=(ACCENT, 0.45))),
         'widgets/panel-background.svg': panel(frame_svg(r(20), 6, CHROME, 0.97, 22, 0.32)),
+        # La versión opaca: Plasma la usa cuando una ventana toca el panel (maximizada debajo de la barra fina, o el orbe
+        # al salir encima de una). Si falta, coge la de Breeze y la barra y el orbe salían con un fondo oscuro
+        'solid/widgets/panel-background.svg': panel(frame_svg(r(20), 6, CHROME, 1, 22, 0.32)),
         # Menús, avisos y ventanitas: tarjeta de Ágape
         'translucent/dialogs/background.svg': frame_svg(r(16), 12, CHROME, min(0.98, CRISTAL + 0.35), 32, 0.45),
         'dialogs/background.svg': frame_svg(r(16), 12, CHROME, 0.98, 32, 0.45),
@@ -308,7 +311,7 @@ def main():
         json.dump({
             'KPlugin': {
                 'Id': THEME, 'Name': 'Apogeo' if THEME == 'apogeo' else 'Apogeo (tu aspecto)', 'Description': 'El cristal y las tarjetas de Ágape',
-                'Authors': [{'Name': 'Ares'}], 'License': 'MIT', 'Version': '1.0', 'Category': '',
+                'Authors': [{'Name': 'Ares'}], 'License': 'MIT', 'Version': '1.1', 'Category': '',
             },
             'X-Plasma-API-Minimum-Version': '6.0',
         }, f, ensure_ascii=False, indent=4)
