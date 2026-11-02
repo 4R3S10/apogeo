@@ -519,6 +519,9 @@ def setup(bus):
             g = dbus.Interface(dbus.SessionBus().get_object('org.kde.kglobalaccel', '/kglobalaccel'),
                                'org.kde.KGlobalAccel')
             g.setForeignShortcutKeys(['kwin', 'Overview', '', ''], _keys())
+            # (y se le da a la de Apogeo: al registrarse con Meta+W aún ocupado, se quedó sin atajo)
+            g.setForeignShortcutKeys(['kwin', 'Apogeo vista', 'KWin', 'Apogeo: tus modos, sus escritorios y tus ventanas'],
+                                     _keys(0x10000000 | 0x57))   # Meta+W
         except dbus.DBusException as e:
             log('Meta+W: %s' % e)
         kwin_reconfigure()
@@ -549,7 +552,7 @@ ORB = 3  # igual, para «C · Orbe central» (la barra fina de arriba y el orbe 
 DEFAULT_WALLPAPERS = 2  # igual, para los fondos de serie de Órbita de Wallhaven (se bajan una vez)
 DESKTOPS = 1  # igual, para los escritorios de cada modo (los atajos de apogeo-escritorios en vez de los de KWin)
 DYNAMIC = 1  # igual, para la isla dinámica, las animaciones de las ventanas y el Alt+Tab de Apogeo
-VISTA = 1  # igual, para la vista de escritorios (Meta+W)
+VISTA = 2  # igual, para la vista de escritorios (Meta+W; 2: el atajo se le da a ella, no solo se le quita a KDE)
 AUDIO = 1  # igual, para el sonido: la salida de los auriculares de serie y Spotify a su mejor calidad (una vez)
 AESTHETICS = 18  # se sube cuando cambie la estética, para aplicarla una vez más a los usuarios que ya existen (17: Órbita;
 # 18: Órbita también para quien se quedó en el aspecto de antes)
