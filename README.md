@@ -537,10 +537,9 @@ sistema ni Windows) y después de escribir BORRAR. `--reparto` cambia el 70 %.
 - **La mejor calidad** (`/etc/pipewire/*.conf.d/50-apogeo-calidad.conf`): si suena una sola cosa, la tarjeta se pone a su
   frecuencia (44,1 kHz la música, 48 kHz juegos y vídeos, 96 o 192 kHz lo de alta resolución) en vez de convertirlo todo
   a 48 kHz; lo que hay que convertir, con la máxima calidad (`resample.quality = 10`) en todas las apps.
-- **Por tus auriculares** (`/etc/wireplumber/wireplumber.conf.d/50-apogeo-auriculares.conf`): la salida analógica (la
-  clavija de 3,5 mm) va antes que la HDMI o DisplayPort de la pantalla; al enchufar los auriculares el sonido pasa a ellos
-  solo, y las apps siguen a la salida que está puesta (no se quedan en la de la última vez). Una vez, al entrar
-  (`audio_setup` de `apogeo-pisos`), la analógica se pone de serie por si quedó la de la pantalla.
+- **Las apps siguen a la salida que eliges** (`/etc/wireplumber/wireplumber.conf.d/50-apogeo-auriculares.conf`): no se
+  quedan en la de la última vez. La salida la eliges tú (el icono del sonido); Apogeo no la cambia (cambiarla sola dejó sin
+  sonido los auriculares en un PC con varias tarjetas).
 - **Spotify** a su mejor calidad sin Premium (Alta, 160 kbps) y sin igualar el volumen (lo comprime). Se pone una vez, con
   Spotify cerrado (si está abierto, la próxima vez que entres).
 

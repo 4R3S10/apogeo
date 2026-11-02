@@ -61,8 +61,9 @@ Window {
 
     Column {
         id: bloque
-        x: Math.round(parent.width * 0.075)
-        y: Math.round(parent.height * 0.24)
+        // En el centro de la pantalla (un poco por encima: abajo está el orbe)
+        x: Math.round((parent.width - width) / 2)
+        y: Math.round((parent.height - height) / 2 - parent.height * 0.04)
         spacing: Math.round(14 * vivo.k)
 
         // El reloj
@@ -85,6 +86,7 @@ Window {
         Item { width: 1; height: Math.round(26 * vivo.k) }
         Canvas {
             id: barras
+            anchors.horizontalCenter: parent.horizontalCenter
             width: reloj.width   // (tan ancho como el reloj)
             height: Math.round(170 * vivo.k)
             opacity: musica.suena ? 1 : 0

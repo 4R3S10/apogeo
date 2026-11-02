@@ -545,13 +545,8 @@ DECORATION = '__aurorae__svg__apogeo'  # la barra de ventana de Órbita (herrami
 
 
 def audio_setup():
-    """Una vez: la salida analógica (tus auriculares de cable) de serie, por si quedó elegida la HDMI de la pantalla, y
-    Spotify con su mejor calidad sin Premium (Alta, 160 kbps) y sin igualar el volumen (lo comprime). Spotify reescribe
+    """Una vez: Spotify con su mejor calidad sin Premium (Alta, 160 kbps) y sin igualar el volumen (lo comprime). Spotify reescribe
     sus ajustes al cerrarse: con él abierto se deja para la próxima vez (devuelve False)."""
-    sinks = run_out('pactl', 'list', 'short', 'sinks') or ''
-    analog = [l.split('\t')[1] for l in sinks.splitlines() if '\t' in l and 'analog' in l.split('\t')[1]]
-    if analog:
-        run('pactl', 'set-default-sink', analog[0])
     if subprocess.run(['pgrep', '-x', 'spotify'], stdout=subprocess.DEVNULL).returncode == 0:
         return False
     want = {'audio.play_bitrate_enumeration': '3', 'audio.normalize_volume': 'false'}
@@ -569,7 +564,7 @@ def audio_setup():
                     f.write('\n'.join(lines) + '\n')
             except OSError as e:
                 log('spotify:', e)
-    log('sonido: salida analógica y Spotify en Alta')
+    log('sonido: Spotify en Alta')
     return True
 
 

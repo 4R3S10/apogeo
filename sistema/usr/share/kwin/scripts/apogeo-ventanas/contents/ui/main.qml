@@ -118,7 +118,8 @@ Item {
             pinConsole();
             w.desktopsChanged.connect(pinConsole);
         }
-        if (cls.indexOf("apogeo-musica") >= 0) {
+        // (solo la tarjeta de la música: el reloj y el visualizador del escritorio, de la misma app, van en su capa)
+        if (cls.indexOf("apogeo-musica") >= 0 && w.caption === "Música de Apogeo") {
             music = w;
             w.onAllDesktops = true;
             w.keepAbove = true;
