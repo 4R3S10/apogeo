@@ -1,150 +1,528 @@
 [
   {
+    "fecha": "2026-11-02",
+    "titulo": "Carpetas, consola nueva y el orbe que se expande",
+    "cosas": [
+      {
+        "icono": "isla",
+        "titulo": "Barras sueltas sobre el fondo",
+        "como": "La barra de arriba y el orbe ya no tienen ese rectángulo gris detrás. La barra de arriba no guarda sitio: tus ventanas maximizadas llegan arriba del todo, se aparta cuando una ventana la tapa y sale al tocar el borde de arriba."
+      },
+      {
+        "icono": "carpeta",
+        "titulo": "Carpetas en la Órbita",
+        "como": "Clic derecho en una app fijada: Nueva carpeta, Mover a una carpeta, Sacar o Quitar. En una carpeta: Renombrar o Deshacer. Con 8 fijadas o más, arriba salen tus 6 más usadas, y con muchas la cubierta se desliza."
+      },
+      {
+        "icono": "pisos",
+        "titulo": "El orbe se expande al cambiar de modo",
+        "como": "El orbe del modo nuevo crece hasta llenar la pantalla con su color y su nombre, y se abre como un iris sobre el modo nuevo."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "Consola: estantes, fichas y colecciones",
+        "como": "En Inicio, ↑ ↓ pasan por Recientes, Más jugados, Sin empezar y tus colecciones. △ (Y) abre la ficha de cada juego: horas, capturas de Steam, colecciones, FPS, su carpeta y su tienda. ☰ cambia el orden y F busca escribiendo. Además, suena al moverte y el mando vibra al jugar."
+      }
+    ]
+  },
+  {
     "fecha": "2026-11-01",
     "titulo": "apologIA, la IA en tu PC",
     "cosas": [
-      {"icono": "texto", "titulo": "apologIA", "como": "Una app nueva para hablar con modelos de IA que corren en tu propio PC: chats a la izquierda (se guardan y puedes renombrarlos o borrarlos), la conversación en el centro y arriba el modelo. Puedes cambiar de modelo a mitad de un chat sin perder el hilo, y abajo ves la velocidad, la RAM y cuánta memoria de la conversación lleva."},
-      {"icono": "descargar", "titulo": "Modelos de donde quieras", "como": "En Modelos buscas en Hugging Face (lo más bajado primero) o en GitHub, pegas el enlace de un repositorio o de cualquier .gguf, o añades uno que ya tengas. Se guardan todos juntos en la carpeta Modelos de tu carpeta personal (con «Cambiar carpeta» los llevas a otra, por ejemplo a otro disco), se comprueba que llegan enteros y cada uno te dice si va bien en tu equipo."},
-      {"icono": "ajustes", "titulo": "Modificador", "como": "Tus instrucciones para el modelo (o ninguna), respuestas sin límite de largo, pensar antes de responder, el estilo (Preciso, Equilibrado o Creativo) y su creatividad, la memoria de la conversación, la GPU y los hilos."},
-      {"icono": "nube", "titulo": "Modelos grandes con Colab", "como": "Para los que no caben en tu PC, apologIA te prepara un cuaderno de Google Colab que usa su GPU gratis: lo subes a Colab, le das a Ejecutar todo y chateas dentro del propio cuaderno."}
+      {
+        "icono": "texto",
+        "titulo": "apologIA",
+        "como": "Una app nueva para hablar con modelos de IA que corren en tu propio PC: chats a la izquierda (se guardan y puedes renombrarlos o borrarlos), la conversación en el centro y arriba el modelo. Puedes cambiar de modelo a mitad de un chat sin perder el hilo, y abajo ves la velocidad, la RAM y cuánta memoria de la conversación lleva."
+      },
+      {
+        "icono": "descargar",
+        "titulo": "Modelos de donde quieras",
+        "como": "En Modelos buscas en Hugging Face (lo más bajado primero) o en GitHub, pegas el enlace de un repositorio o de cualquier .gguf, o añades uno que ya tengas. Se guardan todos juntos en la carpeta Modelos de tu carpeta personal (con «Cambiar carpeta» los llevas a otra, por ejemplo a otro disco), se comprueba que llegan enteros y cada uno te dice si va bien en tu equipo."
+      },
+      {
+        "icono": "ajustes",
+        "titulo": "Modificador",
+        "como": "Tus instrucciones para el modelo (o ninguna), respuestas sin límite de largo, pensar antes de responder, el estilo (Preciso, Equilibrado o Creativo) y su creatividad, la memoria de la conversación, la GPU y los hilos."
+      },
+      {
+        "icono": "nube",
+        "titulo": "Modelos grandes con Colab",
+        "como": "Para los que no caben en tu PC, apologIA te prepara un cuaderno de Google Colab que usa su GPU gratis: lo subes a Colab, le das a Ejecutar todo y chateas dentro del propio cuaderno."
+      }
     ]
   },
   {
     "fecha": "2026-11-01",
     "titulo": "Solo Órbita",
     "cosas": [
-      {"icono": "isla", "titulo": "El orbe, al tocar el borde", "como": "Ya no sale al acercarte: solo al tocar el borde de abajo con el ratón. Sube desde abajo y se enciende (su anillo coge el color del modo con un destello) y las bolitas le siguen; al alejarte baja y se apaga."},
-      {"icono": "jugar", "titulo": "Jugar, al instante", "como": "La consola se abre al entrar en la sesión y ya no se cierra sola: al pasar a Jugar sale en el momento, sin esperar a que cargue."},
-      {"icono": "aspecto", "titulo": "Fuera la estética de antes", "como": "Solo queda Órbita: se van Clásico, los otros estilos, «Como Ágape», «Del fondo», la isla, los animados de antes (los tuyos pasan al de su modo) y la letra Bricolage. En Identidad eliges el color, claro u oscuro, las esquinas, el cristal, el tamaño y las animaciones. Ágape no cambia."},
-      {"icono": "musica", "titulo": "Sonidos nuevos", "como": "Limpios y espaciales, a juego con Órbita: al entrar, un acorde que se abre y unas notas que suben de un lado al otro. Adiós al búho y a la marimba."}
+      {
+        "icono": "isla",
+        "titulo": "El orbe, al tocar el borde",
+        "como": "Ya no sale al acercarte: solo al tocar el borde de abajo con el ratón. Sube desde abajo y se enciende (su anillo coge el color del modo con un destello) y las bolitas le siguen; al alejarte baja y se apaga."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "Jugar, al instante",
+        "como": "La consola se abre al entrar en la sesión y ya no se cierra sola: al pasar a Jugar sale en el momento, sin esperar a que cargue."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Fuera la estética de antes",
+        "como": "Solo queda Órbita: se van Clásico, los otros estilos, «Como Ágape», «Del fondo», la isla, los animados de antes (los tuyos pasan al de su modo) y la letra Bricolage. En Identidad eliges el color, claro u oscuro, las esquinas, el cristal, el tamaño y las animaciones. Ágape no cambia."
+      },
+      {
+        "icono": "musica",
+        "titulo": "Sonidos nuevos",
+        "como": "Limpios y espaciales, a juego con Órbita: al entrar, un acorde que se abre y unas notas que suben de un lado al otro. Adiós al búho y a la marimba."
+      }
     ]
   },
   {
     "fecha": "2026-11-01",
     "titulo": "Escritorios y tarjeta rápida",
     "cosas": [
-      {"icono": "pisos", "titulo": "Escritorios en cada modo", "como": "En Navegar y Estudiar puedes tener hasta 4 escritorios. Ctrl+Alt+← → pasa de uno a otro y, en el último, Ctrl+Alt+→ abre uno nuevo. Cada app se queda donde la abriste, un escritorio vacío se cierra al irte y, junto al modo de arriba, un punto por escritorio. Con Mayús te llevas la ventana."},
-      {"icono": "reloj", "titulo": "La tarjeta rápida", "como": "Un clic en la hora (o Meta+N) abre debajo una tarjeta con lo justo: Wi-Fi, bluetooth, silencio, volumen, brillo, luz nocturna, no molestar y apagar, reiniciar, cerrar sesión, reposo o bloquear. Se va al pulsar fuera o con Esc. Apagar, reiniciar y salir piden un segundo toque. Ya no hay panel a la derecha."},
-      {"icono": "isla", "titulo": "El orbe, escondido", "como": "Abajo no se ve nada: el orbe sale al acercar el ratón al borde de abajo y se esconde al alejarlo."}
+      {
+        "icono": "pisos",
+        "titulo": "Escritorios en cada modo",
+        "como": "En Navegar y Estudiar puedes tener hasta 4 escritorios. Ctrl+Alt+← → pasa de uno a otro y, en el último, Ctrl+Alt+→ abre uno nuevo. Cada app se queda donde la abriste, un escritorio vacío se cierra al irte y, junto al modo de arriba, un punto por escritorio. Con Mayús te llevas la ventana."
+      },
+      {
+        "icono": "reloj",
+        "titulo": "La tarjeta rápida",
+        "como": "Un clic en la hora (o Meta+N) abre debajo una tarjeta con lo justo: Wi-Fi, bluetooth, silencio, volumen, brillo, luz nocturna, no molestar y apagar, reiniciar, cerrar sesión, reposo o bloquear. Se va al pulsar fuera o con Esc. Apagar, reiniciar y salir piden un segundo toque. Ya no hay panel a la derecha."
+      },
+      {
+        "icono": "isla",
+        "titulo": "El orbe, escondido",
+        "como": "Abajo no se ve nada: el orbe sale al acercar el ratón al borde de abajo y se esconde al alejarlo."
+      }
     ]
   },
   {
     "fecha": "2026-11-01",
     "titulo": "1 de noviembre",
     "cosas": [
-      {"icono": "jugar", "titulo": "Herramientas en la consola", "como": "La consola estrena la pestaña Herramientas: Discord, Spotify, OBS, Mission Center, CoolerControl, ProtonPlus e Hydra a un botón, y los FPS en pantalla a la vista o escondidos. Con el botón PS, lo mismo en pequeño: FPS, OBS y «+»."},
-      {"icono": "apagar", "titulo": "Apagar, desde el espacio", "como": "La pantalla de apagar es nueva: la Tierra detrás, el Núcleo latiendo, «¿Hasta luego?» y tres botones grandes (Apagar, Reiniciar, Reposo). Debajo, Windows, Cerrar sesión y Bloquear; todo con el teclado."},
-      {"icono": "novedades", "titulo": "Una bienvenida con vistas", "como": "La bienvenida sale sobre la Tierra vista desde la Luna, explica los modos con su color y enseña el orbe en vez de la isla."},
-      {"icono": "buscar", "titulo": "Escribe y busca", "como": "Si escribes con el escritorio delante se abre la Órbita con lo que has escrito (antes salía el buscador de KDE). Y la esquina de arriba a la izquierda ya no abre la vista general."},
-      {"icono": "texto", "titulo": "Apuntes con otra letra", "como": "Tus notas se escriben en Source Serif 4, una letra hecha para leer. Y en ONLYOFFICE y en Crear nuevo tienes la plantilla «Apuntes» con ella."},
-      {"icono": "ventana", "titulo": "Esquinas siempre redondas", "como": "Las esquinas redondeadas de las ventanas se preparan para tu KWin cada día, así no se pierden al actualizar KDE."},
-      {"icono": "aspecto", "titulo": "Pequeños retoques", "como": "Ajustes habla del orbe (y su vista previa lo enseña), los fondos de serie tienen nombre en el carrusel, el modo de arriba cambia a la vez que el orbe y el centro del botón PS ya sale abajo."}
+      {
+        "icono": "jugar",
+        "titulo": "Herramientas en la consola",
+        "como": "La consola estrena la pestaña Herramientas: Discord, Spotify, OBS, Mission Center, CoolerControl, ProtonPlus e Hydra a un botón, y los FPS en pantalla a la vista o escondidos. Con el botón PS, lo mismo en pequeño: FPS, OBS y «+»."
+      },
+      {
+        "icono": "apagar",
+        "titulo": "Apagar, desde el espacio",
+        "como": "La pantalla de apagar es nueva: la Tierra detrás, el Núcleo latiendo, «¿Hasta luego?» y tres botones grandes (Apagar, Reiniciar, Reposo). Debajo, Windows, Cerrar sesión y Bloquear; todo con el teclado."
+      },
+      {
+        "icono": "novedades",
+        "titulo": "Una bienvenida con vistas",
+        "como": "La bienvenida sale sobre la Tierra vista desde la Luna, explica los modos con su color y enseña el orbe en vez de la isla."
+      },
+      {
+        "icono": "buscar",
+        "titulo": "Escribe y busca",
+        "como": "Si escribes con el escritorio delante se abre la Órbita con lo que has escrito (antes salía el buscador de KDE). Y la esquina de arriba a la izquierda ya no abre la vista general."
+      },
+      {
+        "icono": "texto",
+        "titulo": "Apuntes con otra letra",
+        "como": "Tus notas se escriben en Source Serif 4, una letra hecha para leer. Y en ONLYOFFICE y en Crear nuevo tienes la plantilla «Apuntes» con ella."
+      },
+      {
+        "icono": "ventana",
+        "titulo": "Esquinas siempre redondas",
+        "como": "Las esquinas redondeadas de las ventanas se preparan para tu KWin cada día, así no se pierden al actualizar KDE."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Pequeños retoques",
+        "como": "Ajustes habla del orbe (y su vista previa lo enseña), los fondos de serie tienen nombre en el carrusel, el modo de arriba cambia a la vez que el orbe y el centro del botón PS ya sale abajo."
+      }
     ]
   },
   {
     "fecha": "2026-10-31",
     "titulo": "31 de octubre",
     "cosas": [
-      {"icono": "llave", "titulo": "Entrar, desde el espacio", "como": "La pantalla para entrar al encender es ahora como el bloqueo: la Tierra vista desde el espacio, tu hora recortada en ella, los modos arriba a la izquierda y una línea fina para la contraseña."},
-      {"icono": "imagen", "titulo": "Estudiar, en el espacio", "como": "Estudiar estrena una nebulosa ámbar, del mismo estilo que las de Navegar y Jugar (se baja sola y cambia el atardecer si aún lo tenías)."}
+      {
+        "icono": "llave",
+        "titulo": "Entrar, desde el espacio",
+        "como": "La pantalla para entrar al encender es ahora como el bloqueo: la Tierra vista desde el espacio, tu hora recortada en ella, los modos arriba a la izquierda y una línea fina para la contraseña."
+      },
+      {
+        "icono": "imagen",
+        "titulo": "Estudiar, en el espacio",
+        "como": "Estudiar estrena una nebulosa ámbar, del mismo estilo que las de Navegar y Jugar (se baja sola y cambia el atardecer si aún lo tenías)."
+      }
     ]
   },
   {
     "fecha": "2026-10-30",
     "titulo": "30 de octubre",
     "cosas": [
-      {"icono": "llave", "titulo": "El bloqueo, con la hora recortada", "como": "La pantalla de bloqueo ya enseña tu fondo dentro de los números de la hora (antes salían en blanco) y recuerda en qué modo estabas."},
-      {"icono": "buscar", "titulo": "La Órbita, en halo", "como": "Al pulsar el orbe ya no se ve doble: el orbe se enciende en su sitio y de él salen tus tarjetas, que se despliegan en abanico sobre un arco de luz (tu nota, la música, los avisos y lo de hoy; en Estudiar, también tu estudio). Al cerrarla, todo vuelve al orbe."},
-      {"icono": "imagen", "titulo": "Cambiar de modo, sin tirones", "como": "Cada modo tiene su fondo preparado: al cambiar se funden suavemente, sin pasar por el del modo anterior ni pedir la contraseña. Y Jugar vuelve a abrir la consola."},
-      {"icono": "ventana", "titulo": "El panel rápido, en módulos", "como": "El panel de la derecha son ahora piezas de cristal sueltas, como un centro de control: botones redondos, lo que suena con su portada, el volumen y el brillo en barras altas que se arrastran, y tus avisos y el tiempo debajo. Sale solo al pulsar la esquina de la barra de arriba (o Meta+N): empujar el ratón contra el borde ya no lo abre ni hace brillar el lateral."},
-      {"icono": "buscar", "titulo": "La Órbita, una constelación", "como": "Al abrir la Órbita lo ves todo a la vez: en el centro tus apps fijadas y el buscador, y alrededor, unidos al orbe por hilos de luz, lo que suena (con su portada y sus colores), tus avisos, tu nota (con casillas que se marcan ahí), lo que queda hoy y, en Estudiar, tu estudio. Las apps se fijan buscándolas y pulsando su chincheta."},
-      {"icono": "ventana", "titulo": "Tus ventanas, arriba", "como": "Las apps abiertas salen arriba, en el centro, solo sus iconos (un punto bajo la activa). La pastilla de encima del orbe se va: el volumen y el brillo salen arriba un momento."},
-      {"icono": "imagen", "titulo": "Fondos nuevos", "como": "Navegar estrena una nebulosa azul, Estudiar un atardecer oscuro y Jugar nubes violeta (de Aura, en Wallhaven; se bajan solos). Estudiar va siempre en grafito con su ámbar."},
-      {"icono": "apagar", "titulo": "Arranque sobre la Tierra", "como": "Al encender y apagar, el orbe se forma sobre la Tierra vista desde la Luna, y las órbitas giran ahora suaves, sin saltos."},
-      {"icono": "llave", "titulo": "Bloqueo nuevo", "como": "La hora, enorme y recortada en tu fondo; la fecha debajo; los modos arriba y la contraseña en una línea fina."},
-      {"icono": "jugar", "titulo": "Jugar, solo consola", "como": "En Jugar no hay barra ni orbe: solo la consola."},
-      {"icono": "aspecto", "titulo": "Cristal grafito", "como": "El panel rápido es de cristal neutro y lo encendido va en blanco."},
-      {"icono": "apps", "titulo": "Todo en la Órbita", "como": "El panel de widgets de la izquierda se va: la agenda (con el tiempo, recordatorios y temporizadores), tus notas y Estudios están ahora en la Órbita abierta (el orbe o Meta), en pestañas a la derecha."},
-      {"icono": "llave", "titulo": "Antes de ir a Windows", "como": "La pestaña Windows de la consola te avisa de lo que conviene saber: Secure Boot, TPM, BitLocker y el sitio en su arranque."},
-      {"icono": "imagen", "titulo": "Fondos de Órbita", "como": "Cada modo estrena fondo animado: Navegar «Órbitas» (las órbitas del orbe girando), Jugar «Nebulosa» y Estudiar «Aurora» (de día, sobre papel). Los de antes siguen en Ajustes → Fondos."},
-      {"icono": "jugar", "titulo": "La consola, viva", "como": "El arte del juego elegido se mueve despacio y sus colores tiñen la consola."},
-      {"icono": "usuario", "titulo": "Entrar con el orbe", "como": "Al encender, el orbe se forma antes de girar; al entrar, eliges el modo con el orbe (← →), como en el escritorio."},
-      {"icono": "isla", "titulo": "El escritorio de Órbita", "como": "Abajo, el orbe del modo en el que estás y, a sus lados, los otros dos en bolitas: un clic te lleva. Al pasar el ratón salen tus ventanas; lo que pasa ahora (volumen, avisos, música) sale encima. Arriba, solo el modo y la hora."},
-      {"icono": "buscar", "titulo": "La Órbita abierta", "como": "Pulsa el orbe o Meta: la paleta arriba, tus apps del modo a la izquierda (fija las que quieras con la chincheta, en «Todas») y a la derecha lo que pasa. Escribe «estudiar», «apagar» o «15% de 80»."},
-      {"icono": "jugar", "titulo": "Centro de control, como en la PS5", "como": "En una partida, pulsa el botón PS (o Xbox) del mando: abajo salen lo que suena (⏮ ⏯ ⏭), Discord (apagar tu micro o abrirlo al lado del juego), los avisos que han llegado, el volumen y volver a la consola. Mantén el botón PS y pulsa → o ← para cambiar de canción, o ↑ ↓ para el volumen. Mantenido un rato, trae la consola."},
-      {"icono": "salud", "titulo": "HUD pequeño, siempre a la vista", "como": "En los juegos solo salen los FPS, pequeños, arriba a la izquierda. La temperatura aparece arriba a la derecha, en rojo, solo si se calienta; las temperaturas y los ventiladores, siempre, en el centro de control (botón PS). Mayús derecha+F12 lo esconde."},
-      {"icono": "pisos", "titulo": "Jugar es la consola", "como": "En Jugar no hay escritorio: si cierras la consola, vuelve sola. Para salir, ↓ en el mando o Meta+F2."},
-      {"icono": "texto", "titulo": "Apuntes con letra de libro", "como": "Las notas del panel y tus bóvedas de Obsidian usan Source Serif 4, más cómoda para leer. Estudiar es de papel claro de 8:00 a 20:00 y grafito con ámbar por la noche."},
-      {"icono": "pisos", "titulo": "Los tres modos, de verdad", "como": "Jugar, Navegar y Estudiar ya no son una capa de pintura: cada modo guarda sus propias apps al llegar, su acento y su fondo. Se cambia desde el conmutador, con Meta+F1/F2/F3 o desde Ajustes → Modos."},
-      {"icono": "jugar", "titulo": "Jugar renacida", "como": "La consola entera nueva sobre grafito con el acento violeta: marcas Núcleo, conmutador centrado con los tres modos, insignias de Proton/Heroic/AnyPS5 y anticheat, y cuántos juegos hay en cada pestaña."},
-      {"icono": "texto", "titulo": "Geist", "como": "Tipografía Geist y Geist Mono en toda la interfaz, la terminal y el arranque. Los títulos quedan más limpios y la monoespaciada encaja con el resto."},
-      {"icono": "novedades", "titulo": "Núcleo", "como": "El nuevo símbolo: un núcleo sólido con tres arcos orbitales abiertos, uno por modo. Sustituye al búho en el arranque, el bloqueo y la bienvenida (el búho sigue en el estilo Clásico)."},
-      {"icono": "salud", "titulo": "Limpieza que solo aconseja", "como": "Apogeo revisa el sistema y escribe sugerencias en /var/lib/apogeo/limpieza.txt: nunca desinstala nada por su cuenta y puedes copiar cada orden tú mismo."},
-      {"icono": "apps", "titulo": "Menú completo", "como": "Vuelven al menú las apps reales que se habían ocultado (KWrite, Arch Update, CachyOS Hello, KDE Connect…); solo se esconden utilidades internas que no se usan solas."},
-      {"icono": "ventana", "titulo": "Windows más seguro", "como": "El puente con Windows lleva una nota con fecha y un código único que Windows comprueba, y Apogeo borra al encender la que no se llegó a usar: Windows nunca abre un juego viejo."}
+      {
+        "icono": "llave",
+        "titulo": "El bloqueo, con la hora recortada",
+        "como": "La pantalla de bloqueo ya enseña tu fondo dentro de los números de la hora (antes salían en blanco) y recuerda en qué modo estabas."
+      },
+      {
+        "icono": "buscar",
+        "titulo": "La Órbita, en halo",
+        "como": "Al pulsar el orbe ya no se ve doble: el orbe se enciende en su sitio y de él salen tus tarjetas, que se despliegan en abanico sobre un arco de luz (tu nota, la música, los avisos y lo de hoy; en Estudiar, también tu estudio). Al cerrarla, todo vuelve al orbe."
+      },
+      {
+        "icono": "imagen",
+        "titulo": "Cambiar de modo, sin tirones",
+        "como": "Cada modo tiene su fondo preparado: al cambiar se funden suavemente, sin pasar por el del modo anterior ni pedir la contraseña. Y Jugar vuelve a abrir la consola."
+      },
+      {
+        "icono": "ventana",
+        "titulo": "El panel rápido, en módulos",
+        "como": "El panel de la derecha son ahora piezas de cristal sueltas, como un centro de control: botones redondos, lo que suena con su portada, el volumen y el brillo en barras altas que se arrastran, y tus avisos y el tiempo debajo. Sale solo al pulsar la esquina de la barra de arriba (o Meta+N): empujar el ratón contra el borde ya no lo abre ni hace brillar el lateral."
+      },
+      {
+        "icono": "buscar",
+        "titulo": "La Órbita, una constelación",
+        "como": "Al abrir la Órbita lo ves todo a la vez: en el centro tus apps fijadas y el buscador, y alrededor, unidos al orbe por hilos de luz, lo que suena (con su portada y sus colores), tus avisos, tu nota (con casillas que se marcan ahí), lo que queda hoy y, en Estudiar, tu estudio. Las apps se fijan buscándolas y pulsando su chincheta."
+      },
+      {
+        "icono": "ventana",
+        "titulo": "Tus ventanas, arriba",
+        "como": "Las apps abiertas salen arriba, en el centro, solo sus iconos (un punto bajo la activa). La pastilla de encima del orbe se va: el volumen y el brillo salen arriba un momento."
+      },
+      {
+        "icono": "imagen",
+        "titulo": "Fondos nuevos",
+        "como": "Navegar estrena una nebulosa azul, Estudiar un atardecer oscuro y Jugar nubes violeta (de Aura, en Wallhaven; se bajan solos). Estudiar va siempre en grafito con su ámbar."
+      },
+      {
+        "icono": "apagar",
+        "titulo": "Arranque sobre la Tierra",
+        "como": "Al encender y apagar, el orbe se forma sobre la Tierra vista desde la Luna, y las órbitas giran ahora suaves, sin saltos."
+      },
+      {
+        "icono": "llave",
+        "titulo": "Bloqueo nuevo",
+        "como": "La hora, enorme y recortada en tu fondo; la fecha debajo; los modos arriba y la contraseña en una línea fina."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "Jugar, solo consola",
+        "como": "En Jugar no hay barra ni orbe: solo la consola."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Cristal grafito",
+        "como": "El panel rápido es de cristal neutro y lo encendido va en blanco."
+      },
+      {
+        "icono": "apps",
+        "titulo": "Todo en la Órbita",
+        "como": "El panel de widgets de la izquierda se va: la agenda (con el tiempo, recordatorios y temporizadores), tus notas y Estudios están ahora en la Órbita abierta (el orbe o Meta), en pestañas a la derecha."
+      },
+      {
+        "icono": "llave",
+        "titulo": "Antes de ir a Windows",
+        "como": "La pestaña Windows de la consola te avisa de lo que conviene saber: Secure Boot, TPM, BitLocker y el sitio en su arranque."
+      },
+      {
+        "icono": "imagen",
+        "titulo": "Fondos de Órbita",
+        "como": "Cada modo estrena fondo animado: Navegar «Órbitas» (las órbitas del orbe girando), Jugar «Nebulosa» y Estudiar «Aurora» (de día, sobre papel). Los de antes siguen en Ajustes → Fondos."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "La consola, viva",
+        "como": "El arte del juego elegido se mueve despacio y sus colores tiñen la consola."
+      },
+      {
+        "icono": "usuario",
+        "titulo": "Entrar con el orbe",
+        "como": "Al encender, el orbe se forma antes de girar; al entrar, eliges el modo con el orbe (← →), como en el escritorio."
+      },
+      {
+        "icono": "isla",
+        "titulo": "El escritorio de Órbita",
+        "como": "Abajo, el orbe del modo en el que estás y, a sus lados, los otros dos en bolitas: un clic te lleva. Al pasar el ratón salen tus ventanas; lo que pasa ahora (volumen, avisos, música) sale encima. Arriba, solo el modo y la hora."
+      },
+      {
+        "icono": "buscar",
+        "titulo": "La Órbita abierta",
+        "como": "Pulsa el orbe o Meta: la paleta arriba, tus apps del modo a la izquierda (fija las que quieras con la chincheta, en «Todas») y a la derecha lo que pasa. Escribe «estudiar», «apagar» o «15% de 80»."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "Centro de control, como en la PS5",
+        "como": "En una partida, pulsa el botón PS (o Xbox) del mando: abajo salen lo que suena (⏮ ⏯ ⏭), Discord (apagar tu micro o abrirlo al lado del juego), los avisos que han llegado, el volumen y volver a la consola. Mantén el botón PS y pulsa → o ← para cambiar de canción, o ↑ ↓ para el volumen. Mantenido un rato, trae la consola."
+      },
+      {
+        "icono": "salud",
+        "titulo": "HUD pequeño, siempre a la vista",
+        "como": "En los juegos solo salen los FPS, pequeños, arriba a la izquierda. La temperatura aparece arriba a la derecha, en rojo, solo si se calienta; las temperaturas y los ventiladores, siempre, en el centro de control (botón PS). Mayús derecha+F12 lo esconde."
+      },
+      {
+        "icono": "pisos",
+        "titulo": "Jugar es la consola",
+        "como": "En Jugar no hay escritorio: si cierras la consola, vuelve sola. Para salir, ↓ en el mando o Meta+F2."
+      },
+      {
+        "icono": "texto",
+        "titulo": "Apuntes con letra de libro",
+        "como": "Las notas del panel y tus bóvedas de Obsidian usan Source Serif 4, más cómoda para leer. Estudiar es de papel claro de 8:00 a 20:00 y grafito con ámbar por la noche."
+      },
+      {
+        "icono": "pisos",
+        "titulo": "Los tres modos, de verdad",
+        "como": "Jugar, Navegar y Estudiar ya no son una capa de pintura: cada modo guarda sus propias apps al llegar, su acento y su fondo. Se cambia desde el conmutador, con Meta+F1/F2/F3 o desde Ajustes → Modos."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "Jugar renacida",
+        "como": "La consola entera nueva sobre grafito con el acento violeta: marcas Núcleo, conmutador centrado con los tres modos, insignias de Proton/Heroic/AnyPS5 y anticheat, y cuántos juegos hay en cada pestaña."
+      },
+      {
+        "icono": "texto",
+        "titulo": "Geist",
+        "como": "Tipografía Geist y Geist Mono en toda la interfaz, la terminal y el arranque. Los títulos quedan más limpios y la monoespaciada encaja con el resto."
+      },
+      {
+        "icono": "novedades",
+        "titulo": "Núcleo",
+        "como": "El nuevo símbolo: un núcleo sólido con tres arcos orbitales abiertos, uno por modo. Sustituye al búho en el arranque, el bloqueo y la bienvenida (el búho sigue en el estilo Clásico)."
+      },
+      {
+        "icono": "salud",
+        "titulo": "Limpieza que solo aconseja",
+        "como": "Apogeo revisa el sistema y escribe sugerencias en /var/lib/apogeo/limpieza.txt: nunca desinstala nada por su cuenta y puedes copiar cada orden tú mismo."
+      },
+      {
+        "icono": "apps",
+        "titulo": "Menú completo",
+        "como": "Vuelven al menú las apps reales que se habían ocultado (KWrite, Arch Update, CachyOS Hello, KDE Connect…); solo se esconden utilidades internas que no se usan solas."
+      },
+      {
+        "icono": "ventana",
+        "titulo": "Windows más seguro",
+        "como": "El puente con Windows lleva una nota con fecha y un código único que Windows comprueba, y Apogeo borra al encender la que no se llegó a usar: Windows nunca abre un juego viejo."
+      }
     ]
   },
   {
     "fecha": "2026-10-29",
     "titulo": "29 de octubre",
     "cosas": [
-      {"icono": "isla", "titulo": "Isla dinámica", "como": "La isla sale sola y crece cuando tiene algo que enseñar: un aviso nuevo (con sus botones y Responder), el volumen y el brillo, el temporizador de estudio, una descarga y lo que suena (con la portada y sus colores). Los iconos de tus apps llevan el número de avisos sin leer."},
-      {"icono": "aspecto", "titulo": "Paneles de cristal", "como": "Los dos paneles llevan detrás tu fondo difuminado. La música con la portada y sus colores y una barra para avanzar; el tiempo con el color del cielo según la hora; la semana con puntitos en los días con exámenes o planes y «Próximo»; tu PC con la gráfica del último minuto. Los avisos van agrupados por app, con sus botones y Responder."},
-      {"icono": "ventana", "titulo": "Alt+Tab de cristal y ventanas con vida", "como": "Alt+Tab enseña tus ventanas en grande y en vivo, en una tarjeta de cristal (✕ para cerrar, flechas para moverte; antes Alt+Tab no hacía nada). Las ventanas se abren con un saltito, se cierran encogiéndose y al minimizar van a su icono de la isla."},
-      {"icono": "usuario", "titulo": "Inicio de sesión nuevo", "como": "Al encender: la hora grande, tu foto y tu nombre y una tarjeta de cristal sobre el fondo animado del piso, que cambia (con sus colores) al elegir otro piso."},
-      {"icono": "apps", "titulo": "Dos paneles a los lados", "como": "Meta+A (o el ratón contra el borde izquierdo): tu panel de widgets, con la música, la semana y la agenda, el tiempo, tu PC, relojes del mundo, fondos y tus notas (y Estudios en Estudiar). Meta+N (o la hora de la isla): los pisos, lo de todos los días, tus avisos y el tiempo. Al abrirlos las ventanas se estrechan; el escritorio queda limpio."},
-      {"icono": "aspecto", "titulo": "Colores del fondo", "como": "Cada piso coge los colores de su fondo: la isla, Ajustes, la consola, las ventanas y las carpetas. La ventana activa lleva un borde de ese color. A los fondos animados les das tú el color en Ajustes → Fondos."},
-      {"icono": "apps", "titulo": "Tienda de Apogeo", "como": "Busca «Tienda» en el menú: destacados, lo más usado y cada grupo (Jugar, Estudiar, Internet, Crear). Instala del sistema (con tu contraseña) o de Flathub. Sustituye a Warehouse."},
-      {"icono": "imagen", "titulo": "Fondos con Aura", "como": "Ajustes → Fondos → «Elegir con Aura»: fondos de Wallhaven, vídeos de MotionBGS y la imagen del día de Bing. Lo que eliges va solo al piso en el que estás. También con el botón derecho en el escritorio → «Aura…»."},
-      {"icono": "ventana", "titulo": "Ventanas en carrusel", "como": "Ajustes → Pisos → «Ventanas en carrusel (como niri)»: en ese piso las ventanas van en columnas que se deslizan. Meta+Alt+← → para ir de una a otra y Meta+Alt+R para cambiar el ancho."},
-      {"icono": "foto", "titulo": "ArtCraft Launcher", "como": "Búscalo en el menú: la primera vez lo baja (su versión oficial) y desde él instalas PhotoCraft, FilmCraft, VectorCraft y los demás programas Craft. Se pone al día solo."},
-      {"icono": "apps", "titulo": "Guía de atajos", "como": "Mantén Meta un momento: salen todos los atajos de Apogeo y, arriba, los del piso en el que estás. Al soltar se va. También con Meta+/."},
-      {"icono": "foto", "titulo": "Capturas de Apogeo", "como": "Meta+Mayús+S o Impr Pant: elige zona, ventana o pantalla. Debajo, copiar, guardar, dibujar flechas o sacar el texto. Se copia y se guarda sola en Imágenes/Capturas."},
-      {"icono": "copia", "titulo": "Lo que has copiado, a mano", "como": "Meta+V junto al ratón: lo último que copiaste (textos e imágenes). Intro lo pega y Ctrl+P lo fija para que no se borre al apagar."},
-      {"icono": "emoji", "titulo": "Emojis", "como": "Meta+. mientras escribes: busca en español («corazón», «fuego») o elige por pestañas. Los que más usas salen primero."},
-      {"icono": "calendario", "titulo": "El mes, el tiempo y lo de hoy", "como": "Pulsa la hora de la isla: el calendario, el tiempo de tu ciudad (pulsa su nombre para cambiarla) y lo que tienes ese día."},
-      {"icono": "reloj", "titulo": "Recordatorios y temporizadores", "como": "En esa misma tarjeta, «Recordatorio» o «Temporizador». Cuando llega la hora suena y sale un aviso con «Posponer 10 min», aunque estés jugando."},
-      {"icono": "jugar", "titulo": "Tiempo jugado", "como": "En la consola, junto a cada juego, las horas que llevas (de Steam, de Epic y, en emuladores y PS5, las que cuenta Apogeo)."},
-      {"icono": "apps", "titulo": "Rejilla de ventanas", "como": "Lleva una ventana hasta arriba: salen los huecos (mitades, tercios, cuartos; se cambia en la pastilla de arriba). Suéltala en uno y se coloca."},
-      {"icono": "mas", "titulo": "Notas en el escritorio", "como": "El «+» de arriba a la derecha pone un post-it en el piso donde estás. Escribe, arrástralo y, con ☐, haz una lista."},
-      {"icono": "buscar", "titulo": "Cuentas y archivos en el buscador", "como": "Pulsa Meta y escribe «15% de 80», «5 km en millas», «10 € en dólares» o el nombre de un archivo. Intro copia el resultado; Mayús+Intro abre la carpeta de un archivo."},
-      {"icono": "campana", "titulo": "Contestar desde el aviso", "como": "Si una app lo deja (Discord, mensajes), pulsa «Responder» en el aviso, escribe y pulsa Intro."},
-      {"icono": "llave", "titulo": "Bloqueo más vivo", "como": "La hora bien grande a la derecha y, si suena algo, la canción con sus botones."},
-      {"icono": "aspecto", "titulo": "Ventanas redondeadas", "como": "Todas las ventanas con las esquinas redondeadas y una sombra suave. Siguen tus esquinas de Ajustes → Aspecto."},
-      {"icono": "pisos", "titulo": "Cambiar de piso como un ascensor", "como": "Las ventanas suben o bajan y el fondo se queda quieto detrás."},
-      {"icono": "isla", "titulo": "Iconos de la isla iguales", "como": "Cada app en su baldosa redondeada, con un toque del color de tu estilo."},
-      {"icono": "jugar", "titulo": "Pantalla fluida (FreeSync)", "como": "Si tu monitor lo tiene, en los juegos a pantalla completa la pantalla va a su ritmo. Ajustes → Salud del PC."},
-      {"icono": "novedades", "titulo": "Esta página", "como": "Después de cada actualización te avisamos de lo nuevo; aquí está todo."}
+      {
+        "icono": "isla",
+        "titulo": "Isla dinámica",
+        "como": "La isla sale sola y crece cuando tiene algo que enseñar: un aviso nuevo (con sus botones y Responder), el volumen y el brillo, el temporizador de estudio, una descarga y lo que suena (con la portada y sus colores). Los iconos de tus apps llevan el número de avisos sin leer."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Paneles de cristal",
+        "como": "Los dos paneles llevan detrás tu fondo difuminado. La música con la portada y sus colores y una barra para avanzar; el tiempo con el color del cielo según la hora; la semana con puntitos en los días con exámenes o planes y «Próximo»; tu PC con la gráfica del último minuto. Los avisos van agrupados por app, con sus botones y Responder."
+      },
+      {
+        "icono": "ventana",
+        "titulo": "Alt+Tab de cristal y ventanas con vida",
+        "como": "Alt+Tab enseña tus ventanas en grande y en vivo, en una tarjeta de cristal (✕ para cerrar, flechas para moverte; antes Alt+Tab no hacía nada). Las ventanas se abren con un saltito, se cierran encogiéndose y al minimizar van a su icono de la isla."
+      },
+      {
+        "icono": "usuario",
+        "titulo": "Inicio de sesión nuevo",
+        "como": "Al encender: la hora grande, tu foto y tu nombre y una tarjeta de cristal sobre el fondo animado del piso, que cambia (con sus colores) al elegir otro piso."
+      },
+      {
+        "icono": "apps",
+        "titulo": "Dos paneles a los lados",
+        "como": "Meta+A (o el ratón contra el borde izquierdo): tu panel de widgets, con la música, la semana y la agenda, el tiempo, tu PC, relojes del mundo, fondos y tus notas (y Estudios en Estudiar). Meta+N (o la hora de la isla): los pisos, lo de todos los días, tus avisos y el tiempo. Al abrirlos las ventanas se estrechan; el escritorio queda limpio."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Colores del fondo",
+        "como": "Cada piso coge los colores de su fondo: la isla, Ajustes, la consola, las ventanas y las carpetas. La ventana activa lleva un borde de ese color. A los fondos animados les das tú el color en Ajustes → Fondos."
+      },
+      {
+        "icono": "apps",
+        "titulo": "Tienda de Apogeo",
+        "como": "Busca «Tienda» en el menú: destacados, lo más usado y cada grupo (Jugar, Estudiar, Internet, Crear). Instala del sistema (con tu contraseña) o de Flathub. Sustituye a Warehouse."
+      },
+      {
+        "icono": "imagen",
+        "titulo": "Fondos con Aura",
+        "como": "Ajustes → Fondos → «Elegir con Aura»: fondos de Wallhaven, vídeos de MotionBGS y la imagen del día de Bing. Lo que eliges va solo al piso en el que estás. También con el botón derecho en el escritorio → «Aura…»."
+      },
+      {
+        "icono": "ventana",
+        "titulo": "Ventanas en carrusel",
+        "como": "Ajustes → Pisos → «Ventanas en carrusel (como niri)»: en ese piso las ventanas van en columnas que se deslizan. Meta+Alt+← → para ir de una a otra y Meta+Alt+R para cambiar el ancho."
+      },
+      {
+        "icono": "foto",
+        "titulo": "ArtCraft Launcher",
+        "como": "Búscalo en el menú: la primera vez lo baja (su versión oficial) y desde él instalas PhotoCraft, FilmCraft, VectorCraft y los demás programas Craft. Se pone al día solo."
+      },
+      {
+        "icono": "apps",
+        "titulo": "Guía de atajos",
+        "como": "Mantén Meta un momento: salen todos los atajos de Apogeo y, arriba, los del piso en el que estás. Al soltar se va. También con Meta+/."
+      },
+      {
+        "icono": "foto",
+        "titulo": "Capturas de Apogeo",
+        "como": "Meta+Mayús+S o Impr Pant: elige zona, ventana o pantalla. Debajo, copiar, guardar, dibujar flechas o sacar el texto. Se copia y se guarda sola en Imágenes/Capturas."
+      },
+      {
+        "icono": "copia",
+        "titulo": "Lo que has copiado, a mano",
+        "como": "Meta+V junto al ratón: lo último que copiaste (textos e imágenes). Intro lo pega y Ctrl+P lo fija para que no se borre al apagar."
+      },
+      {
+        "icono": "emoji",
+        "titulo": "Emojis",
+        "como": "Meta+. mientras escribes: busca en español («corazón», «fuego») o elige por pestañas. Los que más usas salen primero."
+      },
+      {
+        "icono": "calendario",
+        "titulo": "El mes, el tiempo y lo de hoy",
+        "como": "Pulsa la hora de la isla: el calendario, el tiempo de tu ciudad (pulsa su nombre para cambiarla) y lo que tienes ese día."
+      },
+      {
+        "icono": "reloj",
+        "titulo": "Recordatorios y temporizadores",
+        "como": "En esa misma tarjeta, «Recordatorio» o «Temporizador». Cuando llega la hora suena y sale un aviso con «Posponer 10 min», aunque estés jugando."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "Tiempo jugado",
+        "como": "En la consola, junto a cada juego, las horas que llevas (de Steam, de Epic y, en emuladores y PS5, las que cuenta Apogeo)."
+      },
+      {
+        "icono": "apps",
+        "titulo": "Rejilla de ventanas",
+        "como": "Lleva una ventana hasta arriba: salen los huecos (mitades, tercios, cuartos; se cambia en la pastilla de arriba). Suéltala en uno y se coloca."
+      },
+      {
+        "icono": "mas",
+        "titulo": "Notas en el escritorio",
+        "como": "El «+» de arriba a la derecha pone un post-it en el piso donde estás. Escribe, arrástralo y, con ☐, haz una lista."
+      },
+      {
+        "icono": "buscar",
+        "titulo": "Cuentas y archivos en el buscador",
+        "como": "Pulsa Meta y escribe «15% de 80», «5 km en millas», «10 € en dólares» o el nombre de un archivo. Intro copia el resultado; Mayús+Intro abre la carpeta de un archivo."
+      },
+      {
+        "icono": "campana",
+        "titulo": "Contestar desde el aviso",
+        "como": "Si una app lo deja (Discord, mensajes), pulsa «Responder» en el aviso, escribe y pulsa Intro."
+      },
+      {
+        "icono": "llave",
+        "titulo": "Bloqueo más vivo",
+        "como": "La hora bien grande a la derecha y, si suena algo, la canción con sus botones."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Ventanas redondeadas",
+        "como": "Todas las ventanas con las esquinas redondeadas y una sombra suave. Siguen tus esquinas de Ajustes → Aspecto."
+      },
+      {
+        "icono": "pisos",
+        "titulo": "Cambiar de piso como un ascensor",
+        "como": "Las ventanas suben o bajan y el fondo se queda quieto detrás."
+      },
+      {
+        "icono": "isla",
+        "titulo": "Iconos de la isla iguales",
+        "como": "Cada app en su baldosa redondeada, con un toque del color de tu estilo."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "Pantalla fluida (FreeSync)",
+        "como": "Si tu monitor lo tiene, en los juegos a pantalla completa la pantalla va a su ritmo. Ajustes → Salud del PC."
+      },
+      {
+        "icono": "novedades",
+        "titulo": "Esta página",
+        "como": "Después de cada actualización te avisamos de lo nuevo; aquí está todo."
+      }
     ]
   },
   {
     "fecha": "2026-10-28",
     "titulo": "28 de octubre",
     "cosas": [
-      {"icono": "energia", "titulo": "Más ligero al encender", "como": "La consola de Jugar ya no se abre sola en Navegar: se abre al entrar en Jugar."},
-      {"icono": "hecho", "titulo": "Fuera programas repetidos", "como": "Lutris, Pavucontrol y el gestor de KWallet (lo hacen Steam, Heroic, el panel rápido y Apogeo)."}
+      {
+        "icono": "energia",
+        "titulo": "Más ligero al encender",
+        "como": "La consola de Jugar ya no se abre sola en Navegar: se abre al entrar en Jugar."
+      },
+      {
+        "icono": "hecho",
+        "titulo": "Fuera programas repetidos",
+        "como": "Lutris, Pavucontrol y el gestor de KWallet (lo hacen Steam, Heroic, el panel rápido y Apogeo)."
+      }
     ]
   },
   {
     "fecha": "2026-10-20",
     "titulo": "20 de octubre",
     "cosas": [
-      {"icono": "actualizar", "titulo": "Deshacer una actualización", "como": "Ajustes → Actualizaciones → «Reiniciar y elegir…»: vuelves a como estaba antes, sin tocar tus archivos."},
-      {"icono": "aspecto", "titulo": "Todo sigue tu estilo", "como": "La bienvenida, la consola, el buscador, la música, el apagado y el inicio de sesión llevan tus colores."},
-      {"icono": "isla", "titulo": "Isla arriba o columna a la izquierda", "como": "Ajustes → Aspecto → «Isla y columna»."},
-      {"icono": "jugar", "titulo": "MangoHud y FPS por juego", "como": "El botón «HUD» de la isla en Jugar enseña los FPS; en la consola, cada juego puede tener su límite."},
-      {"icono": "navegar", "titulo": "Ágape sigue a Apogeo", "como": "Si eliges un estilo propio en Apogeo, Ágape coge sus colores."}
+      {
+        "icono": "actualizar",
+        "titulo": "Deshacer una actualización",
+        "como": "Ajustes → Actualizaciones → «Reiniciar y elegir…»: vuelves a como estaba antes, sin tocar tus archivos."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Todo sigue tu estilo",
+        "como": "La bienvenida, la consola, el buscador, la música, el apagado y el inicio de sesión llevan tus colores."
+      },
+      {
+        "icono": "isla",
+        "titulo": "Isla arriba o columna a la izquierda",
+        "como": "Ajustes → Aspecto → «Isla y columna»."
+      },
+      {
+        "icono": "jugar",
+        "titulo": "MangoHud y FPS por juego",
+        "como": "El botón «HUD» de la isla en Jugar enseña los FPS; en la consola, cada juego puede tener su límite."
+      },
+      {
+        "icono": "navegar",
+        "titulo": "Ágape sigue a Apogeo",
+        "como": "Si eliges un estilo propio en Apogeo, Ágape coge sus colores."
+      }
     ]
   },
   {
     "fecha": "2026-10-19",
     "titulo": "19 de octubre",
     "cosas": [
-      {"icono": "apagar", "titulo": "El búho nuevo y el menú de apagar", "como": "La isla se abre en el menú de apagar, con «Actualizar al apagar»."},
-      {"icono": "llave", "titulo": "Tu símbolo para desbloquear", "como": "Ajustes → Bloqueo: dibújalo tres veces y luego desbloquea dibujándolo."},
-      {"icono": "aspecto", "titulo": "Ajustes → Aspecto", "como": "Estilos de un clic y cada detalle: color, claro u oscuro, letra, esquinas, cristal y tamaño."},
-      {"icono": "campana", "titulo": "Una sola isla", "como": "La hora, la red, el sonido y los avisos dentro de la isla; apps fijadas por piso y su vista en vivo."},
-      {"icono": "musica", "titulo": "Sonidos de Apogeo", "como": "Suaves, de madera, y el «uu-uu» del búho al entrar."}
+      {
+        "icono": "apagar",
+        "titulo": "El búho nuevo y el menú de apagar",
+        "como": "La isla se abre en el menú de apagar, con «Actualizar al apagar»."
+      },
+      {
+        "icono": "llave",
+        "titulo": "Tu símbolo para desbloquear",
+        "como": "Ajustes → Bloqueo: dibújalo tres veces y luego desbloquea dibujándolo."
+      },
+      {
+        "icono": "aspecto",
+        "titulo": "Ajustes → Aspecto",
+        "como": "Estilos de un clic y cada detalle: color, claro u oscuro, letra, esquinas, cristal y tamaño."
+      },
+      {
+        "icono": "campana",
+        "titulo": "Una sola isla",
+        "como": "La hora, la red, el sonido y los avisos dentro de la isla; apps fijadas por piso y su vista en vivo."
+      },
+      {
+        "icono": "musica",
+        "titulo": "Sonidos de Apogeo",
+        "como": "Suaves, de madera, y el «uu-uu» del búho al entrar."
+      }
     ]
   }
 ]
