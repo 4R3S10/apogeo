@@ -149,7 +149,8 @@ que se abrieron (Kvantum no cambia en vivo); las que abras cogen el del modo.
 ### El escritorio de Órbita («C · Orbe central»)
 
 Casi vacío, como en la bienvenida de una consola:
-- **Arriba, una barra fina sin fondo, como en COSMIC, siempre a la vista** (las ventanas maximizadas empiezan debajo): a la
+- **Arriba, una barra fina sin fondo, como en COSMIC, que solo se ve con Ágape delante** (Ágape baja un poco para dejarle
+  sitio; con cualquier otra app se esconde; lo hace `apogeo-bordes` según la ventana activa): a la
   izquierda un punto del color del modo, **Escritorios** (la vista de Meta+W) y **Aplicaciones** (la Órbita)
   (`org.apogeo.modo`); **en el centro, la fecha y la hora** («2 nov., 23:10», `org.apogeo.ventanas`; al cambiar el
   volumen o el brillo, su barrita sale ahí un momento). A la derecha los iconos de tus apps (bandeja), la red, el sonido

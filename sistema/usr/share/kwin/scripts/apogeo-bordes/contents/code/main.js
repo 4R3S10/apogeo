@@ -63,3 +63,34 @@ workspace.cursorPosChanged.connect(update);
 
 // Al empezar, escondido (por si la sesión anterior acabó con él fuera)
 if (readConfig("isla", true)) setIsland("autohide", false);
+
+// ---------- La barra de arriba: escondida, salvo con Ágape delante ----------
+// Con Ágape como ventana activa la barra se ve (y Ágape baja un poco para dejarle sitio); con cualquier otra app, se
+// esconde. Lo que es de Plasma o de Apogeo (la tarjeta rápida, la Órbita, menús…) no cuenta: al usarlos, la barra se
+// queda como estaba. Con Ágape a pantalla completa, escondida.
+function clase(w) { return w ? ((w.resourceClass || "") + " " + (w.desktopFileName || "")).toLowerCase() : ""; }
+function esAgape(w) { return !!w && w.normalWindow && /(^|[^a-z])(ares|agape|ágape)([^a-z]|$)/.test(clase(w)); }
+function noCuenta(w) {
+    const c = clase(w);
+    return !w || !w.normalWindow || c.indexOf("plasmashell") >= 0 || c.indexOf("apogeo") >= 0 || c.indexOf("kwin") >= 0;
+}
+const barra = { ver: null };
+function ponerBarra(ver) {
+    if (ver === barra.ver) return;
+    barra.ver = ver;
+    plasma("panels().forEach(function (p) {" +
+           "  if (!p.widgets().some(function (w) { return w.type == 'org.apogeo.modo'; })) return;" +
+           "  p.hiding = '" + (ver ? "none" : "autohide") + "';" +
+           "});");
+}
+// (un momento después: al cambiar de ventana, la activa pasa a veces por otra un instante)
+const mirar = new QTimer();
+mirar.interval = 150;
+mirar.singleShot = true;
+mirar.timeout.connect(function () {
+    const w = workspace.activeWindow;
+    if (noCuenta(w) && barra.ver !== null) return;
+    ponerBarra(esAgape(w) && !w.fullScreen);
+});
+workspace.windowActivated.connect(function () { mirar.start(); });
+mirar.start();
