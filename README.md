@@ -123,6 +123,11 @@ las ventanas de Apogeo (Ajustes, Tienda, apologIA) dejan ver el fondo, con el de
 (`BlurStrength=4`). **La ventana activa lleva un borde fino del acento del modo** (el efecto de esquinas redondeadas con el
 color «resaltado» de KDE, que cambia con el modo); maximizada o a pantalla completa, sin borde.
 
+**El escritorio vivo** (`musica/Escritorio.qml`, en `apogeo-musica`): un reloj grande de bloques con la fecha debajo
+(como tty-clock) y, mientras suena algo, un visualizador de audio de barras de cuadraditos (las de arriba, del color del
+modo) que escucha `cava` (solo mientras suena; 40 barras a 30 fps). Va en la capa de encima del fondo de pantalla: tus
+ventanas lo tapan, y el ratón y el teclado siguen yendo al escritorio. En Jugar no sale.
+
 Órbita: grafito con el acento de cada modo. Arriba, una vista en pequeño de cómo queda; debajo, cada detalle a mano: el
 color (el de cada modo, que es lo de serie, o uno tuyo para los tres), claro u oscuro (por modo, que es lo de serie, o
 según la hora: claro de 8:00 a 20:00), las esquinas (rectas, suaves o redondas), el cristal, el tamaño (letra y orbe) y

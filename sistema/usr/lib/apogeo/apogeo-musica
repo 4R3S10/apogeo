@@ -20,13 +20,34 @@ import sys
 import time
 
 os.environ['QT_QUICK_CONTROLS_STYLE'] = 'Basic'
-from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtProperty, pyqtSignal, pyqtSlot  # noqa: E402
+from PyQt6.QtCore import QObject, QProcess, QTimer, QUrl, pyqtProperty, pyqtSignal, pyqtSlot  # noqa: E402
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusVariant  # noqa: E402
 from PyQt6.QtGui import QGuiApplication, QIcon, QRegion  # noqa: E402
 from PyQt6.QtNetwork import QLocalSocket  # noqa: E402
 from PyQt6.QtQml import QQmlApplicationEngine  # noqa: E402
 
 QML = os.environ.get('APOGEO_MUSICA_QML', '/usr/share/apogeo/musica/Musica.qml')
+ESCRITORIO_QML = os.path.join(os.path.dirname(QML), 'Escritorio.qml')   # el reloj de bloques y el visualizador
+BARS = 40
+CAVA_CONF = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'apogeo', 'cava.conf')
+CAVA = f'''# Apogeo: el visualizador del escritorio (lo escribe apogeo-musica)
+[general]
+bars = {BARS}
+framerate = 30
+autosens = 1
+[input]
+method = pipewire
+source = auto
+[output]
+method = raw
+raw_target = /dev/stdout
+data_format = ascii
+ascii_max_range = 1000
+bar_delimiter = 59
+frame_delimiter = 10
+[smoothing]
+noise_reduction = 66
+'''
 SOCKET = os.path.join(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'), 'agape-musica.sock')
 MPRIS = 'org.mpris.MediaPlayer2.'
 PATH = '/org/mpris/MediaPlayer2'
@@ -49,6 +70,8 @@ def unwrap(v):
 
 class Musica(QObject):
     changed = pyqtSignal()
+    barsChanged = pyqtSignal()
+    suenaChanged = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -66,10 +89,75 @@ class Musica(QObject):
                 self._last = json.load(f)
         except (OSError, ValueError):
             self._last = {}
+        self._barras = [0.0] * BARS
+        self._suena = False
+        self.cava = None
+        self.cava_buf = b''
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.timer.start(1000)
+        self.changed.connect(self._check_playing)
         self.poll()
+
+    # ---------- El visualizador del escritorio (cava, solo mientras suena algo) ----------
+
+    @pyqtProperty(bool, constant=True)
+    def escritorioVivo(self):
+        return True   # (el reloj sale siempre; las barras, mientras suena algo y con cava)
+
+    @pyqtProperty(bool, notify=suenaChanged)
+    def suena(self):
+        return self._suena
+
+    @pyqtProperty('QVariantList', notify=barsChanged)
+    def barras(self):
+        return self._barras
+
+    def _check_playing(self):
+        playing = any(not s['paused'] for s in self._agape + self._mpris)
+        if playing != self._suena:
+            self._suena = playing
+            self.suenaChanged.emit()
+            self._cava(playing)
+
+    def _cava(self, on):
+        if not on:
+            if self.cava:
+                self.cava.kill()
+                self.cava = None
+            self._barras = [0.0] * BARS
+            self.barsChanged.emit()
+            return
+        if self.cava or not shutil.which('cava'):
+            return
+        try:
+            os.makedirs(os.path.dirname(CAVA_CONF), exist_ok=True)
+            with open(CAVA_CONF, 'w') as f:
+                f.write(CAVA)
+        except OSError:
+            return
+        self.cava = QProcess(self)
+        self.cava.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+        self.cava.readyReadStandardOutput.connect(self._cava_read)
+        self.cava.finished.connect(lambda *_: setattr(self, 'cava', None))
+        self.cava.start('cava', ['-p', CAVA_CONF])
+
+    def _cava_read(self):
+        if not self.cava:
+            return
+        self.cava_buf += bytes(self.cava.readAllStandardOutput())
+        if b'\n' not in self.cava_buf:
+            return
+        lines = self.cava_buf.split(b'\n')
+        self.cava_buf = lines[-1]
+        last = next((l for l in reversed(lines[:-1]) if l.strip()), b'')   # (solo el último fotograma)
+        try:
+            vals = [int(x) / 1000 for x in last.decode().strip().strip(';').split(';') if x]
+        except ValueError:
+            return
+        if len(vals) == BARS:
+            self._barras = vals
+            self.barsChanged.emit()
 
     # ---------- Lo que suena ----------
 
@@ -284,6 +372,8 @@ def main():
     engine.load(QUrl.fromLocalFile(QML))
     if not engine.rootObjects():
         return 1
+    engine.load(QUrl.fromLocalFile(ESCRITORIO_QML))   # (si falla, la música sigue igual)
+    app.aboutToQuit.connect(lambda: musica._cava(False))
     return app.exec()
 
 

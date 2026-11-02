@@ -36,6 +36,7 @@ package_apogeo() {
     apogeo-aura                                               # fondos de internet y tu biblioteca (a cada piso)
     apogeo-karousel                                           # ventanas en carrusel (como niri), en los pisos que elijas
     llama-cpp ggml-vulkan                                     # apologIA: el motor de los modelos (y su GPU)
+    cava                                                      # el visualizador de audio del escritorio
   )
   install=apogeo.install
   cp -a --no-preserve=ownership "$_raiz/sistema/." "$pkgdir/"
