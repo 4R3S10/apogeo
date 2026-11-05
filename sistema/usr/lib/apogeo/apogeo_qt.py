@@ -16,7 +16,29 @@ from apogeo_comun import CONFIG, HOME, Accounts, front, human, kwin, real_gpu, s
 import apogeo_comun
 
 AVATAR = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.join(HOME, '.cache')), 'apogeo', 'foto.png')
-agape = apogeo_comun.agape()
+
+
+class _SinAgape:
+    """Ágape a medio instalar o roto: la ventana de Ajustes tiene que abrir igual (antes, un fallo al cargarlo la
+    dejaba sin arrancar)."""
+    APP = '/usr/lib/apogeo/apogeo-agape'
+
+    class Fallo(Exception):
+        pass
+
+    def _no(self, *_a, **_k):
+        raise self.Fallo('Ágape no está disponible')
+
+    check_token = _no
+    save_token = _no
+    download = _no
+    make_default = _no
+
+
+try:
+    agape = apogeo_comun.agape()
+except Exception:  # noqa: BLE001 (cualquier fallo al cargarlo no puede tumbar Ajustes ni la Tienda)
+    agape = _SinAgape()
 
 
 class Base(QObject):

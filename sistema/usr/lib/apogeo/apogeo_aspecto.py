@@ -11,7 +11,8 @@ pinta cada modo con los suyos sin esperar).
   ajustes['aspecto'] = {estilo, acento, color, modo, letra, esquinas, cristal, tamano, animaciones, posicion}
   (estilo, letra y posicion ya no se eligen: siempre Órbita, Geist y abajo a la derecha)
 
-«color»: «fondo» (lo de serie, como en COSMIC: cada modo coge el color de su fondo de pantalla y todo se tiñe de él; un
+«color»: «fondo» (lo de serie, como en COSMIC: el acento de cada modo coge un tinte suave del color de su fondo de
+pantalla —un cuarto del color del fondo sobre el violeta, el cian o el ámbar de Órbita— y el grafito se tiñe un poco; un
 fondo animado de Apogeo, que no es una imagen, se queda con el color de su modo) o «modo» (el violeta, el cian y el ámbar
 de siempre). Un acento elegido a mano manda sobre los dos.
 """
@@ -50,6 +51,7 @@ PALETAS = {
 }
 DEFAULT = {'estilo': 'orbita', 'acento': '', 'color': 'fondo', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves',
            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
+TINTE_FONDO = 0.25   # «Del fondo»: cuánto del color del fondo entra en el acento de Órbita (0 = nada, 1 = todo)
 CORNERS = {'rectas': 0.35, 'suaves': 0.7, 'redondas': 1.0}
 SIZES = {'compacto': (9, 50), 'normal': (10, 56), 'grande': (11.5, 64)}     # (letra en pt, alto del orbe)
 ANIMS = {'sin': 0.0, 'rapidas': 0.5, 'suaves': 1.0}
@@ -112,7 +114,11 @@ def tokens(a, floor='navegar', fondo=None):
     light = a['modo'] == 'claro' or (a['modo'] == 'hora' and light_now())   # («por modo»: grafito en los tres)
     del_fondo = not a['acento'] and a.get('color') == 'fondo' and fondo
     if not a['acento']:
-        acc = apogeo_color.acento(fondo, light) if del_fondo else (s['acentosClaro'] if light else s['acentos'])[mode]
+        base = (s['acentosClaro'] if light else s['acentos'])[mode]
+        # «Del fondo»: un tinte suave del fondo sobre el acento de Órbita (no el color crudo: los cielos nocturnos dan
+        # magentas y rojos muy vivos que rompen la identidad de cada modo)
+        wf = apogeo_color.acento(fondo, light) if del_fondo else None
+        acc = mix(base, wf, TINTE_FONDO) if wf else base
         s['acento'] = acc
         s['vivo'] = mix(acc, '#000000' if light else '#ffffff', 0.12 if light else 0.18)
         s['sobreAcento'] = '#ffffff' if light or luminance(acc) < 0.45 else '#041318'
@@ -203,7 +209,10 @@ def all_tokens(st, floor):
 
 
 def _run(*c, env=None):
-    subprocess.run(list(c), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, timeout=120)
+    try:
+        subprocess.run(list(c), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        pass   # (sin kwriteconfig6 o sin Plasma, el resto del aspecto se aplica igual en vez de morir el hilo)
 
 
 def _kw(f, g, k, v):

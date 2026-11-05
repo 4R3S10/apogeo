@@ -10,6 +10,7 @@ Rectangle {
     radius: Tema.r(18)
     color: Tema.cristal
     border.color: Tema.borde
+    border.width: 1
     Rectangle { x: s.radius; y: 1; width: s.width - 2 * s.radius; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
     Column {
         id: col

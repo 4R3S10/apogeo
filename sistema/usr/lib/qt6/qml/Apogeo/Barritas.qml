@@ -15,7 +15,8 @@ Row {
             id: barra
             required property int index
             readonly property real fase: (index * 0.37) % 1
-            anchors.bottom: parent ? parent.bottom : undefined
+            // (dentro de un Row no valen las anclas: se pega al fondo a mano, y sigue ahí mientras baila)
+            y: b.height - height
             width: b.grosor
             radius: b.grosor / 2
             color: b.color

@@ -3,7 +3,7 @@
     "KPlugin": {
         "Authors": [{ "Name": "Ares" }],
         "Category": "System Information",
-        "Description": "En la barra fina de arriba de Órbita: el modo en el que estás (abre la Órbita)",
+        "Description": "Hueco de la barra de arriba de Apogeo (no hace falta añadirlo a mano)",
         "Icon": "apogeo",
         "Id": "org.apogeo.modo",
         "License": "MIT",

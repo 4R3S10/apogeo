@@ -274,12 +274,17 @@ def main():
             threading.Thread(target=self._load, daemon=True).start()
 
         def _load(self):
-            self.cat = Catalog()
+            try:
+                self.cat = Catalog()
+            except Exception as e:
+                # (sin AppStream o con el catálogo roto, la ventana no puede quedarse cargando para siempre: sale vacía)
+                print('[tienda]', e, file=sys.stderr)
+                self.cat = False
             self.loadedChanged.emit()
 
         @pyqtProperty(bool, notify=loadedChanged)
         def loaded(self):
-            return self.cat is not None
+            return self.cat is not None   # (False: se intentó y no se pudo; la ventana ya puede enseñarse)
 
         @pyqtProperty(str, notify=busyChanged)
         def busy(self):

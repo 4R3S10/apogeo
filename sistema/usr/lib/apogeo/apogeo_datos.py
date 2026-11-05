@@ -65,11 +65,30 @@ def read_json(path, default):
 
 
 def write_json(path, data):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + '.nuevo'
-    with open(tmp, 'w') as f:
-        json.dump(data, f, ensure_ascii=False)
-    os.replace(tmp, path)
+    """Temporal único + cambio de golpe: lo escriben también hilos (el tiempo) y no se pueden mezclar."""
+    import tempfile
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix='.' + os.path.basename(path) + '.', dir=d)
+    try:
+        with os.fdopen(fd, 'w') as f:
+            json.dump(data, f, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def reminder_ok(r):
+    """Un recordatorio del archivo que se pueda usar (si uno se quedó a medias, se ignora en vez de tumbar los demás)."""
+    return (isinstance(r, dict) and isinstance(r.get('id'), str) and isinstance(r.get('texto'), str)
+            and r.get('tipo') in ('recordatorio', 'temporizador')
+            and isinstance(r.get('cuando'), (int, float)) and not isinstance(r.get('cuando'), bool))
 
 
 def today():
@@ -90,7 +109,9 @@ class Datos(dbus.service.Object):
         self.tick_id = None
         self.windows = '[]'
         # Recordatorios y temporizadores: se mira cada 10 s si toca alguno (los que pasaron con el PC apagado, al entrar)
-        self.reminders = read_json(REMINDERS_FILE, [])
+        saved = read_json(REMINDERS_FILE, [])
+        # (un archivo roto, o una entrada suelta a medias, no puede tumbar los demás recordatorios)
+        self.reminders = [r for r in saved if reminder_ok(r)] if isinstance(saved, list) else []
         self.ringing = {}  # id del aviso → recordatorio
         self.bus = bus
         bus.add_signal_receiver(self._reminder_action, 'ActionInvoked', 'org.freedesktop.Notifications',
@@ -230,18 +251,18 @@ class Datos(dbus.service.Object):
         import apogeo_comun as comun
         if floor not in comun.FLOOR_KEYS or (value not in comun.STYLES and not comun.is_wallpaper_file(value)):
             return
-        st = comun.load()
-        st['pisos'][floor]['fondo'] = value
-        comun.save(st)  # apogeo-pisos lo ve y lo pone
+        def put(st):
+            st['pisos'][floor]['fondo'] = value
+        comun.update(put)  # apogeo-pisos lo ve y lo pone (y nadie pisa lo que cambies a la vez)
 
     @dbus.service.method(IFACE, in_signature='ss')  # (on: «true» o «false»: los widgets solo mandan texto)
     def CambiarSolo(self, floor, on):
         import apogeo_comun as comun
         if floor not in comun.FLOOR_KEYS:
             return
-        st = comun.load()
-        st['fondos']['cambiar'][floor]['activo'] = str(on).lower() == 'true'
-        comun.save(st)
+        def put(st):
+            st['fondos']['cambiar'][floor]['activo'] = str(on).lower() == 'true'
+        comun.update(put)
 
     @dbus.service.method(IFACE, out_signature='s')
     def Tiempo(self):
@@ -382,11 +403,16 @@ class Datos(dbus.service.Object):
     def _check_reminders(self):
         now = time.time()
         due = [r for r in self.reminders if r['cuando'] <= now]
-        if due:
-            self.reminders = [r for r in self.reminders if r['cuando'] > now]
+        if not due:
+            return True
+        # (solo se quitan los que se han podido avisar: si Plasma está reiniciándose, se reintenta en 10 s y no se pierden)
+        quedan = [r for r in self.reminders if r['cuando'] > now]
+        for r in due:
+            if not self._ring(r, late=now - r['cuando'] > 120):
+                quedan.append(r)
+        if quedan != self.reminders:
+            self.reminders = quedan
             self._save_reminders()
-            for r in due:
-                self._ring(r, late=now - r['cuando'] > 120)
         return True
 
     def _ring(self, r, late=False):
@@ -404,8 +430,9 @@ class Datos(dbus.service.Object):
                                                  'x-kde-display-appname': 'Recordatorio'}, signature='sv'),
                                 dbus.Int32(0))
             self.ringing[int(nid)] = r
+            return True
         except dbus.DBusException:
-            pass
+            return False
 
     def _reminder_action(self, nid, action):
         r = self.ringing.pop(int(nid), None)

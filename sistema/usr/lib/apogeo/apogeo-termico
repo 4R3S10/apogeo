@@ -20,6 +20,8 @@ MIN_FACTOR = 0.5
 COOL_READS = 3  # lecturas frescas seguidas antes de subir (que no vaya a tirones)
 INTERVAL = float(os.environ.get('APOGEO_TERMICO_INTERVAL', '2'))
 SYS = os.environ.get('APOGEO_SYSFS', '/sys')  # para probarlo con un /sys de mentira
+RUN = os.environ.get('APOGEO_RUN', '/run/apogeo')
+STATE = os.path.join(RUN, 'termico.json')
 CPU_SENSORS = ('k10temp', 'zenpower', 'coretemp', 'cpu_thermal')
 
 
@@ -75,31 +77,86 @@ def temp_of(d):
     return max(temps) if temps else None
 
 
+def _state():
+    try:
+        with open(STATE) as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_state(d):
+    try:
+        os.makedirs(RUN, exist_ok=True)
+        tmp = STATE + '.nuevo'
+        with open(tmp, 'w') as f:
+            json.dump(d, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, STATE)
+    except OSError:
+        pass
+
+
 class Guard:
     def __init__(self):
         self.factor = 1.0
         self.cool = 0
+        self.saved = False
         self.cpus = sorted(glob.glob(f'{SYS}/devices/system/cpu/cpu[0-9]*/cpufreq'))
-        self.cpu_max = {c: int(read(f'{c}/cpuinfo_max_freq', '0')) for c in self.cpus}
         self.gpus = [d for d in hwmons(('amdgpu',)) if read(f'{d}/power1_cap_default')]
-        self.gpu_cap = {d: int(read(f'{d}/power1_cap_default')) for d in self.gpus}
+        # Si la vez anterior no llegó a restaurar (SIGKILL, OOM…), el hardware se quedó limitado: se devuelve a como
+        # estaba antes de tocarlo.
+        old = _state()
+        cpu_old, gpu_old = old.get('cpu'), old.get('gpu')
+        for path, value in (cpu_old if isinstance(cpu_old, dict) else {}).items():
+            write(os.path.join(str(path), 'scaling_max_freq'), value)
+        for path, value in (gpu_old if isinstance(gpu_old, dict) else {}).items():
+            write(os.path.join(str(path), 'power1_cap'), value)
+        if old:
+            try:
+                os.unlink(STATE)
+            except OSError:
+                pass
+            log('restaurado lo que quedó puesto la vez anterior')
+        # El 100 % es como estaban al arrancar (no el máximo absoluto): así no se pisa lo que ponga
+        # power-profiles-daemon ni un límite tuyo.
+        self.base_cpu = {c: int(read(f'{c}/scaling_max_freq', '0') or 0) for c in self.cpus}
+        self.base_gpu = {d: int(read(f'{d}/power1_cap', '0') or 0) for d in self.gpus}
+        for c in self.cpus:
+            if not self.base_cpu[c]:  # (sin scaling_max_freq): se usa el máximo del procesador
+                self.base_cpu[c] = int(read(f'{c}/cpuinfo_max_freq', '0') or 0)
         log(f'{len(self.cpus)} núcleos, {len(self.gpus)} gráficas con límite de potencia')
+
+    def remember(self):
+        """Guarda los valores originales antes de bajarlos, para poder devolverlos aunque el proceso muera."""
+        if self.saved:
+            return
+        _save_state({'cpu': {c: v for c, v in self.base_cpu.items() if v},
+                     'gpu': {d: v for d, v in self.base_gpu.items() if v}})
+        self.saved = True
 
     def temperature(self):
         temps = [t for t in (temp_of(d) for d in hwmons(CPU_SENSORS + ('amdgpu',))) if t is not None]
         return max(temps) if temps else None
 
     def apply(self):
+        if self.factor < 1:
+            self.remember()
         for c in self.cpus:
-            if self.cpu_max[c]:
-                want = int(self.cpu_max[c] * self.factor)
+            base = self.base_cpu.get(c, 0)
+            if base:
+                want = int(base * self.factor)
                 if read(f'{c}/scaling_max_freq') != str(want):
                     write(f'{c}/scaling_max_freq', want)
         for d in self.gpus:
-            low = int(read(f'{d}/power1_cap_min', '0'))
-            want = max(low, int(self.gpu_cap[d] * self.factor))
-            if read(f'{d}/power1_cap') != str(want):
-                write(f'{d}/power1_cap', want)
+            base = self.base_gpu.get(d, 0)
+            if base:
+                low = int(read(f'{d}/power1_cap_min', '0'))
+                want = max(low, int(base * self.factor))
+                if read(f'{d}/power1_cap') != str(want):
+                    write(f'{d}/power1_cap', want)
 
     def step(self):
         t = self.temperature()
@@ -124,7 +181,12 @@ class Guard:
 
     def restore(self, *_):
         self.factor = 1.0
-        self.apply()
+        self.apply()          # (devuelve exactamente los valores de antes, no el máximo absoluto)
+        try:
+            os.unlink(STATE)
+        except OSError:
+            pass
+        self.saved = False
         log('todo como estaba')
         sys.exit(0)
 

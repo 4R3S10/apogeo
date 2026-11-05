@@ -37,10 +37,11 @@ def main():
         print(f'Apogeo no puede poner esto de fondo: {path}', file=sys.stderr)
         return 1
     floor = current_floor()
-    st = comun.load()
-    st['pisos'][floor]['fondo'] = path
-    st['fondos']['cambiar'][floor]['activo'] = False
-    comun.save(st)  # apogeo-pisos lo ve y lo pone
+
+    def put(st):
+        st['pisos'][floor]['fondo'] = path
+        st['fondos']['cambiar'][floor]['activo'] = False
+    comun.update(put)  # apogeo-pisos lo ve y lo pone (y nadie pisa lo que cambies a la vez)
     return 0
 
 

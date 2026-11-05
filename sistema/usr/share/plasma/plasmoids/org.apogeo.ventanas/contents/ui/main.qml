@@ -105,21 +105,9 @@ PlasmoidItem {
         onWidthChanged: Qt.callLater(recoloca)
         onXChanged: Qt.callLater(recoloca)
         Component.onCompleted: Qt.callLater(recoloca)
-        Timer { interval: 2000; repeat: true; running: true; onTriggered: hueco.recoloca() }
+        // (solo mientras la barra se ve: en Jugar está oculta y no hay nada que recentrar)
+        Timer { interval: 2000; repeat: true; running: hueco.visible && hueco.opacity > 0; onTriggered: hueco.recoloca() }
 
-        // La fecha y la hora, en el centro (como en COSMIC: «2 nov., 23:10»)
-        Texto {
-            id: fecha
-            property date ahora: new Date()
-            Timer { interval: 10000; repeat: true; running: true; triggeredOnStart: true; onTriggered: fecha.ahora = new Date() }
-            visible: false   // (ya no: en el centro van tus apps abiertas)
-            x: Math.max(0, Math.min(hueco.width - width, hueco.centro - width / 2))
-            anchors.verticalCenter: parent.verticalCenter
-            text: Qt.locale("es_ES").toString(ahora, "d MMM, HH:mm")
-            color: Tema.sobreBarra
-            wrapMode: Text.NoWrap
-            font { family: Tema.letra; pixelSize: 13; weight: Font.Medium }
-        }
         // Tus apps abiertas en el modo, en el centro
         Row {
             id: fila

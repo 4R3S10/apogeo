@@ -5,13 +5,16 @@ Lo que comparten los programas de Apogeo: tus ajustes (~/.config/apogeo/ajustes.
 Los ajustes se guardan enteros (con lo que no has cambiado, por defecto) y apogeo-pisos los vigila: al guardarlos se
 aplican solos (fondo, avisos, energía, apps de cada piso, la isla).
 """
+import contextlib
 import copy
+import fcntl
 import glob
 import importlib.machinery
 import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -20,6 +23,8 @@ import time
 HOME = os.path.expanduser('~')
 CONFIG = os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
 SETTINGS = os.path.join(CONFIG, 'apogeo', 'ajustes.json')
+SETTINGS_BAK = SETTINGS + '.bak'
+SETTINGS_LOCK = os.path.join(os.path.dirname(SETTINGS), '.ajustes.lock')
 HEALTH = '/etc/apogeo/salud.json'
 FPS_FILE = os.path.join(CONFIG, 'environment.d', '60-apogeo-juegos.conf')
 LIB = os.environ.get('APOGEO_LIB', '/usr/lib/apogeo')
@@ -92,47 +97,79 @@ FPS_CHOICES = (30, 45, 60)
 # ---------- Ajustes ----------
 
 def _merge(base, over):
+    """Lo que trae el archivo sobre lo de serie, sin dejar que un tipo raro lo rompa: si el valor no es del mismo tipo
+    que el de serie, se queda el de serie (un `null` o un número donde iba un objeto dejaban el programa en bucle)."""
     out = copy.deepcopy(base)
-    for k, v in (over or {}).items():
-        if isinstance(v, dict) and isinstance(out.get(k), dict):
-            out[k] = _merge(out[k], v)
-        elif k in out:
+    if not isinstance(over, dict):
+        return out
+    for k, v in over.items():
+        if k not in out:
+            continue
+        if isinstance(out[k], dict):
+            if isinstance(v, dict):
+                out[k] = _merge(out[k], v)
+        elif isinstance(out[k], list):
+            if isinstance(v, list):
+                out[k] = v
+        elif isinstance(out[k], bool):
+            if isinstance(v, bool):
+                out[k] = v
+        elif isinstance(out[k], (int, float)):
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                out[k] = v
+        elif isinstance(out[k], str):
+            if isinstance(v, str):
+                out[k] = v
+        else:
             out[k] = v
     return out
 
 
-def load():
+def _read_json(path):
     try:
-        with open(SETTINGS) as f:
-            raw = json.load(f)
+        with open(path) as f:
+            data = json.load(f)
     except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def load():
+    raw = _read_json(SETTINGS)
+    if raw is None:
+        raw = _read_json(SETTINGS_BAK)   # (la última copia buena, si el archivo se quedó a medias)
+    if raw is None:
         return copy.deepcopy(DEFAULTS)
+    try:
+        ver = int(raw.get('version', 1))
+    except (TypeError, ValueError):
+        ver = 1
     st = _merge(DEFAULTS, raw)
-    if raw.get('version', 1) < 2 and st['pisos']['jugar']['fondo'] == 'remolino':
+    if ver < 2 and st['pisos']['jugar']['fondo'] == 'remolino':
         st['pisos']['jugar']['fondo'] = 'luces'
-    if raw.get('version', 1) < 3 and st['pisos']['navegar']['apps'] == ['ares.desktop']:
+    if ver < 3 and st['pisos']['navegar']['apps'] == ['ares.desktop']:
         st['pisos']['navegar']['apps'] = []  # (si no lo habías cambiado)
     # (lo que venía de serie antes de Órbita; _aspecto.DEFAULT ya es Órbita y no vale para reconocerlo)
     old = {'estilo': 'apogeo', 'acento': '', 'modo': 'oscuro', 'letra': 'Bricolage Grotesque', 'esquinas': 'redondas',
            'cristal': 55, 'tamano': 'normal', 'animaciones': 'suaves', 'posicion': 'abajo-dcha'}
-    if raw.get('version', 1) < 4 and all(st['aspecto'].get(k) == v for k, v in old.items()):
+    if ver < 4 and all(st['aspecto'].get(k) == v for k, v in old.items()):
         st['aspecto']['estilo'] = 'agape'  # (si no lo habías cambiado)
-    if raw.get('version', 1) < 5 and all(st['aspecto'].get(k) == v for k, v in dict(old, estilo='agape').items()):
+    if ver < 5 and all(st['aspecto'].get(k) == v for k, v in dict(old, estilo='agape').items()):
         st['aspecto']['estilo'] = 'fondo'
     # 6: quien tenía el asunto tal como venía (Berenjena, rosa, Bricolage) pasa a Órbita; lo personalizado se respeta
     # 8: también si se quedó en «Clásico» o «Como Ágape» tal como venían (la comparación de antes no lo reconocía)
     old6 = dict(old, estilo='fondo')
-    if raw.get('version', 1) < 8 and st['aspecto'].get('estilo') in ('apogeo', 'agape', 'fondo') and \
+    if ver < 8 and st['aspecto'].get('estilo') in ('apogeo', 'agape', 'fondo') and \
             all(st['aspecto'].get(k) == v for k, v in old6.items() if k != 'estilo'):
         st['aspecto'].update({'estilo': 'orbita', 'modo': 'piso', 'letra': 'Geist', 'esquinas': 'suaves'})
     # 7: los fondos animados de Órbita, uno por modo, para quien tenía los de antes tal como venían
-    if raw.get('version', 1) < 8 and st['aspecto'].get('estilo') == 'orbita':
+    if ver < 8 and st['aspecto'].get('estilo') == 'orbita':
         for k, old, new in (('jugar', 'luces', 'nebulosa'), ('navegar', 'tinta', 'orbitas'), ('estudiar', 'seda', 'aurora')):
             if st['pisos'][k].get('fondo') == old:
                 st['pisos'][k]['fondo'] = new
     # 9: solo Órbita (con tu acento y lo demás que hubieras cambiado) y, quien tuviera un fondo animado de antes, el de
     # su modo
-    if raw.get('version', 1) < 9:
+    if ver < 9:
         if st['aspecto'].get('estilo') != 'orbita':
             st['aspecto']['acento'] = ''   # (el de otro estilo: mejor el de cada modo)
         st['aspecto'].update({'estilo': 'orbita', 'letra': 'Geist', 'posicion': 'abajo-dcha'})
@@ -140,14 +177,15 @@ def load():
             f = st['pisos'][k]
             if f.get('fondo') not in STYLES and not is_wallpaper_file(f.get('fondo')):
                 f['fondo'] = DEFAULTS['pisos'][k]['fondo']
-    return st
+    return valid(st)
 
 
 def valid(st):
     """Lo que no tenga sentido vuelve a su valor por defecto (nunca «rendimiento», FPS de la lista…)."""
     for k in FLOOR_KEYS:
         f = st['pisos'][k]
-        if f.get('fondo') not in STYLES and not is_wallpaper_file(f.get('fondo')):
+        # (no se exige que el archivo exista: un fondo en un disco que ahora no está conectado no se debe perder)
+        if f.get('fondo') not in STYLES and not _looks_wallpaper(f.get('fondo')):
             f['fondo'] = DEFAULTS['pisos'][k]['fondo']
         if f.get('energia') not in ('power-saver', 'balanced'):
             f['energia'] = 'balanced'
@@ -160,7 +198,7 @@ def valid(st):
     st['juegos_fps'] = {k: v for k, v in (st.get('juegos_fps') or {}).items() if v in FPS_CHOICES}
     st['fpsVisibles'] = st.get('fpsVisibles') is not False
     fondos = st['fondos']
-    fondos['tuyos'] = list(dict.fromkeys(x for x in fondos.get('tuyos', []) if is_wallpaper_file(x)))
+    fondos['tuyos'] = list(dict.fromkeys(x for x in fondos.get('tuyos', []) if _looks_wallpaper(x)))
     if not isinstance(fondos.get('carpeta'), str):
         fondos['carpeta'] = FOLDER_DEFAULT
     for k in FLOOR_KEYS:
@@ -192,8 +230,13 @@ def valid(st):
 
 # ---------- Fondos ----------
 
+def _looks_wallpaper(path):
+    """Tiene pinta de fondo (por la extensión), exista ahora o no (puede estar en un disco sin conectar)."""
+    return isinstance(path, str) and path.lower().endswith(IMAGES + VIDEOS)
+
+
 def is_wallpaper_file(path):
-    return isinstance(path, str) and path.lower().endswith(IMAGES + VIDEOS) and os.path.isfile(path)
+    return _looks_wallpaper(path) and os.path.isfile(path)
 
 
 def is_video(path):
@@ -271,16 +314,105 @@ def rotation_pool(st, floor):
     return list(dict.fromkeys(pool))
 
 
-def save(st):
+@contextlib.contextmanager
+def settings_locked():
+    """Cerrojo entre procesos para leer-modificar-guardar los ajustes (Ajustes, la isla, los pisos…). El sistema lo
+    suelta solo si el proceso muere, así que no puede quedarse trabado."""
+    os.makedirs(os.path.dirname(SETTINGS_LOCK), exist_ok=True)
+    with open(SETTINGS_LOCK, 'a') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
+def _fsync_dir(path):
+    try:
+        fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
+
+
+def _write_json(path, data):
+    """Escribe en un temporal único de la misma carpeta y lo cambia de golpe: si dos procesos guardan a la vez, cada uno
+    usa su archivo y nunca se mezclan (antes compartían «ajustes.json.nuevo»)."""
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix='.' + os.path.basename(path) + '.', dir=d)
+    try:
+        with os.fdopen(fd, 'w') as f:
+            json.dump(data, f, ensure_ascii=False, indent=1)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+        _fsync_dir(d)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _looks_ok(raw):
+    """¿El archivo que hay ahora parece de verdad unos ajustes? (si está a medias o con tipos rotos, no se usa como
+    copia de seguridad: se conserva la última buena)."""
+    if not isinstance(raw, dict):
+        return False
+    try:
+        int(raw.get('version', 1))
+    except (TypeError, ValueError):
+        return False
+    pisos = raw.get('pisos')
+    if pisos is not None:
+        if not isinstance(pisos, dict):
+            return False
+        for k in FLOOR_KEYS:
+            if k in pisos and not isinstance(pisos[k], dict):
+                return False
+    return True
+
+
+def _save_locked(st):
     st = valid(st)
     st['version'] = VERSION
-    os.makedirs(os.path.dirname(SETTINGS), exist_ok=True)
-    tmp = SETTINGS + '.nuevo'
-    with open(tmp, 'w') as f:
-        json.dump(st, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, SETTINGS)  # de golpe: quien lo vigila nunca lee un archivo a medias
+    try:
+        if _looks_ok(_read_json(SETTINGS)):   # (no pisar la copia buena con una rota)
+            shutil.copyfile(SETTINGS, SETTINGS_BAK)
+    except OSError:
+        pass
+    _write_json(SETTINGS, st)
+    if not os.path.exists(SETTINGS_BAK):   # (la primera vez, para que siempre haya una copia de la que tirar)
+        try:
+            shutil.copyfile(SETTINGS, SETTINGS_BAK)
+        except OSError:
+            pass
     write_fps(st['fps'], st.get('juegos_fps'), st['fpsVisibles'])
     return st
+
+
+def save(st):
+    with settings_locked():
+        return _save_locked(st)
+
+
+def update(fn):
+    """Leer, cambiar y guardar los ajustes sin que otro proceso se meta en medio: `fn(st)` los cambia y devuelve el
+    estado (o False para no guardar). Para lo que se hace desde varios sitios: la isla, los pisos, una copia…"""
+    with settings_locked():
+        st = load()
+        out = fn(st)
+        if out is False:
+            return st
+        # (solo se guarda un estado de verdad: si `fn` devolviera otra cosa sin querer, se guarda lo que cambió en `st`)
+        return _save_locked(out if isinstance(out, dict) else st)
 
 
 def set_path(st, path, value):

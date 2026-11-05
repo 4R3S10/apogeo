@@ -76,7 +76,7 @@ def windows_entry():
     if found:
         return found
     saved = read_state().get('entry') or ''
-    if saved and saved in entries:
+    if saved and (not leido or saved in entries):   # (si el firmware no se pudo leer, vale la última que se guardó)
         return saved
     return None
 

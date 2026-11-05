@@ -8,6 +8,7 @@ Los juegos de Apogeo, todos juntos, para la consola del piso Jugar (apogeo-conso
 Solo lee las listas que cada tienda guarda en tu carpeta; no entra en tus cuentas. Apogeo no trae ni busca juegos:
 cada uno pone los suyos.
 """
+import fcntl
 import glob
 import hashlib
 import json
@@ -16,6 +17,7 @@ import re
 import shutil
 import struct
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
@@ -750,11 +752,42 @@ def _legendary(gid, args):
         _status(gid, estado='error', progreso=0, mensaje=str(e))
 
 
+def _lock(name):
+    """Cerrojo por juego: pulsar «instalar» dos veces no lanza dos conversiones sobre el mismo .nuevo."""
+    base = os.path.join(os.environ.get('XDG_RUNTIME_DIR') or tempfile.gettempdir(), 'apogeo')
+    os.makedirs(base, exist_ok=True)
+    path = os.path.join(base, name[:40].replace('/', '_') + '-' + hashlib.sha1(name.encode()).hexdigest()[:12] + '.lock')
+    f = open(path, 'a')
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
 def convert_ps5(folder):
     """Convierte un juego volcado de tu PS5 con AnyPS5: ~/.local/share/apogeo/ps5/<juego>/ con app.elf, libs/ (las de
     AnyPS5) y app0/ (tu volcado, enlazado: no se copia ni se toca)."""
     name = os.path.basename(folder.rstrip('/'))
     gid = 'ps5:' + name
+    lock = _lock('ps5-' + name)
+    if lock is None:
+        return False   # (ya se está convirtiendo: no se pisa)
+    try:
+        return _convert_ps5(folder, name, gid)
+    except Exception as e:   # (un fallo no puede dejar el estado en «convirtiendo» para siempre)
+        _status(gid, estado='error', progreso=0, mensaje=str(e) or 'No se ha podido convertir')
+        shutil.rmtree(os.path.join(PS5_OUT, name) + '.nuevo', ignore_errors=True)
+        return False
+    finally:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+        finally:
+            lock.close()
+
+
+def _convert_ps5(folder, name, gid):
     relinker = os.path.join(ANYPS5, 'actual', 'relinker')
     libs = os.path.join(ANYPS5, 'actual', 'libs')
     if not os.access(relinker, os.X_OK):

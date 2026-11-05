@@ -3,8 +3,10 @@ El color de un fondo de pantalla («Del fondo», Ajustes → Identidad): como en
 y todo (el acento, el grafito de las ventanas, las barras, el orbe, los menús) se tiñe de él.
 
 Se mira el fondo en pequeño (48 × 48, con ffmpeg: vale para imágenes y para el primer fotograma de un vídeo) y se busca
-el tono que más pesa entre los colores vivos (los grises y los negros casi no cuentan). Un fondo sin color (blanco y
-negro) da un acento gris claro. El tono se redondea a pasos de 10° para que fondos parecidos compartan temas generados.
+el tono que más pesa entre los colores vivos. Los grises no cuentan y las sombras tampoco: en un fondo oscuro (un cielo
+nocturno, por ejemplo) el color está en las zonas iluminadas, así que el «hay color o no» se mide solo sobre ellas. Un
+fondo sin color (blanco y negro) da un acento gris claro. El tono se redondea a pasos de 10° para que fondos parecidos
+compartan temas generados.
 Lo calculado se guarda (~/.cache/apogeo/colores-fondo.json) por ruta, tamaño y fecha del archivo.
 
   color_de(ruta) → {'tono': grados o None (sin color), 'claridad': 0…1} o None (no se pudo leer)
@@ -19,7 +21,9 @@ import subprocess
 CACHE = os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'apogeo', 'colores-fondo.json')
 SIZE = 48
 STEP = 10           # grados: fondos de tono parecido, el mismo acento (y los mismos temas)
-GRIS = 0.16         # con menos color medio que esto, el fondo cuenta como blanco y negro
+GRIS = 0.10         # saturación media de los píxeles iluminados: por debajo, el fondo cuenta como blanco y negro
+LUZ = 0.05          # píxeles más oscuros que esto son sombra: no cuentan ni para el tono ni para el gris
+CACHE_VERSION = 2   # (sube cuando cambia lo que se calcula: así no se reutilizan los tonos viejos)
 
 
 def _read_cache():
@@ -57,20 +61,24 @@ def analizar(raw):
     """El tono que manda en esos píxeles (o None si casi no hay color) y lo claro que es el fondo."""
     bins = [0.0] * 36
     acc = [[0.0, 0.0, 0.0] for _ in range(36)]   # (para el tono medio de cada cajón)
-    vivid = light = 0.0
+    light = saturacion = iluminados = 0.0
     n = len(raw) // 3
     for i in range(n):
         r, g, b = raw[3 * i] / 255, raw[3 * i + 1] / 255, raw[3 * i + 2] / 255
         h, s, v = colorsys.rgb_to_hsv(r, g, b)
         light += v
+        if v < LUZ:            # sombra: no hay color que sacar de aquí
+            continue
         w = s * s * v          # lo vivo pesa mucho más que lo apagado
-        vivid += s * v
+        saturacion += s
+        iluminados += 1
         k = int(h * 36) % 36
         bins[k] += w
         acc[k][0] += w * math.cos(h * 2 * math.pi)
         acc[k][1] += w * math.sin(h * 2 * math.pi)
     claridad = light / max(1, n)
-    if vivid / max(1, n) < GRIS:
+    # (sobre los píxeles con algo de luz, no sobre el fondo entero: si no, un cielo nocturno casi negro salía gris)
+    if not iluminados or saturacion / iluminados < GRIS:
         return {'tono': None, 'claridad': round(claridad, 3)}
     # El cajón que más pesa, junto con sus vecinos (un rojo puede caer a los dos lados del 0°)
     k = max(range(36), key=lambda i: bins[i - 1] + bins[i] + bins[(i + 1) % 36])
@@ -88,7 +96,7 @@ def color_de(path):
         st = os.stat(path)
     except OSError:
         return None
-    key = f'{path}|{st.st_size}|{int(st.st_mtime)}'
+    key = f'{path}|{st.st_size}|{int(st.st_mtime)}|v{CACHE_VERSION}'
     cache = _read_cache()
     if key in cache:
         return cache[key]
@@ -96,8 +104,9 @@ def color_de(path):
     if raw is None:
         return None
     info = analizar(raw)
-    # (solo lo de los últimos fondos: que no crezca sin fin)
-    cache = {k: v for k, v in list(cache.items())[-63:] if not k.startswith(path + '|')}
+    # (solo lo de los últimos fondos y de esta versión del cálculo: que no crezca sin fin)
+    cache = {k: v for k, v in list(cache.items())[-63:]
+             if k.endswith(f'|v{CACHE_VERSION}') and not k.startswith(path + '|')}
     cache[key] = info
     _write_cache(cache)
     return info

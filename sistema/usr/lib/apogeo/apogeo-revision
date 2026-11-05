@@ -40,6 +40,37 @@ def read_json(path, default):
         return default
 
 
+def olvidar_estado(path, claves):
+    """Quita claves de pisos.json con el mismo cerrojo que apogeo-pisos (solo si no se puede hablar con él)."""
+    import fcntl
+    import tempfile
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    with open(path + '.lock', 'a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            st = read_json(path, {})
+            if not isinstance(st, dict):
+                st = {}
+            for k in claves:
+                st.pop(k, None)
+            fd, tmp = tempfile.mkstemp(prefix='.pisos.', dir=d)
+            try:
+                with os.fdopen(fd, 'w') as f:
+                    json.dump(st, f)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp, path)
+            except BaseException:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                raise
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
 # ---------- Sistema (root, desde pacman) ----------
 
 def system():
@@ -112,9 +143,10 @@ def user():
         try:
             return time.monotonic() - int(out) / 1e6
         except ValueError:
-            return 999
+            return None   # (desconocido: mejor esperar que dar por hecho que Plasma lleva mucho tiempo estable)
     for _ in range(12):
-        if plasma_age() > 25:
+        age = plasma_age()
+        if age is not None and age > 25:
             break
         time.sleep(5)
     fixed, failed = [], []
@@ -177,12 +209,12 @@ def user():
         lay = layout() or lay
     if lay is not None and not (lay['isla'] and lay['fondo']):
         state_path = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), 'apogeo', 'pisos.json')
-        state = read_json(state_path, {})
         if not lay['isla']:  # los pisos la vuelven a poner (y su bandeja, su hora, el panel rápido y su tamaño)
-            for k in ('isla', 'bandeja', 'reloj', 'rapido', 'cristal'):
-                state.pop(k, None)
-        with open(state_path, 'w') as f:
-            json.dump(state, f)
+            claves = ['isla', 'bandeja', 'reloj', 'rapido', 'cristal']
+            code, _ = sh('dbus-send', '--session', '--type=method_call', '--dest=org.apogeo.Modos', '/Modos',
+                         'org.apogeo.Modos1.Olvidar', 'array:string:' + ','.join(claves))
+            if code != 0:   # (sin sesión o sin apogeo-pisos: se toca el archivo con su mismo cerrojo)
+                olvidar_estado(state_path, claves)
         sh('systemctl', '--user', 'restart', 'apogeo-pisos.service')
         time.sleep(12)
         lay2 = layout() or {}
@@ -257,18 +289,30 @@ def user():
 NEWS = '/usr/share/apogeo/novedades.json'
 
 
-def newest_news():
+def _news():
+    """Las novedades, solo si el archivo tiene la forma que toca (uno roto no puede abortar la revisión)."""
     news = read_json(NEWS, [])
+    if not isinstance(news, list):
+        return []
+    return [n for n in news if isinstance(n, dict) and isinstance(n.get('fecha'), str)]
+
+
+def newest_news():
+    news = _news()
     return news[0]['fecha'] if news else ''
 
 
 def news_aviso(seen):
     """Si esta versión trae algo nuevo que no te hemos contado: un aviso «Apogeo se ha actualizado» con «Ver novedades»,
     que abre Ajustes → Novedades («N3»). Se queda esperando a que lo pulses (en segundo plano)."""
-    news = read_json(NEWS, [])
+    news = _news()
     if not news or news[0]['fecha'] <= seen.get('novedades', ''):
         return
-    things = [c['titulo'] for c in news[0].get('cosas', [])]
+    cosas = news[0].get('cosas')
+    things = [str(c.get('titulo')) for c in cosas if isinstance(c, dict) and c.get('titulo')] \
+        if isinstance(cosas, list) else []
+    if not things:
+        return
     body = join(things[:3]) + ('…' if len(things) > 3 else '.')
     script = ('r=$(notify-send -a Órbita -i apogeo -A ver="Ver novedades" "$1" "$2"); '
               '[ "$r" = ver ] && exec /usr/lib/apogeo/apogeo-ajustes novedades')

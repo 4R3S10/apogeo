@@ -20,6 +20,8 @@ El archivo: una línea «APOGEO-COPIA 1», una línea JSON (fecha, qué lleva, l
   apogeo-copia estado                   la última copia y si hay contraseña (JSON)
   apogeo-copia donde CARPETA            elige dónde se guardan (por el UUID de su disco)
 """
+import fcntl
+import hashlib
 import json
 import os
 import shutil
@@ -183,9 +185,11 @@ def choose(folder):
     if fs.get('uuid') == findmnt('-T', HOME).get('uuid'):
         raise RuntimeError('Elige otro disco o un USB: en este mismo, si el disco falla, se pierde todo junto')
     name = fs.get('label') or os.path.basename(fs.get('target', '')) or 'tu disco'
-    st = comun.load()
-    st['copia']['destino'] = {'uuid': fs['uuid'], 'carpeta': os.path.relpath(folder, fs['target']), 'nombre': name}
-    comun.save(st)
+    destino = {'uuid': fs['uuid'], 'carpeta': os.path.relpath(folder, fs['target']), 'nombre': name}
+
+    def put(st):
+        st['copia']['destino'] = dict(destino)
+    comun.update(put)
     return name
 
 
@@ -237,7 +241,36 @@ def make(sola=False):
                            capture_output=True)
 
 
+def _make_lock(folder):
+    """Cerrojo por carpeta de destino: el temporizador y el USB pueden coincidir, y no deben escribir la misma copia."""
+    base = os.path.join(os.environ.get('XDG_RUNTIME_DIR') or tempfile.gettempdir(), 'apogeo')
+    os.makedirs(base, exist_ok=True)
+    path = os.path.join(base, 'copia-' + hashlib.sha1(folder.encode()).hexdigest()[:12] + '.lock')
+    f = open(path, 'a')
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
 def _make(st, folder, sola):
+    lock = _make_lock(folder)
+    if lock is None:
+        if sola:
+            return 0      # (ya hay una en marcha: esta no hace falta)
+        raise RuntimeError('Ya hay una copia de Apogeo en marcha')
+    try:
+        return _make_locked(st, folder, sola)
+    finally:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+        finally:
+            lock.close()
+
+
+def _make_locked(st, folder, sola):
     os.makedirs(folder, exist_ok=True)
     paths = parts(st)
     if not paths:
@@ -339,12 +372,13 @@ def _fix_paths(old_home):
     """Si la copia era de otra cuenta (otra carpeta personal), las rutas de tus fondos apuntan aquí."""
     if old_home == HOME:
         return
-    st = comun.load()
     fix = lambda p: HOME + p[len(old_home):] if isinstance(p, str) and p.startswith(old_home + '/') else p  # noqa: E731
-    st['fondos']['tuyos'] = [fix(p) for p in st['fondos']['tuyos']]
-    for k in comun.FLOOR_KEYS:
-        st['pisos'][k]['fondo'] = fix(st['pisos'][k]['fondo'])
-    comun.save(st)
+
+    def put(st):
+        st['fondos']['tuyos'] = [fix(p) for p in st['fondos']['tuyos']]
+        for k in comun.FLOOR_KEYS:
+            st['pisos'][k]['fondo'] = fix(st['pisos'][k]['fondo'])
+    comun.update(put)
 
 
 # ---------- Línea de órdenes ----------

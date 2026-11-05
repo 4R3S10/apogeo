@@ -144,7 +144,8 @@ PlasmaCore.Dialog {
             function lee(x) { ba.ahora = Math.round(Math.max(0, Math.min(1, x / width)) * 100); seguido.restart(); }
             onPressed: m => lee(m.x)
             onPositionChanged: m => { if (pressed) lee(m.x); }
-            onReleased: ba.elegido(ba.ahora)
+            onReleased: { seguido.stop(); ba.elegido(ba.ahora); }
+            onCanceled: seguido.stop()
             onWheel: w => { ba.ahora = Math.max(0, Math.min(100, ba.ahora + (w.angleDelta.y > 0 ? 5 : -5))); ba.elegido(ba.ahora); }
         }
         Timer { id: seguido; interval: 120; onTriggered: ba.elegido(ba.ahora) }

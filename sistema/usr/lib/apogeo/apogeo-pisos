@@ -13,6 +13,8 @@ Todo eso sale de tus ajustes (Ajustes de Apogeo, ~/.config/apogeo/ajustes.json):
   apogeo-pisos subir|bajar va al piso de arriba o de abajo (la rueda del ratón en la columna de pisos)
   apogeo-pisos url apogeo-piso:N   lo mismo que «ir N» (lo usa la pantalla de bloqueo)
 """
+import contextlib
+import fcntl
 import glob
 import json
 import os
@@ -36,6 +38,8 @@ import apogeo_aspecto as aspecto  # noqa: E402
 FLOORS = [{'name': 'Jugar', 'key': 'jugar'}, {'name': 'Navegar', 'key': 'navegar'}, {'name': 'Estudiar', 'key': 'estudiar'}]
 HOME = os.path.expanduser('~')
 STATE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'pisos.json')
+STATE_BAK = STATE + '.bak'
+STATE_LOCK = STATE + '.lock'
 MODE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'modo.json')
 MODE_KEYS = ('jugar', 'navegar', 'estudiar')
 WELCOME_DONE = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'apogeo', 'bienvenida-hecha')
@@ -55,7 +59,7 @@ def prop(obj, name):
 
 
 def desktops(bus):
-    """[(posición, id, nombre)] en orden."""
+    """[(posición, id, nombre)] en orden; [] si KWin aún no está (al entrar en la sesión o al reiniciarse)."""
     return sorted((int(p), str(i), str(n)) for p, i, n in prop(vdm(bus), 'desktops'))
 
 
@@ -76,32 +80,80 @@ def go(bus, index):
             return
     except dbus.DBusException:
         pass
-    ds = desktops(bus)
-    pos = min(index * columns(len(ds)), len(ds) - 1)
-    vdm(bus).Set('org.kde.KWin.VirtualDesktopManager', 'current', ds[pos][1],
-                 dbus_interface='org.freedesktop.DBus.Properties')
+    try:
+        ds = desktops(bus)
+        if not ds:
+            log('sin escritorios todavía: KWin aún no está')
+            return False
+        pos = min(index * columns(len(ds)), len(ds) - 1)
+        vdm(bus).Set('org.kde.KWin.VirtualDesktopManager', 'current', ds[pos][1],
+                     dbus_interface='org.freedesktop.DBus.Properties')
+        return True
+    except dbus.DBusException as e:
+        log('KWin no responde:', e.get_dbus_message())
+        return False
 
 
 def current_index(bus):
-    """El piso en el que estás: la fila de la rejilla del escritorio actual."""
-    cur = str(prop(vdm(bus), 'current'))
-    ds = desktops(bus)
+    """El piso en el que estás: la fila de la rejilla del escritorio actual (Navegar si KWin aún no está)."""
+    try:
+        cur = str(prop(vdm(bus), 'current'))
+        ds = desktops(bus)
+    except dbus.DBusException:
+        return len(FLOORS) // 2
+    if not ds:
+        return len(FLOORS) // 2
     k = next((k for k, (_, i, _n) in enumerate(ds) if i == cur), len(FLOORS) // 2 * columns(len(ds)))
     return min(k // columns(len(ds)), len(FLOORS) - 1)
 
 
+@contextlib.contextmanager
+def state_locked():
+    """Cerrojo entre procesos para pisos.json (lo escriben apogeo-pisos y, al revisar el escritorio, apogeo-revision)."""
+    os.makedirs(os.path.dirname(STATE_LOCK), exist_ok=True)
+    with open(STATE_LOCK, 'a') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
 def load_state():
-    try:
-        with open(STATE) as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return {}
+    for path in (STATE, STATE_BAK):
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if isinstance(data, dict):
+            return data
+    return {}
 
 
 def save_state(st):
-    os.makedirs(os.path.dirname(STATE), exist_ok=True)
-    with open(STATE, 'w') as f:
-        json.dump(st, f)
+    d = os.path.dirname(STATE)
+    os.makedirs(d, exist_ok=True)
+    with state_locked():
+        try:
+            with open(STATE) as f:
+                json.load(f)          # (solo si la de ahora se puede leer: no pisar la copia buena con una rota)
+            shutil.copyfile(STATE, STATE_BAK)
+        except (OSError, ValueError):
+            pass
+        fd, tmp = tempfile.mkstemp(prefix='.pisos.', dir=d)
+        try:
+            with os.fdopen(fd, 'w') as f:
+                json.dump(st, f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, STATE)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
 
 
 def write_mode(index):
@@ -173,6 +225,15 @@ class Modos(dbus.service.Object):
         enseña el centro de control de Jugar."""
         items = self.missed.items if self.missed and self.missed.since is not None else []
         return json.dumps(items[::-1][:30], ensure_ascii=False)
+
+    @dbus.service.method('org.apogeo.Modos1', in_signature='as')
+    def Olvidar(self, claves):
+        """Borra del estado de los pisos las claves que ya no valen (lo usa apogeo-revision al encontrar el escritorio a
+        medias): así lo toca un solo proceso y no se pisan las escrituras."""
+        st = load_state()
+        for k in claves:
+            st.pop(str(k), None)
+        save_state(st)
 
     @dbus.service.signal('org.apogeo.Modos1', signature='s')
     def Cambiado(self, modo):
@@ -700,7 +761,7 @@ def aesthetics():
     run('systemctl', '--user', 'disable', '--now', 'arch-update.timer')
     run('pkill', '-f', 'arch-update --tray')
     # (si has cambiado el aspecto, el tuyo encima de lo de serie; se guarda, por si ajustes.load() lo ha puesto al día)
-    aspecto.apply(con_vistos(ajustes.save(ajustes.load())), log=log)
+    aspecto.apply(con_vistos(ajustes.update(lambda _st: None)), log=log)
     log('estética aplicada')
 
 
@@ -1300,46 +1361,32 @@ class Floors:
                              env=dict(os.environ, APOGEO_AUTO='1', APOGEO_MODO=self.floor_key()))  # (la abre el piso, no tú)
 
 
-def island(bus, st):
-    """El orbe como en los ajustes: abajo en el centro y escondido (o siempre a la vista, si lo quitas en Ajustes → Orbe).
-    El script de KWin «apogeo-bordes» lo saca al tocar el borde de abajo y tiene que saber si lo hace."""
-    # Sin orbe abajo: la Órbita sale solo con Meta y de modo se cambia con los atajos o con la Órbita abierta. El panel
-    # del orbe se quita y apogeo-bordes ya no lo saca al tocar el borde
-    hide = st['isla']['esconder']
-    t = aspecto.tokens(aspecto.settings_of(st))
+def island(bus, _st=None):
+    """Sin orbe abajo: la Órbita sale solo con Meta y de modo se cambia con los atajos o con la Órbita abierta.
+
+    Quita el panel del orbe si quedó de antes y deja la barra fina arriba (la reconoce por el plasmoide
+    «org.apogeo.modo», que ya no dibuja nada pero mantiene el hueco). apogeo-bordes deja de sacar la isla al tocar el
+    borde de abajo."""
     kw('kwinrc', 'Script-apogeo-bordes', 'isla', 'false')
     kwin_reconfigure()
     plasma_script(bus, """
         panels().forEach(function (p) {
             var types = p.widgets().map(function (w) { return w.type; });
-            if (types.indexOf('org.apogeo.isla') >= 0 || types.indexOf('org.apogeo.modo') >= 0) {
-                // Nunca con fondo: con «adaptable» (lo de serie) Plasma les pone el fondo opaco cuando una ventana las
-                // toca, y se veía un rectángulo gris oscuro detrás del orbe y de la barra
+            if (types.indexOf('org.apogeo.modo') >= 0) {
+                // Nunca con fondo: con «adaptable» (lo de serie) Plasma le pone el fondo opaco cuando una ventana la
+                // toca, y se veía un rectángulo gris oscuro detrás de la barra
                 if (p.opacity != 'translucent') p.opacity = 'translucent';
-            }
-            if (types.indexOf('org.apogeo.modo') >= 0) {   // la barra fina, arriba (y fina: Plasma a veces la volvía a 40)
+                // La barra fina, arriba (y fina: Plasma a veces la volvía a 40)
                 if (p.location != 'top') p.location = 'top';
                 if (p.height != 30) p.height = 30;
                 // Escondida, salvo con Ágape delante (lo cambia apogeo-bordes según la ventana activa): aquí solo se
                 // arregla si quedó en otro modo
                 if (p.hiding != 'none' && p.hiding != 'autohide') p.hiding = 'autohide';
                 if (p.floating) p.floating = false;
-                return;
             }
-            if (types.indexOf('org.apogeo.isla') >= 0) { p.remove(); return; }
-            if (types.indexOf('org.apogeo.isla') < 0) return;
-            if (p.location != 'bottom') p.location = 'bottom';
-            if (p.height != %d) p.height = %d;
-            p.hiding = %s;
-            p.widgets().forEach(function (w) {
-                if (w.type != 'org.apogeo.isla') return;
-                w.currentConfigGroup = ['General'];
-                w.writeConfig('esconder', %s);
-                w.writeConfig('asomado', false);
-                w.reloadConfig();
-            });
+            if (types.indexOf('org.apogeo.isla') >= 0) { p.remove(); }
         });
-    """ % (t['isla'], t['isla'], json.dumps('autohide' if hide else 'none'), json.dumps(hide)))
+    """)
 
 
 _look = {'ultimo': None, 'cerrojo': threading.Lock()}
@@ -1439,14 +1486,14 @@ def default_wallpapers():
             return
 
         def put():
-            st = ajustes.load()
-            changed = False
-            for floor, path in got.items():
-                if st['pisos'][floor]['fondo'] != path and apogeo_fondos.es_de_serie_antiguo(floor, st['pisos'][floor]['fondo']):
-                    st['pisos'][floor]['fondo'] = path
-                    changed = True
-            if changed:
-                ajustes.save(st)
+            def cambiar(st):
+                changed = False
+                for floor, path in got.items():
+                    if st['pisos'][floor]['fondo'] != path and apogeo_fondos.es_de_serie_antiguo(floor, st['pisos'][floor]['fondo']):
+                        st['pisos'][floor]['fondo'] = path
+                        changed = True
+                return None if changed else False   # (sin cambios: no se toca el archivo)
+            ajustes.update(cambiar)
             state = load_state()
             state['fondos_serie'] = DEFAULT_WALLPAPERS
             save_state(state)
@@ -1481,7 +1528,12 @@ def main():
         elif cmd == 'url' and len(sys.argv) > 2 and sys.argv[2].partition(':')[2].strip('/').isdigit():
             go(bus, int(sys.argv[2].partition(':')[2].strip('/')))
         return
-    setup(bus)
+    try:
+        setup(bus)
+    except dbus.DBusException as e:
+        # (KWin tarda un poco en estar al entrar en la sesión: mejor seguir y reintentarlo al volver a entrar que
+        #  morir y reiniciarse en bucle cada 3 s)
+        log('KWin aún no está:', e.get_dbus_message())
     st = load_state()
     obsidian_notes(st)
     save_state(st)

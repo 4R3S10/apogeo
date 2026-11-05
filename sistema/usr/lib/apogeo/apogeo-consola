@@ -269,14 +269,14 @@ def main():
 
         @pyqtSlot(str, int)
         def setFps(self, key, fps):
-            st = comun.load()
-            per = dict(st.get('juegos_fps') or {})
-            if fps in comun.FPS_CHOICES:
-                per[key] = fps
-            else:
-                per.pop(key, None)
-            st['juegos_fps'] = per
-            comun.save(st)
+            def put(st):
+                per = dict(st.get('juegos_fps') or {})
+                if fps in comun.FPS_CHOICES:
+                    per[key] = fps
+                else:
+                    per.pop(key, None)
+                st['juegos_fps'] = per
+            comun.update(put)
             self.fpsChanged.emit()
 
         # ----- Herramientas («H1»: su pestaña; «H2»: las rápidas en el centro del botón PS) -----
@@ -309,9 +309,7 @@ def main():
         @pyqtSlot(bool)
         def setFpsVisibles(self, on):
             """Los FPS de MangoHud en los juegos, a la vista o no (el límite sigue igual). Los juegos abiertos lo leen ya."""
-            st = comun.load()
-            st['fpsVisibles'] = bool(on)
-            comun.save(st)
+            comun.update(lambda st: st.__setitem__('fpsVisibles', bool(on)))
             self.fpsChanged.emit()
 
         @pyqtSlot(result=bool)
