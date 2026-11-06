@@ -62,6 +62,7 @@ DEFAULTS = {
     'modelo': '',           # el último elegido
     'carpeta': '',          # la carpeta de los modelos ('' = ~/Modelos)
 }
+
 PRESETS = {
     'preciso': {'temperatura': 0.3, 'top_p': 0.9, 'top_k': 20, 'min_p': 0.05, 'repeticion': 1.05},
     'equilibrado': {'temperatura': 0.8, 'top_p': 0.95, 'top_k': 40, 'min_p': 0.05, 'repeticion': 1.0},
@@ -165,6 +166,14 @@ def free_space():
     return shutil.disk_usage(MODELS).free
 
 
+def human(n):
+    """Un número en bytes a KB/MB/GB."""
+    for uni, div in (('B', 1), ('KB', 1 << 10), ('MB', 1 << 20), ('GB', 1 << 30)):
+        if n < (1 << 30) or uni == 'GB':
+            return f'{n / div:.0f} {uni}' if n < 1024 else f'{n / (1 << 30):.1f} GB'
+    return f'{n / (1 << 30):.1f} GB'
+
+
 def fit(size):
     """Cómo irá un modelo de ese tamaño en este PC: «rapido» (cabe holgado), «lento» (justo) o «disco» (no cabe en la
     RAM: se leerá del disco, muy despacio)."""
@@ -252,7 +261,7 @@ def nice_name(name):
     q = QUANT.search(base)
     if q:
         base = base[:q.start()] + base[q.end():]
-    return re.sub(r'[-_ ]+|(?<!\d)\.|\.(?!\d)', ' ', base).strip() or os.path.basename(name)
+    return re.sub(r'[-_ ]+|(?<!\\d)\\.|\\.(?!\\d)', ' ', base).strip() or os.path.basename(name)
 
 
 def summary(head, name):
@@ -448,21 +457,35 @@ class Engine:
         return f'http://127.0.0.1:{self.port}{path}'
 
     def start(self, model, st):
-        """Arranca con ese modelo (en segundo plano; avisa con on_state)."""
+        """Arranca con ese modelo (en segundo plano; avisa con on_state).
+        Arreglado: verifica que llama-server exista y que el modelo esté en la ruta correcta."""
         self.stop()
         with self.lock:
             self.gen += 1
             gen = self.gen
-            path = os.path.join(MODELS, os.path.basename(model))
-            if not os.path.exists(path):
-                self._set('error', 'No está ese modelo')
+
+            # 1. Verificar que llama-server existe y es ejecutable
+            if not LLAMA or not os.path.exists(LLAMA):
+                self._set('error', 'No está instalado llama-server. Instálalo con: sudo pacman -S llama-cpp')
                 return
             if not os.access(LLAMA, os.X_OK):
-                self._set('error', 'Falta llama.cpp (el paquete llama-cpp)')
+                self._set('error', f'No tiene permisos de ejecución en llama-server ({LLAMA})')
                 return
+
+            # 2. Verificar que el modelo existe
+            if not os.path.isfile(model):
+                self._set('error', f'El modelo «{model}» no se encuentra en tu PC.')
+                return
+
+            path = os.path.join(MODELS, os.path.basename(model))
+            if not os.path.exists(path):
+                self._set('error', f'El modelo «{model}» no está en la carpeta de modelos.')
+                return
+
             kv = os.path.join(KV, kv_dir(model))
             os.makedirs(kv, exist_ok=True)
             os.makedirs(CACHE, exist_ok=True)
+
             self.port = free_port()
             args = [LLAMA, '-m', path, '--host', '127.0.0.1', '--port', str(self.port), '-np', '1', '--jinja',
                     '--reasoning-format', 'deepseek', '--slot-save-path', kv, '--no-webui',
@@ -471,19 +494,28 @@ class Engine:
                 args += ['-c', str(int(st['contexto']))]
             if st['hilos']:
                 args += ['-t', str(int(st['hilos']))]
+
             self.key = secrets.token_hex(24)
-            log = open(LOG, 'w')
             try:
-                self.proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                             env=dict(os.environ, LLAMA_API_KEY=self.key),
-                                             preexec_fn=_die_with_parent)
-            except OSError as e:
-                self._set('error', str(e))
+                log = open(LOG, 'w')
+                try:
+                    self.proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                                 env=dict(os.environ, LLAMA_API_KEY=self.key),
+                                                 preexec_fn=_die_with_parent)
+                except OSError as e:
+                    self._set('error', f'No se pudo arrancar llama-server: {e}')
+                    log.close()
+                    return
+                finally:
+                    log.close()
+            except Exception as e:
+                self._set('error', f'Error inesperado: {e}')
                 return
-            finally:
-                log.close()
+
             self.model, self.kv_chat, self.ctx, self.gpu = os.path.basename(model), '', 0, ''
             self._set('cargando')
+
+        # Esperar a que esté listo en un hilo separado
         threading.Thread(target=self._wait, args=(gen, st), daemon=True).start()
 
     def _wait(self, gen, st):
@@ -502,8 +534,9 @@ class Engine:
         else:
             if gen == self.gen:
                 self.stop()
-                self._set('error', 'El modelo tarda demasiado en cargar')
+                self._set('error', 'El modelo tarda demasiado en cargar. Prueba con un modelo más pequeño.')
             return
+
         try:
             with urllib.request.urlopen(self._req('/props'), timeout=5) as r:
                 props = json.load(r)
@@ -511,12 +544,14 @@ class Engine:
         except (OSError, ValueError, urllib.error.URLError):
             pass
         self.ctx = self.ctx or int(st['contexto'] or 4096)
+
         try:
             with open(LOG, errors='replace') as f:
                 m = re.findall(r'offloaded (\d+)/(\d+) layers to GPU', f.read())
             self.gpu = f'{m[-1][0]}/{m[-1][1]}' if m and m[-1][0] != '0' else ''
         except OSError:
             pass
+
         if gen == self.gen:
             self._set('listo')
 
@@ -533,7 +568,7 @@ class Engine:
         if 'failed to allocate' in text or 'out of memory' in text or 'cannot allocate' in text:
             return 'No hay memoria para este modelo con esta memoria de conversación: prueba con menos'
         if 'failed to load model' in text or 'error loading model' in text:
-            return 'No se ha podido abrir el modelo (¿está entero?)'
+            return 'No se ha podido abrir el modelo (¿está entero? Comprueba que no está en uso)'
         err = [ln for ln in lines if 'error' in ln.lower()]
         return (err or lines or ['El motor se ha cerrado'])[-1][-200:]
 
@@ -647,335 +682,3 @@ class Engine:
                 usage = ev.get('usage') or usage
         return {'tps': round(float(timings.get('predicted_per_second') or 0), 1),
                 'tokens': int(usage.get('total_tokens') or 0), 'fin': finish or ''}
-
-
-# ---------- Buscar y bajar modelos ----------
-
-class Redirect(urllib.request.HTTPRedirectHandler):
-    """Al saltar a otro servidor (la CDN de Hugging Face…) no se le pasa tu token."""
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        new = super().redirect_request(req, fp, code, msg, headers, newurl)
-        if new and urllib.parse.urlsplit(newurl).hostname != urllib.parse.urlsplit(req.full_url).hostname:
-            new.remove_header('Authorization')
-        return new
-
-
-_opener = urllib.request.build_opener(Redirect)
-
-
-def hf_token():
-    try:
-        with open(TOKEN) as f:
-            return f.read().strip()
-    except OSError:
-        return ''
-
-
-def set_hf_token(token):
-    os.makedirs(CONFIG, exist_ok=True)
-    if not token.strip():
-        try:
-            os.remove(TOKEN)
-        except OSError:
-            pass
-        return
-    fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, 'w') as f:
-        f.write(token.strip())
-
-
-def _headers(url):
-    h = {'User-Agent': AGENT}
-    host = urllib.parse.urlsplit(url).hostname or ''
-    if host == 'huggingface.co' and hf_token():
-        h['Authorization'] = 'Bearer ' + hf_token()
-    if host == 'api.github.com':
-        h['Accept'] = 'application/vnd.github+json'
-    return h
-
-
-def get_json(url, timeout=20):
-    try:
-        with _opener.open(urllib.request.Request(url, headers=_headers(url)), timeout=timeout) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        if e.code in (403, 429) and 'github' in url:
-            raise RuntimeError('GitHub no deja buscar más ahora mismo (tiene un límite por hora): prueba en un rato')
-        if e.code == 404:
-            raise RuntimeError('No existe (o es privado)')
-        if e.code == 401:
-            raise RuntimeError('Hace falta tu token de Hugging Face (y aceptar la licencia en su web)')
-        raise RuntimeError(f'Ha fallado ({e.code})')
-    except (OSError, ValueError, urllib.error.URLError):
-        raise RuntimeError('Sin conexión con el servidor')
-
-
-def _files(entries):
-    """[{ruta, url, tamano, sha}] → un modelo por archivo, con los trozos juntos y sin proyectores ni adaptadores."""
-    groups = {}
-    for e in entries:
-        name = os.path.basename(e['ruta'])
-        if not name.lower().endswith('.gguf') or NOT_MODEL.search(name):
-            continue
-        m = SPLIT.search(name)
-        key = name[:m.start()] if m else name
-        g = groups.setdefault(key, {'archivo': '', 'partes': [], 'tamano': 0})
-        g['partes'].append(e)
-        g['tamano'] += int(e.get('tamano') or 0)
-        if not m or m.group(1) == '00001':
-            g['archivo'] = name
-    out = []
-    for g in groups.values():
-        if not g['archivo']:
-            continue
-        g['partes'].sort(key=lambda e: e['ruta'])
-        out.append({'archivo': g['archivo'], 'cuant': quant_of(g['archivo']), 'tamano': g['tamano'],
-                    'partes': [{'archivo': os.path.basename(e['ruta']), 'url': e['url'], 'tamano': e.get('tamano', 0),
-                                'sha': e.get('sha', '')} for e in g['partes']],
-                    'va': fit(g['tamano']), 'tienes': os.path.exists(os.path.join(MODELS, g['archivo']))})
-    return sorted(out, key=lambda f: f['tamano'])
-
-
-def hf_search(query):
-    q = urllib.parse.urlencode({'filter': 'gguf', 'sort': 'downloads', 'direction': -1, 'limit': 40,
-                                'search': query.strip()})
-    return [{'repo': m['id'], 'autor': m['id'].split('/')[0], 'nombre': m['id'].split('/')[-1],
-             'descargas': m.get('downloads', 0), 'likes': m.get('likes', 0), 'origen': 'hf'}
-            for m in get_json('https://huggingface.co/api/models?' + q)
-            if '/' in m.get('id', '') and m.get('pipeline_tag') not in NOT_CHAT
-            and (query.strip() or not UNSAFE.search(m['id']))]
-
-
-def hf_files(repo):
-    d = get_json(f'https://huggingface.co/api/models/{urllib.parse.quote(repo, safe="/")}?blobs=true')
-    entries = [{'ruta': s['rfilename'], 'tamano': s.get('size') or s.get('lfs', {}).get('size', 0),
-                'sha': s.get('lfs', {}).get('sha256', ''),
-                'url': f'https://huggingface.co/{repo}/resolve/main/{urllib.parse.quote(s["rfilename"])}'}
-               for s in d.get('siblings', [])]
-    g = d.get('gguf') or {}
-    card = d.get('cardData') or {}
-    return {'repo': repo, 'origen': 'hf', 'web': f'https://huggingface.co/{repo}', 'licencia': card.get('license', ''),
-            'conLicencia': bool(d.get('gated')), 'arquitectura': g.get('architecture', ''),
-            'contextoMax': g.get('context_length', 0), 'archivos': _files(entries)}
-
-
-def gh_search(query):
-    q = urllib.parse.quote(f'{query.strip()} gguf'.strip())
-    d = get_json(f'https://api.github.com/search/repositories?q={q}&sort=stars&order=desc&per_page=30')
-    return [{'repo': r['full_name'], 'autor': r['owner']['login'], 'nombre': r['name'],
-             'descargas': 0, 'likes': r.get('stargazers_count', 0), 'detalle': (r.get('description') or '')[:140],
-             'origen': 'github'} for r in d.get('items', [])]
-
-
-def gh_files(repo):
-    entries = []
-    for rel in get_json(f'https://api.github.com/repos/{repo}/releases?per_page=30'):
-        for a in rel.get('assets', []):
-            digest = a.get('digest') or ''
-            entries.append({'ruta': a['name'], 'url': a['browser_download_url'], 'tamano': a.get('size', 0),
-                            'sha': digest[7:] if digest.startswith('sha256:') else ''})
-    try:
-        tree = get_json(f'https://api.github.com/repos/{repo}/git/trees/HEAD?recursive=1')
-        for t in tree.get('tree', []):
-            if t.get('type') == 'blob' and t['path'].lower().endswith('.gguf'):
-                entries.append({'ruta': t['path'], 'tamano': t.get('size', 0), 'sha': '',
-                                'url': f'https://github.com/{repo}/raw/HEAD/{urllib.parse.quote(t["path"])}'})
-    except RuntimeError:
-        pass
-    return {'repo': repo, 'origen': 'github', 'web': f'https://github.com/{repo}', 'licencia': '',
-            'conLicencia': False, 'arquitectura': '', 'contextoMax': 0, 'archivos': _files(entries)}
-
-
-def from_link(url):
-    """Un enlace pegado: un repositorio de Hugging Face o GitHub (se ven sus modelos) o un .gguf de donde sea."""
-    url = url.strip()
-    u = urllib.parse.urlsplit(url)
-    if u.scheme != 'https' or not u.hostname:
-        raise RuntimeError('Pega un enlace que empiece por https://')
-    path = [p for p in u.path.split('/') if p]
-    if u.hostname in ('huggingface.co', 'www.huggingface.co') and len(path) >= 2:
-        if 'resolve' not in path and 'blob' not in path:
-            return hf_files('/'.join(path[:2]))
-        url = url.replace('/blob/', '/resolve/')
-    elif u.hostname in ('github.com', 'www.github.com') and len(path) >= 2:
-        if not url.lower().split('?')[0].endswith('.gguf'):
-            return gh_files('/'.join(path[:2]))
-        url = url.replace('/blob/', '/raw/')
-    name = urllib.parse.unquote(os.path.basename(urllib.parse.urlsplit(url).path))
-    size = 0
-    try:
-        req = urllib.request.Request(url, method='HEAD', headers=_headers(url))
-        with _opener.open(req, timeout=20) as r:
-            size = int(r.headers.get('Content-Length') or 0)
-            cd = r.headers.get('Content-Disposition') or ''
-            m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)', cd)
-            if m:
-                name = urllib.parse.unquote(m.group(1))
-    except (OSError, urllib.error.URLError):
-        pass
-    if not name.lower().endswith('.gguf'):
-        name = (name or 'modelo') + '.gguf'
-    entries = [{'ruta': name, 'url': url, 'tamano': size, 'sha': ''}]
-    return {'repo': u.hostname, 'origen': 'enlace', 'web': url, 'licencia': '', 'conLicencia': False,
-            'arquitectura': '', 'contextoMax': 0, 'archivos': _files(entries)}
-
-
-def download(part, on_progress, cancel):
-    """Baja un archivo de modelo a modelos/ (sigue donde se quedó si se cortó). on_progress(hecho, total, velocidad).
-    Comprueba que es un GGUF y, si se sabe, su sha256. Lanza RuntimeError con el porqué si no sale."""
-    name = os.path.basename(part['archivo'])
-    if not name.endswith('.gguf') or name.startswith('.'):
-        raise RuntimeError('Solo se bajan modelos .gguf')
-    os.makedirs(MODELS, exist_ok=True)
-    dest = os.path.join(MODELS, name)
-    if os.path.exists(dest):
-        return
-    tmp = dest + '.part'
-    have = os.path.getsize(tmp) if os.path.exists(tmp) else 0
-    total = int(part.get('tamano') or 0)
-    if total and free_space() < total - have + (512 << 20):
-        raise RuntimeError(f'No cabe: hacen falta {human(total - have)} y quedan {human(free_space())}')
-    headers = _headers(part['url'])
-    if have:
-        headers['Range'] = f'bytes={have}-'
-    try:
-        r = _opener.open(urllib.request.Request(part['url'], headers=headers), timeout=30)
-    except urllib.error.HTTPError as e:
-        if e.code == 416 and have and have == total:
-            r = None
-        elif e.code in (401, 403) and 'huggingface' in part['url']:
-            raise RuntimeError('Este modelo pide aceptar su licencia en Hugging Face y tu token')
-        else:
-            raise RuntimeError(f'El servidor ha dicho que no ({e.code})')
-    except (OSError, urllib.error.URLError) as e:
-        raise RuntimeError('Sin conexión: ' + str(getattr(e, 'reason', e)))
-    if r is not None:
-        with r:
-            if r.status == 200 and have:
-                have = 0  # (no deja seguir: desde el principio)
-            size = r.headers.get('Content-Length')
-            if size and not total:
-                total = int(size) + have
-            if total and free_space() < total - have + (512 << 20):
-                raise RuntimeError(f'No cabe: hacen falta {human(total - have)} y quedan {human(free_space())}')
-            with open(tmp, 'ab' if have else 'wb') as f:
-                done, t0, last, speed = have, time.time(), 0, 0
-                first = not have
-                while True:
-                    if cancel.is_set():
-                        raise RuntimeError('Cancelado')
-                    chunk = r.read(1 << 20)
-                    if not chunk:
-                        break
-                    if first:
-                        if not chunk.startswith(b'GGUF'):
-                            f.close()
-                            os.remove(tmp)
-                            raise RuntimeError('Eso no es un modelo GGUF')
-                        first = False
-                    f.write(chunk)
-                    done += len(chunk)
-                    now = time.time()
-                    if now - last > 0.3:
-                        speed = (done - have) / max(0.001, now - t0)
-                        on_progress(done, total, speed)
-                        last = now
-    if total and os.path.getsize(tmp) < total:
-        raise RuntimeError('Se ha cortado: dale otra vez para seguir')
-    if part.get('sha'):
-        on_progress(-1, total, 0)  # (comprobando)
-        h = hashlib.sha256()
-        with open(tmp, 'rb') as f:
-            for block in iter(lambda: f.read(8 << 20), b''):
-                if cancel.is_set():
-                    raise RuntimeError('Cancelado')
-                h.update(block)
-        if h.hexdigest() != part['sha'].lower():
-            os.remove(tmp)
-            raise RuntimeError('Ha llegado mal (no coincide su huella): bájalo otra vez')
-    os.replace(tmp, dest)
-
-
-def human(n):
-    n = float(n or 0)
-    for unit in ('B', 'KB', 'MB', 'GB', 'TB'):
-        if n < 1024 or unit == 'TB':
-            return (f'{n:.1f}' if unit in ('GB', 'TB') else f'{n:.0f}').replace('.', ',') + ' ' + unit
-        n /= 1024
-
-
-# ---------- Colab ----------
-
-def colab_notebook(info, file, st, folder):
-    """Escribe un cuaderno de Colab que compila llama.cpp con CUDA, baja ese modelo de Hugging Face y abre un chat
-    dentro del propio cuaderno (Colab gratis no deja usarlo desde fuera). Devuelve su ruta."""
-    repo = info['repo']
-    names = [p['archivo'] for p in file['partes']]
-    paths = [urllib.parse.unquote(p['url'].split('/resolve/main/', 1)[-1]) for p in file['partes']]
-
-    def md(text):
-        return {'cell_type': 'markdown', 'metadata': {}, 'source': text}
-
-    def code(text):
-        return {'cell_type': 'code', 'metadata': {}, 'execution_count': None, 'outputs': [], 'source': text}
-    gen = {'temperature': float(st['temperatura']), 'top_p': float(st['top_p']), 'top_k': int(st['top_k']),
-           'min_p': float(st['min_p']), 'repeat_penalty': float(st['repeticion'])}
-    if st['largo']:
-        gen['max_tokens'] = int(st['largo'])
-    cells = [
-        md(f'# apologIA en Colab\n**{repo}** · `{names[0]}` ({human(file["tamano"])})\n\n'
-           '1. **Entorno de ejecución → Cambiar tipo de entorno → GPU T4**.\n'
-           '2. **Entorno de ejecución → Ejecutar todo**. La primera vez tarda unos minutos (compila llama.cpp y baja '
-           'el modelo).\n3. Escribe abajo, en el chat del final. Todo pasa dentro de este cuaderno.'),
-        code('!nvidia-smi -L || echo "Sin GPU: elige la T4 en Entorno de ejecución → Cambiar tipo de entorno"'),
-        code('%%bash\nset -e\nif [ ! -x /content/llama.cpp/build/bin/llama-server ]; then\n'
-             '  git clone -q --depth 1 https://github.com/ggml-org/llama.cpp /content/llama.cpp\n'
-             '  cd /content/llama.cpp\n'
-             '  cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75 -DLLAMA_CURL=OFF > /dev/null\n'
-             '  cmake --build build -j 4 --target llama-server > /dev/null\nfi\necho "llama.cpp listo"'),
-        code('from huggingface_hub import hf_hub_download\n'
-             f'REPO = {repo!r}\nARCHIVOS = {paths!r}\n'
-             "rutas = [hf_hub_download(REPO, a, local_dir='/content/modelos') for a in ARCHIVOS]\n"
-             'MODELO = rutas[0]\nprint("Modelo listo:", MODELO)'),
-        code('import subprocess, time, urllib.request\n'
-             f"CONTEXTO = {int(st['contexto'] or 8192)}\n"
-             "motor = subprocess.Popen(['/content/llama.cpp/build/bin/llama-server', '-m', MODELO, '-ngl', 'auto',\n"
-             "    '-c', str(CONTEXTO), '--host', '127.0.0.1', '--port', '8080', '--jinja', '--reasoning-format',\n"
-             "    'deepseek', '--no-webui'], stdout=open('/content/motor.log', 'w'), stderr=subprocess.STDOUT)\n"
-             'for _ in range(600):\n    try:\n'
-             "        urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2); break\n"
-             '    except Exception:\n        time.sleep(1)\n'
-             "print('Motor listo' if motor.poll() is None else open('/content/motor.log').read()[-2000:])"),
-        code('import html, json, urllib.request\nimport ipywidgets as w\nfrom IPython.display import display\n'
-             f"SISTEMA = {st['sistema'].strip()!r}\nAJUSTES = {gen!r}\n"
-             "historial = [{'role': 'system', 'content': SISTEMA}] if SISTEMA else []\n"
-             "chat = w.VBox()\nentrada = w.Textarea(placeholder='Escribe aquí…', layout=w.Layout(width='100%', height='80px'))\n"
-             "boton = w.Button(description='Enviar', button_style='primary')\n\n"
-             'def burbuja(texto, tuyo):\n'
-             "    fondo = '#1f2633' if tuyo else '#11151c'\n"
-             "    return w.HTML(f'<div style=\"background:{fondo};color:#e9edf5;padding:10px 14px;border-radius:12px;"
-             "margin:4px 0;white-space:pre-wrap\">{html.escape(texto)}</div>')\n\n"
-             'def enviar(_=None):\n    texto = entrada.value.strip()\n    if not texto:\n        return\n'
-             "    entrada.value = ''\n    historial.append({'role': 'user', 'content': texto})\n"
-             '    respuesta = burbuja("…", False)\n    chat.children += (burbuja(texto, True), respuesta)\n'
-             "    cuerpo = dict(AJUSTES, messages=historial, stream=True)\n"
-             "    pedido = urllib.request.Request('http://127.0.0.1:8080/v1/chat/completions', data=json.dumps(cuerpo).encode(),\n"
-             "                                    headers={'Content-Type': 'application/json'})\n"
-             "    hecho = ''\n    with urllib.request.urlopen(pedido) as r:\n        for linea in r:\n"
-             "            linea = linea.decode().strip()\n"
-             "            if not linea.startswith('data:') or linea.endswith('[DONE]'):\n                continue\n"
-             "            for c in json.loads(linea[5:]).get('choices', []):\n"
-             "                hecho += (c.get('delta') or {}).get('content') or ''\n"
-             '            respuesta.value = burbuja(hecho or "…", False).value\n'
-             "    historial.append({'role': 'assistant', 'content': hecho})\n\n"
-             'boton.on_click(enviar)\ndisplay(chat, entrada, boton)'),
-    ]
-    nb = {'nbformat': 4, 'nbformat_minor': 5, 'cells': cells,
-          'metadata': {'accelerator': 'GPU', 'colab': {'gpuType': 'T4', 'name': f'apologIA · {repo}'},
-                       'kernelspec': {'name': 'python3', 'display_name': 'Python 3'}}}
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, 'apologIA · ' + re.sub(r'[^\w.-]+', ' ', repo.split('/')[-1]).strip() + '.ipynb')
-    with open(path, 'w') as f:
-        json.dump(nb, f, ensure_ascii=False, indent=1)
-    return path
